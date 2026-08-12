@@ -1,0 +1,115 @@
+plugins {
+    id("java-library")
+    id("maven-publish")
+    id("net.fabricmc.fabric-loom") version "1.15.5"
+}
+
+fun prop(name: String): String = property(name) as String
+
+val mcVersion = stonecutter.current.version
+val javaVersion = prop("java_version").toInt()
+
+group = prop("mod.group")
+version = "${prop("mod.version")}+$mcVersion"
+base.archivesName = "${prop("mod.id")}-fabric-$mcVersion"
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(javaVersion)
+    withSourcesJar()
+}
+
+repositories {
+    mavenCentral()
+}
+
+// Loom's configurations are referenced by name rather than through generated accessors: Kotlin DSL
+// does not emit type-safe accessors for a build script that Stonecutter assigns under a non-default
+// file name (build.fabric.gradle.kts).
+//
+// Which configuration to use depends on whether the target is obfuscated:
+//   - 26.1+ ships unobfuscated, so Loom runs with remapping off and never creates the `mod*`
+//     configurations at all. Plain `implementation` is correct, and no `mappings` layer is needed.
+//   - <=1.21.11 is obfuscated, so dependencies must go through `modImplementation` to be remapped,
+//     and Mojmap must be layered in explicitly.
+// Mojmap is the single name namespace across every target, which is why obfuscation never becomes a
+// porting problem here — only a build-wiring one.
+// Note this is an ordinary Kotlin conditional, not a Stonecutter `//?` comment: Stonecutter only
+// preprocesses files under src/, never build scripts.
+val obfuscated = mcVersion.substringBefore('.').toInt() < 26
+
+dependencies {
+    "minecraft"("com.mojang:minecraft:${prop("deps.minecraft")}")
+    val cfg = if (obfuscated) "modImplementation" else "implementation"
+    if (obfuscated) "mappings"(loom.officialMojangMappings())
+    cfg("net.fabricmc:fabric-loader:${prop("deps.fabric_loader")}")
+    cfg("net.fabricmc.fabric-api:fabric-api:${prop("deps.fabric_api")}")
+}
+
+loom {
+    runs {
+        named("client") {
+            client()
+            configName = "Fabric Client ($mcVersion)"
+            ideConfigGenerated(true)
+            runDir = "runs/client"
+        }
+        named("server") {
+            server()
+            configName = "Fabric Server ($mcVersion)"
+            ideConfigGenerated(true)
+            runDir = "runs/server"
+        }
+    }
+}
+
+tasks.processResources {
+    val props = mapOf(
+        "mod_id" to prop("mod.id"),
+        "mod_name" to prop("mod.name"),
+        "mod_version" to prop("mod.version"),
+        "mod_author" to prop("mod.author"),
+        "mod_license" to prop("mod.license"),
+        "mod_description" to prop("mod.description").replace("\n", "\\n"),
+        "minecraft_range" to prop("deps.minecraft_range"),
+        "fabric_loader" to prop("deps.fabric_loader"),
+        "java_version" to javaVersion.toString(),
+        "pack_format" to prop("pack_format"),
+    )
+    inputs.properties(props)
+    filesMatching(listOf("fabric.mod.json", "pack.mcmeta")) { expand(props) }
+    exclude("META-INF/neoforge.mods.toml", "META-INF/mods.toml")
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("mavenJava") {
+            artifactId = base.archivesName.get()
+            from(components["java"])
+        }
+    }
+}
+
+// Stonecutter rewrites the shared src/ tree in place for the active node. Both compilation and
+// resource processing must wait for that rewrite, or they consume the previous node's source state.
+tasks.compileJava { dependsOn(tasks.named("stonecutterGenerate")) }
+tasks.processResources { dependsOn(tasks.named("stonecutterGenerate")) }
+
+dependencies {
+    // Nullness annotations. NeoForge ships jspecify transitively on 26.1 but not on older versions,
+    // so declare it explicitly: it is an annotations-only jar with no runtime component, safe on every
+    // target, and keeps @Nullable usable in shared code across the whole matrix.
+    compileOnly("org.jspecify:jspecify:1.0.0")
+}
+
+// Plain-JVM unit tests. The data backends are pure logic over CompoundTag/NbtOps and need no game
+// bootstrap, which makes them the one part of the compat layer that is cheaply testable off-thread.
+dependencies {
+    testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+tasks.test {
+    useJUnitPlatform()
+    dependsOn(tasks.named("stonecutterGenerateTest"))
+    testLogging { events("passed", "failed", "skipped") }
+}

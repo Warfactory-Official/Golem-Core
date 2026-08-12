@@ -1,0 +1,22 @@
+{
+    "schemaVersion": 1,
+    "id": "${mod_id}",
+    "version": "${mod_version}",
+    "name": "${mod_name}",
+    "description": "${mod_description}",
+    "authors": [
+        "${mod_author}"
+    ],
+    "license": "${mod_license}",
+    "environment": "*",
+    "entrypoints": {
+        "main": [
+            "dev.golem.core.platform.FabricEntrypoint"
+        ]
+    },
+    "depends": {
+        "fabricloader": ">=${fabric_loader}",
+        "minecraft": "${minecraft_range}",
+        "java": ">=${java_version}"
+    }
+}
