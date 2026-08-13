@@ -46,6 +46,7 @@ neoForge {
 
 repositories {
     mavenCentral()
+    maven("https://maven.blamejared.com") { name = "BlameJared" }
 }
 
 tasks.processResources {
@@ -90,6 +91,13 @@ dependencies {
     // so declare it explicitly: it is an annotations-only jar with no runtime component, safe on every
     // target, and keeps @Nullable usable in shared code across the whole matrix.
     compileOnly("org.jspecify:jspecify:1.0.0")
+
+    // JEI, compile-only and per-node optional: the facade in dev.golem.core.jei exists to hide the
+    // 19.x/29.x API split from consumers, so this library has to see whichever line the node targets.
+    // A node that declares no coordinates compiles the facade out entirely (the `jei` constant).
+    val jeiMc = (findProperty("deps.jei_mc") as String?)?.takeIf { it.isNotBlank() }
+    val jeiVer = (findProperty("deps.jei") as String?)?.takeIf { it.isNotBlank() }
+    if (jeiMc != null && jeiVer != null) compileOnly("mezz.jei:jei-$jeiMc-common-api:$jeiVer")
 }
 
 // Plain-JVM unit tests. The data backends are pure logic over CompoundTag/NbtOps and need no game

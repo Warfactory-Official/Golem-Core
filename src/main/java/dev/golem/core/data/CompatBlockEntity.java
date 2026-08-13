@@ -79,5 +79,24 @@ public abstract class CompatBlockEntity extends BlockEntity {
         super.saveAdditional(tag, registries);
         saveData(new TagDataOut(tag, registries));
     }
+
+    /^*
+     * Side effects of this block entity being removed — dropping an inventory, most of the time.
+     *
+     * <p>26.1 declares this on {@code BlockEntity} and calls it itself, with a default that drops the
+     * contents of any block entity which is a {@link net.minecraft.world.Container}. Below 26.1 there is
+     * no such hook and no such default: dropping is each block's own business, done from
+     * {@code Block.onRemove}. A block entity written against 26.1 therefore keeps compiling and silently
+     * stops dropping anything, which voids a machine's inventory when it is broken.
+     *
+     * <p>This declares the method so overrides still bind, and reproduces 26.1's default exactly. It is
+     * inert until something calls it — {@code dev.golem.core.world.Compat.preRemoveSideEffects} is the
+     * bridge, invoked from the block's removal hook.
+     ^/
+    public void preRemoveSideEffects(net.minecraft.core.BlockPos pos, net.minecraft.world.level.block.state.BlockState state) {
+        if (this instanceof net.minecraft.world.Container container && this.level != null) {
+            net.minecraft.world.Containers.dropContents(this.level, pos, container);
+        }
+    }
     *///?}
 }

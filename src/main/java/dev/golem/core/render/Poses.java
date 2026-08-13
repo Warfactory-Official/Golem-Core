@@ -32,4 +32,26 @@ public final class Poses {
         pose.normal().rotate(rotation);
         *///?}
     }
+
+    /**
+     * Scales a pose in place. 26.1 exposes this on {@code Pose}; older versions only expose the
+     * matrices, so it goes through the transform matrix directly. Uniform scales leave normal
+     * directions unchanged, which is why the normal matrix is untouched.
+     */
+    public static void scale(PoseStack.Pose pose, float x, float y, float z) {
+        //? if >=26.1 {
+        pose.scale(x, y, z);
+        //?} else {
+        /*pose.pose().scale(x, y, z);
+        *///?}
+    }
+
+    /** Translates a pose in place. Same split as {@link #scale}; a translation never affects normals. */
+    public static void translate(PoseStack.Pose pose, float x, float y, float z) {
+        //? if >=26.1 {
+        pose.translate(x, y, z);
+        //?} else {
+        /*pose.pose().translate(x, y, z);
+        *///?}
+    }
 }

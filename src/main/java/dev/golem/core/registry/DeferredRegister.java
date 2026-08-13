@@ -37,7 +37,14 @@ public class DeferredRegister<T> {
      * Registries flushed first, in this order, before any others. Blocks must come before items so
      * that {@code BlockItem} factories can resolve their block during flush.
      */
-    private static final List<ResourceKey<? extends Registry<?>>> FLUSH_ORDER = List.of(Registries.BLOCK, Registries.ITEM);
+    private static final List<ResourceKey<? extends Registry<?>>> FLUSH_ORDER = List.of(
+            Registries.BLOCK,
+            //? if <26.1 {
+            /*// Pre-26.1 armour items take a Holder<ArmorMaterial> at construction, so the materials
+            // must already be registered by the time item factories run.
+            Registries.ARMOR_MATERIAL,
+            *///?}
+            Registries.ITEM);
 
     protected final ResourceKey<? extends Registry<T>> registryKey;
     protected final String namespace;

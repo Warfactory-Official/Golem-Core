@@ -61,6 +61,24 @@ public interface CompatBER<T extends BlockEntity, S extends CompatRenderState>
         return 64;
     }
 
+    //? if <26.1 {
+    /*// On 26.1 these come from the vanilla interface this extends. Below it there is no such
+    // interface, so they are declared here — otherwise every renderer that overrides one fails with
+    // "does not override or implement a method from a supertype". LegacyBERAdapter forwards vanilla's
+    // calls to them, including mapping the no-arg shouldRenderOffScreen onto vanilla's 1-arg form.
+    default int getViewDistance() {
+        return viewDistance();
+    }
+
+    default boolean shouldRenderOffScreen() {
+        return false;
+    }
+
+    default boolean shouldRender(T blockEntity, Vec3 cameraPosition) {
+        return Vec3.atCenterOf(blockEntity.getBlockPos()).closerThan(cameraPosition, getViewDistance());
+    }
+    *///?}
+
     //? if >=26.1 {
     /** Bridges vanilla's extract signature to {@link #extract}, after running the base extraction. */
     @Override

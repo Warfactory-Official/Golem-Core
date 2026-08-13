@@ -12,6 +12,13 @@ pluginManagement {
 plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
     id("dev.kikugie.stonecutter") version "0.9.7"
+    // Picks the right Fabric Loom variant per node. Loom split at the obfuscation boundary:
+    // `net.fabricmc.fabric-loom` builds the unobfuscated era (26.1+) and its officialMojangMappings()
+    // throws outright, while `net.fabricmc.fabric-loom-remap` carries the remapping pipeline for
+    // everything below. Both ship under the same version line, so this selects the plugin id rather
+    // than juggling two Loom versions on one buildscript classpath. Its default selector is exactly
+    // ours — obfuscated below 26 — so no explicit `loomx.obfuscated` is needed.
+    id("dev.kikugie.loom-back-compat") version "0.4.2"
 }
 
 stonecutter {
@@ -24,10 +31,7 @@ stonecutter {
         }
 
         match("26.1", "fabric", "neoforge")
-        // 1.21.1 fabric is deliberately absent for now: Loom 1.15.5 targets the unobfuscated era, and
-        // wiring the obfuscated path needs `dev.kikugie.loom-back-compat`. NeoForge alone is enough to
-        // prove the version-axis backports compile, which is what this node exists for.
-        match("1.21.1", "neoforge")
+        match("1.21.1", "fabric", "neoforge")
         // Phase 2: match("1.20.1", "fabric", "forge")
 
         vcsVersion = "26.1-neoforge"

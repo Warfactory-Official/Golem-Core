@@ -13,6 +13,13 @@ versions/*/runs/
 runs/
 run/
 
+### Logs
+# Game and launcher logs. `logs/` has no leading slash so it matches at any depth — the dev runs write
+# to versions/<node>/logs/, which the `runs/` rule above does not cover.
+logs/
+*.log
+*.log.gz
+
 ### IDE
 .idea/
 *.iml

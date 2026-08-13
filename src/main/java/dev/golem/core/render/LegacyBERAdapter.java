@@ -54,12 +54,38 @@ public final class LegacyBERAdapter<T extends BlockEntity, S extends CompatRende
 
     @Override
     public int getViewDistance() {
-        return delegate.viewDistance();
+        return delegate.getViewDistance();
     }
 
     @Override
     public boolean shouldRender(T blockEntity, Vec3 cameraPosition) {
-        return Vec3.atCenterOf(blockEntity.getBlockPos()).closerThan(cameraPosition, getViewDistance());
+        return delegate.shouldRender(blockEntity, cameraPosition);
     }
+
+    @Override
+    public boolean shouldRenderOffScreen(T blockEntity) {
+        // Vanilla passes the block entity here; 26.1's hook takes none, so the argument is dropped.
+        return delegate.shouldRenderOffScreen();
+    }
+
+    //? if neoforge {
+    /^*
+     * NeoForge culls each block-entity renderer against this box —
+     * {@code frustum.isVisible(renderer.getRenderBoundingBox(be))} in {@code ClientHooks} — and the
+     * default is the unit cube at the block's position. A machine whose model spans several blocks
+     * therefore vanishes as soon as its origin block leaves the frustum, which is what makes big
+     * machines pop out at the screen edges on NeoForge while Fabric (which has no such hook) is fine.
+     *
+     * <p>A renderer that declares {@code shouldRenderOffScreen()} has already said it draws outside its
+     * own block, so it gets {@code AABB.INFINITE} — NeoForge's documented "never cull me" value. Anything
+     * else keeps the default, so this cannot quietly disable culling for ordinary renderers.
+     ^/
+    @Override
+    public net.minecraft.world.phys.AABB getRenderBoundingBox(T blockEntity) {
+        return delegate.shouldRenderOffScreen()
+                ? net.minecraft.world.phys.AABB.INFINITE
+                : new net.minecraft.world.phys.AABB(blockEntity.getBlockPos());
+    }
+    //?}
 }
 *///?}

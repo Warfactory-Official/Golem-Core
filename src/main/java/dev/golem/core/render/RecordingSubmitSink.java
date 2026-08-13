@@ -19,8 +19,10 @@ import java.util.List;
  * submissions sharing an order keep their relative sequence — which is what an eager implementation
  * would have given, making order 0 alone behave exactly like immediate drawing.
  *
- * <p>The pose is snapshotted with {@link PoseStack#last()} at submit time, since callers routinely pop
- * the stack before the flush happens.
+ * <p>The pose is <b>copied</b> at submit time, not referenced. {@link PoseStack#last()} returns the live
+ * top {@code Pose} and the transform methods mutate it in place, so holding the reference would draw
+ * every entry with the stack's final state — and callers routinely keep transforming, and pop, before
+ * the flush happens.
  ^/
 public final class RecordingSubmitSink implements SubmitSink {
 
@@ -62,7 +64,12 @@ public final class RecordingSubmitSink implements SubmitSink {
 
     @Override
     public void submitCustomGeometry(PoseStack poseStack, RenderType renderType, CustomGeometry geometry) {
-        sink().add(new Entry(order, poseStack.last(), renderType, geometry));
+        // copy(), not last(). PoseStack.last() hands back the LIVE top Pose, and translate/mulPose/scale
+        // mutate it in place — so keeping the reference means every entry recorded at the same stack
+        // level is drawn with whatever that pose held when the batch was finally flushed, not with the
+        // transform it was submitted under. A renderer that accumulates joint transforms between
+        // submissions (the assembly machine's arms) therefore drew its parts on top of each other.
+        sink().add(new Entry(order, poseStack.last().copy(), renderType, geometry));
     }
 
     @Override

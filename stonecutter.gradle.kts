@@ -23,5 +23,8 @@ stonecutter parameters {
 
     // Version comparisons use the node's logical version (26.1, 1.21.1, ...), so `//? if >=1.21.11`
     // works regardless of the loader suffix in the node name.
+    // True only where the node declares JEI coordinates, so the integration compiles out elsewhere.
+    constants["jei"] = !(node.project.findProperty("deps.jei") as String?).isNullOrBlank()
+
     swaps["mc_version"] = "\"${node.metadata.version}\";"
 }
