@@ -27,4 +27,17 @@ stonecutter parameters {
     constants["jei"] = !(node.project.findProperty("deps.jei") as String?).isNullOrBlank()
 
     swaps["mc_version"] = "\"${node.metadata.version}\";"
+
+    // Mechanical renames, declared 26.1 -> older because 26.1 is this layer's source of truth. Keep
+    // this list minimal: a replacement must be injective in BOTH directions, so only names that
+    // cannot appear in the other era belong here. Anything needing real translation gets a facade.
+    replacements {
+        // Fabric API's own rename, not vanilla's. Qualified with the owning type so the rule can only
+        // ever hit these calls, and reversible: neither spelling exists in the other era. Without
+        // this, GolemNetwork would need two near-identical fabric branches differing by two tokens.
+        string(current.parsed < "26.1") {
+            replace("PayloadTypeRegistry.clientboundPlay()", "PayloadTypeRegistry.playS2C()")
+            replace("PayloadTypeRegistry.serverboundPlay()", "PayloadTypeRegistry.playC2S()")
+        }
+    }
 }

@@ -5,7 +5,11 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 
-//? if <26.1 {
+//? if >=26.1 {
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
+//?} else {
 /*import net.minecraft.client.gui.GuiGraphics;
 *///?}
 
@@ -53,6 +57,112 @@ public abstract class CompatContainerScreen<T extends AbstractContainerMenu> ext
         this.inventoryLabelY = imageHeight - 94;
         *///?}
     }
+
+    /** The 26.1 background hook, backported for subclasses. */
+    public void extractBackground(
+            //? if >=26.1 {
+            GuiGraphicsExtractor graphics,
+            //?} else {
+            /*GuiGraphics graphics,
+            *///?}
+            int mouseX, int mouseY, float partialTick) {}
+
+    /** The 26.1 label hook, backported for subclasses. */
+    protected void extractLabels(
+            //? if >=26.1 {
+            GuiGraphicsExtractor graphics,
+            //?} else {
+            /*GuiGraphics graphics,
+            *///?}
+            int mouseX, int mouseY) {}
+
+    /** The 26.1 tooltip hook, backported for subclasses. */
+    protected void extractTooltip(
+            //? if >=26.1 {
+            GuiGraphicsExtractor graphics,
+            //?} else {
+            /*GuiGraphics graphics,
+            *///?}
+            int mouseX, int mouseY) {}
+
+    /** Version-neutral click hook. */
+    protected boolean mouseClicked(MouseInput event, boolean doubleClick) { return false; }
+
+    /** Version-neutral release hook. */
+    protected boolean mouseReleased(MouseInput event) { return false; }
+
+    /** Version-neutral key hook. */
+    protected boolean keyPressed(KeyInput event) { return false; }
+
+    /** Version-neutral wheel hook. */
+    protected boolean mouseScrolledCompat(double mouseX, double mouseY, double scrollX, double scrollY) { return false; }
+
+    //? if >=26.1 {
+    @Override
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        return this.mouseClicked(new MouseInput(event), doubleClick) || super.mouseClicked(event, doubleClick);
+    }
+
+    @Override
+    public boolean mouseReleased(MouseButtonEvent event) {
+        return this.mouseReleased(new MouseInput(event)) || super.mouseReleased(event);
+    }
+
+    @Override
+    public boolean keyPressed(KeyEvent event) {
+        return this.keyPressed(new KeyInput(event)) || super.keyPressed(event);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        return this.mouseScrolledCompat(mouseX, mouseY, scrollX, scrollY) || super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+    }
+    //?} else {
+    /*@Override
+    protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
+        this.extractBackground(graphics, mouseX, mouseY, partialTick);
+    }
+
+    @Override
+    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
+        this.extractLabels(graphics, mouseX, mouseY);
+    }
+
+    @Override
+    protected void renderTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
+        super.renderTooltip(graphics, mouseX, mouseY);
+        this.extractTooltip(graphics, mouseX, mouseY);
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        return this.mouseClicked(new MouseInput(mouseX, mouseY, button), false) || super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        return this.mouseReleased(new MouseInput(mouseX, mouseY, button)) || super.mouseReleased(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        return this.keyPressed(new KeyInput(keyCode, scanCode, modifiers)) || super.keyPressed(keyCode, scanCode, modifiers);
+    }
+    *///?}
+
+    //? if >=1.21 && <26.1 {
+    /*@Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        return this.mouseScrolledCompat(mouseX, mouseY, scrollX, scrollY)
+                || super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+    }
+    *///?} elif <1.21 {
+    /*@Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollDelta) {
+        return this.mouseScrolledCompat(mouseX, mouseY, 0.0D, scrollDelta)
+                || super.mouseScrolled(mouseX, mouseY, scrollDelta);
+    }
+    *///?}
 
     //? if <26.1 {
     /*@Override

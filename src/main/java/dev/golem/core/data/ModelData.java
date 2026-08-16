@@ -1,12 +1,15 @@
 package dev.golem.core.data;
 
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.ItemStack;
+
+//? if >=1.20.5 {
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.component.CustomModelData;
 
 import java.util.List;
+//?}
 
-//? if <26.1 {
+//? if >=1.20.5 && <26.1 {
 /*import net.minecraft.world.item.component.DyedItemColor;
 *///?}
 
@@ -29,13 +32,30 @@ public final class ModelData {
 
     private ModelData() {}
 
+    // 1.20.1 has no data components. Keep the colour separate so CustomModelData remains the resource
+    // pack predicate used by the molten-scrap flag.
+    private static final String LEGACY_COLOR = "GolemCoreModelColor";
+
     /** Tags a stack with a tint colour used by its model. */
     public static void setColor(ItemStack stack, int color) {
         //? if >=26.1 {
         stack.set(DataComponents.CUSTOM_MODEL_DATA,
                 new CustomModelData(List.of(), List.of(), List.of(), List.of(color)));
-        //?} else {
+        //?} elif >=1.20.5 {
         /*stack.set(DataComponents.DYED_COLOR, new DyedItemColor(color, false));
+        *///?} else {
+        /*stack.getOrCreateTag().putInt(LEGACY_COLOR, color);
+        *///?}
+    }
+
+    /** Removes the tint and model data created by {@link #setColor}. */
+    public static void removeColor(ItemStack stack) {
+        //? if >=26.1 {
+        stack.remove(DataComponents.CUSTOM_MODEL_DATA);
+        //?} elif >=1.20.5 {
+        /*stack.remove(DataComponents.DYED_COLOR);
+        *///?} else {
+        /*if (stack.hasTag()) stack.getTag().remove(LEGACY_COLOR);
         *///?}
     }
 
@@ -44,22 +64,28 @@ public final class ModelData {
         //? if >=26.1 {
         stack.set(DataComponents.CUSTOM_MODEL_DATA,
                 new CustomModelData(List.of(), List.of(flag), List.of(), List.of(color)));
-        //?} else {
+        //?} elif >=1.20.5 {
         /*// The flag keeps the integer index, which the model's overrides predicate selects on; the
         // colour goes to its own component so neither has to give way to the other.
         stack.set(DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(flag ? 1 : 0));
         stack.set(DataComponents.DYED_COLOR, new DyedItemColor(color, false));
+        *///?} else {
+        /*stack.getOrCreateTag().putInt("CustomModelData", flag ? 1 : 0);
+        stack.getOrCreateTag().putInt(LEGACY_COLOR, color);
         *///?}
     }
 
     /** Reads back the boolean flag set by {@link #setColorAndFlag}. */
     public static boolean flag(ItemStack stack) {
+        //? if >=26.1 {
         CustomModelData data = stack.get(DataComponents.CUSTOM_MODEL_DATA);
         if (data == null) return false;
-        //? if >=26.1 {
         return !data.flags().isEmpty() && Boolean.TRUE.equals(data.flags().get(0));
-        //?} else {
-        /*return data.value() == 1;
+        //?} elif >=1.20.5 {
+        /*CustomModelData data = stack.get(DataComponents.CUSTOM_MODEL_DATA);
+        return data != null && data.value() == 1;
+        *///?} else {
+        /*return stack.hasTag() && stack.getTag().getInt("CustomModelData") == 1;
         *///?}
     }
 
@@ -71,9 +97,12 @@ public final class ModelData {
         //? if >=26.1 {
         CustomModelData data = stack.get(DataComponents.CUSTOM_MODEL_DATA);
         return data == null || data.colors().isEmpty() ? defaultColor : data.colors().get(0);
-        //?} else {
+        //?} elif >=1.20.5 {
         /*DyedItemColor dyed = stack.get(DataComponents.DYED_COLOR);
         return dyed == null ? defaultColor : dyed.rgb();
+        *///?} else {
+        /*return stack.hasTag() && stack.getTag().contains(LEGACY_COLOR, 3)
+                ? stack.getTag().getInt(LEGACY_COLOR) : defaultColor;
         *///?}
     }
 }

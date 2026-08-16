@@ -1,20 +1,23 @@
 package dev.golem.core.gui;
 
-//? if <26.1 {
-/*/^*
- * Stands in for 26.1's {@code MouseButtonEvent} on versions that pass loose coordinates instead.
- *
- * <p>26.1 bundled a click's position and button into one record; older versions pass
- * {@code (double mouseX, double mouseY, int button)}. Screens can keep 26.1's spelling —
- * {@code event.x()}, {@code event.y()}, {@code event.button()} — because the older branch of each
- * guarded override builds one of these from its loose arguments. The accessor names deliberately match
- * vanilla's so screen bodies need no version guards of their own.
- ^/
-public record MouseInput(double x, double y, int button) {
+//? if >=26.1 {
+import net.minecraft.client.input.MouseButtonEvent;
+//?}
 
-    /^* Whether shift was held, matching the vanilla event's convenience accessor. ^/
+/** A version-neutral mouse button event for {@link CompatContainerScreen} hooks. */
+public record MouseInput(double x, double y, int button, boolean shiftDown) {
+
+    //? if >=26.1 {
+    public MouseInput(MouseButtonEvent event) {
+        this(event.x(), event.y(), event.button(), event.hasShiftDown());
+    }
+    //?} else {
+    /*public MouseInput(double x, double y, int button) {
+        this(x, y, button, net.minecraft.client.gui.screens.Screen.hasShiftDown());
+    }
+    *///?}
+
     public boolean hasShiftDown() {
-        return net.minecraft.client.gui.screens.Screen.hasShiftDown();
+        return this.shiftDown;
     }
 }
-*///?}

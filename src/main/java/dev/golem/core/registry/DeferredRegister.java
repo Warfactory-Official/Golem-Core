@@ -39,7 +39,7 @@ public class DeferredRegister<T> {
      */
     private static final List<ResourceKey<? extends Registry<?>>> FLUSH_ORDER = List.of(
             Registries.BLOCK,
-            //? if <26.1 {
+            //? if >=1.20.5 && <26.1 {
             /*// Pre-26.1 armour items take a Holder<ArmorMaterial> at construction, so the materials
             // must already be registered by the time item factories run.
             Registries.ARMOR_MATERIAL,
@@ -140,7 +140,7 @@ public class DeferredRegister<T> {
         }
 
         public RegistryObject<Item> registerSimpleItem(String name, UnaryOperator<Item.Properties> properties) {
-            return registerItem(name, Item::new, properties);
+            return registerItem(name, dev.golem.core.world.CompatItem::new, properties);
         }
 
         public RegistryObject<Item> registerSimpleItem(String name) {
@@ -153,10 +153,10 @@ public class DeferredRegister<T> {
             // ids explicit and needs useBlockDescriptionPrefix(), whereas pre-26.1 BlockItem already
             // overrides getDescriptionId() to defer to its block, so no opt-in exists or is needed.
             //? if >=26.1 {
-            return registerItem(name, props -> new BlockItem(block.get(), props),
+            return registerItem(name, props -> new dev.golem.core.world.CompatBlockItem(block.get(), props),
                     p -> properties.apply(p).useBlockDescriptionPrefix());
             //?} else {
-            /*return registerItem(name, props -> new BlockItem(block.get(), props), properties);
+            /*return registerItem(name, props -> new dev.golem.core.world.CompatBlockItem(block.get(), props), properties);
             *///?}
         }
 

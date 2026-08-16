@@ -1,11 +1,13 @@
 package dev.golem.core.client;
 
+import dev.golem.core.GolemCore;
+
 //? if <26.1 {
 /*import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import dev.golem.core.GolemCore;
+import dev.golem.core.Ids;
 import dev.golem.core.data.ModelData;
 import net.minecraft.client.color.item.ItemColor;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -102,7 +104,7 @@ public final class Tints {
                 .registerReloadListener(new net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener() {
                     @Override
                     public ResourceLocation getFabricId() {
-                        return ResourceLocation.fromNamespaceAndPath(GolemCore.MOD_ID, "item_tints");
+                        return Ids.of(GolemCore.MOD_ID, "item_tints");
                     }
 
                     @Override
@@ -127,7 +129,19 @@ public final class Tints {
                 (net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent event) ->
                         event.registerReloadListener(
                                 (net.minecraft.server.packs.resources.ResourceManagerReloadListener) Tints::reload));
-        //?}
+        //?} elif forge {
+        /^dev.golem.core.platform.ForgeEntrypoint.modBus().addListener(
+                (net.minecraftforge.client.event.RegisterColorHandlersEvent.Item event) -> {
+                    List<Item> items = itemsIn(namespace);
+                    if (!items.isEmpty()) event.register(color, items.toArray(new Item[0]));
+                    report(namespace, items.size());
+                });
+
+        dev.golem.core.platform.ForgeEntrypoint.modBus().addListener(
+                (net.minecraftforge.client.event.RegisterClientReloadListenersEvent event) ->
+                        event.registerReloadListener(
+                                (net.minecraft.server.packs.resources.ResourceManagerReloadListener) Tints::reload));
+        ^///?}
         *///?}
     }
 
@@ -167,6 +181,7 @@ public final class Tints {
             //?} else {
             /*colors.register((state, level, pos, tintIndex) -> tint.color(state), resolved);
             *///?}
+            GolemCore.LOG.info("Block tint installed for {} block(s)", resolved.length);
         });
     }
 
@@ -185,7 +200,10 @@ public final class Tints {
         *///?} elif neoforge {
         dev.golem.core.platform.NeoForgeEntrypoint.modBus().addListener(
                 (net.neoforged.fml.event.lifecycle.FMLClientSetupEvent event) -> event.enqueueWork(action));
-        //?}
+        //?} elif forge {
+        /*dev.golem.core.platform.ForgeEntrypoint.modBus().addListener(
+                (net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent event) -> event.enqueueWork(action));
+        *///?}
     }
 
     //? if <26.1 {
@@ -200,7 +218,7 @@ public final class Tints {
                 if (parsed.isEmpty()) continue;
                 String path = file.getPath();
                 String name = path.substring("items/".length(), path.length() - ".json".length());
-                built.put(ResourceLocation.fromNamespaceAndPath(file.getNamespace(), name), parsed);
+                built.put(Ids.of(file.getNamespace(), name), parsed);
             } catch (Exception e) {
                 // A malformed definition costs that item its tint, not the whole reload.
                 GolemCore.LOG.warn("Skipping tints for {}: {}", file, e.toString());

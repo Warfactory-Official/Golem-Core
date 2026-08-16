@@ -1,5 +1,6 @@
 package dev.golem.core.render;
 
+import dev.golem.core.Ids;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -47,22 +48,22 @@ public final class SpikeRenderer implements CompatBER<BlockEntity, SpikeRenderer
         poseStack.pushPose();
         poseStack.mulPose(Axis.YP.rotationDegrees(-state.yaw));
         sink.submitCustomGeometry(poseStack, layer, (pose, buffer) ->
-                buffer.addVertex(pose, 0F, 0F, 0F)
-                        .setColor(-1)
-                        .setUv(0F, 0F)
-                        .setLight(state.lightCoords)
-                        .setNormal(pose, 0F, 1F, 0F));
+                //? if >=1.21 {
+                buffer.addVertex(pose, 0F, 0F, 0F).setColor(-1).setUv(0F, 0F).setLight(state.lightCoords).setNormal(pose, 0F, 1F, 0F));
+                //?} else {
+                /*buffer.vertex(pose.pose(), 0F, 0F, 0F).color(-1).uv(0F, 0F).uv2(state.lightCoords).normal(pose.normal(), 0F, 1F, 0F).endVertex());
+                *///?}
         poseStack.popPose();
 
         // A later-ordered, camera-facing submission — the pattern HBM uses for translucent effects
         // layered over the base model.
         sink.order(1).submitCustomGeometry(poseStack, layer, (pose, buffer) -> {
             Poses.rotate(pose, Axis.YP.rotationDegrees(-camera.yRot));
-            buffer.addVertex(pose, 0F, 1F, 0F)
-                    .setColor(-1)
-                    .setUv(1F, 1F)
-                    .setLight(state.lightCoords)
-                    .setNormal(pose, 0F, 1F, 0F);
+            //? if >=1.21 {
+            buffer.addVertex(pose, 0F, 1F, 0F).setColor(-1).setUv(1F, 1F).setLight(state.lightCoords).setNormal(pose, 0F, 1F, 0F);
+            //?} else {
+            /*buffer.vertex(pose.pose(), 0F, 1F, 0F).color(-1).uv(1F, 1F).uv2(state.lightCoords).normal(pose.normal(), 0F, 1F, 0F).endVertex();
+            *///?}
         });
     }
 
@@ -90,9 +91,11 @@ public final class SpikeRenderer implements CompatBER<BlockEntity, SpikeRenderer
             *///?}
             id(String namespace, String path) {
         //? if >=26.1 {
-        return Identifier.fromNamespaceAndPath(namespace, path);
-        //?} else {
-        /*return ResourceLocation.fromNamespaceAndPath(namespace, path);
+        return Ids.of(namespace, path);
+        //?} elif >=1.21 {
+        /*return Ids.of(namespace, path);
+        *///?} else {
+        /*return Ids.of(namespace, path);
         *///?}
     }
 }

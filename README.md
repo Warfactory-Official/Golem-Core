@@ -1,1 +1,73 @@
 # Golem-Core
+
+## Networking
+
+Consumers define a payload and its encoding once. The same `GolemCodec` is used by Fabric's raw
+1.20.1 buffer transport and by modern Fabric's `CustomPacketPayload`/`StreamCodec` transport.
+
+```java
+public record SetModePayload(BlockPos pos, int mode) implements GolemPayload {
+    // Use Identifier on 26.1; use ResourceLocation on 1.20.1/1.21.1.
+    public static final ResourceLocation ID = Ids.of("example", "set_mode");
+    public static final GolemCodec<SetModePayload> CODEC = GolemCodec.of(SetModePayload.class, ID,
+            (payload, buffer) -> { buffer.writeBlockPos(payload.pos); buffer.writeVarInt(payload.mode); },
+            buffer -> new SetModePayload(buffer.readBlockPos(), buffer.readVarInt()));
+
+    @Override public ResourceLocation id() { return ID; }
+}
+```
+
+Register each direction once in the consumer's normal common initializer, before a connection is
+opened:
+
+```java
+GolemNetwork.registerPlayToClient(SetModePayload.CODEC, ClientPackets::handleSetMode);
+GolemNetwork.registerPlayToServer(SetModePayload.CODEC, ServerPackets::handleSetMode);
+```
+
+Send on every target with the same calls:
+
+```java
+GolemNetwork.sendToPlayer(player, SetModePayload.CODEC, payload);
+GolemNetwork.sendToTracking(level, pos, SetModePayload.CODEC, payload);
+GolemNetwork.sendToServer(SetModePayload.CODEC, payload);
+```
+
+Handlers run on the logical main thread. Decode input defensively: packet fields are network input.
+The 1.20.1 Forge `SimpleChannel` backend needs the concrete message class; `GolemCodec` retains it
+so the consumer registration call remains identical. NeoForge registration remains event-timed and
+must be bridged from `RegisterPayloadHandlersEvent`; it is not part of the 1.20.1 Forge backend.
+
+## Entity and Recipe Compatibility
+
+`CompatEntity` owns the vanilla synchronized-data override. Consumers define values once with
+`defineData(SynchedData)`, while `loadData(DataIn)` and `saveData(DataOut)` remain the persistence hooks.
+
+```java
+private static final EntityDataAccessor<Boolean> ARMED =
+        SynchedEntityData.defineId(MyEntity.class, EntityDataSerializers.BOOLEAN);
+
+@Override
+protected void defineData(SynchedData data) {
+    data.define(ARMED, false);
+}
+```
+
+Do not override `defineSynchedData`; its vanilla signature differs by Minecraft version. Continue using
+`getEntityData().get(ARMED)` and `getEntityData().set(ARMED, value)` after definition.
+
+Use `Recipes.smeltingResult(level, input)` for furnace lookup. It returns
+`Optional<ItemStack>` and hides `RecipeHolder`, `SingleRecipeInput`, and cached-recipe implementation
+types. The returned stack is a copy and may be modified by the caller.
+
+## Consumer Boundary
+
+Consumer feature code should not override Minecraft methods whose signatures vary by target. Use the
+Core hooks instead: `CompatContainerScreen`/`CompatScreen` for GUI rendering and input, `CompatBlock`
+and `CompatFireBlock` for block callbacks, `CompatItem` for tooltips/use/ticks, and
+`CompatEnchantments` for loot and synthetic tools. Version guards belong in these Core backends.
+
+Declare payload codecs and handlers once with `GolemNetwork`; loader entrypoints only flush retained
+registrations at their lifecycle hook. Declare GameTests once in a `GameTests.Suite`; Forge and NeoForge
+entrypoints only forward their registration event. Loader adapters may translate event-bus timing, but
+must not duplicate the consumer's screen, renderer, HUD, packet, or test inventories.

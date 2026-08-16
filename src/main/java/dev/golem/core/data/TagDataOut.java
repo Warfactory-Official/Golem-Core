@@ -132,7 +132,7 @@ public final class TagDataOut implements DataOut {
     }
 
     private com.mojang.serialization.DynamicOps<Tag> ops() {
-        return registries != null ? registries.createSerializationContext(NbtOps.INSTANCE) : NbtOps.INSTANCE;
+        return registries != null ? RegistryOps.create(NbtOps.INSTANCE, registries) : NbtOps.INSTANCE;
     }
 }
 *///?}

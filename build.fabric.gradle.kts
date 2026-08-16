@@ -75,6 +75,10 @@ tasks.processResources {
         "fabric_loader" to prop("deps.fabric_loader"),
         "java_version" to javaVersion.toString(),
         "pack_format" to prop("pack_format"),
+        "pack_format_entry" to if (mcVersion.substringBefore('.').toInt() >= 26)
+            "\"min_format\": ${prop("pack_format")}, \"max_format\": ${prop("pack_format")}" 
+        else
+            "\"pack_format\": ${prop("pack_format")}",
     )
     inputs.properties(props)
     filesMatching(listOf("fabric.mod.json", "pack.mcmeta")) { expand(props) }

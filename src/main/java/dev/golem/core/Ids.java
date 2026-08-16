@@ -46,6 +46,34 @@ public final class Ids {
         *///?}
     }
 
+    /** Parses a complete namespaced id using the native parser for the target version. */
+    public static
+            //? if >=26.1 {
+            Identifier
+            //?} else {
+            /*ResourceLocation
+            *///?}
+            parse(String id) {
+        //? if >=26.1 {
+        return Identifier.parse(id);
+        //?} elif >=1.21 {
+        /*return ResourceLocation.parse(id);
+        *///?} else {
+        /*return new ResourceLocation(id);
+        *///?}
+    }
+
+    /** Creates an id in Minecraft's namespace. */
+    public static
+            //? if >=26.1 {
+            Identifier
+            //?} else {
+            /*ResourceLocation
+            *///?}
+            minecraft(String path) {
+        return of("minecraft", path);
+    }
+
     /** The id a {@link ResourceKey} points at. Spelled {@code identifier()} on 26.1, {@code location()} below. */
     public static
             //? if >=26.1 {

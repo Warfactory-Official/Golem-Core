@@ -111,7 +111,7 @@ public final class CompatRenderTypes {
         //? if >=26.1 {
         return RenderTypes.dragonRays();
         //?} else {
-        /*return RenderType.dragonRays();
+        /*return RenderType.lightning();
         *///?}
     }
 }

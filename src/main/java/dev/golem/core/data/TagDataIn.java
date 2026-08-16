@@ -7,6 +7,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
+import net.minecraft.resources.RegistryOps;
 import org.jspecify.annotations.Nullable;
 
 import dev.golem.core.GolemCore;
@@ -133,7 +134,7 @@ public final class TagDataIn implements DataIn {
     }
 
     private com.mojang.serialization.DynamicOps<Tag> ops() {
-        return registries != null ? registries.createSerializationContext(NbtOps.INSTANCE) : NbtOps.INSTANCE;
+        return registries != null ? RegistryOps.create(NbtOps.INSTANCE, registries) : NbtOps.INSTANCE;
     }
 }
 *///?}

@@ -1,6 +1,7 @@
 package dev.golem.core.data;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
@@ -36,6 +37,54 @@ public abstract class CompatBlockEntity extends BlockEntity {
         super(type, pos, state);
     }
 
+    //? if forge {
+    /*/^*
+     * Forge's per-block-entity render culling box.
+     *
+     * <p>Forge culls each block entity against this AABB, and its default is the block's **collision
+     * shape** — effectively one block for a machine. A model that spans several blocks therefore pops
+     * out of view the moment its origin block leaves the frustum, which is the "culls too aggressively
+     * at the screen edges" symptom.
+     *
+     * <p>NeoForge has the same hook but hangs it off the *renderer*, so there it is handled centrally in
+     * {@code LegacyBERAdapter#getRenderBoundingBox}. Forge 1.20.1 puts it on the block entity instead,
+     * so the same decision has to be made from here — asking the registered renderer the same question,
+     * so both loaders apply one rule: a renderer that declares {@code shouldRenderOffScreen()} has
+     * already said it draws outside its own block and is never culled; everything else keeps the
+     * one-block box and culls normally. Fabric has no such hook and was never affected.
+     ^/
+    @Override
+    public net.minecraft.world.phys.AABB getRenderBoundingBox() {
+        return dev.golem.core.render.ClientRenderBounds.rendersOffScreen(this)
+                ? net.minecraftforge.common.extensions.IForgeBlockEntity.INFINITE_EXTENT_AABB
+                : new net.minecraft.world.phys.AABB(getBlockPos());
+    }
+    *///?}
+
+    /**
+     * Whether the chunk-load sync tag should carry every persisted field.
+     *
+     * <p>Opt-in rather than default-on: vanilla's update tag holds only identity, and syncing a whole
+     * block entity's NBT to every client on chunk load is a real bandwidth decision, not a formatting
+     * one. Machines that drive their GUI from persisted fields turn it on; everything else keeps
+     * vanilla's behaviour unchanged.
+     */
+    protected boolean syncFullTagOnChunkLoad() {
+        return false;
+    }
+
+    //? if >=1.21.1 {
+    @Override
+    public net.minecraft.nbt.CompoundTag getUpdateTag(net.minecraft.core.HolderLookup.Provider registries) {
+        return syncFullTagOnChunkLoad() ? saveCustomOnly(registries) : super.getUpdateTag(registries);
+    }
+    //?} else {
+    /*@Override
+    public net.minecraft.nbt.CompoundTag getUpdateTag() {
+        return syncFullTagOnChunkLoad() ? saveWithoutMetadata() : super.getUpdateTag();
+    }
+    *///?}
+
     /** Reads this block entity's persisted state. */
     protected void loadData(DataIn in) {}
 
@@ -48,6 +97,26 @@ public abstract class CompatBlockEntity extends BlockEntity {
      * {@code removeComponentsFromTag}, which affects only the save-to-item path, not the world save.
      */
     protected void removeSavedComponents(DataOut out) {}
+
+    /**
+     * Writes this block entity into an item stack across the save-to-item signature change.
+     * Call this from drop handling instead of vanilla's version-specific method.
+     */
+    //? if >=26.1 {
+    public final void saveToItemCompat(ItemStack stack) {
+        stack.applyComponents(collectComponents());
+    }
+    //?}
+    //? if >=1.21.1 && <26.1 {
+    /*public final void saveToItemCompat(ItemStack stack) {
+        saveToItem(stack, level.registryAccess());
+    }
+    *///?}
+    //? if <1.21.1 {
+    /*public final void saveToItemCompat(ItemStack stack) {
+        saveToItem(stack);
+    }
+    *///?}
 
     //? if >=26.1 {
     @Override
@@ -67,7 +136,7 @@ public abstract class CompatBlockEntity extends BlockEntity {
         super.removeComponentsFromTag(output);
         removeSavedComponents(new ValueDataOut(output));
     }
-    //?} else {
+    //?} elif >=1.20.5 {
     /*@Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
@@ -79,7 +148,22 @@ public abstract class CompatBlockEntity extends BlockEntity {
         super.saveAdditional(tag, registries);
         saveData(new TagDataOut(tag, registries));
     }
+    *///?} else {
+    /*@Override
+    public void load(CompoundTag tag) {
+        super.load(tag);
+        loadData(new TagDataIn(tag, null));
+    }
 
+    @Override
+    protected void saveAdditional(CompoundTag tag) {
+        super.saveAdditional(tag);
+        saveData(new TagDataOut(tag, null));
+    }
+    *///?}
+
+    //? if <26.1 {
+    /*
     /^*
      * Side effects of this block entity being removed — dropping an inventory, most of the time.
      *

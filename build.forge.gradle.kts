@@ -1,0 +1,97 @@
+plugins {
+    id("java-library")
+    id("maven-publish")
+    id("net.neoforged.moddev.legacyforge") version "2.0.141"
+}
+
+fun prop(name: String): String = property(name) as String
+
+val mcVersion = stonecutter.current.version
+val javaVersion = prop("java_version").toInt()
+
+group = prop("mod.group")
+version = "${prop("mod.version")}+$mcVersion"
+base.archivesName = "${prop("mod.id")}-forge-$mcVersion"
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(javaVersion)
+    withSourcesJar()
+}
+
+legacyForge {
+    version = prop("deps.forge")
+    addModdingDependenciesTo(sourceSets["test"])
+    runs {
+        configureEach {
+            ideName = "Forge ${name.replaceFirstChar { it.uppercase() }} ($mcVersion)"
+        }
+        register("client") {
+            client()
+            gameDirectory = file("runs/client")
+        }
+        register("server") {
+            server()
+            gameDirectory = file("runs/server")
+        }
+    }
+    mods {
+        register(prop("mod.id")) { sourceSet(sourceSets["main"]) }
+    }
+}
+
+repositories {
+    mavenCentral()
+    maven("https://maven.blamejared.com") { name = "BlameJared" }
+}
+
+tasks.processResources {
+    val props = mapOf(
+        "mod_id" to prop("mod.id"),
+        "mod_name" to prop("mod.name"),
+        "mod_version" to prop("mod.version"),
+        "mod_author" to prop("mod.author"),
+        "mod_license" to prop("mod.license"),
+        "mod_description" to prop("mod.description"),
+        "minecraft_range" to prop("deps.minecraft_range"),
+        "forge_loader_range" to prop("deps.forge_loader_range"),
+        "java_version" to javaVersion.toString(),
+        "pack_format" to prop("pack_format"),
+        "pack_format_entry" to "\"pack_format\": ${prop("pack_format")}",
+    )
+    inputs.properties(props)
+    filesMatching(listOf("META-INF/mods.toml", "pack.mcmeta")) { expand(props) }
+    exclude("fabric.mod.json", "META-INF/neoforge.mods.toml")
+}
+
+tasks.compileJava {
+    dependsOn(tasks.named("stonecutterGenerate"))
+    options.release = javaVersion
+}
+tasks.processResources { dependsOn(tasks.named("stonecutterGenerate")) }
+
+dependencies {
+    compileOnly("org.jspecify:jspecify:1.0.0")
+    // JEI, compile-only and per-node optional — same contract as the other loaders' buildscripts.
+    // The facade in dev.golem.core.jei hides the 15.x/19.x/29.x API split from consumers, so this
+    // library has to see whichever line the node targets; a node that declares no coordinates
+    // compiles the facade out entirely (the `jei` constant).
+    val jeiMc = (findProperty("deps.jei_mc") as String?)?.takeIf { it.isNotBlank() }
+    val jeiVer = (findProperty("deps.jei") as String?)?.takeIf { it.isNotBlank() }
+    if (jeiMc != null && jeiVer != null) compileOnly("mezz.jei:jei-$jeiMc-common-api:$jeiVer")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+tasks.test {
+    useJUnitPlatform()
+    dependsOn(tasks.named("stonecutterGenerateTest"))
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("mavenJava") {
+            artifactId = base.archivesName.get()
+            from(components["java"])
+        }
+    }
+}

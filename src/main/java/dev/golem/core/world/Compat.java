@@ -146,6 +146,82 @@ public final class Compat {
     }
 
     /**
+     * Every item tag currently registered, as tag keys.
+     *
+     * <p>26.1's {@code getTags()} streams the {@code HolderSet.Named} itself (with {@code key()});
+     * older versions stream a {@code Pair} of key and set. Callers that only want the keys — matching
+     * tag paths against a naming convention, say — should not have to know which.
+     */
+    public static java.util.List<net.minecraft.tags.TagKey<Item>> itemTagKeys() {
+        java.util.List<net.minecraft.tags.TagKey<Item>> keys = new java.util.ArrayList<>();
+        //? if >=26.1 {
+        net.minecraft.core.registries.BuiltInRegistries.ITEM.getTags().forEach(named -> keys.add(named.key()));
+        //?} else {
+        /*net.minecraft.core.registries.BuiltInRegistries.ITEM.getTags().forEach(pair -> keys.add(pair.getFirst()));
+        *///?}
+        return keys;
+    }
+
+    /**
+     * Raytraces against blocks. Wraps the whole call rather than just the trailing argument because the
+     * argument's <em>type</em> changed, not only its value: 26.1's {@code ClipContext} takes a
+     * {@code CollisionContext}, older versions take a nullable {@code Entity}. A helper returning "the
+     * right context" therefore cannot exist — only a helper that performs the clip.
+     */
+    public static net.minecraft.world.phys.BlockHitResult clip(Level level,
+            net.minecraft.world.phys.Vec3 from, net.minecraft.world.phys.Vec3 to,
+            net.minecraft.world.level.ClipContext.Block block,
+            net.minecraft.world.level.ClipContext.Fluid fluid) {
+        return level.clip(new net.minecraft.world.level.ClipContext(from, to, block, fluid,
+                //? if >=1.20.5 {
+                net.minecraft.world.phys.shapes.CollisionContext.empty()
+                //?} else {
+                /*(net.minecraft.world.entity.Entity) null
+                *///?}
+        ));
+    }
+
+    /**
+     * The leftover stack for a fuel or crafting input — an empty bucket for lava, and so on.
+     *
+     * <p>26.1 models the remainder as an item instance that must be instantiated; older versions hand
+     * back the {@code Item} itself. Returns {@link ItemStack#EMPTY} when there is no remainder.
+     */
+    public static ItemStack craftingRemainder(ItemStack stack) {
+        // The accessor itself was renamed (getCraftingRemainder / getCraftingRemainingItem), so the
+        // whole call sits inside the guard. Deliberately not leaning on a Stonecutter replacement:
+        // those live in the consuming project's config, and this library has to compile on its own.
+        //? if >=26.1 {
+        var remainder = stack.getItem().getCraftingRemainder();
+        return remainder != null ? remainder.create() : ItemStack.EMPTY;
+        //?} else {
+        /*var remainder = stack.getItem().getCraftingRemainingItem();
+        return remainder != null ? new ItemStack(remainder) : ItemStack.EMPTY;
+        *///?}
+    }
+
+    /** Counts non-empty stacks stored in an item's container component or legacy block-entity tag. */
+    public static int containerItemCount(ItemStack stack, int slots) {
+        //? if >=1.20.5 {
+        net.minecraft.world.item.component.ItemContainerContents contents =
+                stack.get(net.minecraft.core.component.DataComponents.CONTAINER);
+        //? if >=26.1 {
+        return contents == null ? 0 : (int) contents.nonEmptyItemCopyStream().count();
+        //?} else {
+        /*return contents == null ? 0 : (int) contents.nonEmptyStream().count();
+        *///?}
+        //?} else {
+        /*net.minecraft.nbt.CompoundTag tag = stack.getTag();
+        if (tag == null || !tag.contains("BlockEntityTag", net.minecraft.nbt.Tag.TAG_COMPOUND)) return 0;
+        net.minecraft.core.NonNullList<ItemStack> items = net.minecraft.core.NonNullList.withSize(slots, ItemStack.EMPTY);
+        net.minecraft.world.ContainerHelper.loadAllItems(tag.getCompound("BlockEntityTag"), items);
+        int used = 0;
+        for (ItemStack item : items) if (!item.isEmpty()) used++;
+        return used;
+        *///?}
+    }
+
+    /**
      * Runs a block entity's removal side effects — dropping its inventory, normally.
      *
      * <p>26.1 calls {@code BlockEntity.preRemoveSideEffects} itself whenever a block entity is removed,

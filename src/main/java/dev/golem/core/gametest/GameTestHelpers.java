@@ -2,6 +2,8 @@ package dev.golem.core.gametest;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
 //? if <26.1 {
@@ -35,6 +37,15 @@ public final class GameTestHelpers {
                     + " but found " + (be == null ? "nothing" : be.getClass().getSimpleName()));
         }
         return type.cast(be);
+        *///?}
+    }
+
+    /** Creates the test player despite the GameTest helper's era-specific overload. */
+    public static Player mockPlayer(GameTestHelper helper, GameType gameType) {
+        //? if >=1.21 {
+        return helper.makeMockPlayer(gameType);
+        //?} else {
+        /*return helper.makeMockPlayer();
         *///?}
     }
 }

@@ -4,6 +4,10 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
 
+//? if >=1.21.1 {
+import net.minecraft.network.syncher.SynchedEntityData;
+//?}
+
 //? if >=26.1 {
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
@@ -22,6 +26,8 @@ import net.minecraft.world.level.storage.ValueOutput;
  *
  * <p>As with block entities, subclasses override {@link #loadData}/{@link #saveData} and never see the
  * version difference.
+ * Subclasses define synchronized data once through {@link #defineData(SynchedData)}; this class bridges
+ * vanilla's no-argument and builder-based definition hooks.
  */
 public abstract class CompatEntity extends Entity {
 
@@ -34,6 +40,21 @@ public abstract class CompatEntity extends Entity {
 
     /** Writes this entity's persisted state. */
     protected void saveData(DataOut out) {}
+
+    /** Defines synchronized entity data. Called during entity construction. */
+    protected void defineData(SynchedData data) {}
+
+    //? if >=1.21.1 {
+    @Override
+    protected final void defineSynchedData(SynchedEntityData.Builder builder) {
+        defineData(builder::define);
+    }
+    //?} else {
+    /*@Override
+    protected final void defineSynchedData() {
+        defineData(entityData::define);
+    }
+    *///?}
 
     //? if >=26.1 {
     @Override
@@ -54,6 +75,60 @@ public abstract class CompatEntity extends Entity {
     @Override
     protected void addAdditionalSaveData(CompoundTag tag) {
         saveData(new TagDataOut(tag, level().registryAccess()));
+    }
+    *///?}
+
+    /**
+     * Handles damage. Override instead of vanilla's hook, whose name and parameters differ by version:
+     * 26.1 splits the server-authoritative path into {@code hurtServer(ServerLevel, …)}, older versions
+     * have only {@code hurt(DamageSource, float)}. Return false to ignore the damage entirely.
+     *
+     * <p>{@link Compat#hurt} is the matching call side; this is the override side, which was missing.
+     */
+    protected boolean onHurt(net.minecraft.world.damagesource.DamageSource source, float amount) {
+        // Not delegated to super: 26.1 makes Entity.hurtServer ABSTRACT, so there is no inherited
+        // behaviour to fall back on and every entity has to state its own answer. Rather than give the
+        // two eras different defaults — vanilla's damage handling below 26.1, a compile error above —
+        // this models 26.1's contract on every version: unhandled means "takes no damage", which is
+        // also what every consumer of this class already does.
+        return false;
+    }
+
+    //? if >=26.1 {
+    @Override
+    public final boolean hurtServer(net.minecraft.server.level.ServerLevel level,
+                                    net.minecraft.world.damagesource.DamageSource source, float amount) {
+        return onHurt(source, amount);
+    }
+    //?} else {
+    /*@Override
+    public final boolean hurt(net.minecraft.world.damagesource.DamageSource source, float amount) {
+        return onHurt(source, amount);
+    }
+    *///?}
+
+    /**
+     * Handles a player right-clicking this entity. 26.1 passes the hit position; older versions do not.
+     * The position is dropped rather than synthesised — no consumer has needed it, and inventing one
+     * would be a behavioural difference disguised as compatibility.
+     */
+    protected net.minecraft.world.InteractionResult onInteract(net.minecraft.world.entity.player.Player player,
+                                                               net.minecraft.world.InteractionHand hand) {
+        return net.minecraft.world.InteractionResult.PASS;
+    }
+
+    //? if >=26.1 {
+    @Override
+    public final net.minecraft.world.InteractionResult interact(net.minecraft.world.entity.player.Player player,
+                                                                net.minecraft.world.InteractionHand hand,
+                                                                net.minecraft.world.phys.Vec3 hitPosition) {
+        return onInteract(player, hand);
+    }
+    //?} else {
+    /*@Override
+    public final net.minecraft.world.InteractionResult interact(net.minecraft.world.entity.player.Player player,
+                                                                net.minecraft.world.InteractionHand hand) {
+        return onInteract(player, hand);
     }
     *///?}
 }

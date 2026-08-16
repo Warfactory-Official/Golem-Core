@@ -6,7 +6,8 @@ import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
 import mezz.jei.api.registration.ISubtypeRegistration;
-import net.minecraft.core.component.DataComponentType;
+// No DataComponentType import: the type is only ever inferred here (through GolemComponent.type()),
+// and naming it would break 1.20.1, where net.minecraft.core.component does not exist at all.
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
@@ -85,12 +86,12 @@ public final class Jei {
      * itself is unchanged between the two, which is what makes the reimplementation exact.
      */
     public static void registerFromDataComponentTypes(ISubtypeRegistration registration, Item item,
-                                                      DataComponentType<?> component) {
+                                                      dev.golem.core.data.GolemComponent<?> component) {
         //? if >=26.1 {
-        registration.registerFromDataComponentTypes(item, component);
+        registration.registerFromDataComponentTypes(item, component.type());
         //?} else {
         /*registration.registerSubtypeInterpreter(item, (stack, context) -> {
-            Object value = stack.get(component);
+            Object value = component.get(stack).orElse(null);
             return value == null ? "" : value.toString();
         });
         *///?}

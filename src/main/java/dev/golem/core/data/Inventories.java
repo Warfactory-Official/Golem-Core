@@ -25,9 +25,11 @@ public final class Inventories {
     public static void save(DataOut out, NonNullList<ItemStack> stacks, boolean alsoWhenEmpty) {
         //? if >=26.1 {
         ContainerHelper.saveAllItems(unwrap(out), stacks, alsoWhenEmpty);
-        //?} else {
+        //?} elif >=1.20.5 {
         /*TagDataOut tagOut = (TagDataOut) out;
         ContainerHelper.saveAllItems(tagOut.tag(), stacks, alsoWhenEmpty, tagOut.registries());
+        *///?} else {
+        /*ContainerHelper.saveAllItems(((TagDataOut) out).tag(), stacks, alsoWhenEmpty);
         *///?}
     }
 
@@ -35,9 +37,11 @@ public final class Inventories {
     public static void load(DataIn in, NonNullList<ItemStack> stacks) {
         //? if >=26.1 {
         ContainerHelper.loadAllItems(unwrap(in), stacks);
-        //?} else {
+        //?} elif >=1.20.5 {
         /*TagDataIn tagIn = (TagDataIn) in;
         ContainerHelper.loadAllItems(tagIn.tag(), stacks, tagIn.registries());
+        *///?} else {
+        /*ContainerHelper.loadAllItems(((TagDataIn) in).tag(), stacks);
         *///?}
     }
 

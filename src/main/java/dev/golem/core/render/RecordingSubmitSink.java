@@ -4,6 +4,8 @@ package dev.golem.core.render;
 /*import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
+import org.joml.Matrix3f;
+import org.joml.Matrix4f;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -26,7 +28,7 @@ import java.util.List;
  ^/
 public final class RecordingSubmitSink implements SubmitSink {
 
-    private record Entry(int order, PoseStack.Pose pose, RenderType renderType, CustomGeometry geometry) {}
+    private record Entry(int order, Matrix4f pose, Matrix3f normal, RenderType renderType, CustomGeometry geometry) {}
 
     // Items cannot be replayed through a VertexConsumer like geometry can — ItemRenderer wants the
     // whole MultiBufferSource — so they are recorded separately but sorted into the same order stream.
@@ -69,7 +71,8 @@ public final class RecordingSubmitSink implements SubmitSink {
         // level is drawn with whatever that pose held when the batch was finally flushed, not with the
         // transform it was submitted under. A renderer that accumulates joint transforms between
         // submissions (the assembly machine's arms) therefore drew its parts on top of each other.
-        sink().add(new Entry(order, poseStack.last().copy(), renderType, geometry));
+        PoseStack.Pose pose = poseStack.last();
+        sink().add(new Entry(order, new Matrix4f(pose.pose()), new Matrix3f(pose.normal()), renderType, geometry));
     }
 
     @Override
@@ -78,7 +81,8 @@ public final class RecordingSubmitSink implements SubmitSink {
         // The PoseStack is copied, not snapshotted to a Pose: ItemRenderer needs a full stack to push
         // and pop around its own transforms, and the caller is free to pop before the flush.
         PoseStack copy = new PoseStack();
-        copy.mulPose(poseStack.last().pose());
+        copy.last().pose().set(poseStack.last().pose());
+        copy.last().normal().set(poseStack.last().normal());
         itemSink().add(new ItemEntry(order, copy, item, light, overlay));
     }
 
@@ -92,7 +96,10 @@ public final class RecordingSubmitSink implements SubmitSink {
         List<Entry> all = sink();
         all.sort(Comparator.comparingInt(Entry::order));
         for (Entry e : all) {
-            e.geometry().render(e.pose(), bufferSource.getBuffer(e.renderType()));
+            PoseStack poseStack = new PoseStack();
+            poseStack.last().pose().set(e.pose());
+            poseStack.last().normal().set(e.normal());
+            e.geometry().render(poseStack.last(), bufferSource.getBuffer(e.renderType()));
         }
         all.clear();
 
