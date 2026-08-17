@@ -37,6 +37,20 @@ public final class Compat {
     }
 
     /**
+     * The hotbar slot a player currently has selected.
+     *
+     * <p>26.1 made {@code Inventory.selected} private behind {@code getSelectedSlot()}; below that the
+     * field is public and there is no accessor.
+     */
+    public static int selectedSlot(net.minecraft.world.entity.player.Player player) {
+        //? if >=26.1 {
+        return player.getInventory().getSelectedSlot();
+        //?} else {
+        /*return player.getInventory().selected;
+        *///?}
+    }
+
+    /**
      * Adds the 3×9 inventory grid plus hotbar at the given origin, reproducing vanilla's layout
      * exactly (18px pitch, hotbar 58px below the grid's top row) so existing screen textures line up.
      *

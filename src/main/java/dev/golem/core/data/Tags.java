@@ -15,7 +15,9 @@ import net.minecraft.nbt.CompoundTag;
  */
 public final class Tags {
 
+    private static final int TAG_BYTE = 1;
     private static final int TAG_INT = 3;
+    private static final int TAG_FLOAT = 5;
     private static final int TAG_STRING = 8;
 
     private Tags() {}
@@ -25,6 +27,34 @@ public final class Tags {
         return tag.getIntOr(name, defaultValue);
         //?} else {
         /*return tag.contains(name, TAG_INT) ? tag.getInt(name) : defaultValue;
+        *///?}
+    }
+
+    public static float getFloatOr(CompoundTag tag, String name, float defaultValue) {
+        //? if >=26.1 {
+        return tag.getFloatOr(name, defaultValue);
+        //?} else {
+        /*return tag.contains(name, TAG_FLOAT) ? tag.getFloat(name) : defaultValue;
+        *///?}
+    }
+
+    /**
+     * A boolean is stored as a byte, so this reads the byte tag rather than asking for a boolean type
+     * that does not exist in the NBT format.
+     */
+    public static boolean getBooleanOr(CompoundTag tag, String name, boolean defaultValue) {
+        //? if >=26.1 {
+        return tag.getBooleanOr(name, defaultValue);
+        //?} else {
+        /*return tag.contains(name, TAG_BYTE) ? tag.getBoolean(name) : defaultValue;
+        *///?}
+    }
+
+    public static byte getByteOr(CompoundTag tag, String name, byte defaultValue) {
+        //? if >=26.1 {
+        return tag.getByteOr(name, defaultValue);
+        //?} else {
+        /*return tag.contains(name, TAG_BYTE) ? tag.getByte(name) : defaultValue;
         *///?}
     }
 

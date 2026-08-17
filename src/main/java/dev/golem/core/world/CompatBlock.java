@@ -88,7 +88,14 @@ public class CompatBlock extends Block {
     @Override
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
                                            Player player, InteractionHand hand, BlockHitResult hit) {
-        return onUseItem(state, level, pos, player, hand, stack, hit);
+        InteractionResult result = onUseItem(state, level, pos, player, hand, stack, hit);
+        // PASS must become TRY_WITH_EMPTY_HAND here. ServerPlayerGameMode calls useItemOn for EVERY
+        // right-click (empty hand included) and only reaches useWithoutItem when the result is
+        // `instanceof InteractionResult.TryEmptyHandInteraction` — a plain PASS ends the interaction.
+        // Returning PASS therefore makes every block that only overrides onUseWithoutItem completely
+        // inert: no menu, no error, nothing in the log. The 1.21.1 branch below already maps PASS onto
+        // its equivalent (PASS_TO_DEFAULT_BLOCK_INTERACTION); this is the same mapping for 26.1.
+        return result instanceof InteractionResult.Pass ? InteractionResult.TRY_WITH_EMPTY_HAND : result;
     }
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player,
