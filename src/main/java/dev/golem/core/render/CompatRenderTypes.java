@@ -78,6 +78,20 @@ public final class CompatRenderTypes {
         *///?}
     }
 
+    /**
+     * A self-lit glow drawn over solid geometry — alpha-weighted additive, depth-tested but not
+     * depth-writing, unculled. See {@link PlasmaGlowRenderType} for why no stock type fits.
+     */
+    public static RenderType plasmaGlow(
+            //? if >=26.1 {
+            Identifier
+            //?} else {
+            /*ResourceLocation
+            *///?}
+            texture) {
+        return PlasmaGlowRenderType.of(texture);
+    }
+
     /** Translucent variant with explicit outline control; both eras expose the same two-arg form. */
     public static RenderType entityTranslucent(
             //? if >=26.1 {

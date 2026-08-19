@@ -60,6 +60,8 @@ public final class KeyMappings {
     public static Mapping register(String namespace, String translationKey,
             com.mojang.blaze3d.platform.InputConstants.Type type, int value, String categoryPath) {
         //? if >=26.1 {
+        String categoryId = namespace + ":" + categoryPath;
+        boolean firstOfCategory = !CATEGORIES.containsKey(categoryId);
         KeyMapping.Category category = category(namespace, categoryPath);
         Mapping mapping = new Mapping(translationKey, type, value, category);
         //?} else {
@@ -75,9 +77,15 @@ public final class KeyMappings {
         // Deferred: this loader only accepts mappings inside its own mod-bus event. Constructing the
         // mapping eagerly above is fine — that is what vanilla's own field initializers do. The category
         // goes over the same event, or the controls screen has nowhere to file the mapping.
+        //
+        // The category is registered by the FIRST mapping in it and no other: this loader's
+        // registerCategory throws outright on a repeat ("KeyMapping.Category 'ns:path' is already
+        // registered"), and every mapping doing it meant any category holding two mappings crashed the
+        // client during Options construction — before the window opens, and therefore before anything
+        // that looks like a mod error.
         dev.golem.core.platform.NeoForgeEntrypoint.modBus().addListener(
                 (net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent event) -> {
-                    event.registerCategory(category);
+                    if (firstOfCategory) event.registerCategory(category);
                     event.register(mapping);
                 });
         //?} elif neoforge {

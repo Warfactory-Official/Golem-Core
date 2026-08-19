@@ -17,7 +17,9 @@ public final class Tags {
 
     private static final int TAG_BYTE = 1;
     private static final int TAG_INT = 3;
+    private static final int TAG_LONG = 4;
     private static final int TAG_FLOAT = 5;
+    private static final int TAG_DOUBLE = 6;
     private static final int TAG_STRING = 8;
 
     private Tags() {}
@@ -30,11 +32,27 @@ public final class Tags {
         *///?}
     }
 
+    public static long getLongOr(CompoundTag tag, String name, long defaultValue) {
+        //? if >=26.1 {
+        return tag.getLongOr(name, defaultValue);
+        //?} else {
+        /*return tag.contains(name, TAG_LONG) ? tag.getLong(name) : defaultValue;
+        *///?}
+    }
+
     public static float getFloatOr(CompoundTag tag, String name, float defaultValue) {
         //? if >=26.1 {
         return tag.getFloatOr(name, defaultValue);
         //?} else {
         /*return tag.contains(name, TAG_FLOAT) ? tag.getFloat(name) : defaultValue;
+        *///?}
+    }
+
+    public static double getDoubleOr(CompoundTag tag, String name, double defaultValue) {
+        //? if >=26.1 {
+        return tag.getDoubleOr(name, defaultValue);
+        //?} else {
+        /*return tag.contains(name, TAG_DOUBLE) ? tag.getDouble(name) : defaultValue;
         *///?}
     }
 

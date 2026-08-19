@@ -62,12 +62,15 @@ public final class GameTests {
         private final String namespace;
         private final String name;
         private final int timeoutTicks;
+        private final int padding;
         private final Supplier<Consumer<GameTestHelper>> body;
 
-        private Function(String namespace, String name, int timeoutTicks, Supplier<Consumer<GameTestHelper>> body) {
+        private Function(String namespace, String name, int timeoutTicks, int padding,
+                         Supplier<Consumer<GameTestHelper>> body) {
             this.namespace = namespace;
             this.name = name;
             this.timeoutTicks = timeoutTicks;
+            this.padding = padding;
             this.body = body;
         }
 
@@ -88,7 +91,19 @@ public final class GameTests {
         }
 
         public Function function(String name, int timeoutTicks, Supplier<Consumer<GameTestHelper>> body) {
-            Function function = GameTests.function(namespace, name, timeoutTicks, body);
+            return function(name, timeoutTicks, 0, body);
+        }
+
+        /**
+         * Declares a test that needs elbow room. The empty template every test starts from is 1×1×1, so
+         * the runner packs test plots tightly; a test that builds a large structure around itself will
+         * otherwise write straight into its neighbour's plot — which shows up as the <i>neighbour</i>
+         * failing, not this one. {@code padding} is the free space (in blocks) reserved around this
+         * test's plot.
+         */
+        public Function function(String name, int timeoutTicks, int padding,
+                                 Supplier<Consumer<GameTestHelper>> body) {
+            Function function = GameTests.function(namespace, name, timeoutTicks, padding, body);
             functions.add(function);
             return function;
         }
@@ -122,11 +137,16 @@ public final class GameTests {
 
     public static Function function(String namespace, String name, int timeoutTicks,
                                     Supplier<Consumer<GameTestHelper>> body) {
+        return function(namespace, name, timeoutTicks, 0, body);
+    }
+
+    public static Function function(String namespace, String name, int timeoutTicks, int padding,
+                                    Supplier<Consumer<GameTestHelper>> body) {
         //? if >=26.1 {
         REGISTERS.computeIfAbsent(namespace, ns -> DeferredRegister.create(Registries.TEST_FUNCTION, ns))
                 .register(name, body);
         //?}
-        return new Function(namespace, name, timeoutTicks, body);
+        return new Function(namespace, name, timeoutTicks, padding, body);
     }
 
     //? if neoforge {
@@ -144,7 +164,7 @@ public final class GameTests {
 
             TestData<Holder<TestEnvironmentDefinition<?>>> data = new TestData<>(
                     environment, net.minecraft.resources.Identifier.withDefaultNamespace(EMPTY_STRUCTURE),
-                    function.timeoutTicks, 0, true, Rotation.NONE, false, 1, 1, false, 0);
+                    function.timeoutTicks, 0, true, Rotation.NONE, false, 1, 1, false, function.padding);
 
             ResourceKey<Consumer<GameTestHelper>> key =
                     ResourceKey.create(Registries.TEST_FUNCTION, dev.golem.core.Ids.of(function.namespace, function.name));

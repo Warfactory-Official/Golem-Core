@@ -37,6 +37,21 @@ public final class Compat {
     }
 
     /**
+     * Runs an entity's fall-damage path for a fall of {@code fallDistance} blocks.
+     *
+     * <p>The first parameter widened from {@code float} to {@code double} at 26.1. Callers keep passing a
+     * float; only this method knows the difference.
+     */
+    public static boolean causeFallDamage(Entity entity, float fallDistance, float damageMultiplier,
+            DamageSource source) {
+        //? if >=26.1 {
+        return entity.causeFallDamage((double) fallDistance, damageMultiplier, source);
+        //?} else {
+        /*return entity.causeFallDamage(fallDistance, damageMultiplier, source);
+        *///?}
+    }
+
+    /**
      * The hotbar slot a player currently has selected.
      *
      * <p>26.1 made {@code Inventory.selected} private behind {@code getSelectedSlot()}; below that the

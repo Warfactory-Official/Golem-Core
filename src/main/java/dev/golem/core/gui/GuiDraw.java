@@ -44,6 +44,23 @@ public final class GuiDraw {
     }
 
     /**
+     * Fills an axis-aligned rectangle with a solid ARGB colour, from {@code (x0, y0)} inclusive to
+     * {@code (x1, y1)} exclusive.
+     *
+     * <p>Remember the alpha: a colour written as {@code 0xFFFFFF} has alpha zero and draws nothing at
+     * all. That has cost this project a debugging session before.
+     */
+    public static void fill(
+            //? if >=26.1 {
+            GuiGraphicsExtractor graphics,
+            //?} else {
+            /*GuiGraphics graphics,
+            *///?}
+            int x0, int y0, int x1, int y1, int color) {
+        graphics.fill(x0, y0, x1, y1, color);
+    }
+
+    /**
      * Draws a tinted sub-rectangle. 26.1 takes the ARGB tint as a trailing {@code blit} argument;
      * older versions have no such parameter and must set, draw, then reset the shader colour.
      */

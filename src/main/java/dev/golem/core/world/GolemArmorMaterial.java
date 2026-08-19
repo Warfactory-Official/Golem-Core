@@ -51,6 +51,18 @@ public final class GolemArmorMaterial {
         return nativeMaterial;
     }
 
+    /**
+     * The enchantment value, where {@code 0} means "cannot be enchanted at all".
+     *
+     * <p>Read by {@link CompatArmorItem}, which has to special-case that zero: from 26.1 the enchantable
+     * data component <b>rejects</b> a value of 0 outright ({@code Enchantment value must be positive}),
+     * so an unenchantable armour must omit the component rather than declare it as zero. Below 26.1 the
+     * same zero is simply the material's answer and needs no special handling.
+     */
+    int enchantmentValue() {
+        return enchantmentValue;
+    }
+
     //? if >=26.1 {
     private TagKey<Item> repairTag() {
         return TagKey.create(Registries.ITEM,
