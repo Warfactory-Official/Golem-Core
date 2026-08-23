@@ -163,8 +163,8 @@ public abstract class CompatBlockEntity extends BlockEntity {
     *///?}
 
     //? if <26.1 {
-    /*
-    /^*
+    
+    /*/^*
      * Side effects of this block entity being removed — dropping an inventory, most of the time.
      *
      * <p>26.1 declares this on {@code BlockEntity} and calls it itself, with a default that drops the

@@ -5,6 +5,8 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.OrderedSubmitNodeCollector;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.gui.Font;
+import net.minecraft.util.FormattedCharSequence;
 
 /**
  * {@link SubmitSink} backed by vanilla's collector, for versions that have the submit pipeline
@@ -38,6 +40,12 @@ public final class VanillaSubmitSink implements SubmitSink {
     @Override
     public void submitItem(PoseStack poseStack, CompatItemRenderState item, int light, int overlay, int seed) {
         item.delegate.submit(poseStack, root, light, overlay, seed);
+    }
+
+    @Override
+    public void submitText(PoseStack poseStack, Font font, float x, float y, FormattedCharSequence text,
+                           boolean shadow, Font.DisplayMode mode, int light, int color, int backgroundColor) {
+        target.submitText(poseStack, x, y, text, shadow, mode, light, color, backgroundColor, 0);
     }
 
     @Override

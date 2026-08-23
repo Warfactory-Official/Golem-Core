@@ -1,6 +1,8 @@
 package dev.golem.core.render;
 
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
 /**
@@ -26,6 +28,22 @@ public final class Renderers {
         return provider::create;
         //?} else {
         /*return context -> new LegacyBERAdapter<>(provider.create(context));
+        *///?}
+    }
+
+    /**
+     * Samples the packed combined (sky + block) light at a world position.
+     *
+     * <p>26.1 renamed the method {@code getLightColor} → {@code getLightCoords} and its receiver
+     * {@code BlockAndTintGetter} → {@code BlockAndLightGetter}; renderers that draw geometry away from
+     * their block entity's own position (sliding rods, stacked column segments) need this to light each
+     * piece by the block it actually occupies, as baked models always did.
+     */
+    public static int lightAt(Level level, BlockPos pos) {
+        //? if >=26.1 {
+        return net.minecraft.client.renderer.LevelRenderer.getLightCoords((net.minecraft.world.level.BlockAndLightGetter) level, pos);
+        //?} else {
+        /*return net.minecraft.client.renderer.LevelRenderer.getLightColor((net.minecraft.world.level.BlockAndTintGetter) level, pos);
         *///?}
     }
 }

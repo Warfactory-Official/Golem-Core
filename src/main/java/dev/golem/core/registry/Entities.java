@@ -24,4 +24,13 @@ public final class Entities {
         /*return builder.build(dev.golem.core.Ids.keyId(key).getPath());
         *///?}
     }
+
+    /** Disables the entity loot table across the builder API change. */
+    public static <T extends Entity> EntityType.Builder<T> noLoot(EntityType.Builder<T> builder) {
+        //? if >=26.1 {
+        return builder.noLootTable();
+        //?} else {
+        /*return builder;
+        *///?}
+    }
 }

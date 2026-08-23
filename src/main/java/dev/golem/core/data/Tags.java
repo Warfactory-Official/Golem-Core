@@ -21,6 +21,7 @@ public final class Tags {
     private static final int TAG_FLOAT = 5;
     private static final int TAG_DOUBLE = 6;
     private static final int TAG_STRING = 8;
+    private static final int TAG_INT_ARRAY = 11;
 
     private Tags() {}
 
@@ -81,6 +82,30 @@ public final class Tags {
         return tag.getStringOr(name, defaultValue);
         //?} else {
         /*return tag.contains(name, TAG_STRING) ? tag.getString(name) : defaultValue;
+        *///?}
+    }
+
+    public static boolean hasInt(CompoundTag tag, String name) {
+        //? if >=26.1 {
+        return tag.getInt(name).isPresent();
+        //?} else {
+        /*return tag.contains(name, TAG_INT);
+        *///?}
+    }
+
+    public static boolean hasDouble(CompoundTag tag, String name) {
+        //? if >=26.1 {
+        return tag.getDouble(name).isPresent();
+        //?} else {
+        /*return tag.contains(name, TAG_DOUBLE);
+        *///?}
+    }
+
+    public static int[] getIntArrayOr(CompoundTag tag, String name, int[] defaultValue) {
+        //? if >=26.1 {
+        return tag.getIntArray(name).orElse(defaultValue);
+        //?} else {
+        /*return tag.contains(name, TAG_INT_ARRAY) ? tag.getIntArray(name) : defaultValue;
         *///?}
     }
 }

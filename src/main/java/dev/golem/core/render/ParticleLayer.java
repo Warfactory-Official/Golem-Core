@@ -38,18 +38,7 @@ public enum ParticleLayer {
     /**
      * Additive blending, fullbright — the true "energy" look for balefire, plasma and shockwaves.
      *
-     * <p><b>Currently renders as {@link #EMISSIVE} on every era.</b> Real additive needs a custom
-     * blend state, and neither era hands one over cheaply: on 26.1 it means a custom
-     * {@code RenderPipeline}, but the {@code PARTICLE_SNIPPET} it must derive from and
-     * {@code RenderPipelines.register} are both private, so it would mean re-declaring the particle
-     * shader's uniforms by hand plus finding a cross-loader pipeline-registration hook; below 26.1 it
-     * means a hand-written {@code ParticleRenderType}, whose interface shape changed between 1.20.1
-     * and 1.21.1 and so needs two implementations.
-     *
-     * <p>The value exists now so call sites record their real intent and light up for free when the
-     * blend state lands. Fullbright already carries most of the visual weight, because the 1.12
-     * originals got their glow mainly from overriding {@code getBrightnessForRender} to
-     * {@code 0xF000F0} rather than from the blend func.
+     * <p>Resolved to a native additive particle layer by {@link CompatParticle}.
      */
     ADDITIVE;
 

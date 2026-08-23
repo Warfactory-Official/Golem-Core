@@ -2,6 +2,8 @@ package dev.golem.core.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.gui.Font;
+import net.minecraft.util.FormattedCharSequence;
 
 //? if >=26.1 {
 import net.minecraft.client.renderer.rendertype.RenderType;
@@ -42,6 +44,10 @@ public interface SubmitSink {
      *
      */
     void submitItem(PoseStack poseStack, CompatItemRenderState item, int light, int overlay, int seed);
+
+    /** Submits text with the same deferred-pose and ordering rules as geometry. */
+    void submitText(PoseStack poseStack, Font font, float x, float y, FormattedCharSequence text,
+                    boolean shadow, Font.DisplayMode mode, int light, int color, int backgroundColor);
 
     /** Writes the vertices for one submitted piece of geometry. */
     @FunctionalInterface

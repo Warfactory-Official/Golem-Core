@@ -47,6 +47,7 @@ dependencies {
 }
 
 loom {
+    if (!obfuscated) accessWidenerPath = file("../../src/main/resources/golemcore.accesswidener")
     runs {
         named("client") {
             client()
@@ -82,6 +83,10 @@ tasks.processResources {
     )
     inputs.properties(props)
     filesMatching(listOf("fabric.mod.json", "pack.mcmeta")) { expand(props) }
+    filesMatching("fabric.mod.json") {
+        filter { line -> if (!obfuscated && line.trim() == "{") "{\n  \"accessWidener\": \"golemcore.accesswidener\"," else line }
+    }
+    if (obfuscated) exclude("golemcore.accesswidener")
     exclude("META-INF/neoforge.mods.toml", "META-INF/mods.toml")
 }
 

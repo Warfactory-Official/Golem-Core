@@ -2,6 +2,19 @@ package dev.golem.core.render;
 
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+//? if <26.1 {
+/*import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
+import net.minecraft.client.renderer.texture.TextureAtlas;
+*///?}
+//? if >=26.1 {
+import com.mojang.blaze3d.pipeline.BlendFunction;
+import com.mojang.blaze3d.pipeline.ColorTargetState;
+import com.mojang.blaze3d.pipeline.DepthStencilState;
+import com.mojang.blaze3d.pipeline.RenderPipeline;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.texture.TextureAtlas;
+//?}
 
 /**
  * The base class for a mod's own textured, camera-facing particle.
@@ -39,6 +52,61 @@ public abstract class CompatParticle extends
     private static final int FULLBRIGHT = 0xF000F0;
 
     private ParticleLayer golemLayer = ParticleLayer.TRANSLUCENT;
+
+    //? if >=26.1 {
+    // PARTICLE_SNIPPET keeps the vanilla particle atlas bindings while this replaces only blend/depth.
+    // The loader hooks register this pipeline alongside their normal particle pipeline registration.
+    public static final RenderPipeline ADDITIVE_PIPELINE = RenderPipeline.builder(RenderPipelines.PARTICLE_SNIPPET)
+            .withLocation("pipeline/golem_particle_additive")
+            .withColorTargetState(new ColorTargetState(BlendFunction.ADDITIVE))
+            .withDepthStencilState(new DepthStencilState(DepthStencilState.DEFAULT.depthTest(), false)).build();
+    private static final net.minecraft.client.particle.SingleQuadParticle.Layer ADDITIVE_LAYER =
+            new net.minecraft.client.particle.SingleQuadParticle.Layer(true, TextureAtlas.LOCATION_PARTICLES, ADDITIVE_PIPELINE);
+    //?}
+    //? if <26.1 {
+    /*private static final net.minecraft.client.particle.ParticleRenderType ADDITIVE_LAYER =
+            new net.minecraft.client.particle.ParticleRenderType() {
+                //? if >=1.21 {
+                @Override
+                public com.mojang.blaze3d.vertex.BufferBuilder begin(
+                        com.mojang.blaze3d.vertex.Tesselator tesselator,
+                        net.minecraft.client.renderer.texture.TextureManager textureManager) {
+                    RenderSystem.depthMask(false);
+                    RenderSystem.setShaderTexture(0, TextureAtlas.LOCATION_PARTICLES);
+                    RenderSystem.enableBlend();
+                    RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE);
+                    return tesselator.begin(com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS,
+                            com.mojang.blaze3d.vertex.DefaultVertexFormat.PARTICLE);
+                }
+                //?} else {
+                /^@Override
+                public void begin(com.mojang.blaze3d.vertex.BufferBuilder buffer,
+                        net.minecraft.client.renderer.texture.TextureManager textureManager) {
+                    RenderSystem.depthMask(false);
+                    RenderSystem.setShaderTexture(0, TextureAtlas.LOCATION_PARTICLES);
+                    RenderSystem.enableBlend();
+                    RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE);
+                    buffer.begin(com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS,
+                            com.mojang.blaze3d.vertex.DefaultVertexFormat.PARTICLE);
+                }
+                ^///?}
+
+                //? if <1.21 {
+                /^@Override
+                public void end(com.mojang.blaze3d.vertex.Tesselator tesselator) {
+                    tesselator.end();
+                    RenderSystem.defaultBlendFunc();
+                    RenderSystem.depthMask(true);
+                    RenderSystem.disableBlend();
+                }
+                ^///?}
+
+                @Override
+                public String toString() {
+                    return "GOLEM_PARTICLE_ADDITIVE";
+                }
+            };
+    *///?}
 
     protected CompatParticle(ClientLevel level, double x, double y, double z, TextureAtlasSprite sprite) {
         //? if >=26.1 {
@@ -160,15 +228,14 @@ public abstract class CompatParticle extends
     //? if >=26.1 {
     @Override
     protected net.minecraft.client.particle.SingleQuadParticle.Layer getLayer() {
-        // Every layer is alpha-blended against the particle atlas today; EMISSIVE and ADDITIVE differ
-        // only in lighting, which getLightCoords above applies. See ParticleLayer.ADDITIVE for why
-        // the blend state itself is not yet expressed here.
-        return net.minecraft.client.particle.SingleQuadParticle.Layer.TRANSLUCENT;
+        return this.golemLayer == ParticleLayer.ADDITIVE ? ADDITIVE_LAYER
+                : net.minecraft.client.particle.SingleQuadParticle.Layer.TRANSLUCENT;
     }
     //?} else {
     /*@Override
     public net.minecraft.client.particle.ParticleRenderType getRenderType() {
-        return net.minecraft.client.particle.ParticleRenderType.PARTICLE_SHEET_TRANSLUCENT;
+        return this.golemLayer == ParticleLayer.ADDITIVE ? ADDITIVE_LAYER
+                : net.minecraft.client.particle.ParticleRenderType.PARTICLE_SHEET_TRANSLUCENT;
     }
     *///?}
 }

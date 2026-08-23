@@ -33,6 +33,10 @@ public interface DataIn {
 
     Optional<int[]> getIntArray(String name);
 
+    default int[] getIntArrayOr(String name, int[] defaultValue) {
+        return getIntArray(name).orElse(defaultValue);
+    }
+
     /** Decodes a value with a codec, empty if absent or malformed. */
     <T> Optional<T> read(String name, Codec<T> codec);
 

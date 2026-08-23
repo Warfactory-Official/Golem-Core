@@ -128,4 +128,9 @@ public final class CompatRenderTypes {
         /*return RenderType.lightning();
         *///?}
     }
+
+    /** Textureless alpha-weighted additive sheets, matching vanilla's lightning pipeline. */
+    public static RenderType lightning() {
+        return LightningRenderType.get();
+    }
 }

@@ -7,18 +7,15 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.Explosion;
+import net.minecraft.server.level.ServerLevel;
+import java.util.function.BiConsumer;
 //? if >=26.1 {
 import net.minecraft.world.level.ScheduledTickAccess;
 //?}
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
-
-//? if >=26.1 {
-import net.minecraft.server.level.ServerLevel;
-//?} else {
-/*import net.minecraft.world.level.Level;
-*///?}
 
 /**
  * A {@link Block} that runs its block entity's removal side effects on every version.
@@ -84,7 +81,63 @@ public class CompatBlock extends Block {
      */
     protected void onBlockRemoved(BlockState state, Level level, BlockPos pos, boolean movedByPiston) {}
 
+    /** Runs before a player removes this block, across the return-type change in vanilla's hook. */
+    protected void onPlayerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {}
+
+    /**
+     * Handles an explosion before vanilla removes this block. Returning true consumes the native fallback.
+     * The item consumer is absent before 26.1, where vanilla owns loot emission itself.
+     */
+    protected boolean onExplosion(BlockState state, ServerLevel level, BlockPos pos, Explosion explosion,
+                                  BiConsumer<ItemStack, BlockPos> onHit) {
+        return false;
+    }
+
+    /** Forwards an explosion to another block's own vanilla hook without exposing its era-specific name. */
+    public final void forwardExplosionHit(BlockState state, ServerLevel level, BlockPos pos, Explosion explosion,
+                                          BiConsumer<ItemStack, BlockPos> onHit) {
+        //? if >=26.1 {
+        onExplosionHit(state, level, pos, explosion, onHit);
+        //?} else {
+        /*wasExploded(level, pos, explosion);
+        *///?}
+    }
+
+    /** Whether vanilla will suppress the normal block drop for this player. */
+    protected static boolean playerPreventsBlockDrops(Player player) {
+        //? if >=26.1 {
+        return player.preventsBlockDrops();
+        //?} else {
+        /*return player.getAbilities().instabuild;
+        *///?}
+    }
+
+    //? if <1.21.1 {
+    /*@Override
+    public void playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+        onPlayerWillDestroy(level, pos, state, player);
+        super.playerWillDestroy(level, pos, state, player);
+    }
+    *///?}
+
+    //? if >=1.21.1 {
+    @Override
+    public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
+        onPlayerWillDestroy(level, pos, state, player);
+        return super.playerWillDestroy(level, pos, state, player);
+    }
+
+    //?}
+
     //? if >=26.1 {
+    @Override
+    protected void onExplosionHit(BlockState state, ServerLevel level, BlockPos pos, Explosion explosion,
+                                  BiConsumer<ItemStack, BlockPos> onHit) {
+        if (!onExplosion(state, level, pos, explosion, onHit)) {
+            super.onExplosionHit(state, level, pos, explosion, onHit);
+        }
+    }
+
     @Override
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
                                            Player player, InteractionHand hand, BlockHitResult hit) {
@@ -147,6 +200,16 @@ public class CompatBlock extends Block {
              onBlockRemoved(state, level, pos, movedByPiston);
          }
          super.onRemove(state, level, pos, newState, movedByPiston);
+    }
+    *///?}
+
+    //? if <26.1 {
+    /*@Override
+    public void wasExploded(Level level, BlockPos pos, Explosion explosion) {
+        if (!(level instanceof ServerLevel server)
+                || !onExplosion(level.getBlockState(pos), server, pos, explosion, (stack, dropPos) -> {})) {
+            super.wasExploded(level, pos, explosion);
+        }
     }
     *///?}
 

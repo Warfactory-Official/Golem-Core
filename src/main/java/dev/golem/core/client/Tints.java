@@ -91,7 +91,7 @@ public final class Tints {
         };
 
         //? if fabric {
-        // Fabric's registry takes items now. The client initializer runs after the main one, so the
+        /^// Fabric's registry takes items now. The client initializer runs after the main one, so the
         // mod's items are already in BuiltInRegistries by this point.
         List<Item> items = itemsIn(namespace);
         for (Item item : items) {
@@ -113,7 +113,7 @@ public final class Tints {
                         Tints.reload(resources);
                     }
                 });
-        //?} elif neoforge {
+        ^///?} elif neoforge {
         // NeoForge takes item colours through a mod-bus event, and this runs during mod construction —
         // long before deferred registration has put anything in BuiltInRegistries. Collecting the items
         // here would silently find none, so the lookup happens inside the listener, by which time the
