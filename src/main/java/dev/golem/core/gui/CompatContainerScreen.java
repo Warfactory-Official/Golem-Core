@@ -32,6 +32,10 @@ import net.minecraft.client.input.MouseButtonEvent;
  *       {@code AbstractContainerScreen} ever calls {@code renderTooltip} — every vanilla screen that
  *       wants tooltips calls it from its own {@code render}. A port that only renames the override
  *       therefore compiles to a method nobody invokes, and no tooltip ever appears.</li>
+ *   <li><b>And on 26.1 that hook is already occupied.</b> {@code extractTooltip} is where vanilla
+ *       draws the hovered slot's <em>item</em> tooltip; below 26.1 it is empty. So a screen that
+ *       overrides it to add a gauge tooltip keeps item tooltips on five targets and loses them on the
+ *       sixth. Subclasses override {@link #extractOwnTooltip} instead and get both, everywhere.</li>
  * </ul>
  *
  * <p>Extend this instead of {@code AbstractContainerScreen} and all three behave as they do on 26.1.
@@ -76,14 +80,38 @@ public abstract class CompatContainerScreen<T extends AbstractContainerMenu> ext
             *///?}
             int mouseX, int mouseY) {}
 
-    /** The 26.1 tooltip hook, backported for subclasses. */
-    protected void extractTooltip(
+    /**
+     * This screen's <em>own</em> tooltips — the ones for gauges, tanks, bars and other painted regions.
+     *
+     * <p><b>Deliberately not named {@code extractTooltip}.</b> On 26.1 that name is not a free hook: it
+     * is the vanilla method that draws the hovered <em>slot's item</em> tooltip, so a screen overriding
+     * it without calling super silently deletes item tooltips for the whole screen. Below 26.1 the same
+     * name is an empty hook and item tooltips keep working, so the mistake shows up on exactly one of
+     * the six targets. Giving the subclass its own name makes it unmakeable, and
+     * {@code extractTooltip} is {@code final} here so a leftover override fails to compile rather than
+     * failing quietly.
+     *
+     * <p>Called <b>before</b> the item tooltip. 26.1's {@code setTooltipForNextFrame} keeps the
+     * <em>first</em> tooltip set in a frame, not the last, so this ordering lets a screen override the
+     * item tooltip for a region that overlaps a slot, while a region that does not overlap simply
+     * leaves the item's alone.
+     */
+    protected void extractOwnTooltip(
             //? if >=26.1 {
             GuiGraphicsExtractor graphics,
             //?} else {
             /*GuiGraphics graphics,
             *///?}
             int mouseX, int mouseY) {}
+
+    //? if >=26.1 {
+    /** Runs this screen's own tooltips, then vanilla's hovered-item one. See {@link #extractOwnTooltip}. */
+    @Override
+    protected final void extractTooltip(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        this.extractOwnTooltip(graphics, mouseX, mouseY);
+        super.extractTooltip(graphics, mouseX, mouseY);
+    }
+    //?}
 
     /** Version-neutral click hook. */
     protected boolean mouseClicked(MouseInput event, boolean doubleClick) { return false; }
@@ -130,8 +158,11 @@ public abstract class CompatContainerScreen<T extends AbstractContainerMenu> ext
 
     @Override
     protected void renderTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
+        // This era draws immediately rather than deferring, so the later call wins the z-order: the
+        // item tooltip first, this screen's own over it. The net effect matches 26.1's first-writer
+        // rule for the only case that arises in practice, a region tooltip over a slot.
         super.renderTooltip(graphics, mouseX, mouseY);
-        this.extractTooltip(graphics, mouseX, mouseY);
+        this.extractOwnTooltip(graphics, mouseX, mouseY);
     }
 
     @Override
@@ -169,7 +200,7 @@ public abstract class CompatContainerScreen<T extends AbstractContainerMenu> ext
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         super.render(graphics, mouseX, mouseY, partialTick);
         // 26.1 calls this from extractRenderState; here it is on us. After super.render so it draws over
-        // the slots, matching the order extractTooltip runs in.
+        // the slots, matching the order the tooltip hooks run in.
         this.renderTooltip(graphics, mouseX, mouseY);
     }
     *///?}

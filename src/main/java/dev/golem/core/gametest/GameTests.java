@@ -117,8 +117,22 @@ public final class GameTests {
      */
     private static final Map<String, DeferredRegister<Consumer<GameTestHelper>>> REGISTERS = new HashMap<>();
 
-    /** Environments are registered once per namespace, on the first test that needs one. */
-    private static final Map<String, Holder<TestEnvironmentDefinition<?>>> ENVIRONMENTS = new HashMap<>();
+    /**
+     * Environments, one per namespace <b>per registry load</b> — keyed by the event, not held statically.
+     *
+     * <p>This map used to be keyed by namespace alone, and that was a real bug with a confusing symptom.
+     * {@code RegisterGameTestsEvent} fires on every {@code RegistryDataLoader.load}, and each load builds
+     * <i>fresh</i> test-environment and test-instance registries. A namespace-keyed cache hands the
+     * second load a {@link Holder} belonging to the first load's registry, so that load's test instances
+     * reference an environment that is not in its own registry set — and the failure surfaces nowhere
+     * near here: joining a world throws
+     * {@code Failed to serialize ResourceKey[minecraft:test_instance / …]: Element … is not valid in
+     * current registry set} while the server packs registries for the client.
+     *
+     * <p>Weak keys so a finished load's entry goes away with the event.
+     */
+    private static final Map<Object, Map<String, Holder<TestEnvironmentDefinition<?>>>> ENVIRONMENTS =
+            new java.util.WeakHashMap<>();
     //?} else {
     /*/^* Tests awaiting pickup by the generator; see {@link GolemTestGenerator}. ^/
     private static final List<TestFunction> PENDING = new ArrayList<>();
@@ -157,10 +171,12 @@ public final class GameTests {
                                  Suite suite) {
         for (Function function : suite.functions) {
             //? if >=26.1 {
-            Holder<TestEnvironmentDefinition<?>> environment = ENVIRONMENTS.computeIfAbsent(
-                    function.namespace,
-                    ns -> event.registerEnvironment(dev.golem.core.Ids.of(ns, "test_environment"),
-                            new TestEnvironmentDefinition.Functions(Optional.empty(), Optional.empty())));
+            // Per event: one environment per namespace within THIS registry load. See ENVIRONMENTS.
+            Holder<TestEnvironmentDefinition<?>> environment = ENVIRONMENTS
+                    .computeIfAbsent(event, e -> new HashMap<>())
+                    .computeIfAbsent(function.namespace,
+                            ns -> event.registerEnvironment(dev.golem.core.Ids.of(ns, "test_environment"),
+                                    new TestEnvironmentDefinition.Functions(Optional.empty(), Optional.empty())));
 
             TestData<Holder<TestEnvironmentDefinition<?>>> data = new TestData<>(
                     environment, net.minecraft.resources.Identifier.withDefaultNamespace(EMPTY_STRUCTURE),

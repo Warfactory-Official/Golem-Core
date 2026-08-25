@@ -192,21 +192,109 @@ public abstract class CompatParticle extends
      */
     protected void updateForFrame(float partialTick) {}
 
+    /**
+     * Receives one quad of a particle that draws several: {@code d*} offset the particle's own
+     * interpolated position in world units, {@code size} is the quad's half-edge.
+     */
+    @FunctionalInterface
+    public interface QuadSink {
+        void quad(float dx, float dy, float dz, float size);
+    }
+
+    /**
+     * Emits this particle's quads. The default emits the single camera-facing quad vanilla draws.
+     *
+     * <p>Override to draw a <b>cluster</b>. Several 1.12 HBM particles are not one quad at all
+     * ({@code ParticleRocketFlame} is ten), which 1.12 allowed because a particle wrote its own
+     * vertices; modern {@code SingleQuadParticle} emits exactly one and offers no seam for more.
+     *
+     * <p>The quads share this particle's position, rotation, sprite and light, but <b>not</b>
+     * necessarily its colour: {@code setColor}/{@code setAlpha} may be called between emissions.
+     */
+    protected void emitQuads(QuadSink sink, float partialTick) {
+        sink.quad(0F, 0F, 0F, this.getQuadSize(partialTick));
+    }
+
     // The per-frame entry point: 26.1 extracts into a render state, older versions write vertices
-    // directly. Both are called once per particle per frame, which is all updateForFrame needs.
+    // directly. Both are called once per particle per frame, which is all updateForFrame needs, and
+    // both then route the quads through emitQuads so a cluster particle works on either era.
     //? if >=26.1 {
     @Override
     public void extract(net.minecraft.client.renderer.state.level.QuadParticleRenderState renderState,
             net.minecraft.client.Camera camera, float partialTick) {
         this.updateForFrame(partialTick);
-        super.extract(renderState, camera, partialTick);
+
+        org.joml.Quaternionf rotation = new org.joml.Quaternionf();
+        this.getFacingCameraMode().setRotation(rotation, camera, partialTick);
+        if (this.roll != 0.0F) {
+            rotation.rotateZ(net.minecraft.util.Mth.lerp(partialTick, this.oRoll, this.roll));
+        }
+
+        net.minecraft.world.phys.Vec3 cameraPos = camera.position();
+        float baseX = (float) (net.minecraft.util.Mth.lerp(partialTick, this.xo, this.x) - cameraPos.x());
+        float baseY = (float) (net.minecraft.util.Mth.lerp(partialTick, this.yo, this.y) - cameraPos.y());
+        float baseZ = (float) (net.minecraft.util.Mth.lerp(partialTick, this.zo, this.z) - cameraPos.z());
+        int light = this.getLightCoords(partialTick);
+
+        this.emitQuads((dx, dy, dz, size) -> renderState.add(this.getLayer(),
+                baseX + dx, baseY + dy, baseZ + dz,
+                rotation.x, rotation.y, rotation.z, rotation.w, size,
+                this.getU0(), this.getU1(), this.getV0(), this.getV1(),
+                net.minecraft.util.ARGB.colorFromFloat(this.alpha, this.rCol, this.gCol, this.bCol),
+                light), partialTick);
     }
     //?} else {
     /*@Override
     public void render(com.mojang.blaze3d.vertex.VertexConsumer buffer,
             net.minecraft.client.Camera camera, float partialTick) {
         this.updateForFrame(partialTick);
-        super.render(buffer, camera, partialTick);
+
+        org.joml.Quaternionf rotation;
+        //? if >=1.21 {
+        rotation = new org.joml.Quaternionf();
+        this.getFacingCameraMode().setRotation(rotation, camera, partialTick);
+        //?} else {
+        /^// 1.20.1 has no FacingCameraMode seam; the camera's own rotation is all there is.
+        rotation = new org.joml.Quaternionf(camera.rotation());
+        ^///?}
+        if (this.roll != 0.0F) {
+            rotation.rotateZ(net.minecraft.util.Mth.lerp(partialTick, this.oRoll, this.roll));
+        }
+
+        net.minecraft.world.phys.Vec3 cameraPos = camera.getPosition();
+        float baseX = (float) (net.minecraft.util.Mth.lerp((double) partialTick, this.xo, this.x) - cameraPos.x());
+        float baseY = (float) (net.minecraft.util.Mth.lerp((double) partialTick, this.yo, this.y) - cameraPos.y());
+        float baseZ = (float) (net.minecraft.util.Mth.lerp((double) partialTick, this.zo, this.z) - cameraPos.z());
+        int light = this.getLightColor(partialTick);
+
+        this.emitQuads((dx, dy, dz, size) -> {
+            float x = baseX + dx;
+            float y = baseY + dy;
+            float z = baseZ + dz;
+            golemQuadVertex(buffer, rotation, x, y, z,  1F, -1F, size, this.getU1(), this.getV1(), light);
+            golemQuadVertex(buffer, rotation, x, y, z,  1F,  1F, size, this.getU1(), this.getV0(), light);
+            golemQuadVertex(buffer, rotation, x, y, z, -1F,  1F, size, this.getU0(), this.getV0(), light);
+            golemQuadVertex(buffer, rotation, x, y, z, -1F, -1F, size, this.getU0(), this.getV1(), light);
+        }, partialTick);
+    }
+
+    /^* One corner of a particle quad. The particle vertex format is position/uv/colour/light only. ^/
+    private void golemQuadVertex(com.mojang.blaze3d.vertex.VertexConsumer buffer, org.joml.Quaternionf rotation,
+            float x, float y, float z, float cornerX, float cornerY, float size, float u, float v, int light) {
+        org.joml.Vector3f corner = new org.joml.Vector3f(cornerX, cornerY, 0.0F)
+                .rotate(rotation).mul(size).add(x, y, z);
+        //? if >=1.21 {
+        buffer.addVertex(corner.x(), corner.y(), corner.z())
+                .setUv(u, v)
+                .setColor(this.rCol, this.gCol, this.bCol, this.alpha)
+                .setLight(light);
+        //?} else {
+        /^buffer.vertex(corner.x(), corner.y(), corner.z())
+                .uv(u, v)
+                .color(this.rCol, this.gCol, this.bCol, this.alpha)
+                .uv2(light)
+                .endVertex();
+        ^///?}
     }
     *///?}
 

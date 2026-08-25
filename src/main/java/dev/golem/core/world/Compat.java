@@ -157,6 +157,24 @@ public final class Compat {
     }
 
     /**
+     * Whether a block state renders as a full opaque cube <em>at a position</em> — the exact form,
+     * for the call sites that have a level and a position in scope (an explosion deciding whether the
+     * block under a cleared space can hold fire, for instance).
+     *
+     * <p>Prefer this over {@link #isSolidRender(BlockState)}: that one has to approximate below 26.1
+     * because it has nothing but the state.
+     */
+    public static boolean isSolidRender(net.minecraft.world.level.block.state.BlockState state,
+                                        net.minecraft.world.level.BlockGetter level,
+                                        net.minecraft.core.BlockPos pos) {
+        //? if >=26.1 {
+        return state.isSolidRender();
+        //?} else {
+        /*return state.isSolidRender(level, pos);
+        *///?}
+    }
+
+    /**
      * Every item in a tag, as stacks. 26.1's {@code Registry.get(TagKey)} returns the holder set
      * directly; before that the accessor is called {@code getTag}. Same result either way, and the
      * empty case is an empty list rather than a throw on both.
@@ -269,6 +287,88 @@ public final class Compat {
         if (level.getBlockEntity(pos) instanceof dev.golem.core.data.CompatBlockEntity be) {
             be.preRemoveSideEffects(pos, state);
         }
+        *///?}
+    }
+
+    /**
+     * Marks a chunk as needing to be written back to disk.
+     *
+     * <p>26.1 replaced the {@code setUnsaved(boolean)} setter with {@code markUnsaved()}; there is no
+     * "mark saved" direction on 26.1, so only the one useful direction is exposed here. Callers that
+     * write into a chunk's sections behind vanilla's back have to do this themselves — nothing else
+     * will.
+     */
+    public static void markUnsaved(net.minecraft.world.level.chunk.ChunkAccess chunk) {
+        //? if >=26.1 {
+        chunk.markUnsaved();
+        //?} else {
+        /*chunk.setUnsaved(true);
+        *///?}
+    }
+
+    /**
+     * Tells the chunk source that a section flipped between "has blocks" and "is all air".
+     *
+     * <p>26.1 added this call to {@code LevelChunk.setBlockState}; below it there is no such hook and
+     * nothing to do. Only callers that write into a chunk's sections behind vanilla's back need it —
+     * vanilla makes the call itself on the normal path.
+     */
+    public static void onSectionEmptinessChanged(net.minecraft.server.level.ServerLevel level,
+                                                 int chunkX, int sectionY, int chunkZ, boolean empty) {
+        //? if >=26.1 {
+        level.getChunkSource().onSectionEmptinessChanged(chunkX, sectionY, chunkZ, empty);
+        //?}
+    }
+
+    /**
+     * Notifies the six blocks around {@code pos} that the block there changed.
+     *
+     * <p>26.1 added a redstone {@code Orientation} argument, used to give wire updates a direction;
+     * null is the "no particular direction" case and is what vanilla itself passes from most call sites.
+     */
+    public static void updateNeighborsAt(Level level, net.minecraft.core.BlockPos pos,
+                                         net.minecraft.world.level.block.Block block) {
+        //? if >=26.1 {
+        level.updateNeighborsAt(pos, block, null);
+        //?} else {
+        /*level.updateNeighborsAt(pos, block);
+        *///?}
+    }
+
+    /**
+     * Registers or clears a chunk's forced-loading ticket <b>without waiting for the chunk</b>.
+     *
+     * <p>{@code ServerLevel.setChunkForced} is this call followed by {@code getChunk(x, z)} — a
+     * synchronous load that <b>generates</b> when nobody has the chunk. That trailing wait is the whole
+     * difference, and it is not wanted by anything that forces chunks in bulk: a caller claiming a wide
+     * area pays a full chunk generation, on the server thread, per chunk, before it does any work. The
+     * ticket alone is a registration; the chunk system then produces the chunk on its own workers and
+     * the caller picks it up with {@code getChunkNow} on a later tick.
+     *
+     * <p>The state change is identical either way — {@code setChunkForced} delegates the whole of it
+     * here and only adds the wait.
+     */
+    public static void updateChunkForced(ServerLevel level, int chunkX, int chunkZ, boolean forced) {
+        level.getChunkSource().updateChunkForced(new net.minecraft.world.level.ChunkPos(chunkX, chunkZ), forced);
+    }
+
+    /**
+     * Runs the "this block was removed" hook on a cell's neighbours.
+     *
+     * <p>Vanilla fires it from inside {@code LevelChunk.setBlockState} when the update flags carry
+     * {@code UPDATE_NEIGHBORS}. Callers that write into a chunk's sections behind vanilla's back skip it
+     * and have to dispatch it themselves, or containers never drop and rails never re-link.
+     *
+     * <p>26.1 renamed it from {@code onRemove(state, level, pos, newState, moved)} to
+     * {@code affectNeighborsAfterRemoval(level, pos, moved)} and dropped the new state, which it no
+     * longer needs.
+     */
+    public static void affectNeighborsAfterRemoval(ServerLevel level, net.minecraft.core.BlockPos pos,
+                                                   net.minecraft.world.level.block.state.BlockState oldState) {
+        //? if >=26.1 {
+        oldState.affectNeighborsAfterRemoval(level, pos, false);
+        //?} else {
+        /*oldState.onRemove(level, pos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), false);
         *///?}
     }
 }
