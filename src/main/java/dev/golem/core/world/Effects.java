@@ -26,6 +26,38 @@ public final class Effects {
         *///?}
     }
 
+    public static Object resistance() {
+        //? if >=1.21.2 {
+        return net.minecraft.world.effect.MobEffects.RESISTANCE;
+        //?} else {
+        /*return net.minecraft.world.effect.MobEffects.DAMAGE_RESISTANCE;
+        *///?}
+    }
+
+    public static Object speed() {
+        //? if >=1.21.2 {
+        return net.minecraft.world.effect.MobEffects.SPEED;
+        //?} else {
+        /*return net.minecraft.world.effect.MobEffects.MOVEMENT_SPEED;
+        *///?}
+    }
+
+    public static Object haste() {
+        //? if >=1.21.2 {
+        return net.minecraft.world.effect.MobEffects.HASTE;
+        //?} else {
+        /*return net.minecraft.world.effect.MobEffects.DIG_SPEED;
+        *///?}
+    }
+
+    public static Object jumpBoost() {
+        //? if >=1.21.2 {
+        return net.minecraft.world.effect.MobEffects.JUMP_BOOST;
+        //?} else {
+        /*return net.minecraft.world.effect.MobEffects.JUMP;
+        *///?}
+    }
+
     public static MobEffectInstance instance(Object effect, int duration, int amplifier) {
         //? if >=1.21 {
         return new MobEffectInstance((net.minecraft.core.Holder<MobEffect>) effect, duration, amplifier);
@@ -88,6 +120,58 @@ public final class Effects {
         //?} else {
         /*add(entity, effect, duration, amplifier);
         *///?}
+    }
+
+    public static boolean has(LivingEntity entity, Object effect) {
+        //? if >=1.21 {
+        return entity.hasEffect((net.minecraft.core.Holder<MobEffect>) effect);
+        //?} else {
+        /*return entity.hasEffect((MobEffect) effect);
+        *///?}
+    }
+
+    public static MobEffectInstance get(LivingEntity entity, Object effect) {
+        //? if >=1.21 {
+        return entity.getEffect((net.minecraft.core.Holder<MobEffect>) effect);
+        //?} else {
+        /*return entity.getEffect((MobEffect) effect);
+        *///?}
+    }
+
+    public static void remove(LivingEntity entity, Object effect) {
+        //? if >=1.21 {
+        entity.removeEffect((net.minecraft.core.Holder<MobEffect>) effect);
+        //?} else {
+        /*entity.removeEffect((MobEffect) effect);
+        *///?}
+    }
+
+    public static boolean hasRegistered(LivingEntity entity, MobEffect effect) {
+        //? if >=1.21 {
+        return has(entity, net.minecraft.core.registries.BuiltInRegistries.MOB_EFFECT.wrapAsHolder(effect));
+        //?} else {
+        /*return has(entity, effect);
+        *///?}
+    }
+
+    public static MobEffectInstance getRegistered(LivingEntity entity, MobEffect effect) {
+        //? if >=1.21 {
+        return get(entity, net.minecraft.core.registries.BuiltInRegistries.MOB_EFFECT.wrapAsHolder(effect));
+        //?} else {
+        /*return get(entity, effect);
+        *///?}
+    }
+
+    public static void removeRegistered(LivingEntity entity, MobEffect effect) {
+        //? if >=1.21 {
+        entity.removeEffect(net.minecraft.core.registries.BuiltInRegistries.MOB_EFFECT.wrapAsHolder(effect));
+        //?} else {
+        /*entity.removeEffect(effect);
+        *///?}
+    }
+
+    public static void clear(LivingEntity entity) {
+        entity.removeAllEffects();
     }
 
     public static void ignite(Entity entity, int seconds) {

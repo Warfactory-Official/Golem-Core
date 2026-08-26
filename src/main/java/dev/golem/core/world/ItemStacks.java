@@ -74,10 +74,43 @@ public final class ItemStacks {
 
     /** Creates food properties despite the builder's saturation method rename. */
     public static FoodProperties food(int nutrition, float saturationModifier) {
+        return food(nutrition, saturationModifier, false);
+    }
+
+    /** Creates food properties, optionally allowing consumption at a full hunger bar. */
+    public static FoodProperties food(int nutrition, float saturationModifier, boolean alwaysEdible) {
         //? if >=1.20.5 {
-        return new FoodProperties.Builder().nutrition(nutrition).saturationModifier(saturationModifier).build();
+        FoodProperties.Builder builder = new FoodProperties.Builder().nutrition(nutrition)
+                .saturationModifier(saturationModifier);
+        //? if >=1.21.1 {
+        if (alwaysEdible) builder.alwaysEdible();
         //?} else {
-        /*return new FoodProperties.Builder().nutrition(nutrition).saturationMod(saturationModifier).build();
+        /*if (alwaysEdible) builder.alwaysEat();
+        *///?}
+        return builder.build();
+        //?} else {
+        /*FoodProperties.Builder builder = new FoodProperties.Builder().nutrition(nutrition)
+                .saturationMod(saturationModifier);
+        if (alwaysEdible) builder.alwaysEat();
+        return builder.build();
+        *///?}
+    }
+
+    /** Returns the nutrition value across the pre-record and record-shaped food APIs. */
+    public static int foodNutrition(FoodProperties food) {
+        //? if >=1.21 {
+        return food.nutrition();
+        //?} else {
+        /*return food.getNutrition();
+        *///?}
+    }
+
+    /** Returns the constructor-level saturation modifier, not the computed saturation amount. */
+    public static float foodSaturationModifier(FoodProperties food) {
+        //? if >=1.21 {
+        return food.nutrition() == 0 ? 0F : food.saturation() / (food.nutrition() * 2F);
+        //?} else {
+        /*return food.getSaturationModifier();
         *///?}
     }
 }

@@ -6,6 +6,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -33,7 +34,27 @@ public class CompatItem extends Item {
 
     /** Handles use with a stable return type across the supported vanilla APIs. */
     protected InteractionResult compatUse(Level level, Player player, InteractionHand hand) {
-        return InteractionResult.PASS;
+        return compatVanillaUse(level, player, hand);
+    }
+
+    /** Calls the vanilla item implementation without exposing its return-type split to callers. */
+    protected final InteractionResult compatVanillaUse(Level level, Player player, InteractionHand hand) {
+        //? if >=26.1 {
+        return super.use(level, player, hand);
+        //?} else {
+        /*net.minecraft.world.InteractionResultHolder<ItemStack> result = super.use(level, player, hand);
+        return result.getResult();
+        *///?}
+    }
+
+    /** Receives the successful melee-hit hook used by syringe-like items. */
+    protected boolean compatHurtEnemy(ItemStack stack, LivingEntity target, LivingEntity attacker) {
+        return false;
+    }
+
+    /** Item use duration in ticks. Vanilla's default is 32; subclasses override when needed. */
+    protected int compatUseDuration(ItemStack stack, LivingEntity entity) {
+        return 32;
     }
 
     /**
@@ -59,10 +80,34 @@ public class CompatItem extends Item {
      * before that it was {@code canAttackBlock} taking a {@code Player}.
      */
     protected boolean compatCanDestroyBlock(ItemStack stack, net.minecraft.world.level.block.state.BlockState state,
-                                            Level level, net.minecraft.core.BlockPos pos,
-                                            net.minecraft.world.entity.LivingEntity user) {
+                                             Level level, net.minecraft.core.BlockPos pos,
+                                             net.minecraft.world.entity.LivingEntity user) {
         return true;
     }
+
+    //? if >=26.1 {
+    @Override
+    public void hurtEnemy(ItemStack stack, LivingEntity target, LivingEntity attacker) {
+        compatHurtEnemy(stack, target, attacker);
+    }
+    //?} else {
+    /*@Override
+    public boolean hurtEnemy(ItemStack stack, LivingEntity target, LivingEntity attacker) {
+        return compatHurtEnemy(stack, target, attacker);
+    }
+    *///?}
+
+    //? if >=1.20.5 {
+    @Override
+    public int getUseDuration(ItemStack stack, LivingEntity entity) {
+        return compatUseDuration(stack, entity);
+    }
+    //?} else {
+    /*@Override
+    public int getUseDuration(ItemStack stack) {
+        return compatUseDuration(stack, null);
+    }
+    *///?}
 
     //? if >=26.1 {
     @Override
