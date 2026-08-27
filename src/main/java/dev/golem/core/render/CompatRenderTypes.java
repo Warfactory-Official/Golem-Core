@@ -50,6 +50,22 @@ public final class CompatRenderTypes {
         *///?}
     }
 
+    /** An alpha-tested entity pass with face culling disabled, for legacy double-sided OBJ geometry. */
+    public static RenderType entityCutoutNoCull(
+            //? if >=26.1 {
+            Identifier
+            //?} else {
+            /*ResourceLocation
+            *///?}
+        texture) {
+        //? if >=26.1 {
+        // 26.1's entityCutout is the no-cull pipeline; entityCutoutCull is the opt-in culling variant.
+        return RenderTypes.entityCutout(texture);
+        //?} else {
+        /*return RenderType.entityCutoutNoCull(texture);
+        *///?}
+    }
+
     public static RenderType entityTranslucent(
             //? if >=26.1 {
             Identifier

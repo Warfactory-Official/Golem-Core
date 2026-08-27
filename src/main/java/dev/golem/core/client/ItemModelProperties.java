@@ -28,21 +28,41 @@ public final class ItemModelProperties {
                         event.register(Ids.of(namespace, name), new VariantProperty(value).type()));
         //?}
         //?} else {
-        /*net.minecraft.resources.ResourceLocation id = Ids.of(namespace, name);
-        net.minecraft.core.registries.BuiltInRegistries.ITEM.entrySet().stream()
-                .filter(entry -> entry.getKey().location().getNamespace().equals(namespace))
-                .forEach(entry -> net.minecraft.client.renderer.item.ItemProperties.register(
-                        entry.getValue(), id, (stack, level, entity, seed) -> value.get(stack)));
+        /*registerLegacy(namespace, name, value);
         *///?}
     }
 
+    //? if <26.1 {
+    /*private static void registerLegacy(String namespace, String name, Value value) {
+        //? if fabric {
+        net.minecraft.resources.ResourceLocation id = Ids.of(namespace, name);
+        registerLegacyItems(namespace, id, value);
+        //?} elif neoforge {
+        dev.golem.core.platform.NeoForgeEntrypoint.modBus().addListener(
+                (net.neoforged.fml.event.lifecycle.FMLClientSetupEvent event) -> event.enqueueWork(
+                        () -> registerLegacyItems(namespace, Ids.of(namespace, name), value)));
+        //?} elif forge {
+        dev.golem.core.platform.ForgeEntrypoint.modBus().addListener(
+                (net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent event) -> event.enqueueWork(
+                        () -> registerLegacyItems(namespace, Ids.of(namespace, name), value)));
+        //?}
+    }
+
+    private static void registerLegacyItems(String namespace, net.minecraft.resources.ResourceLocation id, Value value) {
+        java.util.List<net.minecraft.world.item.Item> items = net.minecraft.core.registries.BuiltInRegistries.ITEM.entrySet().stream()
+                .filter(entry -> entry.getKey().location().getNamespace().equals(namespace))
+                .map(java.util.Map.Entry::getValue)
+                .toList();
+        items.forEach(item -> net.minecraft.client.renderer.item.ItemProperties.register(
+                item, id, (stack, level, entity, seed) -> value.get(stack)));
+        dev.golem.core.GolemCore.LOG.info("Legacy item model property {} installed for {} item(s)", id, items.size());
+    }
+    *///?}
+
     //? if >=26.1 {
-    private record VariantProperty(Value value)
+    record VariantProperty(Value value)
             implements net.minecraft.client.renderer.item.properties.select.SelectItemModelProperty<String> {
         private static final com.mojang.serialization.Codec<String> VALUE_CODEC = com.mojang.serialization.Codec.STRING;
-        private static final net.minecraft.client.renderer.item.properties.select.SelectItemModelProperty.Type<VariantProperty, String> TYPE =
-                net.minecraft.client.renderer.item.properties.select.SelectItemModelProperty.Type.create(
-                        com.mojang.serialization.MapCodec.unit(new VariantProperty(stack -> 0)), VALUE_CODEC);
 
         @Override
         public String get(ItemStack stack, net.minecraft.client.multiplayer.ClientLevel level,
@@ -53,7 +73,8 @@ public final class ItemModelProperties {
 
         @Override
         public net.minecraft.client.renderer.item.properties.select.SelectItemModelProperty.Type<VariantProperty, String> type() {
-            return TYPE;
+            return net.minecraft.client.renderer.item.properties.select.SelectItemModelProperty.Type.create(
+                    com.mojang.serialization.MapCodec.unit(this), VALUE_CODEC);
         }
 
         @Override
