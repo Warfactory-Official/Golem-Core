@@ -21,8 +21,8 @@ import net.minecraft.resources.Identifier;
  * handed to the engine.
  *
  * <p>The sprite lookup is the part that actually moved between eras: 26.1 routes every atlas through
- * {@code AtlasManager} keyed by a {@code SpriteId}, where older versions exposed
- * {@code Minecraft.getTextureAtlas(atlasId)} as a plain sprite function.
+ * {@code AtlasManager} keyed by a {@code SpriteId}, while older versions register the particle engine's
+ * atlas in {@code TextureManager} under its texture location.
  *
  * <p>Client-only.
  */
@@ -76,10 +76,10 @@ public final class Particles {
                 .get(new net.minecraft.client.resources.model.sprite.SpriteId(
                         net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_PARTICLES, texture));
         //?} else {
-        /*return Minecraft.getInstance()
-                // Older Minecraft uses the atlas definition id here, not the atlas texture location.
-                .getTextureAtlas(dev.golem.core.Ids.minecraft("particles"))
-                .apply(texture);
+        /*return ((net.minecraft.client.renderer.texture.TextureAtlas) Minecraft.getInstance()
+                .getTextureManager()
+                .getTexture(net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_PARTICLES))
+                .getSprite(texture);
         *///?}
     }
 }
