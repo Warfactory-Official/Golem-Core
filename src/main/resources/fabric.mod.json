@@ -14,6 +14,9 @@
             "dev.golem.core.platform.FabricEntrypoint"
         ]
     },
+    "mixins": [
+        "golemcore.fabric.mixins.json"
+    ],
     "depends": {
         "fabricloader": ">=${fabric_loader}",
         "minecraft": "${minecraft_range}",

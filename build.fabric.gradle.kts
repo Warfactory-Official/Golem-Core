@@ -75,6 +75,9 @@ tasks.processResources {
         "minecraft_range" to prop("deps.minecraft_range"),
         "fabric_loader" to prop("deps.fabric_loader"),
         "java_version" to javaVersion.toString(),
+        "mixin_compatibility" to if (javaVersion <= 17) "JAVA_17" else "JAVA_21",
+        "legacy_client_mixins" to ", \"MixinMouseInput\"" +
+            if (obfuscated) ", \"MixinLegacyCrosshair\"" else "",
         "pack_format" to prop("pack_format"),
         "pack_format_entry" to if (mcVersion.substringBefore('.').toInt() >= 26)
             "\"min_format\": ${prop("pack_format")}, \"max_format\": ${prop("pack_format")}" 
@@ -82,7 +85,7 @@ tasks.processResources {
             "\"pack_format\": ${prop("pack_format")}",
     )
     inputs.properties(props)
-    filesMatching(listOf("fabric.mod.json", "pack.mcmeta")) { expand(props) }
+    filesMatching(listOf("fabric.mod.json", "pack.mcmeta", "*.mixins.json")) { expand(props) }
     filesMatching("fabric.mod.json") {
         filter { line -> if (!obfuscated && line.trim() == "{") "{\n  \"accessWidener\": \"golemcore.accesswidener\"," else line }
     }

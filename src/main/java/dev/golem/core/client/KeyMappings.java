@@ -99,6 +99,35 @@ public final class KeyMappings {
         return mapping;
     }
 
+    /** Whether a mapping's current binding is the given mouse button. */
+    public static boolean matchesMouse(KeyMapping mapping, int button) {
+        //? if >=26.1 {
+        return mapping.matchesMouse(new net.minecraft.client.input.MouseButtonEvent(0, 0,
+                new net.minecraft.client.input.MouseButtonInfo(button, 0)));
+        //?} else {
+        /*return mapping.matchesMouse(button);
+        *///?}
+    }
+
+    /** Physical held state for a mapping's current binding, independent of vanilla's dispatch map. */
+    public static boolean isHeld(KeyMapping mapping) {
+        com.mojang.blaze3d.platform.InputConstants.Key key =
+                com.mojang.blaze3d.platform.InputConstants.getKey(mapping.saveString());
+        if (key.getType() == com.mojang.blaze3d.platform.InputConstants.Type.MOUSE) {
+            return MouseInput.isDown(key.getValue());
+        }
+        if (key.getType() == com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM) {
+            //? if >=26.1 {
+            return com.mojang.blaze3d.platform.InputConstants.isKeyDown(
+                    net.minecraft.client.Minecraft.getInstance().getWindow(), key.getValue());
+            //?} else {
+            /*return com.mojang.blaze3d.platform.InputConstants.isKeyDown(
+                    net.minecraft.client.Minecraft.getInstance().getWindow().getWindow(), key.getValue());
+            *///?}
+        }
+        return mapping.isDown();
+    }
+
     /**
      * A mapping that can report its own held state reliably, even when it shares a key with a vanilla bind.
      *
@@ -114,23 +143,15 @@ public final class KeyMappings {
      */
     public static final class Mapping extends KeyMapping {
 
-        /** The button this mapping was declared with. Golem builds these, so it need not ask vanilla. */
-        private final com.mojang.blaze3d.platform.InputConstants.Type declaredType;
-        private final int declaredValue;
-
         //? if >=26.1 {
         Mapping(String name, com.mojang.blaze3d.platform.InputConstants.Type type, int value,
                 KeyMapping.Category category) {
             super(name, type, value, category);
-            this.declaredType = type;
-            this.declaredValue = value;
         }
         //?} else {
         /*Mapping(String name, com.mojang.blaze3d.platform.InputConstants.Type type, int value,
                 String category) {
             super(name, type, value, category);
-            this.declaredType = type;
-            this.declaredValue = value;
         }
         *///?}
 
@@ -146,23 +167,17 @@ public final class KeyMappings {
          * simply does nothing until the user moves it to a free key. There, a mapping declared on a mouse
          * button also polls that button directly.
          *
-         * <p>Known limitation of that fallback: it polls the button this mapping was <em>declared</em>
-         * with, because vanilla exposes no public accessor for the current one below 26.1 (the field is
-         * private, and adding an access widener for it is not worth it). So on 1.20.1, rebinding a
-         * mouse-declared mapping to something else leaves the original button working as well. Rebinding
-         * to a keyboard key is otherwise the documented workaround for this whole problem, and that case
-         * behaves correctly.
+         * <p>The fallback resolves {@link #saveString()} back through {@code InputConstants}, which exposes
+         * the current controls-screen binding without reflection or an access widener.
          */
         public boolean isHeld() {
             if (isDown()) return true;
-            //? if <1.21 {
-            /*if (declaredType == com.mojang.blaze3d.platform.InputConstants.Type.MOUSE) {
-                long window = net.minecraft.client.Minecraft.getInstance().getWindow().getWindow();
-                return org.lwjgl.glfw.GLFW.glfwGetMouseButton(window, declaredValue)
-                        == org.lwjgl.glfw.GLFW.GLFW_PRESS;
-            }
+            //? if <26.1 {
+            /*return KeyMappings.isHeld(this);
             *///?}
+            //? if >=26.1 {
             return false;
+            //?}
         }
     }
 

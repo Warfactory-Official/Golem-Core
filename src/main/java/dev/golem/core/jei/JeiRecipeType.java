@@ -11,8 +11,8 @@ import mezz.jei.api.recipe.types.IRecipeType;
 /**
  * A JEI recipe type, spelled the same way on every JEI line.
  *
- * <p>JEI renamed and moved this type between its 19.x and 29.x lines: 29.x has the interface
- * {@code mezz.jei.api.recipe.types.IRecipeType}, 19.x the final class
+ * <p>JEI renamed and moved this type between its 15.x/19.x and 29.x lines: 29.x has the interface
+ * {@code mezz.jei.api.recipe.types.IRecipeType}, while 15.x and 19.x have the final class
  * {@code mezz.jei.api.recipe.RecipeType}. Different package, different simple name, different kind —
  * and it appears in the signature of nearly every category and handler a mod writes, so left alone it
  * would fork the whole integration in two.

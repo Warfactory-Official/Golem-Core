@@ -3,22 +3,30 @@ package dev.golem.core.jei;
 //? if jei {
 
 import mezz.jei.api.recipe.RecipeIngredientRole;
+import mezz.jei.api.registration.IGuiHandlerRegistration;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
+import mezz.jei.api.registration.IRecipeTransferRegistration;
 import mezz.jei.api.registration.ISubtypeRegistration;
 // No DataComponentType import: the type is only ever inferred here (through GolemComponent.type()),
 // and naming it would break 1.20.1, where net.minecraft.core.component does not exist at all.
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.MenuType;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.function.Predicate;
 
 /**
- * The parts of JEI's registration API that differ between its 19.x and 29.x lines, in one place.
+ * The parts of JEI's registration API that differ between its 15.x, 19.x, and 29.x lines, in one place.
  *
  * <p>Everything here exists so a mod's plugin reads the same on every target. Each method is the 29.x
- * spelling — the line this port is written against — implemented on 19.x in terms of whatever that line
- * calls the same thing. Compiled out entirely on a node that declares no JEI coordinates.
+ * spelling — the line this port is written against — implemented on the 15.x and 19.x lines in terms of
+ * whatever those lines call the same thing. Compiled out entirely on a node that declares no JEI coordinates.
  *
  * @see JeiRecipeType for the type that appears in nearly every JEI signature
  */
@@ -75,6 +83,63 @@ public final class Jei {
     /** Adds the recipes of one type. Identical on both lines once the type is unwrapped. */
     public static <T> void addRecipes(IRecipeRegistration registration, JeiRecipeType<T> type, List<T> recipes) {
         registration.addRecipes(type.unwrap(), recipes);
+    }
+
+    /** Registers a machine's clickable recipe area on every supported JEI API line. */
+    public static void addRecipeClickArea(IGuiHandlerRegistration registration,
+                                          Class<? extends AbstractContainerScreen<?>> screenClass,
+                                          int x, int y, int width, int height, JeiRecipeType<?> type) {
+        registration.addRecipeClickArea(screenClass, x, y, width, height, type.unwrap());
+    }
+
+    /** Registers JEI's slot-range transfer handler without exposing its version-specific recipe type. */
+    public static <C extends AbstractContainerMenu, R> void addRecipeTransferHandler(
+            IRecipeTransferRegistration registration, Class<? extends C> containerClass, MenuType<C> menuType,
+            JeiRecipeType<R> type, int recipeSlotStart, int recipeSlotCount,
+            int inventorySlotStart, int inventorySlotCount) {
+        registration.addRecipeTransferHandler(containerClass, menuType, type.unwrap(), recipeSlotStart,
+                recipeSlotCount, inventorySlotStart, inventorySlotCount);
+    }
+
+    /** Registers a transfer handler for non-contiguous machine slots, optionally excluding recipes that
+     * contain display-only ingredients such as HBM fluid droplets. */
+    public static <C extends AbstractContainerMenu, R> void addSelectiveRecipeTransferHandler(
+            IRecipeTransferRegistration registration, Class<? extends C> containerClass, MenuType<C> menuType,
+            JeiRecipeType<R> type, int[] recipeSlotIndices, int inventorySlotStart, int inventorySlotCount,
+            Predicate<R> canHandle) {
+        //? if >=26.1 {
+        registration.addRecipeTransferHandler(new mezz.jei.api.recipe.transfer.IRecipeTransferInfo<C, R>() {
+            @Override public Class<? extends C> getContainerClass() { return containerClass; }
+            @Override public Optional<MenuType<C>> getMenuType() { return Optional.of(menuType); }
+            @Override public mezz.jei.api.recipe.types.IRecipeType<R> getRecipeType() { return type.unwrap(); }
+            @Override public boolean canHandle(C menu, R recipe) { return canHandle.test(recipe); }
+            @Override public List<net.minecraft.world.inventory.Slot> getRecipeSlots(C menu, R recipe) {
+                List<net.minecraft.world.inventory.Slot> slots = new ArrayList<>(recipeSlotIndices.length);
+                for (int index : recipeSlotIndices) slots.add(menu.getSlot(index));
+                return slots;
+            }
+            @Override public List<net.minecraft.world.inventory.Slot> getInventorySlots(C menu, R recipe) {
+                return new ArrayList<>(menu.slots.subList(inventorySlotStart,
+                        inventorySlotStart + inventorySlotCount));
+            }
+        });
+        //?} else {
+        /*registration.addRecipeTransferHandler(new mezz.jei.api.recipe.transfer.IRecipeTransferInfo<C, R>() {
+            @Override public Class<? extends C> getContainerClass() { return containerClass; }
+            @Override public Optional<MenuType<C>> getMenuType() { return Optional.of(menuType); }
+            @Override public mezz.jei.api.recipe.RecipeType<R> getRecipeType() { return type.unwrap(); }
+            @Override public boolean canHandle(C menu, R recipe) { return canHandle.test(recipe); }
+            @Override public List<net.minecraft.world.inventory.Slot> getRecipeSlots(C menu, R recipe) {
+                List<net.minecraft.world.inventory.Slot> slots = new ArrayList<>(recipeSlotIndices.length);
+                for (int index : recipeSlotIndices) slots.add(menu.getSlot(index));
+                return slots;
+            }
+            @Override public List<net.minecraft.world.inventory.Slot> getInventorySlots(C menu, R recipe) {
+                return new ArrayList<>(menu.slots.subList(inventorySlotStart,
+                        inventorySlotStart + inventorySlotCount));
+            }
+        });
+        *///?}
     }
 
     /**

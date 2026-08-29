@@ -43,6 +43,29 @@ public final class GuiDraw {
         *///?}
     }
 
+    /** Draws a crosshair with vanilla's inverse-colour blend against the pixels behind it. */
+    public static void crosshair(
+            //? if >=26.1 {
+            GuiGraphicsExtractor graphics, Identifier texture,
+            //?} else {
+            /*GuiGraphics graphics, ResourceLocation texture,
+            *///?}
+            int x, int y, float u, float v, int width, int height, int textureWidth, int textureHeight) {
+        //? if >=26.1 {
+        graphics.blit(RenderPipelines.CROSSHAIR, texture, x, y, u, v, width, height, textureWidth, textureHeight);
+        //?} else {
+        /*com.mojang.blaze3d.systems.RenderSystem.enableBlend();
+        com.mojang.blaze3d.systems.RenderSystem.blendFuncSeparate(
+                com.mojang.blaze3d.platform.GlStateManager.SourceFactor.ONE_MINUS_DST_COLOR,
+                com.mojang.blaze3d.platform.GlStateManager.DestFactor.ONE_MINUS_SRC_COLOR,
+                com.mojang.blaze3d.platform.GlStateManager.SourceFactor.ONE,
+                com.mojang.blaze3d.platform.GlStateManager.DestFactor.ZERO);
+        graphics.blit(texture, x, y, u, v, width, height, textureWidth, textureHeight);
+        com.mojang.blaze3d.systems.RenderSystem.defaultBlendFunc();
+        com.mojang.blaze3d.systems.RenderSystem.disableBlend();
+        *///?}
+    }
+
     /**
      * Fills an axis-aligned rectangle with a solid ARGB colour, from {@code (x0, y0)} inclusive to
      * {@code (x1, y1)} exclusive.
