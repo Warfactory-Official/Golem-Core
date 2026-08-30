@@ -29,6 +29,10 @@ import net.minecraft.client.renderer.MultiBufferSource;
  */
 public final class CompatItemRenderState {
 
+    private boolean gui3d;
+    private ItemDisplayContext displayContext = ItemDisplayContext.NONE;
+    private float droppedItemYOffset;
+
     //? if >=26.1 {
     final ItemStackRenderState delegate = new ItemStackRenderState();
     //?} else {
@@ -44,8 +48,22 @@ public final class CompatItemRenderState {
         *///?}
     }
 
+    /**
+     * Whether the resolved item model has the legacy three-dimensional GUI presentation.
+     *
+     * <p>Older versions expose this directly on {@code BakedModel}. 26.1 removed that flag with the
+     * baked-model API; its resolved item state retains the corresponding block-light presentation bit,
+     * which is the only neutral signal available to this facade.
+     */
+    public boolean isGui3d() {
+        return gui3d;
+    }
+
     /** Forgets any previously extracted item. */
     public void clear() {
+        gui3d = false;
+        displayContext = ItemDisplayContext.NONE;
+        droppedItemYOffset = 0F;
         //? if >=26.1 {
         delegate.clear();
         //?} else {
@@ -65,9 +83,20 @@ public final class CompatItemRenderState {
         }
         //? if >=26.1 {
         Minecraft.getInstance().getItemModelResolver().updateForTopItem(delegate, stack, context, level, null, 0);
+        gui3d = delegate.usesBlockLight();
+        droppedItemYOffset = (float) (-delegate.getModelBoundingBox().minY + 0.1625D);
         //?} else {
         /*this.stack = stack.copy();
+        var model = Minecraft.getInstance().getItemRenderer().getModel(stack, level, null, 0);
+        gui3d = model.isGui3d();
+        droppedItemYOffset = model.getTransforms().getTransform(context).scale.y() * 0.25F + 0.1F;
         *///?}
+        displayContext = context;
+    }
+
+    /** Vertical offset applied by a zero-age dropped-item renderer, including its initial bob. */
+    public float droppedItemYOffset() {
+        return droppedItemYOffset;
     }
 
     //? if <26.1 {
@@ -75,7 +104,7 @@ public final class CompatItemRenderState {
     void draw(PoseStack poseStack, MultiBufferSource bufferSource, int light, int overlay, @Nullable Level level) {
         if (stack == null || stack.isEmpty()) return;
         Minecraft.getInstance().getItemRenderer().renderStatic(
-                stack, ItemDisplayContext.FIXED, light, overlay, poseStack, bufferSource, level, 0);
+                stack, displayContext, light, overlay, poseStack, bufferSource, level, 0);
     }
     *///?}
 }

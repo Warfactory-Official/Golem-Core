@@ -6,6 +6,7 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 /*import net.minecraft.network.FriendlyByteBuf;
 *///?}
 import net.minecraft.world.food.FoodProperties;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
 /** Version-neutral operations on item stacks whose vanilla APIs changed between supported versions. */
@@ -30,6 +31,15 @@ public final class ItemStacks {
         /*ItemStack copy = stack.copy();
         copy.setCount(count);
         return copy;
+        *///?}
+    }
+
+    /** Runs the vanilla crafted-item callback despite its level parameter changing across versions. */
+    public static void onCraftedBy(ItemStack stack, Player player, int count) {
+        //? if >=26.1 {
+        stack.onCraftedBy(player, count);
+        //?} else {
+        /*stack.onCraftedBy(player.level(), player, count);
         *///?}
     }
 
