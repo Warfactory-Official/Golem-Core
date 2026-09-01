@@ -23,4 +23,43 @@ public final class Platform {
         /*return net.minecraftforge.fml.loading.FMLLoader.getDist() == net.minecraftforge.api.distmarker.Dist.CLIENT;
         *///?}
     }
+
+    /** Human-readable loader name. */
+    public static String name() {
+        //? if fabric {
+        /*return "Fabric";
+        *///?} elif neoforge {
+        return "NeoForge";
+        //?} elif forge {
+        /*return "Forge";
+        *///?}
+    }
+
+    /** Whether the current loader has loaded {@code modId}. */
+    public static boolean isModLoaded(String modId) {
+        //? if fabric {
+        /*return net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded(modId);
+        *///?} elif neoforge {
+        return net.neoforged.fml.ModList.get().isLoaded(modId);
+        //?} elif forge {
+        /*return net.minecraftforge.fml.ModList.get().isLoaded(modId);
+        *///?}
+    }
+
+    /** Whether the current loader is running a development environment. */
+    public static boolean isDevelopment() {
+        //? if fabric {
+        /*return net.fabricmc.loader.api.FabricLoader.getInstance().isDevelopmentEnvironment();
+        *///?} elif neoforge && >=26.1 {
+        return !net.neoforged.fml.loading.FMLLoader.getCurrent().isProduction();
+        //?} elif neoforge {
+        /*return !net.neoforged.fml.loading.FMLLoader.isProduction();
+        *///?} elif forge {
+        /*return !net.minecraftforge.fml.loading.FMLLoader.isProduction();
+        *///?}
+    }
+
+    public static String environmentName() {
+        return isDevelopment() ? "development" : "production";
+    }
 }

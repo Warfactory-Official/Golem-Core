@@ -3,6 +3,7 @@ package dev.golem.core.data;
 import net.minecraft.core.NonNullList;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.entity.player.Inventory;
 
 /**
  * Item-list persistence in vanilla's {@code "Items"} format.
@@ -42,6 +43,15 @@ public final class Inventories {
         ContainerHelper.loadAllItems(tagIn.tag(), stacks, tagIn.registries());
         *///?} else {
         /*ContainerHelper.loadAllItems(((TagDataIn) in).tag(), stacks);
+        *///?}
+    }
+
+    /** Returns the live 36-slot main inventory, excluding equipment and offhand slots. */
+    public static NonNullList<ItemStack> main(Inventory inventory) {
+        //? if >=26.1 {
+        return inventory.getNonEquipmentItems();
+        //?} else {
+        /*return inventory.items;
         *///?}
     }
 

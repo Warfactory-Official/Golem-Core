@@ -10,6 +10,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.core.NonNullList;
 
 /** Version-neutral operations on item stacks whose vanilla APIs changed between supported versions. */
 public final class ItemStacks {
@@ -64,6 +65,58 @@ public final class ItemStacks {
         /*if (source.hasCustomHoverName()) output.setHoverName(source.getHoverName());
         *///?}
     }
+
+    /** Reads one slot from block-entity state carried by an item. */
+    public static ItemStack carriedItem(ItemStack carrier, String legacyInventoryKey, int slotCount, int slot) {
+        if (slot < 0 || slot >= slotCount) return ItemStack.EMPTY;
+        //? if >=1.20.5 {
+        net.minecraft.world.item.component.ItemContainerContents contents =
+                carrier.get(net.minecraft.core.component.DataComponents.CONTAINER);
+        if (contents == null) return ItemStack.EMPTY;
+        NonNullList<ItemStack> items = NonNullList.withSize(slotCount, ItemStack.EMPTY);
+        contents.copyInto(items);
+        return items.get(slot).copy();
+        //?} else {
+        /*net.minecraft.nbt.CompoundTag data = legacyCarriedData(carrier);
+        if (data.contains(legacyInventoryKey, 10)) {
+            NonNullList<ItemStack> items = NonNullList.withSize(slotCount, ItemStack.EMPTY);
+            net.minecraft.world.ContainerHelper.loadAllItems(data.getCompound(legacyInventoryKey), items);
+            return items.get(slot).copy();
+        }
+        String directSlot = "slot" + slot;
+        return data.contains(directSlot, 10) ? ItemStack.of(data.getCompound(directSlot)) : ItemStack.EMPTY;
+        *///?}
+    }
+
+    /** Reads an integer from an item's carried block custom data. */
+    public static int carriedInt(ItemStack carrier, String key) {
+        //? if >=1.20.5 {
+        net.minecraft.world.item.component.CustomData data =
+                carrier.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+        return data == null ? 0 : dev.golem.core.data.Tags.getIntOr(data.copyTag(), key, 0);
+        //?} else {
+        /*return legacyCarriedData(carrier).getInt(key);
+        *///?}
+    }
+
+    /** Reads a boolean from an item's carried block custom data. */
+    public static boolean carriedBoolean(ItemStack carrier, String key) {
+        //? if >=1.20.5 {
+        net.minecraft.world.item.component.CustomData data =
+                carrier.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+        return data != null && dev.golem.core.data.Tags.getBooleanOr(data.copyTag(), key, false);
+        //?} else {
+        /*return legacyCarriedData(carrier).getBoolean(key);
+        *///?}
+    }
+
+    //? if <1.20.5 {
+    /*private static net.minecraft.nbt.CompoundTag legacyCarriedData(ItemStack carrier) {
+        net.minecraft.nbt.CompoundTag root = carrier.getTag();
+        if (root == null) return new net.minecraft.nbt.CompoundTag();
+        return root.contains("BlockEntityTag", 10) ? root.getCompound("BlockEntityTag") : root;
+    }
+    *///?}
 
     /** Runs the vanilla crafted-item callback despite its level parameter changing across versions. */
     public static void onCraftedBy(ItemStack stack, Player player, int count) {

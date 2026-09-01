@@ -71,3 +71,15 @@ Declare payload codecs and handlers once with `GolemNetwork`; loader entrypoints
 registrations at their lifecycle hook. Declare GameTests once in a `GameTests.Suite`; Forge and NeoForge
 entrypoints only forward their registration event. Loader adapters may translate event-bus timing, but
 must not duplicate the consumer's screen, renderer, HUD, packet, or test inventories.
+
+## Registry, Platform, and World Facades
+
+Use `BlockEntities.type(factory, blocks...)` inside the consumer's deferred registration supplier. It
+owns Fabric's builder and the Forge/NeoForge constructor differences without changing registration
+timing. `Platform` exposes loader name, mod presence, physical side, and development state; consumers
+should not maintain their own loader service for these queries.
+
+`Inventories.main(inventory)` is the live 36-slot player inventory view. `ItemStacks.carriedItem`,
+`carriedInt`, and `carriedBoolean` read block state carried through modern components or legacy item NBT.
+Use `Fires.canSpreadAround`, `Entities.createForConversion`, and `Permissions.gamemasters()` rather than
+branching on their vanilla signatures in consumer code.
