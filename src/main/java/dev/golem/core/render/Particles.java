@@ -28,6 +28,12 @@ import net.minecraft.resources.Identifier;
  */
 public final class Particles {
 
+    public enum Quality {
+        ALL,
+        DECREASED,
+        MINIMAL
+    }
+
     private Particles() {}
 
     /**
@@ -41,6 +47,31 @@ public final class Particles {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level == null) return;
         minecraft.particleEngine.add(particle);
+    }
+
+    /** Applies a particle tint across the particle-class hierarchy used by each era. */
+    public static void color(Particle particle, float red, float green, float blue) {
+        //? if >=26.1 {
+        if (particle instanceof net.minecraft.client.particle.SingleQuadParticle quad) {
+            quad.setColor(red, green, blue);
+        }
+        //?} else {
+        /*particle.setColor(red, green, blue);
+        *///?}
+    }
+
+    /** The user's particle-density setting, whose vanilla enum moved packages in 26.1. */
+    public static Quality quality() {
+        //? if >=26.1 {
+        net.minecraft.server.level.ParticleStatus status = Minecraft.getInstance().options.particles().get();
+        //?} else {
+        /*net.minecraft.client.ParticleStatus status = Minecraft.getInstance().options.particles().get();
+        *///?}
+        return switch (status) {
+            case ALL -> Quality.ALL;
+            case DECREASED -> Quality.DECREASED;
+            case MINIMAL -> Quality.MINIMAL;
+        };
     }
 
     /**

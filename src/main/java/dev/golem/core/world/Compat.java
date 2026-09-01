@@ -239,6 +239,9 @@ public final class Compat {
         // whole call sits inside the guard. Deliberately not leaning on a Stonecutter replacement:
         // those live in the consuming project's config, and this library has to compile on its own.
         //? if >=26.1 {
+        net.minecraft.world.item.component.UseRemainder component =
+                stack.get(net.minecraft.core.component.DataComponents.USE_REMAINDER);
+        if (component != null) return component.convertInto().create();
         var remainder = stack.getItem().getCraftingRemainder();
         return remainder != null ? remainder.create() : ItemStack.EMPTY;
         //?} else {

@@ -6,6 +6,8 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 /*import net.minecraft.network.FriendlyByteBuf;
 *///?}
 import net.minecraft.world.food.FoodProperties;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
@@ -31,6 +33,35 @@ public final class ItemStacks {
         /*ItemStack copy = stack.copy();
         copy.setCount(count);
         return copy;
+        *///?}
+    }
+
+    /** Damages a held item and broadcasts its break animation across the callback signature change. */
+    public static void hurtAndBreak(ItemStack stack, int amount, Player player, InteractionHand hand) {
+        //? if >=1.21.1 {
+        stack.hurtAndBreak(amount, player,
+                hand == InteractionHand.MAIN_HAND ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND);
+        //?} else {
+        /*stack.hurtAndBreak(amount, player, owner -> owner.broadcastBreakEvent(hand));
+        *///?}
+    }
+
+    /** Copies the source stack's mutable custom state onto an already-configured output stack. */
+    public static void copyCustomState(ItemStack source, ItemStack output) {
+        //? if >=1.20.5 {
+        output.applyComponents(source.getComponentsPatch());
+        //?} else {
+        /*if (source.hasTag()) output.getOrCreateTag().merge(source.getTag().copy());
+        *///?}
+    }
+
+    /** Copies only the user-assigned display name between transformed container items. */
+    public static void copyCustomName(ItemStack source, ItemStack output) {
+        //? if >=1.20.5 {
+        net.minecraft.network.chat.Component name = source.get(net.minecraft.core.component.DataComponents.CUSTOM_NAME);
+        if (name != null) output.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, name);
+        //?} else {
+        /*if (source.hasCustomHoverName()) output.setHoverName(source.getHoverName());
         *///?}
     }
 

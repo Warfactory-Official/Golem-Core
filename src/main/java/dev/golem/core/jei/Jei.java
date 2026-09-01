@@ -143,23 +143,37 @@ public final class Jei {
     }
 
     /**
-     * Makes an item's JEI identity depend on a data component, so stacks differing only in that
-     * component (a fluid icon's fluid, say) are treated as distinct ingredients.
+     * Makes an item's JEI identity depend on data components, so stacks differing only in those
+     * components (a fluid icon's fluid, amount, or pressure, say) are treated as distinct ingredients.
      *
      * <p>29.x offers {@code registerFromDataComponentTypes} directly. 19.x predates it and takes a
      * subtype interpreter, so this supplies one that reads the same component — the component API
      * itself is unchanged between the two, which is what makes the reimplementation exact.
      */
     public static void registerFromDataComponentTypes(ISubtypeRegistration registration, Item item,
-                                                      dev.golem.core.data.GolemComponent<?> component) {
+                                                      dev.golem.core.data.GolemComponent<?>... components) {
+        if (components.length == 0) return;
         //? if >=26.1 {
-        registration.registerFromDataComponentTypes(item, component.type());
+        registration.registerFromDataComponentTypes(item,
+                java.util.Arrays.stream(components)
+                        .map(dev.golem.core.data.GolemComponent::type)
+                        .toArray(net.minecraft.core.component.DataComponentType[]::new));
         //?} else {
         /*registration.registerSubtypeInterpreter(item, (stack, context) -> {
-            Object value = component.get(stack).orElse(null);
-            return value == null ? "" : value.toString();
+            StringBuilder subtype = new StringBuilder();
+            for (dev.golem.core.data.GolemComponent<?> component : components) {
+                Object value = component.get(stack).orElse(null);
+                subtype.append('|').append(value == null ? "" : value);
+            }
+            return subtype.toString();
         });
         *///?}
+    }
+
+    /** Registers an item whose identity includes state that is not a data component. */
+    public static void registerSubtypeInterpreter(ISubtypeRegistration registration, Item item,
+                                                  java.util.function.Function<ItemStack, String> interpreter) {
+        registration.registerSubtypeInterpreter(item, (stack, context) -> interpreter.apply(stack));
     }
 }
 //?}

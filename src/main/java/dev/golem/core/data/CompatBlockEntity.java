@@ -1,6 +1,9 @@
 package dev.golem.core.data;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.NonNullList;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -98,6 +101,27 @@ public abstract class CompatBlockEntity extends BlockEntity {
      */
     protected void removeSavedComponents(DataOut out) {}
 
+    /** Inventory carried by this block entity's item form, or null when none is carried. */
+    protected NonNullList<ItemStack> carriedItems() {
+        return null;
+    }
+
+    /** Additional state carried in the item form's custom-data component, or null when none is needed. */
+    protected CompoundTag collectCarriedData() {
+        return null;
+    }
+
+    /** Applies additional state from the item form's custom-data component. */
+    protected void applyCarriedData(CompoundTag data) {}
+
+    /** Custom display name carried by this block entity's item form, or null when unnamed. */
+    protected Component collectCarriedName() {
+        return null;
+    }
+
+    /** Applies a custom display name from the item form. */
+    protected void applyCarriedName(Component name) {}
+
     /**
      * Writes this block entity into an item stack across the save-to-item signature change.
      * Call this from drop handling instead of vanilla's version-specific method.
@@ -120,6 +144,38 @@ public abstract class CompatBlockEntity extends BlockEntity {
 
     //? if >=26.1 {
     @Override
+    protected void applyImplicitComponents(net.minecraft.core.component.DataComponentGetter components) {
+        super.applyImplicitComponents(components);
+        NonNullList<ItemStack> items = carriedItems();
+        if (items != null) {
+            components.getOrDefault(net.minecraft.core.component.DataComponents.CONTAINER,
+                    net.minecraft.world.item.component.ItemContainerContents.EMPTY).copyInto(items);
+        }
+        net.minecraft.world.item.component.CustomData data =
+                components.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+        if (data != null) applyCarriedData(data.copyTag());
+        Component name = components.get(net.minecraft.core.component.DataComponents.CUSTOM_NAME);
+        if (name != null) applyCarriedName(name);
+    }
+
+    @Override
+    protected void collectImplicitComponents(net.minecraft.core.component.DataComponentMap.Builder components) {
+        super.collectImplicitComponents(components);
+        NonNullList<ItemStack> items = carriedItems();
+        if (items != null) {
+            components.set(net.minecraft.core.component.DataComponents.CONTAINER,
+                    net.minecraft.world.item.component.ItemContainerContents.fromItems(items));
+        }
+        CompoundTag data = collectCarriedData();
+        if (data != null) {
+            components.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
+                    net.minecraft.world.item.component.CustomData.of(data));
+        }
+        Component name = collectCarriedName();
+        if (name != null) components.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, name);
+    }
+
+    @Override
     protected void loadAdditional(ValueInput input) {
         super.loadAdditional(input);
         loadData(new ValueDataIn(input));
@@ -138,6 +194,38 @@ public abstract class CompatBlockEntity extends BlockEntity {
     }
     //?} elif >=1.20.5 {
     /*@Override
+    protected void applyImplicitComponents(BlockEntity.DataComponentInput components) {
+        super.applyImplicitComponents(components);
+        NonNullList<ItemStack> items = carriedItems();
+        if (items != null) {
+            components.getOrDefault(net.minecraft.core.component.DataComponents.CONTAINER,
+                    net.minecraft.world.item.component.ItemContainerContents.EMPTY).copyInto(items);
+        }
+        net.minecraft.world.item.component.CustomData data =
+                components.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+        if (data != null) applyCarriedData(data.copyTag());
+        Component name = components.get(net.minecraft.core.component.DataComponents.CUSTOM_NAME);
+        if (name != null) applyCarriedName(name);
+    }
+
+    @Override
+    protected void collectImplicitComponents(net.minecraft.core.component.DataComponentMap.Builder components) {
+        super.collectImplicitComponents(components);
+        NonNullList<ItemStack> items = carriedItems();
+        if (items != null) {
+            components.set(net.minecraft.core.component.DataComponents.CONTAINER,
+                    net.minecraft.world.item.component.ItemContainerContents.fromItems(items));
+        }
+        CompoundTag data = collectCarriedData();
+        if (data != null) {
+            components.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
+                    net.minecraft.world.item.component.CustomData.of(data));
+        }
+        Component name = collectCarriedName();
+        if (name != null) components.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, name);
+    }
+
+    @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
         loadData(new TagDataIn(tag, registries));
