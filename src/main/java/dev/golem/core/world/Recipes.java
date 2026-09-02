@@ -1,6 +1,8 @@
 package dev.golem.core.world;
 
+import dev.golem.core.Ids;
 import java.util.Optional;
+import java.util.List;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
@@ -9,7 +11,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.SingleRecipeInput;
-import java.util.List;
 //?} else {
 /*import net.minecraft.world.SimpleContainer;
 import net.minecraft.core.NonNullList;
@@ -21,6 +22,18 @@ import net.minecraft.world.item.crafting.RecipeType;
 public final class Recipes {
 
     private Recipes() {}
+
+    /** Returns whether the level's active recipe manager contains the namespaced recipe id. */
+    public static boolean hasRecipe(Level level, String namespace, String path) {
+        var id = Ids.of(namespace, path);
+        //? if >=26.1 {
+        if (level.getServer() == null) return false;
+        return level.getServer().getRecipeManager().getRecipes().stream()
+                .anyMatch(recipe -> recipe.id().identifier().equals(id));
+        //?} else {
+        /*return level.getRecipeManager().byKey(id).isPresent();
+        *///?}
+    }
 
     /**
      * Finds the first matching smelting recipe and returns an independent result stack.
@@ -74,6 +87,35 @@ public final class Recipes {
         *///?} else {
         /*TransientCraftingContainer craftingInput = new TransientCraftingContainer(null, 1, 1,
                 NonNullList.of(ItemStack.EMPTY, input));
+        return level.getRecipeManager().getRecipeFor(RecipeType.CRAFTING, craftingInput, level)
+                .map(recipe -> recipe.assemble(craftingInput, level.registryAccess()))
+                .filter(result -> !result.isEmpty())
+                .map(ItemStack::copy);
+        *///?}
+    }
+
+    /** Finds and assembles a shaped crafting recipe for the supplied rectangular input grid. */
+    public static Optional<ItemStack> craftingResult(Level level, int width, int height,
+                                                     List<ItemStack> inputs) {
+        if (width <= 0 || height <= 0 || inputs.size() != width * height) return Optional.empty();
+
+        //? if >=26.1 {
+        if (!(level instanceof ServerLevel serverLevel)) return Optional.empty();
+        CraftingInput craftingInput = CraftingInput.of(width, height, inputs);
+        return serverLevel.recipeAccess().getRecipeFor(RecipeType.CRAFTING, craftingInput, level)
+                .map(holder -> holder.value().assemble(craftingInput))
+                .filter(result -> !result.isEmpty())
+                .map(ItemStack::copy);
+        //?} elif >=1.21.1 {
+        /*CraftingInput craftingInput = CraftingInput.of(width, height, inputs);
+        return level.getRecipeManager().getRecipeFor(RecipeType.CRAFTING, craftingInput, level)
+                .map(holder -> holder.value().assemble(craftingInput, level.registryAccess()))
+                .filter(result -> !result.isEmpty())
+                .map(ItemStack::copy);
+        *///?} else {
+        /*NonNullList<ItemStack> slots = NonNullList.withSize(width * height, ItemStack.EMPTY);
+        for (int i = 0; i < inputs.size(); i++) slots.set(i, inputs.get(i));
+        TransientCraftingContainer craftingInput = new TransientCraftingContainer(null, width, height, slots);
         return level.getRecipeManager().getRecipeFor(RecipeType.CRAFTING, craftingInput, level)
                 .map(recipe -> recipe.assemble(craftingInput, level.registryAccess()))
                 .filter(result -> !result.isEmpty())
