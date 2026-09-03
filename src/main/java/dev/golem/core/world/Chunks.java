@@ -1,12 +1,23 @@
 package dev.golem.core.world;
 
+import dev.golem.core.GolemCore;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 /** Chunk access whose shape changed across the supported range. */
 public final class Chunks {
 
     private Chunks() {}
+
+    /**
+     * Ownership that vanilla's set-like ticket collection does not retain. Multiple bulk operations may
+     * claim the same chunk; only the final release may remove their shared vanilla ticket.
+     */
+    private static final Map<ServerLevel, Map<Long, Integer>> LOAD_REFS = new WeakHashMap<>();
 
     /**
      * A ticket that <b>loads a chunk without simulating it</b>.
@@ -44,7 +55,12 @@ public final class Chunks {
      * <p>Returns immediately. The chunk shows up in {@code getChunkNow} once the chunk system has
      * produced it; callers poll for that rather than waiting. Balanced by {@link #releaseForLoading}.
      */
-    public static void claimForLoading(ServerLevel level, int chunkX, int chunkZ) {
+    public static synchronized void claimForLoading(ServerLevel level, int chunkX, int chunkZ) {
+        long key = pack(chunkX, chunkZ);
+        Map<Long, Integer> refs = LOAD_REFS.computeIfAbsent(level, ignored -> new HashMap<>());
+        Integer previous = refs.put(key, refs.getOrDefault(key, 0) + 1);
+        if (previous != null) return;
+
         ChunkPos pos = new ChunkPos(chunkX, chunkZ);
         //? if >=26.1 {
         level.getChunkSource().addTicketWithRadius(LOAD_ONLY, pos, 0);
@@ -54,12 +70,30 @@ public final class Chunks {
     }
 
     /** Drops a claim taken by {@link #claimForLoading}. */
-    public static void releaseForLoading(ServerLevel level, int chunkX, int chunkZ) {
+    public static synchronized void releaseForLoading(ServerLevel level, int chunkX, int chunkZ) {
+        long key = pack(chunkX, chunkZ);
+        Map<Long, Integer> refs = LOAD_REFS.get(level);
+        Integer count = refs == null ? null : refs.get(key);
+        if (count == null) {
+            GolemCore.LOG.warn("Ignoring unmatched loading-claim release for chunk [{}, {}]", chunkX, chunkZ);
+            return;
+        }
+        if (count > 1) {
+            refs.put(key, count - 1);
+            return;
+        }
+        refs.remove(key);
+        if (refs.isEmpty()) LOAD_REFS.remove(level);
+
         ChunkPos pos = new ChunkPos(chunkX, chunkZ);
         //? if >=26.1 {
         level.getChunkSource().removeTicketWithRadius(LOAD_ONLY, pos, 0);
         //?} else {
         /*level.getChunkSource().removeRegionTicket(LOAD_ONLY, pos, 0, pos);
         *///?}
+    }
+
+    private static long pack(int chunkX, int chunkZ) {
+        return (chunkX & 0xFFFFFFFFL) | ((long) chunkZ << 32);
     }
 }
