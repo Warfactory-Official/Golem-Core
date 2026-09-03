@@ -39,5 +39,10 @@ stonecutter parameters {
             replace("PayloadTypeRegistry.clientboundPlay()", "PayloadTypeRegistry.playS2C()")
             replace("PayloadTypeRegistry.serverboundPlay()", "PayloadTypeRegistry.playC2S()")
         }
+        string(current.parsed < "26.1") {
+            replace("BuiltInRegistries.ITEM.getValue(Ids.parse(", "BuiltInRegistries.ITEM.get(Ids.parse(")
+            replace("BuiltInRegistries.DATA_COMPONENT_TYPE.getValue(Ids.parse(",
+                    "BuiltInRegistries.DATA_COMPONENT_TYPE.get(Ids.parse(")
+        }
     }
 }

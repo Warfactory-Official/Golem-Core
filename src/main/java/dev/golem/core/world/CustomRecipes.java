@@ -53,6 +53,145 @@ public final class CustomRecipes {
         *///?}
     }
 
+    /** Factory for a shaped recipe whose Ingredient values may constrain item components. */
+    @FunctionalInterface
+    public interface ComponentShapedFactory<T extends ComponentShapedRecipe> {
+        T create(String namespace, String path, List<String> pattern,
+                 java.util.Map<String, ComponentIngredient> key, ItemStackSpec result);
+    }
+
+    /** Builds the cross-version component-sensitive shaped recipe serializer. */
+    public static <T extends ComponentShapedRecipe> RecipeSerializer<T> componentShaped(
+            ComponentShapedFactory<T> factory) {
+        Objects.requireNonNull(factory);
+        //? if >=26.1 {
+        return componentShaped26(factory);
+        //?} else if >=1.21.1 {
+        /*return componentShaped21(factory);
+        *///?} else {
+        /*return componentShapedLegacy(factory);
+        *///?}
+    }
+
+    //? if >=26.1 {
+    private static <T extends ComponentShapedRecipe> RecipeSerializer<T> componentShaped26(
+            ComponentShapedFactory<T> factory) {
+        com.mojang.serialization.Codec<java.util.Map<String, ComponentIngredient>> keyCodec =
+                com.mojang.serialization.Codec.unboundedMap(com.mojang.serialization.Codec.STRING,
+                        ComponentIngredient.CODEC);
+        com.mojang.serialization.MapCodec<T> codec =
+                com.mojang.serialization.codecs.RecordCodecBuilder.mapCodec(instance -> instance.group(
+                        com.mojang.serialization.Codec.STRING.listOf().fieldOf("pattern")
+                                .forGetter(recipe -> recipe.pattern()),
+                        keyCodec.fieldOf("key").forGetter(recipe -> recipe.key()),
+                        net.minecraft.world.item.ItemStackTemplate.CODEC.fieldOf("result")
+                                .forGetter(recipe -> recipe.resultTemplate())
+                ).apply(instance, (pattern, key, result) ->
+                        factory.create("", "", pattern, key, ItemStackSpec.fromTemplate(result))));
+        net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, T> stream =
+                net.minecraft.network.codec.StreamCodec.composite(
+                        net.minecraft.network.codec.ByteBufCodecs.STRING_UTF8.apply(
+                                net.minecraft.network.codec.ByteBufCodecs.list()),
+                        recipe -> recipe.pattern(),
+                        net.minecraft.network.codec.ByteBufCodecs.map(java.util.HashMap::new,
+                                net.minecraft.network.codec.ByteBufCodecs.STRING_UTF8,
+                                ComponentIngredient.STREAM_CODEC),
+                        recipe -> recipe.key(),
+                        net.minecraft.world.item.ItemStackTemplate.STREAM_CODEC,
+                        recipe -> recipe.resultTemplate(),
+                        (pattern, key, result) -> factory.create("", "", pattern, key,
+                                ItemStackSpec.fromTemplate(result)));
+        return new RecipeSerializer<>(codec, stream);
+    }
+    //?}
+
+    //? if >=1.21.1 && <26.1 {
+    /*private static <T extends ComponentShapedRecipe> RecipeSerializer<T> componentShaped21(
+            ComponentShapedFactory<T> factory) {
+        com.mojang.serialization.Codec<java.util.Map<String, ComponentIngredient>> keyCodec =
+                com.mojang.serialization.Codec.unboundedMap(com.mojang.serialization.Codec.STRING,
+                        ComponentIngredient.CODEC);
+        com.mojang.serialization.MapCodec<T> codec =
+                com.mojang.serialization.codecs.RecordCodecBuilder.mapCodec(instance -> instance.group(
+                        com.mojang.serialization.Codec.STRING.listOf().fieldOf("pattern")
+                                .forGetter(recipe -> recipe.pattern()),
+                        keyCodec.fieldOf("key").forGetter(recipe -> recipe.key()),
+                        ItemStack.CODEC.fieldOf("result").forGetter(recipe -> recipe.result())
+                ).apply(instance, (pattern, key, result) ->
+                        factory.create("", "", pattern, key, ItemStackSpec.of(result))));
+        net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, T> stream =
+                net.minecraft.network.codec.StreamCodec.composite(
+                        net.minecraft.network.codec.ByteBufCodecs.STRING_UTF8.apply(
+                                net.minecraft.network.codec.ByteBufCodecs.list()),
+                        recipe -> recipe.pattern(),
+                        net.minecraft.network.codec.ByteBufCodecs.map(java.util.HashMap::new,
+                                net.minecraft.network.codec.ByteBufCodecs.STRING_UTF8,
+                                ComponentIngredient.STREAM_CODEC),
+                        recipe -> recipe.key(),
+                        ItemStack.STREAM_CODEC,
+                        recipe -> recipe.result(),
+                        (pattern, key, result) -> factory.create("", "", pattern, key,
+                                ItemStackSpec.of(result)));
+        return new RecipeSerializer<>() {
+            @Override public com.mojang.serialization.MapCodec<T> codec() { return codec; }
+            @Override public net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, T> streamCodec() {
+                return stream;
+            }
+        };
+    }
+    *///?}
+
+    //? if <1.21.1 {
+    /*private static <T extends ComponentShapedRecipe> RecipeSerializer<T> componentShapedLegacy(
+            ComponentShapedFactory<T> factory) {
+        return new RecipeSerializer<>() {
+            @Override
+            public T fromJson(net.minecraft.resources.ResourceLocation id, com.google.gson.JsonObject json) {
+                com.google.gson.JsonArray jsonPattern =
+                        net.minecraft.util.GsonHelper.getAsJsonArray(json, "pattern");
+                List<String> pattern = new java.util.ArrayList<>(jsonPattern.size());
+                for (com.google.gson.JsonElement element : jsonPattern) pattern.add(element.getAsString());
+
+                com.google.gson.JsonObject jsonKey =
+                        net.minecraft.util.GsonHelper.getAsJsonObject(json, "key");
+                java.util.Map<String, ComponentIngredient> key = new java.util.HashMap<>();
+                for (java.util.Map.Entry<String, com.google.gson.JsonElement> entry : jsonKey.entrySet()) {
+                    key.put(entry.getKey(), ComponentIngredient.fromJson(entry.getValue()));
+                }
+                ItemStack result = net.minecraft.world.item.crafting.ShapedRecipe.itemStackFromJson(
+                        net.minecraft.util.GsonHelper.getAsJsonObject(json, "result"));
+                return factory.create(id.getNamespace(), id.getPath(), pattern, key, ItemStackSpec.of(result));
+            }
+
+            @Override
+            public T fromNetwork(net.minecraft.resources.ResourceLocation id,
+                                 net.minecraft.network.FriendlyByteBuf buffer) {
+                int patternSize = buffer.readVarInt();
+                List<String> pattern = new java.util.ArrayList<>(patternSize);
+                for (int i = 0; i < patternSize; i++) pattern.add(buffer.readUtf());
+                int keySize = buffer.readVarInt();
+                java.util.Map<String, ComponentIngredient> key = new java.util.HashMap<>();
+                for (int i = 0; i < keySize; i++) key.put(buffer.readUtf(), ComponentIngredient.fromNetwork(buffer));
+                return factory.create(id.getNamespace(), id.getPath(), pattern, key,
+                        ItemStackSpec.of(buffer.readItem()));
+            }
+
+            @Override
+            public void toNetwork(net.minecraft.network.FriendlyByteBuf buffer, T recipe) {
+                buffer.writeVarInt(recipe.pattern().size());
+                for (String row : recipe.pattern()) buffer.writeUtf(row);
+                buffer.writeVarInt(recipe.key().size());
+                for (java.util.Map.Entry<String, ComponentIngredient> entry : recipe.key().entrySet()) {
+                    buffer.writeUtf(entry.getKey());
+                    entry.getValue().toNetwork(buffer);
+                }
+                buffer.writeItem(recipe.result());
+            }
+
+        };
+    }
+    *///?}
+
     //? if >=26.1 {
     private static <T extends ComponentCopyShapelessRecipe> RecipeSerializer<T> componentCopyShapeless26(
             ComponentCopyFactory<T> factory) {

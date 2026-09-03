@@ -1,5 +1,7 @@
 package dev.golem.core.world;
 
+import dev.golem.core.Ids;
+
 //? if >=1.20.5 {
 import net.minecraft.network.RegistryFriendlyByteBuf;
 //?} else {
@@ -23,6 +25,23 @@ public final class ItemStacks {
         return ItemStack.isSameItemSameComponents(first, second);
         //?} else {
         /*return ItemStack.isSameItemSameTags(first, second);
+        *///?}
+    }
+
+    /** Tests an item registry id without exposing the registry lookup spelling to consumers. */
+    public static boolean matchesItemId(ItemStack stack, String id) {
+        if (stack == null || stack.isEmpty()) return false;
+        return stack.is(net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(Ids.parse(id)));
+    }
+
+    /** Tests one integer component, or its namespaced legacy NBT representation on 1.20.1. */
+    public static boolean matchesIntComponent(ItemStack stack, String key, int value) {
+        //? if >=1.21.1 {
+        net.minecraft.core.component.DataComponentType<?> type =
+                net.minecraft.core.registries.BuiltInRegistries.DATA_COMPONENT_TYPE.getValue(Ids.parse(key));
+        return type != null && stack.has(type) && Integer.valueOf(value).equals(stack.get(type));
+        //?} else {
+        /*return stack.hasTag() && stack.getTag().contains(key, 3) && stack.getTag().getInt(key) == value;
         *///?}
     }
 

@@ -24,6 +24,8 @@ public class CompatArmorItem extends
     *///?}
 {
 
+    private final ArmorSlot armorSlot;
+
     @SuppressWarnings("unchecked")
     public CompatArmorItem(GolemArmorMaterial material, ArmorSlot slot, Item.Properties properties) {
         //? if >=26.1 {
@@ -34,6 +36,12 @@ public class CompatArmorItem extends
         *///?} else {
         /*super((net.minecraft.world.item.ArmorMaterial) material.nativeMaterial(), type(slot), properties);
         *///?}
+        this.armorSlot = slot;
+    }
+
+    /** The equipment slot represented by this item, including on versions without an item-side accessor. */
+    public final ArmorSlot armorSlot() {
+        return armorSlot;
     }
 
     //? if forge {

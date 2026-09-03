@@ -181,4 +181,5 @@ public final class Effects {
         /*entity.setSecondsOnFire(seconds);
         *///?}
     }
+
 }

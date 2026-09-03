@@ -36,6 +36,16 @@ public abstract class CompatCustomRecipe extends CustomRecipe {
 
     protected abstract ItemStack assembleItems(List<ItemStack> input);
 
+    /** Grid-aware hook for recipes whose shaped position is part of their contract. */
+    protected boolean matchesGrid(int width, int height, List<ItemStack> input, Level level) {
+        return matchesItems(input, level);
+    }
+
+    /** Grid-aware assembly hook paired with {@link #matchesGrid}. */
+    protected ItemStack assembleGrid(int width, int height, List<ItemStack> input) {
+        return assembleItems(input);
+    }
+
     /** Version-neutral entry points for machines and server-side validation. */
     public final boolean matchesItemStacks(List<ItemStack> input, Level level) {
         return matchesItems(input, level);
@@ -63,18 +73,18 @@ public abstract class CompatCustomRecipe extends CustomRecipe {
 
     @Override
     public final boolean matches(CraftingInput input, Level level) {
-        return matchesItems(items(input), level);
+        return matchesGrid(input.width(), input.height(), items(input), level);
     }
 
     //? if >=26.1 {
     @Override
     public final ItemStack assemble(CraftingInput input) {
-        return assembleItems(items(input));
+        return assembleGrid(input.width(), input.height(), items(input));
     }
     //?} else {
     /*@Override
     public final ItemStack assemble(CraftingInput input, net.minecraft.core.HolderLookup.Provider registries) {
-        return assembleItems(items(input));
+        return assembleGrid(input.width(), input.height(), items(input));
     }
     *///?}
     //?} else {
@@ -86,12 +96,12 @@ public abstract class CompatCustomRecipe extends CustomRecipe {
 
     @Override
     public final boolean matches(CraftingContainer input, Level level) {
-        return matchesItems(items(input), level);
+        return matchesGrid(input.getWidth(), input.getHeight(), items(input), level);
     }
 
     @Override
     public final ItemStack assemble(CraftingContainer input, net.minecraft.core.RegistryAccess registries) {
-        return assembleItems(items(input));
+        return assembleGrid(input.getWidth(), input.getHeight(), items(input));
     }
     *///?}
 

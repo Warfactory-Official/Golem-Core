@@ -65,4 +65,14 @@ public final class CompatEnchantments {
         /*tool.enchant(Enchantments.BLOCK_FORTUNE, fortune);
         *///?}
     }
+
+    /** Whether an equipped stack may not be removed by a non-creative player. */
+    public static boolean preventsArmorChange(ItemStack stack) {
+        //? if >=1.21.1 {
+        return EnchantmentHelper.has(stack,
+                net.minecraft.world.item.enchantment.EnchantmentEffectComponents.PREVENT_ARMOR_CHANGE);
+        //?} else {
+        /*return EnchantmentHelper.hasBindingCurse(stack);
+        *///?}
+    }
 }
