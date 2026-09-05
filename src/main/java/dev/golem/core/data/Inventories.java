@@ -24,6 +24,10 @@ public final class Inventories {
 
     /** Writes a stack list under {@code "Items"}. {@code alsoWhenEmpty} forces the key to be written. */
     public static void save(DataOut out, NonNullList<ItemStack> stacks, boolean alsoWhenEmpty) {
+        if (out instanceof MemoryData.Access access) {
+            access.data().saveItems(stacks, alsoWhenEmpty);
+            return;
+        }
         //? if >=26.1 {
         ContainerHelper.saveAllItems(unwrap(out), stacks, alsoWhenEmpty);
         //?} elif >=1.20.5 {
@@ -36,6 +40,10 @@ public final class Inventories {
 
     /** Reads a stack list from {@code "Items"} into {@code stacks}. */
     public static void load(DataIn in, NonNullList<ItemStack> stacks) {
+        if (in instanceof MemoryData.Access access) {
+            access.data().loadItems(stacks);
+            return;
+        }
         //? if >=26.1 {
         ContainerHelper.loadAllItems(unwrap(in), stacks);
         //?} elif >=1.20.5 {

@@ -94,6 +94,13 @@ public abstract class CompatBlockEntity extends BlockEntity {
     /** Writes this block entity's persisted state. */
     protected void saveData(DataOut out) {}
 
+    /** Exercises the same persistence hooks against an in-memory representation, primarily for GameTests. */
+    public final void copyPersistentDataTo(CompatBlockEntity target) {
+        MemoryData data = new MemoryData();
+        saveData(data.writer());
+        target.loadData(data.reader());
+    }
+
     /**
      * Drops keys that must not travel with the block when it is picked up as an item — typically an
      * inventory that is already carried by a data component. Bridged from vanilla's

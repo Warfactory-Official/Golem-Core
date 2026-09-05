@@ -45,12 +45,19 @@ public final class GolemComponent<T> {
         //? if >=1.21.1 {
         DeferredRegister<DataComponentType<?>> register = REGISTERS.computeIfAbsent(namespace,
                 ns -> DeferredRegister.create(Registries.DATA_COMPONENT_TYPE, ns));
-        component = register.register(name, () -> DataComponentType.<T>builder().persistent(codec).build());
+        component = register.register(name, () -> componentType(codec));
         //?} else {
         /*this.codec = codec;
         legacy = null;
         *///?}
     }
+
+    //? if >=1.21.1 {
+    static <T> DataComponentType<T> componentType(Codec<T> codec) {
+        return DataComponentType.<T>builder().persistent(codec).networkSynchronized(
+                net.minecraft.network.codec.ByteBufCodecs.fromCodecWithRegistries(codec)).build();
+    }
+    //?}
 
     //? if <1.21.1 {
     /*private GolemComponent(String namespace, String name, LegacyValue<T> legacy) {

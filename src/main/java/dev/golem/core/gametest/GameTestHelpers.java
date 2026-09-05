@@ -69,6 +69,15 @@ public final class GameTestHelpers {
         *///?}
     }
 
+    /** Copies the complete persisted block-entity payload without exposing era-specific save/load methods. */
+    public static void copyPersistentData(BlockEntity source, BlockEntity target) {
+        if (!(source instanceof dev.golem.core.data.CompatBlockEntity from)
+                || !(target instanceof dev.golem.core.data.CompatBlockEntity to)) {
+            throw new IllegalArgumentException("Persistence copy requires CompatBlockEntity instances");
+        }
+        from.copyPersistentDataTo(to);
+    }
+
     /** Creates an owned server-player fixture with a real listener and an in-memory outbound connection. */
     public static MockServerPlayer mockServerPlayer(GameTestHelper helper) {
         return new MockServerPlayer(helper);

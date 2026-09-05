@@ -14,6 +14,8 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.core.NonNullList;
 
+import java.util.List;
+
 /** Version-neutral operations on item stacks whose vanilla APIs changed between supported versions. */
 public final class ItemStacks {
 
@@ -25,6 +27,20 @@ public final class ItemStacks {
         return ItemStack.isSameItemSameComponents(first, second);
         //?} else {
         /*return ItemStack.isSameItemSameTags(first, second);
+        *///?}
+    }
+
+    /** Compares item data while ignoring durability, matching the old wildcard filter. */
+    public static boolean sameItemAndDataIgnoringDamage(ItemStack first, ItemStack second) {
+        //? if >=1.20.5 {
+        ItemStack firstCopy = first.copy();
+        ItemStack secondCopy = second.copy();
+        firstCopy.remove(net.minecraft.core.component.DataComponents.DAMAGE);
+        secondCopy.remove(net.minecraft.core.component.DataComponents.DAMAGE);
+        return ItemStack.isSameItemSameComponents(firstCopy, secondCopy);
+        //?} else {
+        /*return ItemStack.isSameItem(first, second)
+                && ItemStack.isSameItemSameTags(first, second);
         *///?}
     }
 
@@ -82,6 +98,46 @@ public final class ItemStacks {
         if (name != null) output.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, name);
         //?} else {
         /*if (source.hasCustomHoverName()) output.setHoverName(source.getHoverName());
+        *///?}
+    }
+
+    /** Applies the vanilla custom name and lore used by machines that print a message stack. */
+    public static void setNameAndLore(ItemStack stack, String name, List<String> lines) {
+        //? if >=1.20.5 {
+        stack.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,
+                net.minecraft.network.chat.Component.literal(name));
+        stack.set(net.minecraft.core.component.DataComponents.LORE,
+                new net.minecraft.world.item.component.ItemLore(lines.stream()
+                        .<net.minecraft.network.chat.Component>map(line ->
+                                net.minecraft.network.chat.Component.literal(line)
+                                        .withStyle(net.minecraft.ChatFormatting.GRAY))
+                        .toList()));
+        //?} else {
+        /*net.minecraft.nbt.CompoundTag display = stack.getOrCreateTagElement("display");
+        net.minecraft.nbt.ListTag lore = new net.minecraft.nbt.ListTag();
+        for (String line : lines) {
+            lore.add(net.minecraft.nbt.StringTag.valueOf("\u00a7r\u00a77" + line));
+        }
+        display.put("Lore", lore);
+        stack.setHoverName(net.minecraft.network.chat.Component.literal(name));
+        *///?}
+    }
+
+    /** Returns the plain text of vanilla lore lines, regardless of component or legacy NBT storage. */
+    public static List<String> loreLines(ItemStack stack) {
+        //? if >=1.20.5 {
+        net.minecraft.world.item.component.ItemLore lore =
+                stack.get(net.minecraft.core.component.DataComponents.LORE);
+        return lore == null ? List.of() : lore.lines().stream()
+                .map(net.minecraft.network.chat.Component::getString).toList();
+        //?} else {
+        /*if (!stack.hasTag()) return List.of();
+        net.minecraft.nbt.CompoundTag display = stack.getTag().getCompound("display");
+        if (!display.contains("Lore", 9)) return List.of();
+        net.minecraft.nbt.ListTag lore = display.getList("Lore", 8);
+        java.util.ArrayList<String> lines = new java.util.ArrayList<>();
+        for (int i = 0; i < lore.size(); i++) lines.add(lore.getString(i));
+        return List.copyOf(lines);
         *///?}
     }
 

@@ -41,6 +41,23 @@ public abstract class CompatEntity extends Entity {
     /** Writes this entity's persisted state. */
     protected void saveData(DataOut out) {}
 
+    /** Matches PrimedTnt: portal handling is part of its tick from 1.21.1 onward, not in 1.20.1. */
+    protected final void compatHandlePortal() {
+        //? if >=1.21.1 {
+        handlePortal();
+        //?}
+    }
+
+    /** Applies the legacy water push hook where the target entity API still exposes it. */
+    protected final void compatUpdateInWaterStateAndDoFluidPushing() {
+        //? if >=26.1 {
+        updateFluidInteraction();
+        //?} else {
+        /*
+        updateInWaterStateAndDoFluidPushing();
+        *///?}
+    }
+
     /** Defines synchronized entity data. Called during entity construction. */
     protected void defineData(SynchedData data) {}
 

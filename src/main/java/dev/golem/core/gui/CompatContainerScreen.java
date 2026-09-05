@@ -1,12 +1,15 @@
 package dev.golem.core.gui;
 
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 
 //? if >=26.1 {
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 //?} else {
@@ -41,6 +44,9 @@ import net.minecraft.client.input.MouseButtonEvent;
  * <p>Extend this instead of {@code AbstractContainerScreen} and all three behave as they do on 26.1.
  */
 public abstract class CompatContainerScreen<T extends AbstractContainerMenu> extends AbstractContainerScreen<T> {
+
+    /** Direct field for JEI's pre-key focus probe; it cannot discover EditBox instances inside arrays. */
+    protected EditBox focusedEditBoxForInput;
 
     protected CompatContainerScreen(T menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
@@ -122,13 +128,22 @@ public abstract class CompatContainerScreen<T extends AbstractContainerMenu> ext
     /** Version-neutral key hook. */
     protected boolean keyPressed(KeyInput event) { return false; }
 
+    /** Version-neutral key-release hook. */
+    protected boolean keyReleased(KeyInput event) { return false; }
+
+    /** Version-neutral character hook. */
+    protected boolean charTyped(CharInput event) { return false; }
+
     /** Version-neutral wheel hook. */
     protected boolean mouseScrolledCompat(double mouseX, double mouseY, double scrollX, double scrollY) { return false; }
 
     //? if >=26.1 {
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        return this.mouseClicked(new MouseInput(event), doubleClick) || super.mouseClicked(event, doubleClick);
+        boolean handled = this.mouseClicked(new MouseInput(event), doubleClick)
+                || super.mouseClicked(event, doubleClick);
+        this.updateFocusedEditBox();
+        return handled;
     }
 
     @Override
@@ -138,7 +153,26 @@ public abstract class CompatContainerScreen<T extends AbstractContainerMenu> ext
 
     @Override
     public boolean keyPressed(KeyEvent event) {
-        return this.keyPressed(new KeyInput(event)) || super.keyPressed(event);
+        KeyInput input = new KeyInput(event);
+        boolean handled = this.keyPressed(input) || this.keyPressedFocusedEditBox(input) || super.keyPressed(event);
+        this.updateFocusedEditBox();
+        return handled;
+    }
+
+    @Override
+    public boolean keyReleased(KeyEvent event) {
+        KeyInput input = new KeyInput(event);
+        boolean handled = this.keyReleased(input) || this.keyReleasedFocusedEditBox(input) || super.keyReleased(event);
+        this.updateFocusedEditBox();
+        return handled;
+    }
+
+    @Override
+    public boolean charTyped(CharacterEvent event) {
+        CharInput input = new CharInput(event);
+        boolean handled = this.charTyped(input) || this.charTypedFocusedEditBox(input) || super.charTyped(event);
+        this.updateFocusedEditBox();
+        return handled;
     }
 
     @Override
@@ -167,7 +201,10 @@ public abstract class CompatContainerScreen<T extends AbstractContainerMenu> ext
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        return this.mouseClicked(new MouseInput(mouseX, mouseY, button), false) || super.mouseClicked(mouseX, mouseY, button);
+        boolean handled = this.mouseClicked(new MouseInput(mouseX, mouseY, button), false)
+                || super.mouseClicked(mouseX, mouseY, button);
+        this.updateFocusedEditBox();
+        return handled;
     }
 
     @Override
@@ -177,7 +214,29 @@ public abstract class CompatContainerScreen<T extends AbstractContainerMenu> ext
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        return this.keyPressed(new KeyInput(keyCode, scanCode, modifiers)) || super.keyPressed(keyCode, scanCode, modifiers);
+        KeyInput input = new KeyInput(keyCode, scanCode, modifiers);
+        boolean handled = this.keyPressed(input) || this.keyPressedFocusedEditBox(input)
+                || super.keyPressed(keyCode, scanCode, modifiers);
+        this.updateFocusedEditBox();
+        return handled;
+    }
+
+    @Override
+    public boolean keyReleased(int keyCode, int scanCode, int modifiers) {
+        KeyInput input = new KeyInput(keyCode, scanCode, modifiers);
+        boolean handled = this.keyReleased(input) || this.keyReleasedFocusedEditBox(input)
+                || super.keyReleased(keyCode, scanCode, modifiers);
+        this.updateFocusedEditBox();
+        return handled;
+    }
+
+    @Override
+    public boolean charTyped(char codePoint, int modifiers) {
+        CharInput input = new CharInput(codePoint, modifiers);
+        boolean handled = this.charTyped(input) || this.charTypedFocusedEditBox(input)
+                || super.charTyped(codePoint, modifiers);
+        this.updateFocusedEditBox();
+        return handled;
     }
     *///?}
 
@@ -204,4 +263,46 @@ public abstract class CompatContainerScreen<T extends AbstractContainerMenu> ext
         this.renderTooltip(graphics, mouseX, mouseY);
     }
     *///?}
+
+    private EditBox focusedEditBox() {
+        if (this.focusedEditBoxForInput != null && this.focusedEditBoxForInput.isActive()
+                && this.focusedEditBoxForInput.isFocused()) return this.focusedEditBoxForInput;
+        return this.getFocused() instanceof EditBox editBox && editBox.isActive() && editBox.isFocused()
+                ? editBox : null;
+    }
+
+    @Override
+    public void setFocused(GuiEventListener focused) {
+        super.setFocused(focused);
+        this.focusedEditBoxForInput = focused instanceof EditBox editBox ? editBox : null;
+    }
+
+    private void updateFocusedEditBox() {
+        if (this.getFocused() instanceof EditBox editBox && editBox.isActive() && editBox.isFocused()) {
+            this.focusedEditBoxForInput = editBox;
+        } else if (this.focusedEditBoxForInput == null || !this.focusedEditBoxForInput.isFocused()) {
+            this.focusedEditBoxForInput = null;
+        }
+    }
+
+    private boolean keyPressedFocusedEditBox(KeyInput event) {
+        EditBox editBox = this.focusedEditBox();
+        if (editBox == null || !EditBoxInput.consumesKey(event.key())) return false;
+        event.keyPressed(editBox);
+        return true;
+    }
+
+    private boolean keyReleasedFocusedEditBox(KeyInput event) {
+        EditBox editBox = this.focusedEditBox();
+        if (editBox == null || !EditBoxInput.consumesKey(event.key())) return false;
+        event.keyReleased(editBox);
+        return true;
+    }
+
+    private boolean charTypedFocusedEditBox(CharInput event) {
+        EditBox editBox = this.focusedEditBox();
+        if (editBox == null) return false;
+        event.charTyped(editBox);
+        return true;
+    }
 }

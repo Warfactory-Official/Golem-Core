@@ -57,4 +57,13 @@ public final class KeyInput {
         /*return editBox.keyPressed(this.key, this.scanCode, this.modifiers);
         *///?}
     }
+
+    /** Delivers a key release to a text widget without exposing its version-specific event type. */
+    public boolean keyReleased(net.minecraft.client.gui.components.EditBox editBox) {
+        //? if >=26.1 {
+        return editBox.keyReleased(this.event);
+        //?} else {
+        /*return editBox.keyReleased(this.key, this.scanCode, this.modifiers);
+        *///?}
+    }
 }

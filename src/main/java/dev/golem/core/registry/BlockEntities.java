@@ -1,6 +1,8 @@
 package dev.golem.core.registry;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
@@ -26,6 +28,25 @@ public final class BlockEntities {
         /*return new BlockEntityType<T>(factory::create, java.util.Set.of(blocks), null);
         *///?} elif forge {
         /*return BlockEntityType.Builder.of(factory::create, blocks).build(null);
+        *///?}
+    }
+
+    /** Saves a block entity with its type and position without exposing the registry-aware signature split. */
+    public static CompoundTag save(BlockEntity blockEntity, HolderLookup.Provider registries) {
+        //? if >=1.20.5 {
+        return blockEntity.saveWithFullMetadata(registries);
+        //?} else {
+        /*return blockEntity.saveWithFullMetadata();
+        *///?}
+    }
+
+    /** Recreates a registered block entity from custom data across the loadStatic signature split. */
+    public static BlockEntity load(BlockPos pos, BlockState state, CompoundTag tag,
+                                   HolderLookup.Provider registries) {
+        //? if >=1.20.5 {
+        return BlockEntity.loadStatic(pos, state, tag, registries);
+        //?} else {
+        /*return BlockEntity.loadStatic(pos, state, tag);
         *///?}
     }
 }

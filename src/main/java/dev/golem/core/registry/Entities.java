@@ -36,10 +36,28 @@ public final class Entities {
         *///?}
     }
 
+    /** Keeps moving entities' velocity packets enabled on loaders that expose that builder option. */
+    public static <T extends Entity> EntityType.Builder<T> trackDeltas(EntityType.Builder<T> builder) {
+        //? if neoforge || forge {
+        return builder.setShouldReceiveVelocityUpdates(true);
+        //?} else {
+        /*return builder;
+        *///?}
+    }
+
     /** Creates a mob for an entity conversion, preserving the modern creation reason where available. */
     public static <T extends Mob> T createForConversion(EntityType<T> type, ServerLevel level) {
         //? if >=26.1 {
         return type.create(level, net.minecraft.world.entity.EntitySpawnReason.CONVERSION);
+        //?} else {
+        /*return type.create(level);
+        *///?}
+    }
+
+    /** Creates an entity with the explicit triggered spawn reason across the entity-construction API change. */
+    public static <T extends Entity> T createTriggered(EntityType<T> type, ServerLevel level) {
+        //? if >=26.1 {
+        return type.create(level, net.minecraft.world.entity.EntitySpawnReason.TRIGGERED);
         //?} else {
         /*return type.create(level);
         *///?}

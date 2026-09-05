@@ -56,16 +56,34 @@ protected void defineData(SynchedData data) {
 Do not override `defineSynchedData`; its vanilla signature differs by Minecraft version. Continue using
 `getEntityData().get(ARMED)` and `getEntityData().set(ARMED, value)` after definition.
 
+Moving entities can call `compatHandlePortal()` and
+`compatUpdateInWaterStateAndDoFluidPushing()` from their shared tick. The latter selects 26.1's
+`updateFluidInteraction()` or the older water-push hook. Use `Entities.trackDeltas(builder)` when the
+entity's velocity should be tracked on loaders that expose that builder option.
+
 Use `Recipes.smeltingResult(level, input)` for furnace lookup. It returns
 `Optional<ItemStack>` and hides `RecipeHolder`, `SingleRecipeInput`, and cached-recipe implementation
 types. The returned stack is a copy and may be modified by the caller.
+
+For recipe-presence checks, use `Recipes.hasRecipe(level, namespace, path)`. It resolves the namespaced
+id and checks the active recipe manager without exposing the version-specific manager shape. For a
+rectangular crafting grid, use `Recipes.craftingResult(level, width, height, inputs)`; it performs the
+crafting-grid lookup/assembly (including shaped recipes) behind the same facade, validates the input
+dimensions, and returns an independent result stack. These operations are also the neutral seam for
+guard-free HBM GameTests.
+
+`ComponentIngredient` and `ComponentShapedRecipe` preserve exact component-bearing shaped ingredients
+across the component and legacy-NBT eras. Register the retained serializer through `CustomRecipes` and
+keep consumer recipe JSON/version guards out of the mod. `DamageEvents` similarly exposes one mutable,
+cancellable living-damage event across all loaders; resistance semantics remain consumer behavior.
 
 ## Consumer Boundary
 
 Consumer feature code should not override Minecraft methods whose signatures vary by target. Use the
 Core hooks instead: `CompatContainerScreen`/`CompatScreen` for GUI rendering and input, `CompatBlock`
 and `CompatFireBlock` for block callbacks, `CompatItem` for tooltips/use/ticks, and
-`CompatEnchantments` for loot and synthetic tools. Version guards belong in these Core backends.
+`CompatEnchantments` for loot, synthetic tools, and armor-change prevention such as Curse of Binding.
+Version guards belong in these Core backends.
 
 Declare payload codecs and handlers once with `GolemNetwork`; loader entrypoints only flush retained
 registrations at their lifecycle hook. Declare GameTests once in a `GameTests.Suite`; Forge and NeoForge
@@ -81,5 +99,5 @@ should not maintain their own loader service for these queries.
 
 `Inventories.main(inventory)` is the live 36-slot player inventory view. `ItemStacks.carriedItem`,
 `carriedInt`, and `carriedBoolean` read block state carried through modern components or legacy item NBT.
-Use `Fires.canSpreadAround`, `Entities.createForConversion`, and `Permissions.gamemasters()` rather than
-branching on their vanilla signatures in consumer code.
+Use `Fires.canSpreadAround`, `Entities.createForConversion`, `Entities.createTriggered`, and
+`Permissions.gamemasters()` rather than branching on their vanilla signatures in consumer code.

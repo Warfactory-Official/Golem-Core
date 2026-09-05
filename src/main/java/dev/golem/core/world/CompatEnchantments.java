@@ -2,6 +2,7 @@ package dev.golem.core.world;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.Enchantments;
@@ -12,6 +13,19 @@ import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 public final class CompatEnchantments {
 
     private CompatEnchantments() {}
+
+    /** Applies vanilla's blast-protection dampener to explosion knockback. */
+    public static double blastKnockback(ServerLevel level, LivingEntity entity, double knockback) {
+        //? if >=1.21.1 {
+        int protection = EnchantmentHelper.getEnchantmentLevel(
+                level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT)
+                        .getOrThrow(Enchantments.BLAST_PROTECTION), entity);
+        return knockback * net.minecraft.util.Mth.clamp(1D - protection * 0.15D, 0D, 1D);
+        //?} else {
+        /*return net.minecraft.world.item.enchantment.ProtectionEnchantment
+                .getExplosionKnockbackAfterDampener(entity, knockback);
+        *///?}
+    }
 
     /** The Fortune level on the loot context's tool, or zero when it has none. */
     public static int fortune(LootParams.Builder params) {

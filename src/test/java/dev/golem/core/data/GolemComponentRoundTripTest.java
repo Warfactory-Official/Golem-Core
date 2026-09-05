@@ -1,5 +1,16 @@
 package dev.golem.core.data;
 
+//? if >=1.21.1 {
+import com.mojang.serialization.Codec;
+import io.netty.buffer.Unpooled;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+//?}
+
 //? if <1.21.1 {
 /*import net.minecraft.SharedConstants;
 import net.minecraft.nbt.CompoundTag;
@@ -52,3 +63,22 @@ class GolemComponentRoundTripTest {
     }
 }
 *///?}
+
+//? if >=1.21.1 {
+class GolemComponentRoundTripTest {
+
+    @Test
+    void persistentComponentsAlsoHaveARegistryAwareNetworkCodec() {
+        var stream = GolemComponent.componentType(Codec.INT).streamCodec();
+        assertNotNull(stream);
+        RegistryFriendlyByteBuf buffer = new RegistryFriendlyByteBuf(
+                Unpooled.buffer(), RegistryAccess.EMPTY);
+        try {
+            stream.encode(buffer, 37);
+            assertEquals(37, stream.decode(buffer));
+        } finally {
+            buffer.release();
+        }
+    }
+}
+//?}
