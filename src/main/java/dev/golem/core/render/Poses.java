@@ -1,6 +1,7 @@
 package dev.golem.core.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 
 /**
@@ -19,6 +20,18 @@ import org.joml.Quaternionf;
 public final class Poses {
 
     private Poses() {}
+
+    /**
+     * Multiplies the top of the stack by an arbitrary transform. 26.1 overloads {@code mulPose} for
+     * this; before 1.20.5 the same method is spelled {@code mulPoseMatrix}.
+     */
+    public static void mulPose(PoseStack poseStack, Matrix4f transform) {
+        //? if >=1.20.5 {
+        poseStack.mulPose(transform);
+        //?} else {
+        /*poseStack.mulPoseMatrix(transform);
+        *///?}
+    }
 
     /**
      * Rotates the pose in place, applying the rotation to both the position and normal matrices —
