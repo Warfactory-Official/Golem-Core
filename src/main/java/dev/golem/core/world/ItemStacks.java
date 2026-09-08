@@ -21,6 +21,20 @@ public final class ItemStacks {
 
     private ItemStacks() {}
 
+    /**
+     * A codec for one stack that tolerates an empty one, for storing a stack inside something else.
+     *
+     * <p>1.20.5 renamed the tolerant form to {@code OPTIONAL_CODEC} when components landed; before
+     * that the plain {@code CODEC} is already the nullable one, and there is no second constant.
+     */
+    public static com.mojang.serialization.Codec<ItemStack> optionalCodec() {
+        //? if >=1.20.5 {
+        return ItemStack.OPTIONAL_CODEC;
+        //?} else {
+        /*return ItemStack.CODEC;
+        *///?}
+    }
+
     /** Returns whether both stacks have the same item and item data, ignoring their counts. */
     public static boolean sameItemAndData(ItemStack first, ItemStack second) {
         //? if >=1.20.5 {
