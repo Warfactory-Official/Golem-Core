@@ -21,15 +21,13 @@ public final class Poses {
 
     private Poses() {}
 
-    /**
-     * Multiplies the top of the stack by an arbitrary transform. 26.1 overloads {@code mulPose} for
-     * this; before 1.20.5 the same method is spelled {@code mulPoseMatrix}.
-     */
+    /** Applies an affine model matrix, including its mirrored/nonuniform normal transform. */
     public static void mulPose(PoseStack poseStack, Matrix4f transform) {
         //? if >=1.20.5 {
         poseStack.mulPose(transform);
         //?} else {
         /*poseStack.mulPoseMatrix(transform);
+        poseStack.last().normal().mul(new org.joml.Matrix3f(transform).invert().transpose());
         *///?}
     }
 

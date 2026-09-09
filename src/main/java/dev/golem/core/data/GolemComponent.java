@@ -120,6 +120,15 @@ public final class GolemComponent<T> {
         *///?}
     }
 
+    /** Codec for fixed-slot stack lists; empty slots use the platform's optional stack representation. */
+    public static Codec<java.util.List<ItemStack>> itemStackListCodec() {
+        //? if >=1.21.1 {
+        return ItemStack.OPTIONAL_CODEC.listOf();
+        //?} else {
+        /*return ItemStack.CODEC.listOf();
+        *///?}
+    }
+
     /** Returns the value, or empty when this stack has no valid value for this component. */
     public Optional<T> get(ItemStack stack) {
         Objects.requireNonNull(stack);

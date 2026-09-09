@@ -2,6 +2,7 @@ package dev.golem.core.render;
 
 //? if >=26.1 {
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.OrderedSubmitNodeCollector;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderType;
@@ -22,19 +23,35 @@ public final class VanillaSubmitSink implements SubmitSink {
 
     private final OrderedSubmitNodeCollector target;
     private final SubmitNodeCollector root;
+    private final PassState passState;
 
-    public VanillaSubmitSink(SubmitNodeCollector collector) {
-        this(collector, collector);
+    /** Scoped to one root renderer submission, never to vanilla's collector which is reused per frame. */
+    private static final class PassState {
+        private boolean sceneCaptured;
     }
 
-    private VanillaSubmitSink(OrderedSubmitNodeCollector target, SubmitNodeCollector root) {
+    public VanillaSubmitSink(SubmitNodeCollector collector) {
+        this(collector, collector, new PassState());
+    }
+
+    private VanillaSubmitSink(OrderedSubmitNodeCollector target, SubmitNodeCollector root, PassState passState) {
         this.target = target;
         this.root = root;
+        this.passState = passState;
     }
 
     @Override
     public void submitCustomGeometry(PoseStack poseStack, RenderType renderType, CustomGeometry geometry) {
-        target.submitCustomGeometry(poseStack, renderType, geometry::render);
+        target.submitCustomGeometry(poseStack, renderType, (pose, buffer) -> {
+            VertexConsumer drawBuffer = buffer;
+            if (!passState.sceneCaptured && HeatDistortionRenderType.isSceneSampling(renderType)) {
+                // The callback owns the currently-open buffer. Capture before writing to it, but never
+                // end/reacquire that buffer from inside its own FeatureRenderDispatcher callback.
+                HeatDistortionRenderType.prepareSceneForPass();
+                passState.sceneCaptured = true;
+            }
+            geometry.render(pose, drawBuffer);
+        });
     }
 
     @Override
@@ -50,7 +67,7 @@ public final class VanillaSubmitSink implements SubmitSink {
 
     @Override
     public SubmitSink order(int order) {
-        return new VanillaSubmitSink(root.order(order), root);
+        return new VanillaSubmitSink(root.order(order), root, passState);
     }
 }
 //?}

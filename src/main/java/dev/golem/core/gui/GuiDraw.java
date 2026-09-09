@@ -23,6 +23,14 @@ import net.minecraft.resources.ResourceLocation;
  */
 public final class GuiDraw {
 
+    //? if >=26.1 {
+    private static final com.mojang.blaze3d.pipeline.RenderPipeline GUI_ADDITIVE =
+            com.mojang.blaze3d.pipeline.RenderPipeline.builder(RenderPipelines.GUI_TEXTURED_SNIPPET)
+                    .withLocation(dev.golem.core.Ids.of("golemcore", "pipeline/gui_additive"))
+                    .withColorTargetState(new com.mojang.blaze3d.pipeline.ColorTargetState(
+                            com.mojang.blaze3d.pipeline.BlendFunction.LIGHTNING)).build();
+    //?}
+
     private GuiDraw() {}
 
     /**
@@ -40,6 +48,45 @@ public final class GuiDraw {
         graphics.blit(RenderPipelines.GUI_TEXTURED, texture, x, y, u, v, width, height, textureWidth, textureHeight);
         //?} else {
         /*graphics.blit(texture, x, y, u, v, width, height, textureWidth, textureHeight);
+        *///?}
+    }
+
+    /** Draws a destination rectangle from an arbitrary normalized source rectangle. */
+    public static void blitUv(
+            //? if >=26.1 {
+            GuiGraphicsExtractor graphics, Identifier texture,
+            //?} else {
+            /*GuiGraphics graphics, ResourceLocation texture,
+            *///?}
+            int x, int y, int width, int height, float u0, float v0, float u1, float v1,
+            int textureWidth, int textureHeight) {
+        blitUv(graphics, texture, x, y, width, height, u0, v0, u1, v1, textureWidth, textureHeight, false);
+    }
+
+    /** Additive HUD lights retain their black background in the atlas; black contributes no light. */
+    public static void blitUv(
+            //? if >=26.1 {
+            GuiGraphicsExtractor graphics, Identifier texture,
+            //?} else {
+            /*GuiGraphics graphics, ResourceLocation texture,
+            *///?}
+            int x, int y, int width, int height, float u0, float v0, float u1, float v1,
+            int textureWidth, int textureHeight, boolean additive) {
+        int sourceWidth = Math.max(1, Math.round((u1 - u0) * textureWidth));
+        int sourceHeight = Math.max(1, Math.round((v1 - v0) * textureHeight));
+        //? if >=26.1 {
+        graphics.blit(additive ? GUI_ADDITIVE : RenderPipelines.GUI_TEXTURED, texture, x, y, u0 * textureWidth, v0 * textureHeight,
+                width, height, sourceWidth, sourceHeight, textureWidth, textureHeight);
+        //?} else {
+        /*com.mojang.blaze3d.systems.RenderSystem.enableBlend();
+        com.mojang.blaze3d.systems.RenderSystem.defaultBlendFunc();
+        if (additive) com.mojang.blaze3d.systems.RenderSystem.blendFunc(
+                com.mojang.blaze3d.platform.GlStateManager.SourceFactor.SRC_ALPHA,
+                com.mojang.blaze3d.platform.GlStateManager.DestFactor.ONE);
+        graphics.blit(texture, x, y, width, height, u0 * textureWidth, v0 * textureHeight, sourceWidth, sourceHeight,
+                textureWidth, textureHeight);
+        com.mojang.blaze3d.systems.RenderSystem.disableBlend();
+        com.mojang.blaze3d.systems.RenderSystem.defaultBlendFunc();
         *///?}
     }
 

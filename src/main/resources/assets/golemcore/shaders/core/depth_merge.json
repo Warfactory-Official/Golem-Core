@@ -1,0 +1,7 @@
+{
+  "vertex": "golemcore:depth_merge",
+  "fragment": "golemcore:depth_merge",
+  "attributes": ["Position"],
+  "samplers": [{"name": "Sampler0"}, {"name": "Sampler1"}, {"name": "Sampler2"}],
+  "uniforms": []
+}

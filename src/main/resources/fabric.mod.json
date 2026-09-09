@@ -15,6 +15,7 @@
         ]
     },
     "mixins": [
+        "golemcore.mixins.json",
         "golemcore.fabric.mixins.json"
     ],
     "depends": {

@@ -250,6 +250,11 @@ public final class Compat {
         *///?}
     }
 
+    /** Applies an item's crafting remainder property across the supported item-property APIs. */
+    public static Item.Properties craftingRemainder(Item.Properties properties, Item remainder) {
+        return properties.craftRemainder(remainder);
+    }
+
     /** Counts non-empty stacks stored in an item's container component or legacy block-entity tag. */
     public static int containerItemCount(ItemStack stack, int slots) {
         //? if >=1.20.5 {

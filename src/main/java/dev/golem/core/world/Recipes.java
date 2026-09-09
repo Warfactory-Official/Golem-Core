@@ -96,7 +96,7 @@ public final class Recipes {
 
     /** Finds and assembles a shaped crafting recipe for the supplied rectangular input grid. */
     public static Optional<ItemStack> craftingResult(Level level, int width, int height,
-                                                     List<ItemStack> inputs) {
+                                                      List<ItemStack> inputs) {
         if (width <= 0 || height <= 0 || inputs.size() != width * height) return Optional.empty();
 
         //? if >=26.1 {
@@ -120,6 +120,29 @@ public final class Recipes {
                 .map(recipe -> recipe.assemble(craftingInput, level.registryAccess()))
                 .filter(result -> !result.isEmpty())
                 .map(ItemStack::copy);
+        *///?}
+    }
+
+    /** Finds a shaped crafting recipe and returns its per-slot crafting remainders. */
+    public static Optional<List<ItemStack>> craftingRemainders(Level level, int width, int height,
+                                                                List<ItemStack> inputs) {
+        if (width <= 0 || height <= 0 || inputs.size() != width * height) return Optional.empty();
+
+        //? if >=26.1 {
+        if (!(level instanceof ServerLevel serverLevel)) return Optional.empty();
+        CraftingInput craftingInput = CraftingInput.of(width, height, inputs);
+        return serverLevel.recipeAccess().getRecipeFor(RecipeType.CRAFTING, craftingInput, level)
+                .map(holder -> List.copyOf(holder.value().getRemainingItems(craftingInput)));
+        //?} elif >=1.21.1 {
+        /*CraftingInput craftingInput = CraftingInput.of(width, height, inputs);
+        return level.getRecipeManager().getRecipeFor(RecipeType.CRAFTING, craftingInput, level)
+                .map(holder -> List.copyOf(holder.value().getRemainingItems(craftingInput)));
+        *///?} else {
+        /*NonNullList<ItemStack> slots = NonNullList.withSize(width * height, ItemStack.EMPTY);
+        for (int i = 0; i < inputs.size(); i++) slots.set(i, inputs.get(i));
+        TransientCraftingContainer craftingInput = new TransientCraftingContainer(null, width, height, slots);
+        return level.getRecipeManager().getRecipeFor(RecipeType.CRAFTING, craftingInput, level)
+                .map(recipe -> List.copyOf(recipe.getRemainingItems(craftingInput)));
         *///?}
     }
 }

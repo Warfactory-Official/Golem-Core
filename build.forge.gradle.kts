@@ -20,6 +20,9 @@ java {
 
 legacyForge {
     version = prop("deps.forge")
+    val at = file("src/main/resources/META-INF/golemcore.forge.accesstransformer.cfg")
+    if (at.exists()) accessTransformers.from(at)
+    validateAccessTransformers = true
     addModdingDependenciesTo(sourceSets["test"])
     runs {
         configureEach {
@@ -55,12 +58,21 @@ tasks.processResources {
         "minecraft_range" to prop("deps.minecraft_range"),
         "forge_loader_range" to prop("deps.forge_loader_range"),
         "java_version" to javaVersion.toString(),
+        "mixin_compatibility" to if (javaVersion <= 17) "JAVA_17" else "JAVA_21",
+        "world_effect_mixins" to "",
         "pack_format" to prop("pack_format"),
         "pack_format_entry" to "\"pack_format\": ${prop("pack_format")}",
     )
     inputs.properties(props)
-    filesMatching(listOf("META-INF/mods.toml", "pack.mcmeta")) { expand(props) }
-    exclude("fabric.mod.json", "META-INF/neoforge.mods.toml")
+    filesMatching(listOf("META-INF/mods.toml", "pack.mcmeta", "*.mixins.json")) { expand(props) }
+    exclude(
+        "fabric.mod.json", "golemcore.fabric.mixins.json", "META-INF/neoforge.mods.toml",
+        "META-INF/accesstransformer.cfg", "META-INF/golemcore.forge.accesstransformer.cfg",
+    )
+    from(file("src/main/resources/META-INF/golemcore.forge.accesstransformer.cfg")) {
+        into("META-INF")
+        rename { "accesstransformer.cfg" }
+    }
 }
 
 tasks.compileJava {
@@ -71,6 +83,8 @@ tasks.processResources { dependsOn(tasks.named("stonecutterGenerate")) }
 
 dependencies {
     compileOnly("org.jspecify:jspecify:1.0.0")
+    compileOnly("org.spongepowered:mixin:0.8.5")
+    annotationProcessor("org.spongepowered:mixin:0.8.5:processor")
     // JEI, compile-only and per-node optional — same contract as the other loaders' buildscripts.
     // The facade in dev.golem.core.jei hides the 15.x/19.x/29.x API split from consumers, so this
     // library has to see whichever line the node targets; a node that declares no coordinates
@@ -82,9 +96,22 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
+mixin {
+    add(sourceSets["main"], "golemcore.refmap.json")
+    config("golemcore.mixins.json")
+}
+
+// Stonecutter writes the shared resources in place; the legacy toolkit must see the active node's
+// access-transformer resource before it creates the transformed Minecraft artifacts.
+tasks.named("createMinecraftArtifacts") { dependsOn(tasks.named("stonecutterGenerate")) }
+
 tasks.test {
     useJUnitPlatform()
     dependsOn(tasks.named("stonecutterGenerateTest"))
+}
+
+tasks.jar {
+    manifest.attributes["MixinConfigs"] = "golemcore.mixins.json"
 }
 
 publishing {

@@ -113,4 +113,19 @@ public final class Particles {
                 .getSprite(texture);
         *///?}
     }
+
+    /** Spawns a coloured vanilla dust particle, hiding its constructor's colour-shape change. */
+    public static void dust(net.minecraft.world.level.Level level, double x, double y, double z,
+            float red, float green, float blue, float size, double motionX, double motionY, double motionZ) {
+        int color = ((int) (Math.max(0F, Math.min(1F, red)) * 255F) << 16)
+                | ((int) (Math.max(0F, Math.min(1F, green)) * 255F) << 8)
+                | (int) (Math.max(0F, Math.min(1F, blue)) * 255F);
+        //? if >=26.1 {
+        level.addParticle(new net.minecraft.core.particles.DustParticleOptions(color, size),
+                x, y, z, motionX, motionY, motionZ);
+        //?} else {
+        /*level.addParticle(new net.minecraft.core.particles.DustParticleOptions(
+                        new org.joml.Vector3f(red, green, blue), size), x, y, z, motionX, motionY, motionZ);
+        *///?}
+    }
 }

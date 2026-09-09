@@ -47,6 +47,13 @@ public final class PlasmaGlowRenderType {
 
     private PlasmaGlowRenderType() {}
 
+    /** Register during client initialization, before Forge dispatches its reload-registration event. */
+    public static void init() {
+        //? if <1.21 {
+        /*Factory.registerReloads();
+        *///?}
+    }
+
     //? if >=26.1 {
     private static final RenderPipeline PIPELINE = RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
             .withLocation("pipeline/golem_plasma_glow")
@@ -78,11 +85,54 @@ public final class PlasmaGlowRenderType {
     private static final class Factory extends RenderType {
         private Factory() { super(null, null, null, 0, false, false, null, null); }
 
+        //? if <1.21 {
+        /^private static net.minecraft.client.renderer.ShaderInstance shader;
+        private static boolean reloadRegistered;
+
+        private static void registerReloads() {
+            if (!reloadRegistered) {
+                reloadRegistered = true;
+                dev.golem.core.client.ClientResourceReloads.register("golemcore", "plasma_glow", () -> {
+                    if (shader != null) shader.close();
+                    shader = null;
+                });
+            }
+        }
+
+        private static net.minecraft.client.renderer.ShaderInstance shader() {
+            if (shader == null) {
+                try {
+                    shader = new net.minecraft.client.renderer.ShaderInstance(
+                            net.minecraft.client.Minecraft.getInstance().getResourceManager(),
+                            "rendertype_entity_translucent_emissive", DefaultVertexFormat.NEW_ENTITY) {
+                        @Override
+                        public void apply() {
+                            super.apply();
+                            // Keep vanilla's BlendMode cache in its normal state. A different JSON blend
+                            // makes later shaders overwrite special ambient blends (notably the vignette).
+                            com.mojang.blaze3d.systems.RenderSystem.enableBlend();
+                            com.mojang.blaze3d.systems.RenderSystem.blendFunc(
+                                    com.mojang.blaze3d.platform.GlStateManager.SourceFactor.SRC_ALPHA,
+                                    com.mojang.blaze3d.platform.GlStateManager.DestFactor.ONE);
+                        }
+                    };
+                } catch (java.io.IOException exception) {
+                    throw new IllegalStateException("Could not load additive glow shader", exception);
+                }
+            }
+            return shader;
+        }
+        ^///?}
+
         static RenderType glow(ResourceLocation texture) {
             return create("golem_plasma_glow",
                     DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS, 256, false, true,
                     CompositeState.builder()
+                            //? if <1.21 {
+                            /^.setShaderState(new ShaderStateShard(Factory::shader))
+                            ^///?} else {
                             .setShaderState(RENDERTYPE_ENTITY_TRANSLUCENT_EMISSIVE_SHADER)
+                            //?}
                             .setTextureState(new TextureStateShard(texture, false, false))
                             // SRC_ALPHA / ONE - the alpha-weighted additive blend, not ONE/ONE.
                             .setTransparencyState(LIGHTNING_TRANSPARENCY)

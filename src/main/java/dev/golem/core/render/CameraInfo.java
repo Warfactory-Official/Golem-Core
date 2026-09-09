@@ -24,4 +24,22 @@ public final class CameraInfo {
         this.yRot = yRot;
         this.orientation = orientation;
     }
+
+    /** Converts a camera-relative world vector to the coordinate space of a world renderer's pose. */
+    public org.joml.Vector3f worldToRender(org.joml.Vector3f vector) {
+        // 1.20 bakes the view rotation into the world PoseStack; newer renderers keep it in the
+        // global shader matrix. InverseViewRotation also includes the loader's camera roll.
+        //? if <1.21 {
+        /*vector.mul(new org.joml.Matrix3f(com.mojang.blaze3d.systems.RenderSystem.getInverseViewRotationMatrix()).invert());
+        *///?}
+        return vector;
+    }
+
+    /** Inverse of worldToRender, for local equipment attachments retained as world-space history. */
+    public org.joml.Vector3f renderToWorld(org.joml.Vector3f vector) {
+        //? if <1.21 {
+        /*vector.mul(com.mojang.blaze3d.systems.RenderSystem.getInverseViewRotationMatrix());
+        *///?}
+        return vector;
+    }
 }

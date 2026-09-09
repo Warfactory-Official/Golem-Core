@@ -66,6 +66,16 @@ public final class Effects {
         *///?}
     }
 
+    /** Constructs an instance from a concrete registered effect, wrapping it on holder-based versions. */
+    public static MobEffectInstance instanceRegistered(MobEffect effect, int duration, int amplifier) {
+        //? if >=1.21 {
+        return instance(net.minecraft.core.registries.BuiltInRegistries.MOB_EFFECT.wrapAsHolder(effect),
+                duration, amplifier);
+        //?} else {
+        /*return instance(effect, duration, amplifier);
+        *///?}
+    }
+
     /**
      * An effect instance with explicit ambient/visible flags.
      *

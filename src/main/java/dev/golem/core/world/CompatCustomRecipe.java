@@ -65,7 +65,7 @@ public abstract class CompatCustomRecipe extends CustomRecipe {
     *///?}
 
     //? if >=1.21.1 {
-    private static List<ItemStack> items(CraftingInput input) {
+    protected static List<ItemStack> items(CraftingInput input) {
         List<ItemStack> stacks = new ArrayList<>(input.size());
         for (int slot = 0; slot < input.size(); slot++) stacks.add(input.getItem(slot));
         return stacks;

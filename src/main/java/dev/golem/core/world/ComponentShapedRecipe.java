@@ -1,8 +1,10 @@
 package dev.golem.core.world;
 
+import dev.golem.core.Ids;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import net.minecraft.core.NonNullList;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -121,6 +123,55 @@ public class ComponentShapedRecipe extends CompatCustomRecipe {
     protected ItemStack assembleGrid(int gridWidth, int gridHeight, List<ItemStack> input) {
         return matchesGrid(gridWidth, gridHeight, input, null) ? result.create() : ItemStack.EMPTY;
     }
+
+    private ComponentIngredient expectedAt(int gridWidth, int gridHeight, List<ItemStack> input,
+                                           int slot) {
+        for (boolean mirrored : new boolean[] {false, true}) {
+            for (int offsetY = 0; offsetY <= gridHeight - height; offsetY++) {
+                for (int offsetX = 0; offsetX <= gridWidth - width; offsetX++) {
+                    if (!matchesAt(gridWidth, gridHeight, input, mirrored, offsetX, offsetY)) continue;
+                    int x = slot % gridWidth - offsetX;
+                    int y = slot / gridWidth - offsetY;
+                    if (x < 0 || x >= width || y < 0 || y >= height) return ComponentIngredient.EMPTY;
+                    int sourceX = mirrored ? width - x - 1 : x;
+                    return ingredients.get(y * width + sourceX);
+                }
+            }
+        }
+        return ComponentIngredient.EMPTY;
+    }
+
+    private static ItemStack remainderStack(String id) {
+        net.minecraft.world.item.Item item =
+                net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(Ids.parse(id));
+        return item == net.minecraft.world.item.Items.AIR ? ItemStack.EMPTY : new ItemStack(item);
+    }
+
+    private NonNullList<ItemStack> remaining(int gridWidth, int gridHeight, List<ItemStack> input) {
+        NonNullList<ItemStack> result = NonNullList.withSize(input.size(), ItemStack.EMPTY);
+        for (int slot = 0; slot < input.size(); slot++) {
+            ComponentIngredient expected = expectedAt(gridWidth, gridHeight, input, slot);
+            ItemStack remainder = expected.remainder().isEmpty()
+                    ? Compat.craftingRemainder(input.get(slot))
+                    : remainderStack(expected.remainder());
+            if (!remainder.isEmpty()) result.set(slot, remainder);
+        }
+        return result;
+    }
+
+    //? if >=1.21.1 {
+    @Override
+    public NonNullList<ItemStack> getRemainingItems(net.minecraft.world.item.crafting.CraftingInput input) {
+        return remaining(input.width(), input.height(), items(input));
+    }
+    //?} else {
+    /*@Override
+    public NonNullList<ItemStack> getRemainingItems(net.minecraft.world.inventory.CraftingContainer input) {
+        List<ItemStack> stacks = new ArrayList<>(input.getContainerSize());
+        for (int slot = 0; slot < input.getContainerSize(); slot++) stacks.add(input.getItem(slot));
+        return remaining(input.getWidth(), input.getHeight(), stacks);
+    }
+    *///?}
 
     //? if >=26.1 {
     @Override

@@ -2,6 +2,7 @@ package dev.golem.core.render;
 
 //? if <26.1 {
 /*import com.mojang.blaze3d.vertex.PoseStack;
+ import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.gui.Font;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -59,9 +60,18 @@ public final class RecordingSubmitSink implements SubmitSink {
     }
 
     private RecordingSubmitSink sharedWith;
+    private boolean sceneCaptured;
 
     private List<Entry> sink() {
         return sharedWith != null ? sharedWith.sink() : entries;
+    }
+
+    private RecordingSubmitSink rootSink() {
+        return sharedWith == null ? this : sharedWith.rootSink();
+    }
+
+    private static void flushPending(MultiBufferSource source) {
+        if (source instanceof MultiBufferSource.BufferSource buffers) buffers.endBatch();
     }
 
     @Override
@@ -103,21 +113,37 @@ public final class RecordingSubmitSink implements SubmitSink {
     /^* Draws everything recorded, lowest order first, then clears. ^/
     public void flush(MultiBufferSource bufferSource, net.minecraft.world.level.@org.jspecify.annotations.Nullable Level level) {
         List<Entry> all = sink();
-        all.sort(Comparator.comparingInt(Entry::order));
-        for (Entry entry : all) {
-            if (entry instanceof GeometryEntry e) {
-                PoseStack poseStack = new PoseStack();
-                poseStack.last().pose().set(e.pose());
-                poseStack.last().normal().set(e.normal());
-                e.geometry().render(poseStack.last(), bufferSource.getBuffer(e.renderType()));
-            } else if (entry instanceof ItemEntry e) {
-                e.item().draw(e.poseStack(), bufferSource, e.light(), e.overlay(), level);
-            } else if (entry instanceof TextEntry e) {
-                e.font().drawInBatch(e.text(), e.x(), e.y(), e.color(), e.shadow(), e.poseStack().last().pose(),
-                        bufferSource, e.mode(), e.background(), e.light());
+        RecordingSubmitSink root = rootSink();
+        try {
+            all.sort(Comparator.comparingInt(Entry::order));
+            for (Entry entry : all) {
+                if (entry instanceof GeometryEntry e) {
+                    VertexConsumer buffer;
+                    if (!root.sceneCaptured && HeatDistortionRenderType.isSceneSampling(e.renderType())) {
+                        // Flush all pending buffers before the copy. Otherwise the framebuffer still lacks
+                        // geometry queued by preceding entries and the shader samples an intermediate scene.
+                        flushPending(bufferSource);
+                        HeatDistortionRenderType.prepareSceneForPass();
+                        root.sceneCaptured = true;
+                        buffer = bufferSource.getBuffer(e.renderType());
+                    } else {
+                        buffer = bufferSource.getBuffer(e.renderType());
+                    }
+                    PoseStack poseStack = new PoseStack();
+                    poseStack.last().pose().set(e.pose());
+                    poseStack.last().normal().set(e.normal());
+                    e.geometry().render(poseStack.last(), buffer);
+                } else if (entry instanceof ItemEntry e) {
+                    e.item().draw(e.poseStack(), bufferSource, e.light(), e.overlay(), level);
+                } else if (entry instanceof TextEntry e) {
+                    e.font().drawInBatch(e.text(), e.x(), e.y(), e.color(), e.shadow(), e.poseStack().last().pose(),
+                            bufferSource, e.mode(), e.background(), e.light());
+                }
             }
+        } finally {
+            all.clear();
+            root.sceneCaptured = false;
         }
-        all.clear();
     }
 }
 *///?}

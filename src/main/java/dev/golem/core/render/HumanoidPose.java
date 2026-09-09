@@ -2,6 +2,7 @@ package dev.golem.core.render;
 
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.world.entity.player.Player;
 
 /**
  * The posed skeleton of the humanoid a layer is drawing on, for renderers that supply their own
@@ -30,12 +31,20 @@ public final class HumanoidPose {
     public final boolean baby;
     /** Whether the entity is invisible; layers normally skip drawing entirely when it is. */
     public final boolean invisible;
+    /** The player represented by this render state, or null for non-player humanoids. */
+    private final Player player;
 
     public HumanoidPose(HumanoidModel<?> model, boolean sneaking, boolean baby, boolean invisible) {
+        this(model, sneaking, baby, invisible, null);
+    }
+
+    public HumanoidPose(HumanoidModel<?> model, boolean sneaking, boolean baby, boolean invisible,
+            Player player) {
         this.model = model;
         this.sneaking = sneaking;
         this.baby = baby;
         this.invisible = invisible;
+        this.player = player;
     }
 
     /** The model these parts belong to, for the rare caller that needs more than the seven parts. */
@@ -70,5 +79,9 @@ public final class HumanoidPose {
 
     public ModelPart rightLeg() {
         return model.rightLeg;
+    }
+
+    public Player player() {
+        return player;
     }
 }

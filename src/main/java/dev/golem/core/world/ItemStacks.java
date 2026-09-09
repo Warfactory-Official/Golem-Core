@@ -75,6 +75,17 @@ public final class ItemStacks {
         *///?}
     }
 
+    /** Tests that a named item component is absent on the stack. */
+    public static boolean matchesAbsentComponent(ItemStack stack, String key) {
+        //? if >=1.21.1 {
+        net.minecraft.core.component.DataComponentType<?> type =
+                net.minecraft.core.registries.BuiltInRegistries.DATA_COMPONENT_TYPE.getValue(Ids.parse(key));
+        return type != null && !stack.has(type);
+        //?} else {
+        /*return !stack.hasTag() || !stack.getTag().contains(key);
+        *///?}
+    }
+
     /** Copies a stack while replacing its count. */
     public static ItemStack copyWithCount(ItemStack stack, int count) {
         //? if >=1.20.5 {

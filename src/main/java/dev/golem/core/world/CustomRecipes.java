@@ -60,6 +60,12 @@ public final class CustomRecipes {
                  java.util.Map<String, ComponentIngredient> key, ItemStackSpec result);
     }
 
+    @FunctionalInterface
+    public interface ComponentSmeltingFactory<T extends net.minecraft.world.item.crafting.SmeltingRecipe> {
+        T create(String namespace, String path, ComponentIngredient ingredient, ItemStackSpec result,
+                 float experience, int cookingTime);
+    }
+
     /** Builds the cross-version component-sensitive shaped recipe serializer. */
     public static <T extends ComponentShapedRecipe> RecipeSerializer<T> componentShaped(
             ComponentShapedFactory<T> factory) {
@@ -70,6 +76,19 @@ public final class CustomRecipes {
         /*return componentShaped21(factory);
         *///?} else {
         /*return componentShapedLegacy(factory);
+        *///?}
+    }
+
+    /** Builds a smelting recipe whose input and result retain exact integer item components. */
+    public static <T extends net.minecraft.world.item.crafting.SmeltingRecipe> RecipeSerializer<T> componentSmelting(
+            ComponentSmeltingFactory<T> factory) {
+        Objects.requireNonNull(factory);
+        //? if >=26.1 {
+        return componentSmelting26(factory);
+        //?} else if >=1.21.1 {
+        /*return componentSmelting21(factory);
+        *///?} else {
+        /*return componentSmeltingLegacy(factory);
         *///?}
     }
 
@@ -104,6 +123,107 @@ public final class CustomRecipes {
         return new RecipeSerializer<>(codec, stream);
     }
     //?}
+
+    //? if >=26.1 {
+    private static <T extends net.minecraft.world.item.crafting.SmeltingRecipe> RecipeSerializer<T> componentSmelting26(
+            ComponentSmeltingFactory<T> factory) {
+        com.mojang.serialization.MapCodec<T> codec =
+                com.mojang.serialization.codecs.RecordCodecBuilder.mapCodec(instance -> instance.group(
+                        ComponentIngredient.CODEC.fieldOf("ingredient")
+                                .forGetter(recipe -> ((ComponentSmeltingRecipe) recipe).componentIngredient()),
+                        net.minecraft.world.item.ItemStackTemplate.CODEC.fieldOf("result")
+                                .forGetter(recipe -> ((ComponentSmeltingRecipe) recipe).resultTemplate()),
+                        com.mojang.serialization.Codec.FLOAT.fieldOf("experience")
+                                .forGetter(recipe -> recipe.experience()),
+                        com.mojang.serialization.Codec.INT.fieldOf("cookingtime")
+                                .forGetter(recipe -> recipe.cookingTime())
+                ).apply(instance, (ingredient, result, experience, cookingTime) ->
+                         factory.create("", "", ingredient, ItemStackSpec.fromTemplate(result), experience, cookingTime)));
+        net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, T> stream =
+                net.minecraft.network.codec.StreamCodec.composite(
+                        ComponentIngredient.STREAM_CODEC,
+                        recipe -> ((ComponentSmeltingRecipe) recipe).componentIngredient(),
+                        net.minecraft.world.item.ItemStackTemplate.STREAM_CODEC,
+                        recipe -> ((ComponentSmeltingRecipe) recipe).resultTemplate(),
+                        net.minecraft.network.codec.ByteBufCodecs.FLOAT,
+                        recipe -> recipe.experience(),
+                        net.minecraft.network.codec.ByteBufCodecs.INT,
+                        recipe -> recipe.cookingTime(),
+                        (ingredient, result, experience, cookingTime) ->
+                                 factory.create("", "", ingredient, ItemStackSpec.fromTemplate(result), experience, cookingTime));
+        return new RecipeSerializer<>(codec, stream);
+    }
+    //?}
+
+    //? if >=1.21.1 && <26.1 {
+     /*private static <T extends net.minecraft.world.item.crafting.SmeltingRecipe> RecipeSerializer<T> componentSmelting21(
+            ComponentSmeltingFactory<T> factory) {
+        com.mojang.serialization.MapCodec<T> codec =
+                com.mojang.serialization.codecs.RecordCodecBuilder.mapCodec(instance -> instance.group(
+                        ComponentIngredient.CODEC.fieldOf("ingredient")
+                                .forGetter(recipe -> ((ComponentSmeltingRecipe) recipe).componentIngredient()),
+                        net.minecraft.world.item.ItemStack.CODEC.fieldOf("result")
+                                .forGetter(recipe -> ((ComponentSmeltingRecipe) recipe).result()),
+                        com.mojang.serialization.Codec.FLOAT.fieldOf("experience")
+                                 .forGetter(recipe -> recipe.getExperience()),
+                        com.mojang.serialization.Codec.INT.fieldOf("cookingtime")
+                                 .forGetter(recipe -> recipe.getCookingTime())
+                ).apply(instance, (ingredient, result, experience, cookingTime) ->
+                         factory.create("", "", ingredient, ItemStackSpec.of(result), experience, cookingTime)));
+        net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, T> stream =
+                net.minecraft.network.codec.StreamCodec.composite(
+                        ComponentIngredient.STREAM_CODEC,
+                        recipe -> ((ComponentSmeltingRecipe) recipe).componentIngredient(),
+                        net.minecraft.world.item.ItemStack.STREAM_CODEC,
+                        recipe -> ((ComponentSmeltingRecipe) recipe).result(),
+                        net.minecraft.network.codec.ByteBufCodecs.FLOAT,
+                         recipe -> recipe.getExperience(),
+                        net.minecraft.network.codec.ByteBufCodecs.INT,
+                         recipe -> recipe.getCookingTime(),
+                        (ingredient, result, experience, cookingTime) ->
+                                 factory.create("", "", ingredient, ItemStackSpec.of(result), experience, cookingTime));
+        return new RecipeSerializer<>() {
+            @Override public com.mojang.serialization.MapCodec<T> codec() { return codec; }
+            @Override public net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, T> streamCodec() {
+                return stream;
+            }
+        };
+    }
+    *///?}
+
+    //? if <1.21.1 {
+    /*private static <T extends net.minecraft.world.item.crafting.SmeltingRecipe> RecipeSerializer<T> componentSmeltingLegacy(
+            ComponentSmeltingFactory<T> factory) {
+        return new RecipeSerializer<>() {
+            @Override
+            public T fromJson(net.minecraft.resources.ResourceLocation id, com.google.gson.JsonObject json) {
+                ComponentIngredient ingredient = ComponentIngredient.fromJson(json.get("ingredient"));
+                net.minecraft.world.item.ItemStack result = net.minecraft.world.item.crafting.ShapedRecipe.itemStackFromJson(
+                        net.minecraft.util.GsonHelper.getAsJsonObject(json, "result"));
+                float experience = net.minecraft.util.GsonHelper.getAsFloat(json, "experience", 0F);
+                int cookingTime = net.minecraft.util.GsonHelper.getAsInt(json, "cookingtime", 200);
+                 return factory.create(id.getNamespace(), id.getPath(), ingredient, ItemStackSpec.of(result), experience, cookingTime);
+            }
+
+            @Override
+            public T fromNetwork(net.minecraft.resources.ResourceLocation id,
+                                 net.minecraft.network.FriendlyByteBuf buffer) {
+                ComponentIngredient ingredient = ComponentIngredient.fromNetwork(buffer);
+                net.minecraft.world.item.ItemStack result = buffer.readItem();
+                 return factory.create(id.getNamespace(), id.getPath(), ingredient, ItemStackSpec.of(result), buffer.readFloat(), buffer.readVarInt());
+            }
+
+            @Override
+            public void toNetwork(net.minecraft.network.FriendlyByteBuf buffer, T recipe) {
+                ComponentSmeltingRecipe component = (ComponentSmeltingRecipe) recipe;
+                component.componentIngredient().toNetwork(buffer);
+                buffer.writeItem(component.result());
+                 buffer.writeFloat(component.getExperience());
+                 buffer.writeVarInt(component.getCookingTime());
+            }
+        };
+    }
+    *///?}
 
     //? if >=1.21.1 && <26.1 {
     /*private static <T extends ComponentShapedRecipe> RecipeSerializer<T> componentShaped21(

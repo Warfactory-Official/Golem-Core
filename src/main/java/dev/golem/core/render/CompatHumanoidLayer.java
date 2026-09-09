@@ -61,7 +61,8 @@ public abstract class CompatHumanoidLayer extends RenderLayer {
      * @param light the packed light coordinates for this entity
      * @param parts the parent model's posed skeleton — see {@link HumanoidPose}
      */
-    public abstract void submit(Worn worn, PoseStack pose, SubmitSink sink, int light, HumanoidPose parts);
+    public abstract void submit(Worn worn, PoseStack pose, SubmitSink sink, int light, HumanoidPose parts,
+            CameraInfo camera);
 
     /** The parent humanoid model, or null if this layer was attached to a renderer that has none. */
     protected final HumanoidModel<?> humanoidModel() {
@@ -87,7 +88,11 @@ public abstract class CompatHumanoidLayer extends RenderLayer {
         if (worn.isEmpty()) return;
 
         submit(worn, pose, new VanillaSubmitSink(collector), lightCoords,
-                new HumanoidPose(model, humanoid.isCrouching, humanoid.isBaby, isInvisible(humanoid)));
+                new HumanoidPose(model, humanoid.isCrouching, humanoid.isBaby, isInvisible(humanoid),
+                        dev.golem.core.client.PlayerRenderHooks.playerForState(humanoid)),
+                new CameraInfo(net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera().position(),
+                        net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera().yRot(),
+                        net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera().rotation()));
     }
 
     /**
@@ -121,10 +126,12 @@ public abstract class CompatHumanoidLayer extends RenderLayer {
         if (worn.isEmpty()) return;
 
         HumanoidPose parts = new HumanoidPose(model, living.isCrouching(), living.isBaby(),
-                living.isInvisible());
+                living.isInvisible(), living instanceof net.minecraft.world.entity.player.Player player ? player : null);
 
         RecordingSubmitSink sink = new RecordingSubmitSink();
-        submit(worn, pose, sink, packedLight, parts);
+        net.minecraft.client.Camera camera = net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera();
+        submit(worn, pose, sink, packedLight, parts,
+                new CameraInfo(camera.getPosition(), camera.getYRot(), camera.rotation()));
         sink.flush(bufferSource, living.level());
     }
     *///?}

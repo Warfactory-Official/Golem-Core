@@ -21,6 +21,9 @@ java {
 neoForge {
     version = prop("deps.neoforge")
 
+    val at = file("src/main/resources/META-INF/golemcore.neoforge.accesstransformer.cfg")
+    if (at.exists()) accessTransformers.from(at)
+
     runs {
         configureEach {
             ideName = "NeoForge ${name.replaceFirstChar { it.uppercase() }} ($mcVersion)"
@@ -61,6 +64,8 @@ tasks.processResources {
         "neoforge_version" to prop("deps.neoforge"),
         "neoforge_loader_range" to prop("deps.neoforge_loader_range"),
         "java_version" to javaVersion.toString(),
+        "mixin_compatibility" to if (javaVersion <= 17) "JAVA_17" else "JAVA_21",
+        "world_effect_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinWorldEffects\"" else "",
         "pack_format" to prop("pack_format"),
         "pack_format_entry" to if (mcVersion.substringBefore('.').toInt() >= 26)
             "\"min_format\": ${prop("pack_format")}, \"max_format\": ${prop("pack_format")}" 
@@ -68,8 +73,15 @@ tasks.processResources {
             "\"pack_format\": ${prop("pack_format")}",
     )
     inputs.properties(props)
-    filesMatching(listOf("META-INF/neoforge.mods.toml", "pack.mcmeta")) { expand(props) }
-    exclude("fabric.mod.json")
+    filesMatching(listOf("META-INF/neoforge.mods.toml", "pack.mcmeta", "*.mixins.json")) { expand(props) }
+    exclude(
+        "fabric.mod.json", "golemcore.fabric.mixins.json",
+        "META-INF/accesstransformer.cfg", "META-INF/golemcore.neoforge.accesstransformer.cfg",
+    )
+    from(file("src/main/resources/META-INF/golemcore.neoforge.accesstransformer.cfg")) {
+        into("META-INF")
+        rename { "accesstransformer.cfg" }
+    }
 }
 
 // Stonecutter writes this project's sources from the root src/ tree; the toolkit must not read them
@@ -95,6 +107,7 @@ dependencies {
     // so declare it explicitly: it is an annotations-only jar with no runtime component, safe on every
     // target, and keeps @Nullable usable in shared code across the whole matrix.
     compileOnly("org.jspecify:jspecify:1.0.0")
+    compileOnly("org.spongepowered:mixin:0.8.5")
 
     // JEI, compile-only and per-node optional: the facade in dev.golem.core.jei exists to hide the
     // 19.x/29.x API split from consumers, so this library has to see whichever line the node targets.

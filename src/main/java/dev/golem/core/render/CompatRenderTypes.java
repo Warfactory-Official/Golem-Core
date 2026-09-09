@@ -50,6 +50,21 @@ public final class CompatRenderTypes {
         *///?}
     }
 
+    /** Alpha-tested entity geometry with face culling enabled, matching the old GL default. */
+    public static RenderType entityCutoutCull(
+            //? if >=26.1 {
+            Identifier
+            //?} else {
+            /*ResourceLocation
+            *///?}
+            texture) {
+        //? if >=26.1 {
+        return RenderTypes.entityCutoutCull(texture);
+        //?} else {
+        /*return RenderType.entityCutout(texture);
+        *///?}
+    }
+
     /** An alpha-tested entity pass with face culling disabled, for legacy double-sided OBJ geometry. */
     public static RenderType entityCutoutNoCull(
             //? if >=26.1 {

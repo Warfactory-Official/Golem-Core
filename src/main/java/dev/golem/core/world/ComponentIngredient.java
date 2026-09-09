@@ -11,12 +11,15 @@ import net.minecraft.world.item.crafting.Ingredient;
 /** An item ingredient with exact integer component constraints. */
 public final class ComponentIngredient {
 
-    public static final ComponentIngredient EMPTY = new ComponentIngredient(List.of(), Map.of());
+    public static final ComponentIngredient EMPTY = new ComponentIngredient(List.of(), Map.of(), List.of(), "");
 
     public static final Codec<ComponentIngredient> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Codec.STRING.listOf().fieldOf("items").forGetter(value -> value.items),
             Codec.unboundedMap(Codec.STRING, Codec.INT).optionalFieldOf("components", Map.of())
-                    .forGetter(value -> value.components)
+                    .forGetter(value -> value.components),
+            Codec.STRING.listOf().optionalFieldOf("absent_components", List.of())
+                    .forGetter(value -> value.absentComponents),
+            Codec.STRING.optionalFieldOf("remainder", "").forGetter(value -> value.remainder)
     ).apply(instance, ComponentIngredient::new));
 
     //? if >=1.21.1 {
@@ -24,27 +27,37 @@ public final class ComponentIngredient {
             STREAM_CODEC = net.minecraft.network.codec.StreamCodec.composite(
                     net.minecraft.network.codec.ByteBufCodecs.STRING_UTF8.apply(
                             net.minecraft.network.codec.ByteBufCodecs.list()),
-                    value -> value.items,
-                    net.minecraft.network.codec.ByteBufCodecs.map(java.util.HashMap::new,
-                            net.minecraft.network.codec.ByteBufCodecs.STRING_UTF8,
-                            net.minecraft.network.codec.ByteBufCodecs.INT),
-                    value -> value.components,
-                    ComponentIngredient::new);
+                     value -> value.items,
+                     net.minecraft.network.codec.ByteBufCodecs.map(java.util.HashMap::new,
+                             net.minecraft.network.codec.ByteBufCodecs.STRING_UTF8,
+                             net.minecraft.network.codec.ByteBufCodecs.INT),
+                      value -> value.components,
+                      net.minecraft.network.codec.ByteBufCodecs.STRING_UTF8.apply(
+                              net.minecraft.network.codec.ByteBufCodecs.list()),
+                      value -> value.absentComponents,
+                      net.minecraft.network.codec.ByteBufCodecs.STRING_UTF8,
+                      value -> value.remainder,
+                      ComponentIngredient::new);
     //?}
 
     private final List<String> items;
     private final Map<String, Integer> components;
+    private final List<String> absentComponents;
+    private final String remainder;
 
-    private ComponentIngredient(List<String> items, Map<String, Integer> components) {
-        if (items.isEmpty() && !components.isEmpty()) {
+    private ComponentIngredient(List<String> items, Map<String, Integer> components,
+                                List<String> absentComponents, String remainder) {
+        if (items.isEmpty() && (!components.isEmpty() || !absentComponents.isEmpty())) {
             throw new IllegalArgumentException("empty component ingredient");
         }
         this.items = List.copyOf(items);
         this.components = Map.copyOf(components);
+        this.absentComponents = List.copyOf(absentComponents);
+        this.remainder = remainder == null ? "" : remainder;
     }
 
     public static ComponentIngredient of(String item) {
-        return new ComponentIngredient(List.of(item), Map.of());
+        return new ComponentIngredient(List.of(item), Map.of(), List.of(), "");
     }
 
     public static ComponentIngredient fromJson(com.google.gson.JsonElement element) {
@@ -66,7 +79,13 @@ public final class ComponentIngredient {
                 components.put(entry.getKey(), entry.getValue().getAsInt());
             }
         }
-        return new ComponentIngredient(items, components);
+        List<String> absentComponents = new java.util.ArrayList<>();
+        com.google.gson.JsonArray absentValues = object.getAsJsonArray("absent_components");
+        if (absentValues != null) {
+            for (com.google.gson.JsonElement value : absentValues) absentComponents.add(value.getAsString());
+        }
+        String remainder = object.has("remainder") ? object.get("remainder").getAsString() : "";
+        return new ComponentIngredient(items, components, absentComponents, remainder);
     }
 
     //? if <1.21.1 {
@@ -77,7 +96,10 @@ public final class ComponentIngredient {
         int componentCount = buffer.readVarInt();
         Map<String, Integer> components = new java.util.HashMap<>();
         for (int i = 0; i < componentCount; i++) components.put(buffer.readUtf(), buffer.readVarInt());
-        return new ComponentIngredient(items, components);
+        int absentCount = buffer.readVarInt();
+        List<String> absentComponents = new java.util.ArrayList<>(absentCount);
+        for (int i = 0; i < absentCount; i++) absentComponents.add(buffer.readUtf());
+        return new ComponentIngredient(items, components, absentComponents, buffer.readUtf());
     }
 
     public void toNetwork(net.minecraft.network.FriendlyByteBuf buffer) {
@@ -88,6 +110,9 @@ public final class ComponentIngredient {
             buffer.writeUtf(entry.getKey());
             buffer.writeVarInt(entry.getValue());
         }
+        buffer.writeVarInt(absentComponents.size());
+        for (String key : absentComponents) buffer.writeUtf(key);
+        buffer.writeUtf(remainder);
     }
     *///?}
 
@@ -99,6 +124,14 @@ public final class ComponentIngredient {
         return components;
     }
 
+    public List<String> absentComponents() {
+        return absentComponents;
+    }
+
+    public String remainder() {
+        return remainder;
+    }
+
     public boolean isEmpty() {
         return items.isEmpty();
     }
@@ -108,7 +141,9 @@ public final class ComponentIngredient {
             return false;
         }
         return components.entrySet().stream()
-                .allMatch(entry -> ItemStacks.matchesIntComponent(stack, entry.getKey(), entry.getValue()));
+                .allMatch(entry -> ItemStacks.matchesIntComponent(stack, entry.getKey(), entry.getValue()))
+                && absentComponents.stream()
+                .allMatch(key -> ItemStacks.matchesAbsentComponent(stack, key));
     }
 
     /** A display-only ordinary ingredient; the component constraint remains enforced by {@link #test}. */

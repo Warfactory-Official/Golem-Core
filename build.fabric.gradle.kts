@@ -37,6 +37,7 @@ repositories {
 // Note this is an ordinary Kotlin conditional, not a Stonecutter `//?` comment: Stonecutter only
 // preprocesses files under src/, never build scripts.
 val obfuscated = mcVersion.substringBefore('.').toInt() < 26
+val accessWidenerName = if (obfuscated) "golemcore.legacy.accesswidener" else "golemcore.accesswidener"
 
 dependencies {
     "minecraft"("com.mojang:minecraft:${prop("deps.minecraft")}")
@@ -47,7 +48,7 @@ dependencies {
 }
 
 loom {
-    if (!obfuscated) accessWidenerPath = file("../../src/main/resources/golemcore.accesswidener")
+    accessWidenerPath = file("../../src/main/resources/$accessWidenerName")
     runs {
         named("client") {
             client()
@@ -76,6 +77,7 @@ tasks.processResources {
         "fabric_loader" to prop("deps.fabric_loader"),
         "java_version" to javaVersion.toString(),
         "mixin_compatibility" to if (javaVersion <= 17) "JAVA_17" else "JAVA_21",
+        "world_effect_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinWorldEffects\"" else "",
         "legacy_client_mixins" to ", \"MixinMouseInput\"" +
             if (obfuscated) ", \"MixinLegacyCrosshair\"" else "",
         "pack_format" to prop("pack_format"),
@@ -87,9 +89,15 @@ tasks.processResources {
     inputs.properties(props)
     filesMatching(listOf("fabric.mod.json", "pack.mcmeta", "*.mixins.json")) { expand(props) }
     filesMatching("fabric.mod.json") {
-        filter { line -> if (!obfuscated && line.trim() == "{") "{\n  \"accessWidener\": \"golemcore.accesswidener\"," else line }
+        filter { line -> if (line.trim() == "{")
+            "{\n  \"accessWidener\": \"$accessWidenerName\"," else line }
     }
-    if (obfuscated) exclude("golemcore.accesswidener")
+    if (obfuscated) exclude("golemcore.accesswidener") else exclude("golemcore.legacy.accesswidener")
+    exclude(
+        "META-INF/accesstransformer.cfg",
+        "META-INF/golemcore.neoforge.accesstransformer.cfg",
+        "META-INF/golemcore.forge.accesstransformer.cfg",
+    )
     exclude("META-INF/neoforge.mods.toml", "META-INF/mods.toml")
 }
 
