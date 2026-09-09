@@ -45,6 +45,15 @@ public final class Entities {
         *///?}
     }
 
+    /** Resolves an entity type by namespaced id across the registry lookup rename. */
+    public static EntityType<?> byId(String id) {
+        //? if >=26.1 {
+        return net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getValue(dev.golem.core.Ids.parse(id));
+        //?} else {
+        /*return net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.get(dev.golem.core.Ids.parse(id));
+        *///?}
+    }
+
     /** Creates a mob for an entity conversion, preserving the modern creation reason where available. */
     public static <T extends Mob> T createForConversion(EntityType<T> type, ServerLevel level) {
         //? if >=26.1 {
