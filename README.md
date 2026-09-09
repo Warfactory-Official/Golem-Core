@@ -104,3 +104,25 @@ Use `Entities.byId(id)` for built-in entity-type lookup. It owns the 26.1 regist
 `carriedInt`, and `carriedBoolean` read block state carried through modern components or legacy item NBT.
 Use `Fires.canSpreadAround`, `Entities.createForConversion`, `Entities.createTriggered`, and
 `Permissions.gamemasters()` rather than branching on their vanilla signatures in consumer code.
+
+## GPU Instancing
+
+`dev.golem.core.flywheel` vendors a GPU instancing engine, relocated from the 26.1 port in NTM-CE.
+Flywheel proper has no 26.1 build, so on that line there is nothing to bind to — and the engine is
+written against the blaze3d GPU-buffer and pipeline API that arrived with 26.1, needing an access
+transformer over `GlBuffer` and an interface injection onto `GpuBuffer` that only NeoForge supplies.
+It therefore compiles on 26.1 NeoForge and nowhere else; `hasVendoredFlywheel` in the NeoForge
+buildscript gates the access transformer, the interface injection and the shaders together.
+
+`Flywheel` itself is present on every node with inert bodies. Call `Flywheel.init()` unconditionally
+at client init — it subscribes the engine to the thirteen events that drive it, across both buses,
+and does nothing where there is no engine. Ask `Flywheel.isAvailable()` only where the answer changes
+what a consumer draws. An available engine still renders nothing until visuals are registered against
+it: instancing is an addition to the vanilla block-entity renderer path, never a replacement for it.
+
+Multiblocks need one hook. The crumbling overlay resolves a mined position to the block that owns the
+visual, and a mined dummy owns none; CE tests for `BlockDummyable` inline, which this layer cannot
+name. Install a `CrumblingCoreResolver` through `Flywheel.setCrumblingCoreResolver` instead. Leaving
+it unset costs only the overlay on multiblocks.
+
+See `THIRD_PARTY_NOTICES.md` — the task pipeline and visualizer framework are MIT, by Jozufozu.
