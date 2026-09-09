@@ -97,6 +97,9 @@ owns Fabric's builder and the Forge/NeoForge constructor differences without cha
 timing. `Platform` exposes loader name, mod presence, physical side, and development state; consumers
 should not maintain their own loader service for these queries.
 
+Use `Entities.byId(id)` for built-in entity-type lookup. It owns the 26.1 registry `getValue` versus older
+`get` spelling so consumers do not add an era guard for validation or catalogue code.
+
 `Inventories.main(inventory)` is the live 36-slot player inventory view. `ItemStacks.carriedItem`,
 `carriedInt`, and `carriedBoolean` read block state carried through modern components or legacy item NBT.
 Use `Fires.canSpreadAround`, `Entities.createForConversion`, `Entities.createTriggered`, and
