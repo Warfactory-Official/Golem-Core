@@ -5,10 +5,8 @@ package dev.golem.core.flywheel.backend;
 import dev.golem.core.flywheel.DrawManager;
 import dev.golem.core.flywheel.instance.InstancedDrawManager;
 
-// Mirrors upstream Flywheel's Backends. INSTANCING (priority 500) is the working backend;
-// INDIRECT (priority 1000) is registered but force-disabled via supported()=false until the
-// SSBO draw manager + compute culler land (slices 2c-2 through 2c-4). BATCHING was removed
-// upstream in Dec 2023 ("Gone, reduced to batches", 2dbdf83e); we never add it.
+// Mirrors upstream Flywheel's Backends. Capability-gated INDIRECT has priority 1000, with universally
+// supported INSTANCING at priority 500 as its fallback. BATCHING was removed upstream in Dec 2023.
 public final class Backends {
 
     public static final Backend INSTANCING = new Backend() {

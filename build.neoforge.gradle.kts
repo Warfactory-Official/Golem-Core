@@ -117,10 +117,10 @@ tasks.processResources {
     )
     dependsOn(mergeAccessTransformers)
     from(mergedAccessTransformer) { into("META-INF") }
-    // The interface injection and the shaders belong to the vendored Flywheel backend, which only
-    // exists on 26.1.
+    // The interface injection and golem_* shaders belong to the vendored Flywheel backend, which
+    // only exists on 26.1. Keep unrelated Core shaders such as depth_merge.
     if (!hasVendoredFlywheel) {
-        exclude("META-INF/interface_injection.json", "assets/golemcore/shaders/**")
+        exclude("META-INF/interface_injection.json", "assets/golemcore/shaders/core/golem_*")
     }
 }
 

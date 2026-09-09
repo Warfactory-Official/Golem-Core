@@ -7,8 +7,9 @@ import org.jspecify.annotations.Nullable;
 /**
  * The GPU instancing engine: one entry point for the whole of {@code dev.golem.core.flywheel}.
  *
- * <p>Flywheel proper has no 26.1 build, so this package vendors the engine rather than binding to the
- * {@code dev.engine_room} artifact. Every consumer-facing decision about it is made here:
+ * <p>Engine Room has a 26.1 source branch but no published artifact used by this build, so this package
+ * vendors the engine rather than binding to {@code dev.engine_room}. Every consumer-facing decision
+ * about it is made here:
  *
  * <ul>
  *   <li><b>Where it exists.</b> The engine is written against the blaze3d GPU-buffer and pipeline API
@@ -29,6 +30,7 @@ import org.jspecify.annotations.Nullable;
 public final class Flywheel {
 
     private static @Nullable CrumblingCoreResolver crumblingCoreResolver;
+    private static boolean initialized;
 
     private Flywheel() {}
 
@@ -67,6 +69,9 @@ public final class Flywheel {
      */
     public static void init() {
         //? if neoforge && >=26.1 {
+        if (initialized) return;
+        initialized = true;
+        dev.golem.core.flywheel.backend.Backends.init();
         // Pipelines are a registry event on the mod bus; everything else is a game-bus event.
         net.neoforged.bus.api.IEventBus modBus = dev.golem.core.platform.NeoForgeEntrypoint.modBus();
         modBus.addListener(Pipelines::register);
