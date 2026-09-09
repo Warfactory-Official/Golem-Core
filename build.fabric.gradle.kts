@@ -97,6 +97,10 @@ tasks.processResources {
         "META-INF/accesstransformer.cfg",
         "META-INF/golemcore.neoforge.accesstransformer.cfg",
         "META-INF/golemcore.forge.accesstransformer.cfg",
+        // The flywheel widenings, the interface injection and the shaders they exist for all belong
+        // to the NeoForge-only vendored Flywheel backend, which compiles out entirely on this loader.
+        "META-INF/golemcore.flywheel.accesstransformer.cfg",
+        "META-INF/interface_injection.json", "assets/golemcore/shaders/**",
     )
     exclude("META-INF/neoforge.mods.toml", "META-INF/mods.toml")
 }

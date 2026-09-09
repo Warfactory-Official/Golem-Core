@@ -20,7 +20,9 @@ java {
 
 legacyForge {
     version = prop("deps.forge")
-    val at = file("src/main/resources/META-INF/golemcore.forge.accesstransformer.cfg")
+    // Node projects live in versions/<node>/ and have no src/ of their own — the shared tree is two
+    // levels up. A bare "src/main/..." resolves to nothing, and the exists() guard makes that silent.
+    val at = file("../../src/main/resources/META-INF/golemcore.forge.accesstransformer.cfg")
     if (at.exists()) accessTransformers.from(at)
     validateAccessTransformers = true
     addModdingDependenciesTo(sourceSets["test"])
@@ -68,12 +70,22 @@ tasks.processResources {
     exclude(
         "fabric.mod.json", "golemcore.fabric.mixins.json", "META-INF/neoforge.mods.toml",
         "META-INF/accesstransformer.cfg", "META-INF/golemcore.forge.accesstransformer.cfg",
+        "META-INF/golemcore.neoforge.accesstransformer.cfg",
+        // The interface injection, the flywheel widenings and the shaders they exist for all belong
+        // to the NeoForge-only vendored Flywheel backend, which compiles out entirely on this loader.
+        "META-INF/golemcore.flywheel.accesstransformer.cfg",
+        "META-INF/interface_injection.json", "assets/golemcore/shaders/**",
     )
-    from(file("src/main/resources/META-INF/golemcore.forge.accesstransformer.cfg")) {
+    from(file("../../src/main/resources/META-INF/golemcore.forge.accesstransformer.cfg")) {
         into("META-INF")
         rename { "accesstransformer.cfg" }
     }
 }
+
+// The toolkit reads this project's sources, so it must not run before stonecutter has written
+// them. The NeoForge buildscript has always declared this; without it here, any invocation that
+// runs both tasks (chiseledBuild) fails Gradle's implicit-dependency validation.
+tasks.named("createMinecraftArtifacts") { dependsOn(tasks.named("stonecutterGenerate")) }
 
 tasks.compileJava {
     dependsOn(tasks.named("stonecutterGenerate"))

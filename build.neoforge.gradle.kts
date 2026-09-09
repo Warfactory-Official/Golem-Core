@@ -9,6 +9,33 @@ fun prop(name: String): String = property(name) as String
 val mcVersion = stonecutter.current.version
 val javaVersion = prop("java_version").toInt()
 
+// The vendored Flywheel backend in dev.golem.core.flywheel only exists from 26.1 — it is written
+// against the blaze3d GPU-buffer/pipeline API that arrived with it. Both its access transformer and
+// its interface injection name types that do not exist before then, so declaring either one on an
+// older node fails the build outright rather than being ignored.
+val hasVendoredFlywheel = mcVersion.substringBefore('.').toInt() >= 26
+
+// NeoForge reads exactly one META-INF/accesstransformer.cfg per jar, so the backend's widenings
+// cannot ship as a second file — and they cannot join the shared one either, because GlBuffer does
+// not exist before 26.1 and an access transformer naming a missing class fails the node outright.
+// The shipped file is therefore assembled from whichever sources apply to this node.
+val accessTransformerFiles = listOfNotNull(
+    file("../../src/main/resources/META-INF/golemcore.neoforge.accesstransformer.cfg")
+        .takeIf { it.exists() },
+    file("../../src/main/resources/META-INF/golemcore.flywheel.accesstransformer.cfg")
+        .takeIf { hasVendoredFlywheel && it.exists() },
+)
+val mergedAccessTransformer = layout.buildDirectory.file("golemcore-at/accesstransformer.cfg")
+val mergeAccessTransformers = tasks.register("mergeAccessTransformers") {
+    inputs.files(accessTransformerFiles)
+    outputs.file(mergedAccessTransformer)
+    doLast {
+        val out = mergedAccessTransformer.get().asFile
+        out.parentFile.mkdirs()
+        out.writeText(accessTransformerFiles.joinToString("\n") { it.readText().trim() } + "\n")
+    }
+}
+
 group = prop("mod.group")
 version = "${prop("mod.version")}+$mcVersion"
 base.archivesName = "${prop("mod.id")}-neoforge-$mcVersion"
@@ -21,8 +48,10 @@ java {
 neoForge {
     version = prop("deps.neoforge")
 
-    val at = file("src/main/resources/META-INF/golemcore.neoforge.accesstransformer.cfg")
-    if (at.exists()) accessTransformers.from(at)
+    // Node projects live in versions/<node>/ and have no src/ of their own — the shared tree is two
+    // levels up. A bare "src/main/..." here resolves to nothing, and because the declaration is
+    // guarded on exists() that failure is silent: the transformer is simply never applied.
+    for (at in accessTransformerFiles) accessTransformers.from(at)
 
     runs {
         configureEach {
@@ -40,6 +69,12 @@ neoForge {
 
     mods {
         register(prop("mod.id")) { sourceSet(sourceSets["main"]) }
+    }
+
+    if (hasVendoredFlywheel) {
+        // SlabBuffer reads the GL name and persistent-map address straight off GlBuffer, which needs
+        // both fields widened and the accessor interface injected onto the abstract GpuBuffer.
+        interfaceInjectionData.from("../../src/main/resources/META-INF/interface_injection.json")
     }
 
     // Unit tests compile against Minecraft too — the data backends are built on CompoundTag/NbtOps.
@@ -77,10 +112,24 @@ tasks.processResources {
     exclude(
         "fabric.mod.json", "golemcore.fabric.mixins.json",
         "META-INF/accesstransformer.cfg", "META-INF/golemcore.neoforge.accesstransformer.cfg",
+        "META-INF/golemcore.forge.accesstransformer.cfg",
+        "META-INF/golemcore.flywheel.accesstransformer.cfg",
     )
-    from(file("src/main/resources/META-INF/golemcore.neoforge.accesstransformer.cfg")) {
-        into("META-INF")
-        rename { "accesstransformer.cfg" }
+    dependsOn(mergeAccessTransformers)
+    from(mergedAccessTransformer) { into("META-INF") }
+    // The interface injection and the shaders belong to the vendored Flywheel backend, which only
+    // exists on 26.1.
+    if (!hasVendoredFlywheel) {
+        exclude("META-INF/interface_injection.json", "assets/golemcore/shaders/**")
+    }
+}
+
+// UnsafeBootstrap names jdk.internal.misc.Unsafe for its acquire/release accessors, which sun.misc
+// does not carry. java.base qualified-exports that package to a closed list of JDK modules, so javac
+// needs the export granted explicitly; at runtime the class opens it to its own module by hand.
+if (hasVendoredFlywheel) {
+    tasks.compileJava {
+        options.compilerArgs.add("--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED")
     }
 }
 
