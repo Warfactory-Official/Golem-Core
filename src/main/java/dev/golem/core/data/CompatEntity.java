@@ -35,6 +35,18 @@ public abstract class CompatEntity extends Entity {
         super(type, level);
     }
 
+    /** Neutral hook for entities that are unaffected by explosions. */
+    protected boolean shouldIgnoreExplosion() {
+        return false;
+    }
+
+    //? if >=1.21.1 {
+    @Override
+    public final boolean ignoreExplosion(net.minecraft.world.level.Explosion explosion) {
+        return shouldIgnoreExplosion();
+    }
+    //?}
+
     /** Reads this entity's persisted state. */
     protected void loadData(DataIn in) {}
 

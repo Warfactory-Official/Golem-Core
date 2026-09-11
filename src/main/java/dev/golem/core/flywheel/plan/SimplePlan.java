@@ -40,16 +40,22 @@ public final class SimplePlan<C> implements SimplyComposedPlan<C>, DirectPlan<C>
         if (count == 1) {
             RunnableWithContext<C> task = tasks[0];
             executor.execute(() -> {
-                task.run(context);
-                done.run();
+                try {
+                    task.run(context);
+                } finally {
+                    done.run();
+                }
             });
             return;
         }
         TaskSynchronizer sync = new TaskSynchronizer(count, done);
         for (RunnableWithContext<C> task : tasks) {
             executor.execute(() -> {
-                task.run(context);
-                sync.completeOne();
+                try {
+                    task.run(context);
+                } finally {
+                    sync.completeOne();
+                }
             });
         }
     }

@@ -34,8 +34,11 @@ public final class Distribute {
             TaskSynchronizer sync = new TaskSynchronizer(size, onCompletion);
             for (T value : values) {
                 executor.execute(() -> {
-                    action.accept(value, context);
-                    sync.completeOne();
+                    try {
+                        action.accept(value, context);
+                    } finally {
+                        sync.completeOne();
+                    }
                 });
             }
         } else {
@@ -49,10 +52,13 @@ public final class Distribute {
                 int sliceStart = start;
                 int sliceEnd = end;
                 executor.execute(() -> {
-                    for (int i = sliceStart; i < sliceEnd; i++) {
-                        action.accept(values[i], context);
+                    try {
+                        for (int i = sliceStart; i < sliceEnd; i++) {
+                            action.accept(values[i], context);
+                        }
+                    } finally {
+                        sync.completeOne();
                     }
-                    sync.completeOne();
                 });
             }
         }
@@ -75,8 +81,11 @@ public final class Distribute {
             for (int i = 0; i < size; i++) {
                 int idx = i;
                 executor.execute(() -> {
-                    action.accept(new Slice<>(values, idx, idx + 1), context);
-                    sync.completeOne();
+                    try {
+                        action.accept(new Slice<>(values, idx, idx + 1), context);
+                    } finally {
+                        sync.completeOne();
+                    }
                 });
             }
         } else {
@@ -90,8 +99,11 @@ public final class Distribute {
                 int sliceStart = start;
                 int sliceEnd = end;
                 executor.execute(() -> {
-                    action.accept(new Slice<>(values, sliceStart, sliceEnd), context);
-                    sync.completeOne();
+                    try {
+                        action.accept(new Slice<>(values, sliceStart, sliceEnd), context);
+                    } finally {
+                        sync.completeOne();
+                    }
                 });
             }
         }
@@ -161,14 +173,28 @@ public final class Distribute {
     private static <C> void executePlanSlice(Plan<C>[] plans, int start, int end, TaskExecutor executor, C context, Runnable done) {
         SmallTaskSynchronizer sync = new SmallTaskSynchronizer(end - start, done);
         for (int i = start; i < end; i++) {
-            executePlan(plans[i], executor, context, sync);
+            java.util.concurrent.atomic.AtomicBoolean completed = new java.util.concurrent.atomic.AtomicBoolean();
+            Runnable complete = () -> {
+                if (completed.compareAndSet(false, true)) {
+                    sync.completeOne();
+                }
+            };
+            try {
+                executePlan(plans[i], executor, context, complete);
+            } catch (Throwable throwable) {
+                complete.run();
+                throw throwable;
+            }
         }
     }
 
     private static <C> void executePlan(Plan<C> plan, TaskExecutor executor, C context, Runnable done) {
         if (DirectPlanSupport.supports(plan)) {
-            DirectPlanSupport.execute(plan, executor, context);
-            done.run();
+            try {
+                DirectPlanSupport.execute(plan, executor, context);
+            } finally {
+                done.run();
+            }
             return;
         }
         plan.execute(executor, context, done);
