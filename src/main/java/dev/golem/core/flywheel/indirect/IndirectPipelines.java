@@ -38,8 +38,7 @@ public final class IndirectPipelines {
     // Depth-only variants for sortable translucent materials. Used by IndirectDrawManager's
     // Fabulous-mode second multidraw to write closest-particle depth into the translucent
     // layer's depth attachment (so the transparency post-chain sorts our layer correctly
-    // against clouds/weather). Null for materials where requiresDepthSort=false — they don't
-    // need the post-chain layer-sort fix.
+    // against clouds/weather). Sorting and this depth proxy are separate material requirements.
     private static final RenderPipeline[] DEPTH_ONLY_PIPELINES = new RenderPipeline[Material.VALUES.length];
 
     private IndirectPipelines() {
@@ -59,7 +58,7 @@ public final class IndirectPipelines {
             PIPELINES[material.ordinal()] = pipeline;
             event.registerPipeline(pipeline);
 
-            if (material.requiresDepthSort) {
+            if (material.requiresFabulousDepth) {
                 RenderPipeline depthPipeline = buildDepthOnlyPipeline(material);
                 DEPTH_ONLY_PIPELINES[material.ordinal()] = depthPipeline;
                 event.registerPipeline(depthPipeline);
@@ -121,6 +120,16 @@ public final class IndirectPipelines {
             case TRANSLUCENT_NO_DEPTH_WRITE_NO_CULL:
                 builder.withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT));
                 break;
+            case TRANSLUCENT_SORTED_NO_CULL:
+                builder.withShaderDefine("ALPHA_CUTOUT", 0.1F);
+                builder.withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT));
+                break;
+            case SOURCE_ALPHA_ADDITIVE_NO_CULL:
+                builder.withShaderDefine("NO_DYNAMIC_LIGHTS");
+                builder.withShaderDefine("NO_FOG");
+                builder.withColorTargetState(new ColorTargetState(new BlendFunction(
+                        SourceFactor.SRC_ALPHA, DestFactor.ONE, SourceFactor.ONE, DestFactor.ZERO)));
+                break;
             case ADDITIVE:
             case ADDITIVE_NO_CULL:
                 builder.withColorTargetState(new ColorTargetState(BlendFunction.ADDITIVE));
@@ -145,7 +154,7 @@ public final class IndirectPipelines {
     // for this pipeline at draw-validation time (extra bindings are tolerated; only missing
     // ones error).
     //
-    // Only invoked for materials with requiresDepthSort=true. The depth pass is a Fabulous-
+    // Only invoked for materials with requiresFabulousDepth=true. The depth pass is a Fabulous-
     // mode add-on to inform the transparency post-chain's per-pixel layer sort; in Fancy/Fast
     // and shader-pack pipelines IndirectDrawManager doesn't run it at all.
     private static RenderPipeline buildDepthOnlyPipeline(Material material) {

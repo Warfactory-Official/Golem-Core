@@ -3,21 +3,22 @@ package dev.golem.core.flywheel.gl;
 //? if neoforge && >=26.1 {
 
 import com.mojang.blaze3d.buffers.GpuBuffer;
+import com.mojang.blaze3d.opengl.GlBuffer;
 import com.mojang.blaze3d.systems.RenderSystem;
 import org.lwjgl.opengl.GL45;
-import org.lwjgl.system.MemoryUtil;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.function.Supplier;
 
 // Persistent-mapped Mojang GpuBuffer that doubles as the instancer's CPU slab. Setters write
-// directly into the mapped pointer via Unsafe; the instanced backend binds the buffer as a
+// directly into the mapped ByteBuffer; the instanced backend binds the buffer as a
 // UBO via pass.setUniform("Instances", slabBuffer.gpuBuffer().slice(...)) without a CPU→GPU
 // memcpy, and the indirect backend issues raw glCopyNamedBufferSubData from the slab handle
 // into the shared object SSBO.
 //
-// GpuBuffer's GL name and persistent map are exposed via GpuBufferExtension (interface
-// injection in META-INF/interface_injection.json + AT widening of GlBuffer.handle/
-// persistentBuffer), so SlabBuffer reads them directly off the GpuBuffer reference.
+// The active device is OpenGL, so the AT-widened GlBuffer handle/persistentBuffer fields expose
+// the native storage without a runtime interface injection.
 //
 // USAGE flags:
 //   USAGE_UNIFORM              — bound as UBO at draw time (instanced backend)
@@ -44,7 +45,7 @@ public final class SlabBuffer {
     private final Supplier<String> label;
     private GpuBuffer gpuBuffer;
     private int handle;
-    private long ptr;
+    private ByteBuffer mapped;
     private long capacityBytes;
 
     private Retired retiredThisFrame;
@@ -63,8 +64,8 @@ public final class SlabBuffer {
         return handle;
     }
 
-    public long address() {
-        return ptr;
+    public ByteBuffer mapped() {
+        return mapped;
     }
 
     public long capacity() {
@@ -104,7 +105,7 @@ public final class SlabBuffer {
             gpuBuffer = null;
         }
         handle = 0;
-        ptr = 0L;
+        mapped = null;
         capacityBytes = 0L;
         if (retiredThisFrame != null) {
             retiredThisFrame.delete();
@@ -117,22 +118,28 @@ public final class SlabBuffer {
     }
 
     private void allocate(long bytes) {
-        gpuBuffer = RenderSystem.getDevice().createBuffer(label, USAGE_FLAGS, bytes);
-        handle = gpuBuffer.golem$glHandle();
-        ptr = gpuBuffer.golem$persistentAddress();
+        Allocation allocation = create(bytes);
+        gpuBuffer = allocation.buffer();
+        handle = allocation.glBuffer().handle;
+        mapped = allocation.mapped();
         capacityBytes = bytes;
     }
 
     private void grow(long newBytes) {
-        GpuBuffer newGpuBuffer = RenderSystem.getDevice().createBuffer(label, USAGE_FLAGS, newBytes);
-        long newPtr = newGpuBuffer.golem$persistentAddress();
-
-        if (capacityBytes > 0L) {
-            // Both mappings are CLIENT_STORAGE so this is RAM→RAM. The old buffer stays
-            // alive for two more frames (retired pattern) — the GPU may still be reading it,
-            // but reading from CPU RAM concurrently with the CPU's memcpy source is a
-            // read/read collision, not a race.
-            MemoryUtil.memCopy(ptr, newPtr, capacityBytes);
+        Allocation allocation = create(newBytes);
+        try {
+            if (capacityBytes > 0L) {
+                // Both mappings are CLIENT_STORAGE so this is RAM→RAM. The old buffer stays
+                // alive for two more frames; the GPU and CPU only read it during this copy.
+                ByteBuffer source = mapped.duplicate().order(ByteOrder.nativeOrder());
+                source.position(0).limit((int) capacityBytes);
+                ByteBuffer target = allocation.mapped().duplicate().order(ByteOrder.nativeOrder());
+                target.position(0);
+                target.put(source);
+            }
+        } catch (RuntimeException | Error failure) {
+            allocation.buffer().close();
+            throw failure;
         }
 
         if (retiredThisFrame != null) {
@@ -140,11 +147,35 @@ public final class SlabBuffer {
         }
         retiredThisFrame = new Retired(gpuBuffer);
 
-        gpuBuffer = newGpuBuffer;
-        handle = newGpuBuffer.golem$glHandle();
-        ptr = newPtr;
+        gpuBuffer = allocation.buffer();
+        handle = allocation.glBuffer().handle;
+        mapped = allocation.mapped();
         capacityBytes = newBytes;
     }
+
+    private Allocation create(long bytes) {
+        GpuBuffer buffer = RenderSystem.getDevice().createBuffer(label, USAGE_FLAGS, bytes);
+        try {
+            GlBuffer glBuffer = gl(buffer);
+            return new Allocation(buffer, glBuffer, persistentBuffer(glBuffer));
+        } catch (RuntimeException | Error failure) {
+            buffer.close();
+            throw failure;
+        }
+    }
+
+    private static GlBuffer gl(GpuBuffer buffer) {
+        if (buffer instanceof GlBuffer glBuffer) return glBuffer;
+        throw new IllegalStateException("Golem flywheel requires the OpenGL render device");
+    }
+
+    private static ByteBuffer persistentBuffer(GpuBuffer buffer) {
+        var mapped = gl(buffer).persistentBuffer;
+        if (mapped == null) throw new IllegalStateException("Golem flywheel requires a persistently mapped buffer");
+        return mapped.duplicate().order(ByteOrder.nativeOrder());
+    }
+
+    private record Allocation(GpuBuffer buffer, GlBuffer glBuffer, ByteBuffer mapped) {}
 
     private static final class Retired {
 

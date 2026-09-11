@@ -2,7 +2,6 @@ package dev.golem.core.flywheel.instance;
 
 //? if neoforge && >=26.1 {
 
-import dev.golem.core.flywheel.gl.UnsafeHolder;
 import dev.golem.core.flywheel.Instancer;
 import dev.golem.core.flywheel.Material;
 import dev.golem.core.flywheel.gl.SlabBuffer;
@@ -10,13 +9,13 @@ import dev.golem.core.flywheel.visual.DynamicVisual;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
 import org.joml.Matrix4fc;
-import org.lwjgl.system.MemoryUtil;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.util.Arrays;
 import java.util.concurrent.ForkJoinPool;
-
-import static dev.golem.core.flywheel.gl.UnsafeHolder.U;
 
 // Per-bucket persistent CPU staging shared by both backends. Subclasses (InstancedInstancer
 // for UBO, IndirectInstancer for SSBO) own the GPU-side specifics: where the bytes go on
@@ -36,7 +35,7 @@ import static dev.golem.core.flywheel.gl.UnsafeHolder.U;
 // single sub-rect of an N×M frame sheet per frame.
 //
 // Storage: a single persistent-mapped GL buffer of `capacity * 112` bytes in std140 layout is
-// the source of truth. Setters write directly into the mapped pointer via Unsafe; the indirect
+// the source of truth. Setters use absolute writes into the mapped ByteBuffer; the indirect
 // backend uploads dirty pages with one glFlushMappedNamedBufferRange + glCopyNamedBufferSubData
 // into the shared object SSBO — no CPU staging ring, no scatter compute. The slab is created
 // by SlabBuffer in the constructor (render thread) and freed in close(); ensureCapacity
@@ -58,7 +57,7 @@ import static dev.golem.core.flywheel.gl.UnsafeHolder.U;
 //     shards on the render thread at flush time.
 //   - visiblePageMasks packs 32 slots into one int word, so two workers updating different
 //     slots in the same word would race a plain |=/&=. Bit set/clear go through
-//     Unsafe.compareAndSetInt, mirroring upstream Flywheel's per-page AtomicInteger
+//     VarHandle.compareAndSet, mirroring upstream Flywheel's per-page AtomicInteger
 //     validity bitset without the AtomicIntegerArray pointer indirection.
 // The remaining structural methods (allocate, free, ensureCapacity, flush, writeStd140,
 // close) run outside visual writer tasks. Backend parallelUpdate may reshuffle slots only
@@ -81,13 +80,11 @@ public abstract class AbstractInstancer implements Instancer {
     protected final Material material;
     protected final Identifier texture;
 
-    // Native std140 slab. slabBuffer is a persistent-mapped GL buffer; slabAddr is its current
-    // mapped pointer (refreshed on every grow). Capacity is tracked in slots (slab byte size =
-    // capacity * 112). swapScratchAddr is a small Unsafe-allocated scratch for slot swaps and
-    // doesn't need GL backing.
+    // Native std140 slab. slabBuffer is a persistent-mapped GL buffer; slab is refreshed on grow.
     private final SlabBuffer slabBuffer;
-    protected long slabAddr;
-    private long swapScratchAddr;
+    protected ByteBuffer slab;
+    private final byte[] swapScratch = new byte[STD140_BYTES];
+    private final byte[] swapOther = new byte[STD140_BYTES];
     protected int capacity;
 
     // Side caches — only the two fields whose semantics depend on each other (see class doc).
@@ -96,9 +93,11 @@ public abstract class AbstractInstancer implements Instancer {
     // Packed 32-slot visibility masks for backends that batch work per fixed-size page.
     // Mirrors upstream Flywheel's per-page AtomicInteger validity bitset: writeVisible runs
     // on workers in the parallel frame phase, so two workers updating different slots in the
-    // same 32-slot word race the read-modify-write. Mutated via Unsafe.compareAndSetInt to
+    // same 32-slot word race the read-modify-write. Mutated via VarHandle.compareAndSet to
     // avoid AtomicIntegerArray's pointer indirection.
     private int[] visiblePageMasks;
+    private static final VarHandle INT_ARRAY = MethodHandles.arrayElementVarHandle(int[].class);
+    private static final VarHandle LONG_ARRAY = MethodHandles.arrayElementVarHandle(long[].class);
 
     protected int liveCount;
     private InstanceHandle[] handles;
@@ -125,11 +124,10 @@ public abstract class AbstractInstancer implements Instancer {
         this.slabBuffer = new SlabBuffer(
                 () -> "Golem Slab " + material.name() + " mesh=" + meshHandle,
                 initialBytes);
-        this.slabAddr = slabBuffer.address();
-        this.swapScratchAddr = U.allocateMemory(STD140_BYTES);
+        this.slab = slabBuffer.mapped();
         // glNamedBufferStorage doesn't zero; CPU-zero the mapped region so unwritten slots
         // hold the dead-instance sentinel (all-zero color etc.).
-        U.setMemory(slabAddr, initialBytes, (byte) 0);
+        zero(0, (int) initialBytes);
         this.colors = new int[INITIAL_CAPACITY];
         Arrays.fill(colors, 0xFFFFFFFF);
         this.visible = new boolean[INITIAL_CAPACITY];
@@ -166,21 +164,21 @@ public abstract class AbstractInstancer implements Instancer {
         visible[index] = true;
         colors[index] = 0xFFFFFFFF;
         atomicSetBit(visiblePageMasks, index >> 5, 1 << (index & 31));
-        long base = slabAddr + (long) index * STD140_BYTES;
+        int base = index * STD140_BYTES;
         // Reset to defaults: zero everything, then write the non-zero values. setMemory of
         // 112 bytes is one intrinsic memset; the targeted putFloats afterwards are the
         // diagonal of mat4, the white color, and the identity UV scale.
-        U.setMemory(base, STD140_BYTES, (byte) 0);
-        U.putFloat(base + OFF_COLOR,      1F);
-        U.putFloat(base + OFF_COLOR + 4,  1F);
-        U.putFloat(base + OFF_COLOR + 8,  1F);
-        U.putFloat(base + OFF_COLOR + 12, 1F);
-        U.putFloat(base + OFF_MAT,        1F);
-        U.putFloat(base + OFF_MAT + 20,   1F);
-        U.putFloat(base + OFF_MAT + 40,   1F);
-        U.putFloat(base + OFF_MAT + 60,   1F);
-        U.putFloat(base + OFF_UV + 8,     1F);
-        U.putFloat(base + OFF_UV + 12,    1F);
+        zero(base, STD140_BYTES);
+        slab.putFloat(base + OFF_COLOR,      1F);
+        slab.putFloat(base + OFF_COLOR + 4,  1F);
+        slab.putFloat(base + OFF_COLOR + 8,  1F);
+        slab.putFloat(base + OFF_COLOR + 12, 1F);
+        slab.putFloat(base + OFF_MAT,        1F);
+        slab.putFloat(base + OFF_MAT + 20,   1F);
+        slab.putFloat(base + OFF_MAT + 40,   1F);
+        slab.putFloat(base + OFF_MAT + 60,   1F);
+        slab.putFloat(base + OFF_UV + 8,     1F);
+        slab.putFloat(base + OFF_UV + 12,    1F);
         InstanceHandle handle = new InstanceHandle(this, index);
         handles[index] = handle;
         markDirty(index);
@@ -200,24 +198,23 @@ public abstract class AbstractInstancer implements Instancer {
     }
 
     void writeTransform(int index, Matrix4fc m) {
-        // JOML writes the column-major mat4 directly to the slab via Unsafe.
-        m.getToAddress(slabAddr + (long) index * STD140_BYTES + OFF_MAT);
+        m.get(index * STD140_BYTES + OFF_MAT, slab);
         markDirty(index);
     }
 
     void writeLight(int index, int light) {
         // Pack the two uint16 channels (block, sky) into the std140 ivec2: an int per
         // 4 bytes. Bottom 16 bits at +0, top 16 at +4 of the ivec2's 8-byte slot.
-        long base = slabAddr + (long) index * STD140_BYTES + OFF_LIGHT;
-        U.putInt(base,     light & 0xFFFF);
-        U.putInt(base + 4, light >>> 16 & 0xFFFF);
+        int base = index * STD140_BYTES + OFF_LIGHT;
+        slab.putInt(base,     light & 0xFFFF);
+        slab.putInt(base + 4, light >>> 16 & 0xFFFF);
         markDirty(index);
     }
 
     void writeOverlay(int index, int overlay) {
-        long base = slabAddr + (long) index * STD140_BYTES + OFF_OVERLAY;
-        U.putInt(base,     overlay & 0xFFFF);
-        U.putInt(base + 4, overlay >>> 16 & 0xFFFF);
+        int base = index * STD140_BYTES + OFF_OVERLAY;
+        slab.putInt(base,     overlay & 0xFFFF);
+        slab.putInt(base + 4, overlay >>> 16 & 0xFFFF);
         markDirty(index);
     }
 
@@ -226,11 +223,11 @@ public abstract class AbstractInstancer implements Instancer {
         // Only blast over the slab color when visible — otherwise the dead-instance
         // sentinel (all-zero color) must remain in place.
         if (visible[index]) {
-            long base = slabAddr + (long) index * STD140_BYTES + OFF_COLOR;
-            U.putFloat(base,      ARGB.redFloat(color));
-            U.putFloat(base + 4,  ARGB.greenFloat(color));
-            U.putFloat(base + 8,  ARGB.blueFloat(color));
-            U.putFloat(base + 12, ARGB.alphaFloat(color));
+            int base = index * STD140_BYTES + OFF_COLOR;
+            slab.putFloat(base,      ARGB.redFloat(color));
+            slab.putFloat(base + 4,  ARGB.greenFloat(color));
+            slab.putFloat(base + 8,  ARGB.blueFloat(color));
+            slab.putFloat(base + 12, ARGB.alphaFloat(color));
         }
         markDirty(index);
     }
@@ -243,11 +240,11 @@ public abstract class AbstractInstancer implements Instancer {
     // writeColor: silently ignored on invisible slots so the dead-instance sentinel stays.
     void writeRawColor(int index, float r, float g, float b, float a) {
         if (!visible[index]) return;
-        long base = slabAddr + (long) index * STD140_BYTES + OFF_COLOR;
-        U.putFloat(base,      r);
-        U.putFloat(base + 4,  g);
-        U.putFloat(base + 8,  b);
-        U.putFloat(base + 12, a);
+        int base = index * STD140_BYTES + OFF_COLOR;
+        slab.putFloat(base,      r);
+        slab.putFloat(base + 4,  g);
+        slab.putFloat(base + 8,  b);
+        slab.putFloat(base + 12, a);
         markDirty(index);
     }
 
@@ -260,42 +257,38 @@ public abstract class AbstractInstancer implements Instancer {
         } else {
             atomicClearBit(visiblePageMasks, word, bit);
         }
-        long base = slabAddr + (long) index * STD140_BYTES + OFF_COLOR;
+        int base = index * STD140_BYTES + OFF_COLOR;
         if (v) {
             int color = colors[index];
-            U.putFloat(base,      ARGB.redFloat(color));
-            U.putFloat(base + 4,  ARGB.greenFloat(color));
-            U.putFloat(base + 8,  ARGB.blueFloat(color));
-            U.putFloat(base + 12, ARGB.alphaFloat(color));
+            slab.putFloat(base,      ARGB.redFloat(color));
+            slab.putFloat(base + 4,  ARGB.greenFloat(color));
+            slab.putFloat(base + 8,  ARGB.blueFloat(color));
+            slab.putFloat(base + 12, ARGB.alphaFloat(color));
         } else {
-            U.putLong(base,     0L);
-            U.putLong(base + 8, 0L);
+            slab.putLong(base,     0L);
+            slab.putLong(base + 8, 0L);
         }
         markDirty(index);
     }
 
     void writeUV(int index, float offsetU, float offsetV, float scaleU, float scaleV) {
-        long base = slabAddr + (long) index * STD140_BYTES + OFF_UV;
-        U.putFloat(base,      offsetU);
-        U.putFloat(base + 4,  offsetV);
-        U.putFloat(base + 8,  scaleU);
-        U.putFloat(base + 12, scaleV);
+        int base = index * STD140_BYTES + OFF_UV;
+        slab.putFloat(base,      offsetU);
+        slab.putFloat(base + 4,  offsetV);
+        slab.putFloat(base + 8,  scaleU);
+        slab.putFloat(base + 12, scaleV);
         markDirty(index);
     }
 
     // Bulk-copy one slot's std140 record into dst at dstOffset. Used by CrumblingScratch,
     // which stitches instances from multiple instancers (different slabs) into one transient
-    // UBO. Single-instance flushes go directly via slabAddress() on the subclass — there's
-    // no per-instance pack work anymore.
+    // UBO. The mapped slab remains the source, so there is no per-instance repacking.
     public void writeStd140(int index, ByteBuffer dst, int dstOffset) {
-        long destAddr = MemoryUtil.memAddress(dst) + dstOffset;
-        U.copyMemory(slabAddr + (long) index * STD140_BYTES, destAddr, STD140_BYTES);
-    }
-
-    // Native address of the std140 slab — currently the persistent-mapped pointer of
-    // slabBuffer. Refreshed by ensureCapacity when the underlying buffer grows.
-    public final long slabAddress() {
-        return slabAddr;
+        ByteBuffer source = slab.duplicate().order(ByteOrder.nativeOrder());
+        source.position(index * STD140_BYTES).limit((index + 1) * STD140_BYTES);
+        ByteBuffer target = dst.duplicate().order(ByteOrder.nativeOrder());
+        target.position(dstOffset);
+        target.put(source);
     }
 
     // The GL handle of the slab buffer. Indirect backend uses this as the
@@ -318,18 +311,18 @@ public abstract class AbstractInstancer implements Instancer {
     // (release+acquire) semantics on success.
     protected final void markDirty(int index) {
         int base = (Thread.currentThread().hashCode() & SHARD_MASK) * SHARD_STRIDE;
-        long minOff = UnsafeHolder.offLong(base + MIN_OFF_IN_SHARD);
-        long maxOff = UnsafeHolder.offLong(base + MAX_OFF_IN_SHARD);
+        int minIndex = base + MIN_OFF_IN_SHARD;
+        int maxIndex = base + MAX_OFF_IN_SHARD;
         long v = index;
         long cur;
         do {
-            cur = U.getLongOpaque(dirtyShards, minOff);
+            cur = (long) LONG_ARRAY.getOpaque(dirtyShards, minIndex);
             if (v >= cur) break;
-        } while (!U.compareAndSetLong(dirtyShards, minOff, cur, v));
+        } while (!LONG_ARRAY.compareAndSet(dirtyShards, minIndex, cur, v));
         do {
-            cur = U.getLongOpaque(dirtyShards, maxOff);
+            cur = (long) LONG_ARRAY.getOpaque(dirtyShards, maxIndex);
             if (v <= cur) break;
-        } while (!U.compareAndSetLong(dirtyShards, maxOff, cur, v));
+        } while (!LONG_ARRAY.compareAndSet(dirtyShards, maxIndex, cur, v));
     }
 
     // Render-thread reads — reduce all shards into a global (min, max). Acquire ensures we
@@ -340,7 +333,7 @@ public abstract class AbstractInstancer implements Instancer {
     public final int dirtyMin() {
         long min = Integer.MAX_VALUE;
         for (int s = 0; s < SHARD_COUNT; s++) {
-            long v = U.getLongAcquire(dirtyShards, UnsafeHolder.offLong(s * SHARD_STRIDE + MIN_OFF_IN_SHARD));
+            long v = (long) LONG_ARRAY.getAcquire(dirtyShards, s * SHARD_STRIDE + MIN_OFF_IN_SHARD);
             if (v < min) min = v;
         }
         return (int) min;
@@ -349,7 +342,7 @@ public abstract class AbstractInstancer implements Instancer {
     public final int dirtyMax() {
         long max = -1L;
         for (int s = 0; s < SHARD_COUNT; s++) {
-            long v = U.getLongAcquire(dirtyShards, UnsafeHolder.offLong(s * SHARD_STRIDE + MAX_OFF_IN_SHARD));
+            long v = (long) LONG_ARRAY.getAcquire(dirtyShards, s * SHARD_STRIDE + MAX_OFF_IN_SHARD);
             if (v > max) max = v;
         }
         return (int) max;
@@ -360,15 +353,15 @@ public abstract class AbstractInstancer implements Instancer {
     // writes the full range into shard 0; the dirtyMin/Max reduce will pick it up.
     protected final void markFullyDirty() {
         if (liveCount > 0) {
-            U.putLongRelease(dirtyShards, UnsafeHolder.offLong(MIN_OFF_IN_SHARD), 0L);
-            U.putLongRelease(dirtyShards, UnsafeHolder.offLong(MAX_OFF_IN_SHARD), (long) (liveCount - 1));
+            LONG_ARRAY.setRelease(dirtyShards, MIN_OFF_IN_SHARD, 0L);
+            LONG_ARRAY.setRelease(dirtyShards, MAX_OFF_IN_SHARD, (long) (liveCount - 1));
         }
     }
 
     protected final void clearDirty() {
         for (int s = 0; s < SHARD_COUNT; s++) {
-            U.putLongRelease(dirtyShards, UnsafeHolder.offLong(s * SHARD_STRIDE + MIN_OFF_IN_SHARD), Integer.MAX_VALUE);
-            U.putLongRelease(dirtyShards, UnsafeHolder.offLong(s * SHARD_STRIDE + MAX_OFF_IN_SHARD), -1L);
+            LONG_ARRAY.setRelease(dirtyShards, s * SHARD_STRIDE + MIN_OFF_IN_SHARD, (long) Integer.MAX_VALUE);
+            LONG_ARRAY.setRelease(dirtyShards, s * SHARD_STRIDE + MAX_OFF_IN_SHARD, -1L);
         }
     }
 
@@ -385,25 +378,23 @@ public abstract class AbstractInstancer implements Instancer {
 
     protected final int visibleMaskPage(int page) {
         if (page >= visiblePageMasks.length) return 0;
-        return U.getIntAcquire(visiblePageMasks, UnsafeHolder.offInt(page));
+        return (int) INT_ARRAY.getAcquire(visiblePageMasks, page);
     }
 
     private static void atomicSetBit(int[] arr, int word, int bit) {
-        long off = UnsafeHolder.offInt(word);
         int cur;
         do {
-            cur = U.getIntOpaque(arr, off);
+            cur = (int) INT_ARRAY.getOpaque(arr, word);
             if ((cur & bit) != 0) return;
-        } while (!U.compareAndSetInt(arr, off, cur, cur | bit));
+        } while (!INT_ARRAY.compareAndSet(arr, word, cur, cur | bit));
     }
 
     private static void atomicClearBit(int[] arr, int word, int bit) {
-        long off = UnsafeHolder.offInt(word);
         int cur;
         do {
-            cur = U.getIntOpaque(arr, off);
+            cur = (int) INT_ARRAY.getOpaque(arr, word);
             if ((cur & bit) == 0) return;
-        } while (!U.compareAndSetInt(arr, off, cur, cur & ~bit));
+        } while (!INT_ARRAY.compareAndSet(arr, word, cur, cur & ~bit));
     }
 
     // Protected so backend-specific instancers can react when CPU capacity grows (e.g. stage-
@@ -420,7 +411,7 @@ public abstract class AbstractInstancer implements Instancer {
         long oldSize = (long) cap * STD140_BYTES;
         boolean grew = slabBuffer.ensureCapacity(newSize);
         if (grew) {
-            slabAddr = slabBuffer.address();
+            slab = slabBuffer.mapped();
             // The new GPU handle has no contents — slabBuffer's grow CPU-memcpys old-mapped
             // into new-mapped for CPU continuity, but the destination object buffer the
             // indirect backend copies into doesn't yet have a glCopyNamedBufferSubData from
@@ -429,7 +420,7 @@ public abstract class AbstractInstancer implements Instancer {
         }
         // Zero the tail so unallocated slots stay zero (dead-instance sentinel). Always
         // runs — even if the buffer didn't physically grow we still expanded the slot range.
-        U.setMemory(slabAddr + oldSize, newSize - oldSize, (byte) 0);
+        zero((int) oldSize, (int) (newSize - oldSize));
         colors = copyAndFill(colors, next, 0xFFFFFFFF);
         visible = Arrays.copyOf(visible, next);
         handles = Arrays.copyOf(handles, next);
@@ -457,22 +448,19 @@ public abstract class AbstractInstancer implements Instancer {
     // Subclasses must call this from their close() override after releasing the GPU buffer.
     protected final void freeSlab() {
         slabBuffer.delete();
-        slabAddr = 0L;
-        if (swapScratchAddr != 0L) {
-            U.freeMemory(swapScratchAddr);
-            swapScratchAddr = 0L;
-        }
+        slab = null;
     }
 
     protected final void swapSlots(int a, int b) {
         if (a == b) return;
 
-        long aBase = slabAddr + (long) a * STD140_BYTES;
-        long bBase = slabAddr + (long) b * STD140_BYTES;
-
-        U.copyMemory(aBase, swapScratchAddr, STD140_BYTES);
-        U.copyMemory(bBase, aBase, STD140_BYTES);
-        U.copyMemory(swapScratchAddr, bBase, STD140_BYTES);
+        int aBase = a * STD140_BYTES;
+        int bBase = b * STD140_BYTES;
+        ByteBuffer view = slab.duplicate().order(ByteOrder.nativeOrder());
+        view.get(aBase, swapScratch);
+        view.get(bBase, swapOther);
+        view.put(aBase, swapOther);
+        view.put(bBase, swapScratch);
 
         int color = colors[a];
         colors[a] = colors[b];
@@ -493,9 +481,13 @@ public abstract class AbstractInstancer implements Instancer {
     }
 
     private void moveSlot(int src, int dst) {
-        long srcBase = slabAddr + (long) src * STD140_BYTES;
-        long dstBase = slabAddr + (long) dst * STD140_BYTES;
-        U.copyMemory(srcBase, dstBase, STD140_BYTES);
+        int srcBase = src * STD140_BYTES;
+        int dstBase = dst * STD140_BYTES;
+        ByteBuffer source = slab.duplicate().order(ByteOrder.nativeOrder());
+        source.position(srcBase).limit(srcBase + STD140_BYTES);
+        ByteBuffer target = slab.duplicate().order(ByteOrder.nativeOrder());
+        target.position(dstBase);
+        target.put(source);
 
         colors[dst] = colors[src];
         visible[dst] = visible[src];
@@ -514,8 +506,8 @@ public abstract class AbstractInstancer implements Instancer {
     }
 
     private void clearSlot(int index) {
-        long base = slabAddr + (long) index * STD140_BYTES;
-        U.setMemory(base, STD140_BYTES, (byte) 0);
+        int base = index * STD140_BYTES;
+        zero(base, STD140_BYTES);
         colors[index] = 0xFFFFFFFF;
         visible[index] = false;
         handles[index] = null;
@@ -530,6 +522,10 @@ public abstract class AbstractInstancer implements Instancer {
         } else {
             atomicClearBit(visiblePageMasks, word, bit);
         }
+    }
+
+    private void zero(int offset, int length) {
+        for (int i = offset, end = offset + length; i < end; i++) slab.put(i, (byte) 0);
     }
 }
 //?}

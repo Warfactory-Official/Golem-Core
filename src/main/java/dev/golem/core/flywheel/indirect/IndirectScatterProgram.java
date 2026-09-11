@@ -24,16 +24,18 @@ public final class IndirectScatterProgram {
     public boolean ensureLoaded() {
         if (programId != 0) return true;
         RenderSystem.assertOnRenderThread();
+        int shaderId = 0;
         try {
             String source = readResource(SCATTER_SHADER);
-            int shaderId = compileShader(source);
+            shaderId = compileShader(source);
             programId = linkProgram(shaderId);
-            GL20.glDeleteShader(shaderId);
             return true;
         } catch (IOException | RuntimeException e) {
             GolemCore.LOG.error("Failed to load Golem scatter compute shader; staging uploads disabled", e);
             programId = 0;
             return false;
+        } finally {
+            if (shaderId != 0) GL20.glDeleteShader(shaderId);
         }
     }
 

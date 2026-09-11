@@ -5,8 +5,8 @@ package dev.golem.core.flywheel;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 
 public enum Material {
-    CUTOUT(Stage.OPAQUE, true, true, false, false),
-    CUTOUT_NO_CULL(Stage.OPAQUE, true, false, false, false),
+    CUTOUT(Stage.OPAQUE, true, true, false, false, false),
+    CUTOUT_NO_CULL(Stage.OPAQUE, true, false, false, false, false),
     /** Cutout pipeline with a per-instance two-sided slab clip in fragment shader. Replaces
      *  1.7's {@code glClipPlane} pattern for sliding-door variants whose panels would otherwise
      *  poke through the frame on their far side. Per-instance state lives in the existing
@@ -23,15 +23,17 @@ public enum Material {
      *  Vertex tint forced to white in clip mode (alpha preserved as dead-instance sentinel).
      *  Use for symmetric-slide cases — sliding blast door (z=±2.5), round airlock (z=±1.999),
      *  large vehicle door (x=±3.4375). */
-    CUTOUT_CLIP_SLAB(Stage.OPAQUE, true, true, false, false),
+    CUTOUT_CLIP_SLAB(Stage.OPAQUE, true, true, false, false, false),
     /** Cutout pipeline with a per-instance single half-space clip — fragment discards where
      *  {@code dot((nx,ny,nz), slidPos) > distance}. Same per-instance encoding as
      *  {@link #CUTOUT_CLIP_SLAB} (slide in {@code InstanceColor.rgb}, plane in
      *  {@code UVTransform}). Use for one-sided caps — sliding seal (back cap z ≤ 0.5001),
      *  qe_containment (top cap y ≤ 3). */
-    CUTOUT_CLIP_HALFSPACE(Stage.OPAQUE, true, true, false, false),
-    TRANSLUCENT(Stage.TRANSLUCENT, true, true, false, false),
-    TRANSLUCENT_NO_CULL(Stage.TRANSLUCENT, true, false, false, false),
+    CUTOUT_CLIP_HALFSPACE(Stage.OPAQUE, true, true, false, false, false),
+    TRANSLUCENT(Stage.TRANSLUCENT, true, true, false, false, false),
+    TRANSLUCENT_NO_CULL(Stage.TRANSLUCENT, true, false, false, false, false),
+    /** Depth-writing entity translucency whose overlapping instances still require stable back-to-front order. */
+    TRANSLUCENT_SORTED_NO_CULL(Stage.TRANSLUCENT, true, false, false, true, false),
     // Translucent without depth-write. Used for layered translucent geometry (particle clouds,
     // smoke, fog) where many overlapping draws must compose alpha correctly. With depth-write
     // on, partially-transparent quads claim full opacity in the depth buffer — overlapping
@@ -59,16 +61,17 @@ public enum Material {
     // flicker. Cull writes packed (key16 << 16 | instIdx16) per survivor; the sort orders
     // survivors farthest-first in [0, instanceCount) so alpha blends back-to-front correctly.
     // No per-draw cap — slices are sized exactly to the live count.
-    TRANSLUCENT_NO_DEPTH_WRITE(Stage.TRANSLUCENT, false, true, true, true),
-    TRANSLUCENT_NO_DEPTH_WRITE_NO_CULL(Stage.TRANSLUCENT, false, false, true, true),
+    TRANSLUCENT_NO_DEPTH_WRITE(Stage.TRANSLUCENT, false, true, true, true, true),
+    TRANSLUCENT_NO_DEPTH_WRITE_NO_CULL(Stage.TRANSLUCENT, false, false, true, true, true),
     // Additive blending — order-independent (glAdd is commutative), so no sort needed even
     // though depth-write is off. Used for glow effects (rocket exhaust, plasma, RBMK flame).
-    ADDITIVE(Stage.TRANSLUCENT, false, true, true, false),
-    ADDITIVE_NO_CULL(Stage.TRANSLUCENT, false, false, true, false),
+    SOURCE_ALPHA_ADDITIVE_NO_CULL(Stage.TRANSLUCENT, false, false, true, false, false),
+    ADDITIVE(Stage.TRANSLUCENT, false, true, true, false, false),
+    ADDITIVE_NO_CULL(Stage.TRANSLUCENT, false, false, true, false, false),
     // Crumbling overlay material. Not used as a regular instancer bucket — visuals never request
     // it via instancer(...). Engine.onRenderCrumbling fetches the pipeline directly to draw the
     // destroy_stage_N atlas over visualized BEs being broken.
-    CRUMBLING(Stage.TRANSLUCENT, false, true, false, false);
+    CRUMBLING(Stage.TRANSLUCENT, false, true, false, false, false);
 
     public static final Material[] VALUES = values();
 
@@ -82,13 +85,17 @@ public enum Material {
     // Run the per-frame depth-sort compute pass on this material's visList slices in the
     // indirect backend. See class-level comment on TRANSLUCENT_NO_DEPTH_WRITE.
     public final boolean requiresDepthSort;
+    /** Whether Fabulous needs a second color-masked pass to preserve this no-depth-write layer's depth. */
+    public final boolean requiresFabulousDepth;
 
-    Material(Stage stage, boolean depthWrite, boolean cull, boolean disableLighting, boolean requiresDepthSort) {
+    Material(Stage stage, boolean depthWrite, boolean cull, boolean disableLighting,
+             boolean requiresDepthSort, boolean requiresFabulousDepth) {
         this.stage = stage;
         this.depthWrite = depthWrite;
         this.cull = cull;
         this.disableLighting = disableLighting;
         this.requiresDepthSort = requiresDepthSort;
+        this.requiresFabulousDepth = requiresFabulousDepth;
     }
 
     public boolean isStage(RenderLevelStageEvent event) {

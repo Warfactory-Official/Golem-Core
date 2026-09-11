@@ -123,6 +123,29 @@ public final class CompatRenderTypes {
         return PlasmaGlowRenderType.of(texture);
     }
 
+    /** Torex's legacy fog-free, lightmapped {@code SRC_ALPHA/ONE} flare with no depth write. */
+    public static RenderType torexFlare(
+            //? if >=26.1 {
+            Identifier
+            //?} else {
+            /*ResourceLocation
+            *///?}
+            texture) {
+        return TorexFlareRenderType.of(texture);
+    }
+
+    public record FlareVertex(float red, float green, float blue, float alpha, int packedLight) {}
+
+    /** Adapts the old flare row to the render type available on this target. */
+    public static FlareVertex torexFlareVertex(float red, float green, float blue,
+                                                float alpha, int packedLight) {
+        //? if >=26.1 {
+        return new FlareVertex(red, green, blue, alpha, packedLight);
+        //?} else {
+        /*return new FlareVertex(red * alpha, green * alpha, blue * alpha, 1F, 0x00F000F0);
+        *///?}
+    }
+
     /** Translucent variant with explicit outline control; both eras expose the same two-arg form. */
     public static RenderType entityTranslucent(
             //? if >=26.1 {

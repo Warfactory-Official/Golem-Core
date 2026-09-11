@@ -16,6 +16,10 @@ public interface DrawManager {
 
     Instancer instancer(int meshHandle, Material material, Identifier texture);
 
+    default boolean canDraw(Material material) {
+        return MeshPool.vertexBuffer() != null && MeshPool.indexBuffer() != null;
+    }
+
     default Plan<DynamicVisual.Context> frameMaintenancePlan() {
         return Plan.unit();
     }

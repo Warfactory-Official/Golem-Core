@@ -38,11 +38,11 @@ public final class IndirectComputeProgram {
     public boolean ensureLoaded() {
         if (programId != 0) return true;
         RenderSystem.assertOnRenderThread();
+        int shaderId = 0;
         try {
             String source = readResource(CULL_SHADER);
-            int shaderId = compileShader(source);
+            shaderId = compileShader(source);
             programId = linkProgram(shaderId);
-            GL20.glDeleteShader(shaderId);
             frustumPlanesLoc = GL20.glGetUniformLocation(programId, "FrustumPlanes");
             cameraPosROLoc = GL20.glGetUniformLocation(programId, "CameraPosRO");
             modelViewLoc = GL20.glGetUniformLocation(programId, "ModelView");
@@ -54,6 +54,8 @@ public final class IndirectComputeProgram {
             GolemCore.LOG.error("Failed to load Golem cull compute shader; INDIRECT culling disabled", e);
             programId = 0;
             return false;
+        } finally {
+            if (shaderId != 0) GL20.glDeleteShader(shaderId);
         }
     }
 

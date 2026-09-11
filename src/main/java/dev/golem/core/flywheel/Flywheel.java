@@ -13,8 +13,8 @@ import org.jspecify.annotations.Nullable;
  *
  * <ul>
  *   <li><b>Where it exists.</b> The engine is written against the blaze3d GPU-buffer and pipeline API
- *       introduced with 26.1, and it needs an access transformer plus an interface injection that only
- *       NeoForge can supply — so it compiles only on 26.1 NeoForge. This class does not: it is present
+     *       introduced with 26.1, and it needs an access transformer that only NeoForge supplies — so it
+     *       compiles only on 26.1 NeoForge. This class does not: it is present
  *       everywhere with inert bodies, so a consumer calls {@link #init} unconditionally and asks
  *       {@link #isAvailable} when the answer actually changes what it draws.</li>
  *   <li><b>How it starts.</b> CE registers thirteen listeners across two buses by hand at its own

@@ -136,6 +136,14 @@ public final class VisualizationManager {
         return PlanRunner.runAsync(NestedPlan.of(plans).then(drawManager.frameMaintenancePlan()), executor, context);
     }
 
+    public void runFrameSynchronous(DynamicVisual.Context context) {
+        List<EntityVisual<?>> snapshot = new ArrayList<>();
+        entities.snapshot(snapshot);
+        for (EntityVisual<?> visual : snapshot) {
+            if (visual instanceof SynchronousDynamicVisual synchronous) synchronous.beginFrame(context);
+        }
+    }
+
     public void dispatchLightUpdate(long sectionKey) {
         for (Visual visual : sections.visualsInSection(sectionKey)) {
             if (visual instanceof LightUpdatedVisual lit) {

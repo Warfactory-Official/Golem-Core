@@ -72,6 +72,7 @@ public final class IndirectDrawManager implements DrawManager {
     private final IndirectCrumblingScratch crumblingScratch = new IndirectCrumblingScratch();
     private final float[] frustumPlanes = new float[24];
     private volatile boolean sortDumpRequested;
+    private boolean preflightFailed;
     private int lastFlushedFrameId = Integer.MIN_VALUE;
     private StagingBuffer staging;
 
@@ -84,6 +85,18 @@ public final class IndirectDrawManager implements DrawManager {
     @Override
     public Plan<DynamicVisual.Context> frameMaintenancePlan() {
         return frameMaintenancePlan;
+    }
+
+    @Override
+    public boolean canDraw(Material material) {
+        if (preflightFailed) return false;
+        boolean ready = DrawManager.super.canDraw(material)
+                && scatterProgram.ensureLoaded()
+                && cullProgram.ensureLoaded()
+                && applyProgram.ensureLoaded()
+                && (material.stage != Material.Stage.TRANSLUCENT || sortProgram.ensureLoaded());
+        preflightFailed = !ready;
+        return ready;
     }
 
     @Override

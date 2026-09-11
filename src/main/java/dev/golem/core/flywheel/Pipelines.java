@@ -134,6 +134,16 @@ public final class Pipelines {
             case TRANSLUCENT_NO_DEPTH_WRITE_NO_CULL:
                 builder.withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT));
                 break;
+            case TRANSLUCENT_SORTED_NO_CULL:
+                builder.withShaderDefine("ALPHA_CUTOUT", 0.1F);
+                builder.withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT));
+                break;
+            case SOURCE_ALPHA_ADDITIVE_NO_CULL:
+                builder.withShaderDefine("NO_DYNAMIC_LIGHTS");
+                builder.withShaderDefine("NO_FOG");
+                builder.withColorTargetState(new ColorTargetState(new BlendFunction(
+                        SourceFactor.SRC_ALPHA, DestFactor.ONE, SourceFactor.ONE, DestFactor.ZERO)));
+                break;
             case ADDITIVE:
             case ADDITIVE_NO_CULL:
                 builder.withColorTargetState(new ColorTargetState(BlendFunction.ADDITIVE));

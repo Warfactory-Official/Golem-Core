@@ -193,7 +193,7 @@ public final class IndirectStageGroup {
                 }
             }
             appendSubmission(false, instancer, drawIndex);
-            if (instancer.material().requiresDepthSort) {
+            if (instancer.material().requiresFabulousDepth) {
                 appendSubmission(true, instancer, drawIndex);
             }
         }

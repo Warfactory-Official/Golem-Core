@@ -58,6 +58,7 @@ public final class GolemRenderSystem {
         Vec3i origin = GolemFrameContext.originFor(camera);
         currentRenderOrigin = origin;
         var context = GolemFrameContext.create(camera, partialTick, frameId++, origin, LIMITER);
+        manager.runFrameSynchronous(context);
         previousFramePlan = manager.runFrameAsync(EXECUTOR, context);
     }
 

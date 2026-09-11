@@ -11,8 +11,8 @@ val javaVersion = prop("java_version").toInt()
 
 // The vendored Flywheel backend in dev.golem.core.flywheel only exists from 26.1 — it is written
 // against the blaze3d GPU-buffer/pipeline API that arrived with it. Both its access transformer and
-// its interface injection name types that do not exist before then, so declaring either one on an
-// older node fails the build outright rather than being ignored.
+// its access transformer names types that do not exist before then, so declaring it on an older
+// node fails the build outright rather than being ignored.
 val hasVendoredFlywheel = mcVersion.substringBefore('.').toInt() >= 26
 
 // NeoForge reads exactly one META-INF/accesstransformer.cfg per jar, so the backend's widenings
@@ -71,12 +71,6 @@ neoForge {
         register(prop("mod.id")) { sourceSet(sourceSets["main"]) }
     }
 
-    if (hasVendoredFlywheel) {
-        // SlabBuffer reads the GL name and persistent-map address straight off GlBuffer, which needs
-        // both fields widened and the accessor interface injected onto the abstract GpuBuffer.
-        interfaceInjectionData.from("../../src/main/resources/META-INF/interface_injection.json")
-    }
-
     // Unit tests compile against Minecraft too — the data backends are built on CompoundTag/NbtOps.
     // MDG only wires the modding dependencies into `main` by default.
     addModdingDependenciesTo(sourceSets["test"])
@@ -117,19 +111,10 @@ tasks.processResources {
     )
     dependsOn(mergeAccessTransformers)
     from(mergedAccessTransformer) { into("META-INF") }
-    // The interface injection and golem_* shaders belong to the vendored Flywheel backend, which
-    // only exists on 26.1. Keep unrelated Core shaders such as depth_merge.
+    // The golem_* shaders belong to the vendored Flywheel backend, which only exists on 26.1.
+    // Keep unrelated Core shaders such as depth_merge.
     if (!hasVendoredFlywheel) {
-        exclude("META-INF/interface_injection.json", "assets/golemcore/shaders/core/golem_*")
-    }
-}
-
-// UnsafeBootstrap names jdk.internal.misc.Unsafe for its acquire/release accessors, which sun.misc
-// does not carry. java.base qualified-exports that package to a closed list of JDK modules, so javac
-// needs the export granted explicitly; at runtime the class opens it to its own module by hand.
-if (hasVendoredFlywheel) {
-    tasks.compileJava {
-        options.compilerArgs.add("--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED")
+        exclude("assets/golemcore/shaders/core/golem_*")
     }
 }
 

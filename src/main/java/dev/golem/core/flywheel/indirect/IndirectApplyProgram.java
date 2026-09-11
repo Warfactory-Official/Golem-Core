@@ -25,16 +25,18 @@ public final class IndirectApplyProgram {
     public boolean ensureLoaded() {
         if (programId != 0) return true;
         RenderSystem.assertOnRenderThread();
+        int shaderId = 0;
         try {
             String source = readResource(APPLY_SHADER);
-            int shaderId = compileShader(source);
+            shaderId = compileShader(source);
             programId = linkProgram(shaderId);
-            GL20.glDeleteShader(shaderId);
             return true;
         } catch (IOException | RuntimeException e) {
             GolemCore.LOG.error("Failed to load Golem apply compute shader; INDIRECT apply pass disabled", e);
             programId = 0;
             return false;
+        } finally {
+            if (shaderId != 0) GL20.glDeleteShader(shaderId);
         }
     }
 

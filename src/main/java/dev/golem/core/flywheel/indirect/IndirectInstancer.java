@@ -254,10 +254,13 @@ public final class IndirectInstancer extends AbstractInstancer {
     private void uploadPageRun(int slabHandle, int dstVbo, int startPage, int endPageExclusive, long pageBytes) {
         long dstByteOff = requireMappedPage(startPage);
         long srcOff = (long) startPage * pageBytes;
-        long totalBytes = (long) (endPageExclusive - startPage) * pageBytes;
+        long srcEnd = Math.min((long) endPageExclusive * pageBytes, (long) liveCount * STD140_BYTES);
+        long totalBytes = srcEnd - srcOff;
         // Setters wrote into the slab's mapped pointer; flush makes those CPU stores visible
         // to GL's command stream before the GPU-side copy reads them. CLIENT_STORAGE keeps the
         // backing CPU-resident so glCopyNamedBufferSubData is a fast DMA into the object VBO.
+        // The final local page may be partial; flushing/copying page padding beyond liveCount
+        // would exceed a small slab's allocation.
         GL45.glFlushMappedNamedBufferRange(slabHandle, srcOff, totalBytes);
         GL45.glCopyNamedBufferSubData(slabHandle, dstVbo, srcOff, dstByteOff, totalBytes);
     }

@@ -97,10 +97,10 @@ tasks.processResources {
         "META-INF/accesstransformer.cfg",
         "META-INF/golemcore.neoforge.accesstransformer.cfg",
         "META-INF/golemcore.forge.accesstransformer.cfg",
-        // The flywheel widenings, interface injection and golem_* shaders belong to the
+        // The flywheel widenings and golem_* shaders belong to the
         // NeoForge-only vendored backend. Keep unrelated Core shaders such as depth_merge.
         "META-INF/golemcore.flywheel.accesstransformer.cfg",
-        "META-INF/interface_injection.json", "assets/golemcore/shaders/core/golem_*",
+        "assets/golemcore/shaders/core/golem_*",
     )
     exclude("META-INF/neoforge.mods.toml", "META-INF/mods.toml")
 }
