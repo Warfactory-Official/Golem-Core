@@ -81,6 +81,31 @@ public final class Variants {
     }
 
     /**
+     * Six-way facing for a model authored pointing <em>up</em> rather than north: {@code up} is
+     * unrotated, {@code down} is flipped, and a side is pitched a quarter turn and then yawed.
+     * Transcribed from {@code blockstates/radio_torch_controller.json}.
+     *
+     * <p>This is a different table from {@link #facingAll()}, not a different spelling of it. Both
+     * conventions are in vanilla and both are on disk here, and the only thing that distinguishes
+     * them is which way the model was drawn — which the blockstate cannot see. Picking the wrong
+     * one produces a block that is the right shape and pointing somewhere else.
+     */
+    public static Dispatch facingUp() {
+        return facingUp("facing");
+    }
+
+    public static Dispatch facingUp(String property) {
+        Map<String, List<Placement>> placements = new LinkedHashMap<>();
+        placements.put(property + "=up", one(Placement.NONE));
+        placements.put(property + "=down", one(Placement.rotated(180, 0, false)));
+        for (int quarter = 0; quarter < HORIZONTAL.length; quarter++) {
+            placements.put(property + "=" + HORIZONTAL[quarter],
+                    one(Placement.rotated(90, quarter * 90, false)));
+        }
+        return of(Collections.singleton(property), placements);
+    }
+
+    /**
      * Pillar orientation for a {@link Models#column} model. Transcribed from
      * {@code blockstates/waste_log.json}.
      */

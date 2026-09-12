@@ -99,6 +99,111 @@ public final class Models {
     }
 
     /**
+     * Several suffixed models under one declaration, for a block whose blockstate picks between
+     * them: the on/off pair a machine switches, the numbered pool a shaded ore draws from.
+     *
+     * <p>{@link Variants#slab} and {@link Variants#stairs} have their own presets because their
+     * suffixes are fixed and their parents are irregular. This is for everything else, where the
+     * suffix is the blockstate's business and each entry is an ordinary shape.
+     *
+     * <pre>{@code
+     * Models.group().and("_off", Models.cubeAll("hbm:blocks/lamp_off"))
+     *               .and("_on",  Models.cubeAll("hbm:blocks/lamp_on"))
+     * }</pre>
+     *
+     * <p>The empty suffix is allowed and means the base model itself, because a blockstate that
+     * picks between {@code <base>} and {@code <base>_cracked} is the same kind of thing as one
+     * picking between {@code _off} and {@code _on}.
+     */
+    public static Group group() {
+        return new Group(Collections.emptyMap());
+    }
+
+    /** A set of suffixed sub-shapes, built up one at a time. Immutable; {@link #and} returns a new one. */
+    public static final class Group implements Shape {
+
+        private final Map<String, Shape> parts;
+
+        private Group(Map<String, Shape> parts) {
+            this.parts = parts;
+        }
+
+        public Group and(String suffix, Shape shape) {
+            if (suffix == null) {
+                throw new DejsonException("a group entry needs a suffix");
+            }
+            if (shape == null) {
+                throw new DejsonException("group entry '" + suffix + "' was given a null shape");
+            }
+            if (parts.containsKey(suffix)) {
+                throw new DejsonException("group entry '" + suffix + "' declared twice");
+            }
+            Map<String, Shape> merged = new LinkedHashMap<>(parts);
+            merged.put(suffix, shape);
+            return new Group(Collections.unmodifiableMap(merged));
+        }
+
+        @Override
+        public Map<String, JsonObject> models(String base) {
+            if (parts.isEmpty()) {
+                throw new DejsonException("group() with no entries emits nothing; "
+                        + "use Models.none() if that is what was meant");
+            }
+            Map<String, JsonObject> models = new LinkedHashMap<>();
+            parts.forEach((suffix, shape) -> {
+                Map<String, JsonObject> part = shape.models(base + suffix);
+                if (part.size() != 1 || !part.containsKey(base + suffix)) {
+                    throw new DejsonException("group entry '" + suffix
+                            + "' emits more than its own model: " + part.keySet());
+                }
+                models.putAll(part);
+            });
+            return Collections.unmodifiableMap(models);
+        }
+    }
+
+    /**
+     * The same shape, tagged with the render type its block needs.
+     *
+     * <p>{@code render_type} is how a model asks for anything but the opaque solid layer — cutout
+     * for a block with holes in its texture, translucent for glass. It is a model field rather
+     * than a block property on every target here, and leaving it off does not fail the bake: it
+     * draws the block on the solid layer, where its transparent pixels come out black.
+     *
+     * <pre>{@code Models.renderType("minecraft:cutout", Models.cubeAll("hbm:blocks/gas_radon"))}</pre>
+     */
+    public static Shape renderType(String renderType, Shape shape) {
+        if (renderType == null || renderType.isEmpty()) {
+            throw new DejsonException("renderType() needs a render type");
+        }
+        requireId(renderType, "render type");
+        if (shape == null) {
+            throw new DejsonException("renderType('" + renderType + "') was given a null shape");
+        }
+        return base -> {
+            Map<String, JsonObject> tagged = new LinkedHashMap<>();
+            shape.models(base).forEach((id, model) -> {
+                JsonObject copy = model.deepCopy();
+                copy.addProperty("render_type", renderType);
+                tagged.put(id, copy);
+            });
+            return Collections.unmodifiableMap(tagged);
+        };
+    }
+
+    /**
+     * A shape that emits nothing, for a block whose appearance comes from a renderer.
+     *
+     * <p>Paired with {@link Dejson.Declaration#rendered}, which points the blockstate at a shared
+     * model somebody else owns. 150 of the blockstates shipped here are exactly that: a machine
+     * drawn by a block-entity renderer, whose blockstate exists only because vanilla demands one
+     * and whose model is the same empty placeholder every time.
+     */
+    public static Shape none() {
+        return base -> Collections.emptyMap();
+    }
+
+    /**
      * The item model of a block: a bare parent pointing at the block's own model, with no textures
      * of its own. This is the only item shape whose parent is not a vanilla one, so it takes the
      * block model id rather than deriving it — a block whose item should show a different model

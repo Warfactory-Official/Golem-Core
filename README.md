@@ -94,7 +94,31 @@ must not duplicate the consumer's screen, renderer, HUD, packet, or test invento
 
 Use `BlockEntities.type(factory, blocks...)` inside the consumer's deferred registration supplier. It
 owns Fabric's builder and the Forge/NeoForge constructor differences without changing registration
-timing. `Platform` exposes loader name, mod presence, physical side, and development state; consumers
+timing.
+
+**Declare the ticker there too.** `serverTicking(factory, tick, blocks...)`, `clientTicking(...)` and
+`ticking(factory, clientTick, serverTick, blocks...)` bind a ticker to the type they build; the block
+then implements `TickingBlock` instead of `EntityBlock` and writes no `getTicker` at all.
+
+```java
+BLOCK_ENTITIES.register("machine_diesel", () -> BlockEntities.serverTicking(
+        TileEntityMachineDiesel::new, TileEntityMachineDiesel::serverTick,
+        ModMachineBlocks.machine_diesel.get()));
+```
+
+Vanilla asks the *block* for a ticker and hands it the block entity's type, which leaves every block
+re-deriving something the block entity knows: whether it ticks, on which side, through which method.
+Per block that is an override, a side test, a type identity check and a private unchecked cast — 142
+overrides and 114 copies of the cast in HBM. `TickingBlock`'s default answers from the type it was
+handed, so the identity check disappears rather than moving: a block backing more than one type — a
+pump that is steam or electric, a base class shared by six radio torches — needs no branch, because
+the lookup is keyed on the type vanilla already resolved for the position.
+
+`TickingBlock` is an interface because the blocks needing it rarely share a base class, and a more
+specific interface default wins over `EntityBlock`'s. The one trap: a *class* method beats any
+interface default, so a `getTicker` left anywhere in the chain silently wins. `ticks(type)`,
+`ticks(type, client)` and `tickingTypes()` exist so a test can assert coverage — worth having,
+because a block left on plain `EntityBlock` compiles, places, keeps its inventory, and never ticks. `Platform` exposes loader name, mod presence, physical side, and development state; consumers
 should not maintain their own loader service for these queries.
 
 Use `Entities.byId(id)` for built-in entity-type lookup. It owns the 26.1 registry `getValue` versus older
@@ -139,12 +163,11 @@ the overlay on multiblocks.
 
 See `THIRD_PARTY_NOTICES.md` — the task pipeline and visualizer framework are MIT, by Jozufozu.
 
-## Generated Block Models
+## Generated JSON
 
-`dev.golem.core.dejson` replaces hand-written model and blockstate JSON with a declaration made
-beside the block's registration. What it produces is ordinary vanilla JSON, so it parses on the same
-parser, bakes on the same pipeline, and is seen by connected-texture engines exactly as a file-loaded
-model is.
+`dev.golem.core.dejson` replaces hand-written JSON with a declaration made beside the registration.
+What it produces is ordinary vanilla JSON, so it parses on the same parser, bakes on the same
+pipeline, and is seen by connected-texture engines exactly as a file-loaded model is.
 
 ```java
 Dejson.block("hbm", "crate_steel")
@@ -153,39 +176,130 @@ Dejson.block("hbm", "crate_steel")
       .states(Variants.facing())
       .blockItem()
       .register();
+
+Dejson.item("hbm", "ingot_steel")
+      .models(Models.generated("hbm:items/ingot_steel"))
+      .register();
 ```
+
+HBM uses this for **4178 declarations covering 6826 files** — 5084 assets and 1742 data files —
+which are no longer in the tree.
+
+### Models
 
 `Models` covers the parented, texture-only shapes — `cubeAll`, `cubeBottomTop`, `column`,
 `orientable`, `cross`, `slabAll`/`slab`, `stairsAll`/`stairs`, `generated`, `handheld`, `blockItem`
-— and `parented` is the escape hatch below them. Anything carrying hand-built `elements` stays a
-file, and anything with real geometry is an OBJ and belongs to the instanced renderer.
+— with three combinators above them and `parented` as the escape hatch below:
 
-`Variants` covers the blockstate half: `simple`, `facing` (horizontal) and `facingAll`, `axis`,
-`slab`, `stairs`, `uniform`/`uniformRange`, `select`, `flag`, `intRange`, `pool`, and `product` to
-cross them. A sixteen-variant `facing`/`lit`/`ext` machine is `product(facing(), select("lit", …),
-select("ext", …))`. Every rotation table is transcribed from a file the consumer already ships,
-because a table that is wrong by one quarter turn is not a crash.
+- `group()` builds several suffixed models under one declaration (`_off`/`_on`, a numbered pool,
+  `""`/`_cracked`), which is what a blockstate selecting by suffix needs.
+- `renderType(type, shape)` tags a shape for the cutout or translucent layer. Leaving it off does
+  not fail the bake — it draws the block solid, with its transparent pixels black.
+- `none()` emits nothing, for a block drawn by a renderer.
+
+Anything carrying hand-built `elements` stays a file, and anything with real geometry is an OBJ and
+belongs to the instanced renderer.
+
+### Blockstates
+
+`Variants` covers the blockstate half: `simple`, `facing` (horizontal), `facingAll` and `facingUp`,
+`axis`, `slab`, `stairs`, `uniform`/`uniformRange`, `select`, `flag`, `intRange`, `pool`, and
+`product` to cross them. A sixteen-variant `facing`/`lit`/`ext` machine is `product(facing(),
+select("lit", …), select("ext", …))`. Every rotation table is transcribed from a file the consumer
+already ships, because a table that is wrong by one quarter turn is not a crash.
+
+`facingAll` and `facingUp` are the same six directions with different tables, and the difference is
+which way the model was drawn — which the blockstate cannot see. Both are in use here.
+
+`Declaration.rendered(sharedModel)` is for a block whose appearance comes from a block-entity
+renderer: its blockstate points at a shared placeholder and it emits no models of its own. 150 of
+HBM's blockstates are exactly that, and they are the near-identical files an OBJ machine leaves
+behind.
 
 Multipart blockstates are **not** covered. They are a different top-level JSON shape, not another
-variant table, and the two that exist in practice — a cable and a fluid duct — are the only genuinely
-non-trivial blockstates in the corpus. They stay files.
+variant table, and the two that exist in practice — a cable and a fluid duct — are the only
+genuinely non-trivial blockstates in the corpus. They stay files.
 
-`blockItem()` publishes both item spellings from one declaration: the model at
-`models/item/<path>.json` that older targets load directly, and the item *definition* at
-`items/<path>.json` that 26.1 resolves through. They are different files, not two eras of one file.
+### Items, and the two spellings of one
+
+`blockItem()` and `Dejson.item(...)` both publish two files, because the eras disagree about what an
+item model *is*: the model at `models/item/<path>.json` that older targets load directly, and the
+*definition* at `items/<path>.json` that 26.1 resolves through. They are different files, not two
+eras of one file.
+
+`blockItem()` and `blockItemDirect()` differ only in which model id the definition names — the item
+model, or the block model straight away. They bake identically; both spellings are on disk in HBM,
+245 direct and 141 not. 244 of the direct-spelling ones ship no `models/item/` file at all, because
+below 26.1 HBM's build derives one from the definition; declaring the block item emits it from the
+declaration instead, out of the same source of truth as the block model.
+
+### Data files
+
+The assets half has a vocabulary because a model and a blockstate are things you can describe.
+Data files have nothing in common but their encoding, so `Data` is a plain path-to-content registry
+and the shapes are built on top of it.
+
+`Drops` covers block loot tables. Five hundred of them say one of six sentences — drops itself,
+drops itself even out of an explosion, drops nothing, drops double as a double slab, keeps its
+inventory, drops its mineral unless silk-touched — and in HBM's corpus those six sentences had
+drifted into a dozen spellings, because there was nowhere to say each one once. Each method emits
+the shape vanilla's own generator emits. What is deliberately *not* normalised is
+`survives_explosion`: whether a blown-up block leaves its item behind is a decision about the block,
+so `self` and `selfAlways` are two verbs and the caller picks one.
+
+`Tags` covers tag files, which are the most paternal shape in a data pack — a `replace` flag that is
+false in every one of them and a list of ids. Membership is spelled exactly as the file spells it,
+including a leading `#`, because the difference is real: an id names one item and must exist, while
+a `#` reference names a tag that may legitimately be empty. Paths are the modern singular ones; a
+consumer's own build renames them for the pre-1.21 plural directories.
+
+`Damage` and `BiomeModifiers` each exist because the same fact was being written twice:
+
+- A damage type is three fields under `data/<ns>/damage_type/` and its behaviour is a *tag* under
+  `data/minecraft/tags/damage_type/`. Nothing connects them, so adding a type and forgetting the tag
+  is a one-line omission with no symptom at the point of the mistake — armour quietly starts
+  protecting against radiation. `Damage.declare` takes every type at once and writes both halves
+  from the one table, because the tag files are the transpose of the types.
+- A Forge-family biome modifier is the same file twice under two namespaces, `neoforge:add_features`
+  against `forge:add_features`. That is a loader difference, which is what this layer is for; one
+  declaration emits both.
+
+`Crafting` covers the three recipe families whose shape carries no decision: a block packing from
+nine of something, the same block unpacking, and a furnace turning one item into another. It covers
+those three and nothing else, because a shaped recipe with a real pattern *is* its pattern and there
+is no boilerplate in it to remove. Recipe ids are passed rather than derived — the recipe book
+remembers them and JEI bookmarks them, so a migration that tidied them would reset progress.
+
+HBM's 787 `c:` material tags were the clearest case for the whole idea. 578 of them said only that
+`c:ingots/iron` contains `hbm:ingot_iron` — a restatement of the shape table, one file at a time —
+and are now one line per material naming the shapes it comes in.
+
+### Delivery
+
+`DejsonWriter` emits the registry as files and, more importantly, checks it against the files it
+claims to replace. `DejsonMain` is the build entry point:
+
+```
+java dev.golem.core.dejson.DejsonMain verify <out> <authored> com.hbm.blocks.ModBlockModels …
+java dev.golem.core.dejson.DejsonMain write  <out> <authored> com.hbm.blocks.ModBlockModels …
+```
+
+It runs in a plain JVM — nothing in the declaration vocabulary touches Minecraft — which is what
+makes this a build step rather than a game one, and what makes the check cheap enough to be part of
+`check`. The order matters: declare, verify against the authored file, *then* delete it. After the
+deletion there is nothing left to compare against.
 
 Three rules the layer keeps:
 
-- **File wins.** The delivery layer consults the registry only where no resource exists at the path,
-  so resource packs still override, a hand-authored exception is still possible, and deleting a JSON
-  file *is* the migration step.
+- **File wins.** A path that exists under the authored resource root is left to it, so resource
+  packs still override, a hand-authored exception is still possible, and deleting a JSON file *is*
+  the migration step.
 - **Slots are never pruned.** A texture entry no face references can be the slot carrier a Java
   baker or a connected-texture engine reads; dropping one fails the bake outright. Everything
   declared is emitted.
 - **Fail loud, at the declaration.** Malformed ids, duplicate slots, a rotation that is not a
   quarter turn, and a blockstate pointing at a model its shape never emits all throw at
-  `register()`. Whether a named texture exists needs a resource manager, so `Dejson.sprites()` hands
-  the full set to the delivery layer to check at reload.
+  `register()`.
 
 `BlockStates` is the one class here that names Minecraft types: it reads a `BlockState`'s properties
 by name so `Dispatch.covers` can answer, and `uncovered(block, dispatch)` turns "some state has no

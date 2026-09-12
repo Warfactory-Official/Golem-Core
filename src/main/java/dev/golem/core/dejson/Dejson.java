@@ -52,6 +52,7 @@ public final class Dejson {
     private static final Map<String, JsonObject> MODELS = new ConcurrentHashMap<>();
     private static final Map<String, JsonObject> STATES = new ConcurrentHashMap<>();
     private static final Map<String, Declaration> DECLARATIONS = new ConcurrentHashMap<>();
+    private static final Map<String, ItemDeclaration> ITEM_DECLARATIONS = new ConcurrentHashMap<>();
     private static final Map<String, JsonObject> ITEM_DEFINITIONS = new ConcurrentHashMap<>();
 
     private Dejson() {}
@@ -59,6 +60,21 @@ public final class Dejson {
     /** Begins a declaration for {@code <namespace>:<path>}, matching the block's registry id. */
     public static Declaration block(String namespace, String path) {
         return new Declaration(namespace, path);
+    }
+
+    /**
+     * Begins a declaration for a plain item, matching the item's registry id.
+     *
+     * <p>An item is the smaller half of the same idea and by far the larger half of the corpus: it
+     * has no blockstate, so a declaration is one shape and nothing else. Almost all of them are a
+     * sprite or three stacked on {@code item/generated}.
+     *
+     * <p>A block's own item is not declared this way — {@link Declaration#blockItem()} attaches it
+     * to the block, so the two cannot drift apart. This is for items that are only items, and for
+     * the block items whose block still loads its model from a file.
+     */
+    public static ItemDeclaration item(String namespace, String path) {
+        return new ItemDeclaration(namespace, path);
     }
 
     /** The generated {@code models/<path>.json} for a model id, or null if none was declared. */
@@ -88,6 +104,10 @@ public final class Dejson {
         return Collections.unmodifiableCollection(DECLARATIONS.values());
     }
 
+    public static Collection<ItemDeclaration> itemDeclarations() {
+        return Collections.unmodifiableCollection(ITEM_DECLARATIONS.values());
+    }
+
     public static Set<String> modelIds() {
         return Collections.unmodifiableSet(MODELS.keySet());
     }
@@ -98,6 +118,9 @@ public final class Dejson {
         for (Declaration declaration : DECLARATIONS.values()) {
             sprites.addAll(declaration.sprites());
         }
+        for (ItemDeclaration declaration : ITEM_DECLARATIONS.values()) {
+            sprites.addAll(declaration.sprites());
+        }
         return sprites;
     }
 
@@ -106,7 +129,9 @@ public final class Dejson {
         MODELS.clear();
         STATES.clear();
         DECLARATIONS.clear();
+        ITEM_DECLARATIONS.clear();
         ITEM_DEFINITIONS.clear();
+        Data.reset();
     }
 
     /** One block's declaration, built fluently and checked when it registers. */
@@ -118,7 +143,9 @@ public final class Dejson {
 
         private Shape shape;
         private Dispatch dispatch;
+        private String renderBase;
         private Shape itemShape;
+        private String definitionModel;
         private Map<String, JsonObject> models = Collections.emptyMap();
 
         private Declaration(String namespace, String path) {
@@ -139,6 +166,26 @@ public final class Dejson {
             return this;
         }
 
+        /**
+         * Declares a block drawn by a renderer: the blockstate points at a shared model this block
+         * does not own, and the block emits no models of its own.
+         *
+         * <p>An OBJ machine has no block model to speak of — what vanilla bakes for it is an empty
+         * placeholder carrying a particle texture, and every one of them points at the same one.
+         * The blockstate still has to exist, and still has to name every state, which is why 150
+         * near-identical files are on disk. This says that in one line, and says the true thing
+         * while it is at it: this block's appearance is not in a model file.
+         *
+         * <p>The blockstate is built on {@code sharedModel} rather than on this block's own id, so
+         * a dispatch that rotates or selects by suffix still works — it just does so against
+         * somebody else's model, which is the caller's business to get right.
+         */
+        public Declaration rendered(String sharedModel) {
+            Models.requireId(sharedModel, "shared model");
+            this.renderBase = sharedModel;
+            return models(Models.none());
+        }
+
         public Declaration states(Dispatch dispatch) {
             if (dispatch == null) {
                 throw new DejsonException(blockId + " was given a null dispatch");
@@ -152,8 +199,33 @@ public final class Dejson {
             return this;
         }
 
-        /** The usual item model: a bare parent pointing at this block's own base model. */
+        /**
+         * The block's item: a model that is a bare parent pointing at the block's own model, and a
+         * 26.1 item definition naming that item model.
+         *
+         * <p>See {@link #blockItemDirect()} for the other spelling. The two bake identically; they
+         * differ only in which model id the definition names, and both are on disk here.
+         */
         public Declaration blockItem() {
+            definitionModel = itemId;
+            return item(Models.blockItem(baseModel));
+        }
+
+        /**
+         * The same block item, with the 26.1 definition naming the <i>block</i> model directly
+         * instead of going through the item model.
+         *
+         * <p>This is not a different-looking item. A definition naming {@code hbm:block/foo} and
+         * one naming an item model whose only content is {@code parent: hbm:block/foo} bake to the
+         * same thing, and 245 of the definitions here take the short way while 141 take the long
+         * one. The item model is emitted either way, because below 26.1 there is no definition
+         * layer and {@code models/item/<path>.json} is the only thing the renderer looks for. The
+         * short-way block items ship no such file; a consumer that has been deriving one from the
+         * definition at build time can stop, because the declaration emits it from the same place
+         * the block model comes from.
+         */
+        public Declaration blockItemDirect() {
+            definitionModel = baseModel;
             return item(Models.blockItem(baseModel));
         }
 
@@ -195,25 +267,22 @@ public final class Dejson {
             return models;
         }
 
+        /** The model the blockstate is built on: this block's own, or the shared one it is drawn by. */
+        public String stateBase() {
+            return renderBase == null ? baseModel : renderBase;
+        }
+
+        /** Whether this block's appearance comes from a renderer rather than from a model it owns. */
+        public boolean isRendered() {
+            return renderBase != null;
+        }
+
         public JsonObject blockStateJson() {
-            return dispatch.toJson(baseModel);
+            return dispatch.toJson(stateBase());
         }
 
         public Set<String> sprites() {
-            Set<String> sprites = new LinkedHashSet<>();
-            for (JsonObject model : models.values()) {
-                JsonObject textures = model.getAsJsonObject("textures");
-                if (textures == null) {
-                    continue;
-                }
-                for (String slot : textures.keySet()) {
-                    String value = textures.get(slot).getAsString();
-                    if (!value.startsWith("#")) {
-                        sprites.add(value);
-                    }
-                }
-            }
-            return sprites;
+            return spritesOf(models);
         }
 
         /** Checks the declaration and publishes it. Throws rather than registering a broken one. */
@@ -235,13 +304,18 @@ public final class Dejson {
                 built.putAll(item);
             }
 
-            Set<String> referenced = dispatch.referencedModels(baseModel);
-            Set<String> missing = new LinkedHashSet<>(referenced);
-            missing.removeAll(built.keySet());
-            if (!missing.isEmpty()) {
-                throw new DejsonException(blockId + " points at " + missing
-                        + " but its shape only emits " + built.keySet()
-                        + "; the shape and the blockstate disagree");
+            if (renderBase == null) {
+                Set<String> referenced = dispatch.referencedModels(baseModel);
+                Set<String> missing = new LinkedHashSet<>(referenced);
+                missing.removeAll(built.keySet());
+                if (!missing.isEmpty()) {
+                    throw new DejsonException(blockId + " points at " + missing
+                            + " but its shape only emits " + built.keySet()
+                            + "; the shape and the blockstate disagree");
+                }
+            } else if (!built.isEmpty()) {
+                throw new DejsonException(blockId + " is declared rendered(" + renderBase
+                        + ") but its shape still emits " + built.keySet());
             }
 
             for (String id : built.keySet()) {
@@ -258,9 +332,105 @@ public final class Dejson {
             MODELS.putAll(built);
             STATES.put(blockId, blockStateJson());
             if (itemShape != null) {
-                ITEM_DEFINITIONS.put(itemId, Models.itemDefinition(itemId));
+                ITEM_DEFINITIONS.put(itemId,
+                        Models.itemDefinition(definitionModel == null ? itemId : definitionModel));
             }
             return this;
         }
+    }
+
+    /**
+     * One item's declaration: a shape, and the two files it stands in for.
+     *
+     * <p>There are two files because the eras disagree about what an item model <i>is</i>. Up to
+     * 1.21.x an item is a model at {@code models/item/<path>.json} and nothing else. From 26.1 it
+     * is a <i>definition</i> at {@code items/<path>.json} that names a model, and the model stays
+     * where it was. Both are emitted from the one declaration, so neither target has to be thought
+     * about at the call site.
+     */
+    public static final class ItemDeclaration {
+
+        private final String itemId;
+        private final String definitionId;
+
+        private Shape shape;
+        private Map<String, JsonObject> models = Collections.emptyMap();
+
+        private ItemDeclaration(String namespace, String path) {
+            if (namespace == null || namespace.isEmpty() || path == null || path.isEmpty()) {
+                throw new DejsonException("item declaration needs a namespace and a path");
+            }
+            this.definitionId = namespace + ":" + path;
+            this.itemId = namespace + ":item/" + path;
+            Models.requireId(definitionId, "item");
+        }
+
+        public ItemDeclaration models(Shape shape) {
+            if (shape == null) {
+                throw new DejsonException(definitionId + " was given a null shape");
+            }
+            this.shape = shape;
+            return this;
+        }
+
+        /** The item's registry id, and the path its item definition would live at. */
+        public String definitionId() {
+            return definitionId;
+        }
+
+        /** The item's model id, {@code <namespace>:item/<path>}. */
+        public String itemId() {
+            return itemId;
+        }
+
+        public Map<String, JsonObject> models() {
+            return models;
+        }
+
+        public Set<String> sprites() {
+            return spritesOf(models);
+        }
+
+        public ItemDeclaration register() {
+            if (shape == null) {
+                throw new DejsonException(definitionId + " declares no model; call models(...)");
+            }
+
+            Map<String, JsonObject> built = shape.models(itemId);
+            if (built.size() != 1 || !built.containsKey(itemId)) {
+                throw new DejsonException(definitionId
+                        + " has a shape that emits more than its own model: " + built.keySet());
+            }
+
+            if (MODELS.containsKey(itemId)) {
+                throw new DejsonException("model " + itemId + " is declared twice; "
+                        + definitionId + " collides with an earlier declaration");
+            }
+            if (ITEM_DECLARATIONS.putIfAbsent(definitionId, this) != null) {
+                throw new DejsonException(definitionId + " is declared twice");
+            }
+
+            this.models = Collections.unmodifiableMap(new LinkedHashMap<>(built));
+            MODELS.putAll(built);
+            ITEM_DEFINITIONS.put(itemId, Models.itemDefinition(itemId));
+            return this;
+        }
+    }
+
+    private static Set<String> spritesOf(Map<String, JsonObject> models) {
+        Set<String> sprites = new LinkedHashSet<>();
+        for (JsonObject model : models.values()) {
+            JsonObject textures = model.getAsJsonObject("textures");
+            if (textures == null) {
+                continue;
+            }
+            for (String slot : textures.keySet()) {
+                String value = textures.get(slot).getAsString();
+                if (!value.startsWith("#")) {
+                    sprites.add(value);
+                }
+            }
+        }
+        return sprites;
     }
 }

@@ -34,6 +34,29 @@ public final class BlockStates {
      * {@code minecraft:air} itself cannot be looked up, which is not a block anything declares a
      * model for.
      */
+    /**
+     * Every registered block whose id sits in {@code namespace}, in registry order.
+     *
+     * <p>Registry iteration itself reads the same on every target; what does not is reading a
+     * block's id back out, because the id type was renamed at 26.1. A consumer that wants to sweep
+     * its own blocks — to check that each states a rotation, or that each ticking one was given a
+     * ticker — should not need an era guard to do it.
+     */
+    public static java.util.List<Block> blocksIn(String namespace) {
+        java.util.List<Block> blocks = new java.util.ArrayList<>();
+        for (Block block : net.minecraft.core.registries.BuiltInRegistries.BLOCK) {
+            //? if >=26.1 {
+            net.minecraft.resources.Identifier id = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(block);
+            //?} else {
+            /*net.minecraft.resources.ResourceLocation id = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(block);
+            *///?}
+            if (id != null && id.getNamespace().equals(namespace)) {
+                blocks.add(block);
+            }
+        }
+        return blocks;
+    }
+
     public static Block block(String id) {
         //? if >=26.1 {
         Block block = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getValue(dev.golem.core.Ids.parse(id));
