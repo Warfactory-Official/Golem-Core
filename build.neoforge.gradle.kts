@@ -74,6 +74,16 @@ neoForge {
     // Unit tests compile against Minecraft too — the data backends are built on CompoundTag/NbtOps.
     // MDG only wires the modding dependencies into `main` by default.
     addModdingDependenciesTo(sourceSets["test"])
+
+    // And some of them have to *run* under FML. NeoForge's SharedConstants asks FMLEnvironment
+    // whether it is in production during its static init, which throws "There is no current FML
+    // Loader" in a plain test JVM — so any test that touches Bootstrap or a vanilla registry dies
+    // in @BeforeAll rather than failing an assertion. This launches the test JVM through FML's own
+    // JUnit entry point, which is the only thing that makes registry-backed tests possible here.
+    unitTest {
+        enable()
+        testedMod = mods.named(prop("mod.id"))
+    }
 }
 
 repositories {

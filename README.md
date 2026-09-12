@@ -138,3 +138,60 @@ name. Pass an `Instancing.CrumblingCoreResolver` to `Instancing.init` instead. L
 the overlay on multiblocks.
 
 See `THIRD_PARTY_NOTICES.md` — the task pipeline and visualizer framework are MIT, by Jozufozu.
+
+## Generated Block Models
+
+`dev.golem.core.dejson` replaces hand-written model and blockstate JSON with a declaration made
+beside the block's registration. What it produces is ordinary vanilla JSON, so it parses on the same
+parser, bakes on the same pipeline, and is seen by connected-texture engines exactly as a file-loaded
+model is.
+
+```java
+Dejson.block("hbm", "crate_steel")
+      .models(Models.cubeBottomTop("hbm:blocks/crate_steel_top",
+              "hbm:blocks/crate_steel_side", "hbm:blocks/crate_steel_top"))
+      .states(Variants.facing())
+      .blockItem()
+      .register();
+```
+
+`Models` covers the parented, texture-only shapes — `cubeAll`, `cubeBottomTop`, `column`,
+`orientable`, `cross`, `slabAll`/`slab`, `stairsAll`/`stairs`, `generated`, `handheld`, `blockItem`
+— and `parented` is the escape hatch below them. Anything carrying hand-built `elements` stays a
+file, and anything with real geometry is an OBJ and belongs to the instanced renderer.
+
+`Variants` covers the blockstate half: `simple`, `facing` (horizontal) and `facingAll`, `axis`,
+`slab`, `stairs`, `uniform`/`uniformRange`, `select`, `flag`, `intRange`, `pool`, and `product` to
+cross them. A sixteen-variant `facing`/`lit`/`ext` machine is `product(facing(), select("lit", …),
+select("ext", …))`. Every rotation table is transcribed from a file the consumer already ships,
+because a table that is wrong by one quarter turn is not a crash.
+
+Multipart blockstates are **not** covered. They are a different top-level JSON shape, not another
+variant table, and the two that exist in practice — a cable and a fluid duct — are the only genuinely
+non-trivial blockstates in the corpus. They stay files.
+
+`blockItem()` publishes both item spellings from one declaration: the model at
+`models/item/<path>.json` that older targets load directly, and the item *definition* at
+`items/<path>.json` that 26.1 resolves through. They are different files, not two eras of one file.
+
+Three rules the layer keeps:
+
+- **File wins.** The delivery layer consults the registry only where no resource exists at the path,
+  so resource packs still override, a hand-authored exception is still possible, and deleting a JSON
+  file *is* the migration step.
+- **Slots are never pruned.** A texture entry no face references can be the slot carrier a Java
+  baker or a connected-texture engine reads; dropping one fails the bake outright. Everything
+  declared is emitted.
+- **Fail loud, at the declaration.** Malformed ids, duplicate slots, a rotation that is not a
+  quarter turn, and a blockstate pointing at a model its shape never emits all throw at
+  `register()`. Whether a named texture exists needs a resource manager, so `Dejson.sprites()` hands
+  the full set to the delivery layer to check at reload.
+
+`BlockStates` is the one class here that names Minecraft types: it reads a `BlockState`'s properties
+by name so `Dispatch.covers` can answer, and `uncovered(block, dispatch)` turns "some state has no
+model" from an untextured cube in a world into a failing test.
+
+Connected textures keep working by construction for the texture-keyed engines (a `.png.mcmeta`
+descriptor sits beside the sprite, not the model) and for the post-bake wrapping ones (they wrap
+whatever was baked). The one mode a generated model cannot support is model-keyed — a model JSON
+declaring a custom loader — because there is no file to carry the key. Do not adopt that mode.

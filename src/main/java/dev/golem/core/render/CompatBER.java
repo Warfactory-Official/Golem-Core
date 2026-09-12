@@ -101,5 +101,24 @@ public interface CompatBER<T extends BlockEntity, S extends CompatRenderState>
     default int getViewDistance() {
         return viewDistance();
     }
+
+    //? if neoforge {
+    /**
+     * Forwards the render bounding box NeoForge asks for. Vanilla culls a block-entity renderer
+     * against its own block's box; a renderer that draws outside that box is simply not called once
+     * the block itself leaves the frustum, which reads as the effect popping out of existence when
+     * the camera turns.
+     *
+     * <p>A renderer declaring {@link #shouldRenderOffScreen} has already said it draws outside its
+     * own block, so it gets NeoForge's documented "never cull me" value; anything else keeps the
+     * default single-block box.
+     */
+    @Override
+    default net.minecraft.world.phys.AABB getRenderBoundingBox(T blockEntity) {
+        return shouldRenderOffScreen()
+                ? net.minecraft.world.phys.AABB.INFINITE
+                : new net.minecraft.world.phys.AABB(blockEntity.getBlockPos());
+    }
+    //?}
     //?}
 }

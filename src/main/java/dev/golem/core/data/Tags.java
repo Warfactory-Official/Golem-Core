@@ -108,4 +108,12 @@ public final class Tags {
         /*return tag.contains(name, TAG_INT_ARRAY) ? tag.getIntArray(name) : defaultValue;
         *///?}
     }
+
+    public static java.util.Set<String> keys(CompoundTag tag) {
+        //? if >=26.1 {
+        return tag.keySet();
+        //?} else {
+        /*return tag.getAllKeys();
+        *///?}
+    }
 }
