@@ -118,13 +118,6 @@ public abstract class CompatScreen extends Screen {
     }
     //?} else {
     /*@Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        this.extractBackgroundCompat(graphics, mouseX, mouseY, partialTick);
-        super.render(graphics, mouseX, mouseY, partialTick);
-        this.extractForegroundCompat(graphics, mouseX, mouseY, partialTick);
-    }
-
-    @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         MouseInput input = new MouseInput(mouseX, mouseY, button);
         return this.mouseClickedCompat(input, false) || super.mouseClicked(mouseX, mouseY, button)
@@ -162,6 +155,37 @@ public abstract class CompatScreen extends Screen {
                 || super.charTyped(codePoint, modifiers);
         this.updateFocusedEditBox();
         return handled;
+    }
+    *///?}
+
+    /**
+     * The background goes in {@code renderBackground}, not ahead of {@code render}.
+     *
+     * <p>1.20.2 moved {@code renderBackground} to the top of {@code Screen.render} and made it run the
+     * menu blur, so anything already in the framebuffer when {@code super.render} is entered gets
+     * blurred. Drawing the panel first therefore softens every pixel of it while the foreground pass —
+     * text, items — stays sharp, which reads as a texture problem rather than an ordering one. Vanilla's
+     * own container screens avoid it the same way, by hanging {@code renderBg} off
+     * {@code renderBackground}. 1.20.1 has neither the blur nor the call, so it keeps the plain order.
+     */
+    //? if >=1.21 && <26.1 {
+    /*@Override
+    public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        super.renderBackground(graphics, mouseX, mouseY, partialTick);
+        this.extractBackgroundCompat(graphics, mouseX, mouseY, partialTick);
+    }
+
+    @Override
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        super.render(graphics, mouseX, mouseY, partialTick);
+        this.extractForegroundCompat(graphics, mouseX, mouseY, partialTick);
+    }
+    *///?} elif <1.21 {
+    /*@Override
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        this.extractBackgroundCompat(graphics, mouseX, mouseY, partialTick);
+        super.render(graphics, mouseX, mouseY, partialTick);
+        this.extractForegroundCompat(graphics, mouseX, mouseY, partialTick);
     }
     *///?}
 

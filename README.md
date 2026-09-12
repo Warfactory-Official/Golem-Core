@@ -163,6 +163,78 @@ the overlay on multiblocks.
 
 See `THIRD_PARTY_NOTICES.md` — the task pipeline and visualizer framework are MIT, by Jozufozu.
 
+## Declared Models
+
+`dev.golem.core.render.gem` is the other half of instancing: the vocabulary a renderer uses to state
+its model instead of drawing it. A renderer with its own submit body can only ever feed the vanilla
+pass, because its geometry lives for one call and its transforms live in a `PoseStack` that is gone by
+the next frame. The instanced backend needs every bucket of (mesh, surface) known before the first
+frame and only the moving transforms touched again. One declaration satisfies both; two descriptions of
+one machine would not stay in step.
+
+A model is a tree of `Gem.Part`. Each part carries an ordered list of transform operations and,
+usually, one `Geometry` drawn with one `Surface`; a part with no geometry is a joint that exists only
+to place its children. **Operations apply in declaration order, and that order is a `PoseStack`'s call
+order**, so transcribing a hand-written renderer is mechanical and the result is comparable line by
+line. `Geometry` is supplied by the consumer — Core parses no meshes — and must describe the same
+surface both ways it is asked for: as vertices written into a buffer, and as an indexed resident mesh.
+
+An operation is either fixed or read from the render state, and a part with no state-driven operation
+is rigid. Animation is declared four ways because it arrives in four shapes: `angle`, `slide`, `spin`
+and `stretch` bind one float from the render state to one axis; `keys` plays a `render.anim` bus whose
+playhead the render state drives rather than the clock, which is what lets a keyframed pose describe a
+machine whose progress is a number rather than an elapsed time; `pose` takes a transform the state has
+already composed, for a renderer that builds its bones as matrices rather than as named steps;
+genuinely procedural motion binds its joint angles through `angle` and stays procedural.
+
+A part's *contents* can move too. `mesh` chooses its geometry and `skin` its surface from the render
+state — one anvil-shaped slot holding whichever of the twelve anvils this block is, one engine wearing
+whichever of three tier textures it has. That is not the same as declaring a part per combination: a
+part is one instance either way, and an instance that changes bucket moves; a part per combination
+allocates every bucket on every machine and hides all but one. `visibleIf` is still what a part that
+sometimes draws nothing uses — whether a part occupies a slot at all is settled when the model is
+sealed.
+
+Not everything a machine draws is a model. A beam whose vertices come from where it lands, a fluid
+surface whose shape is its fill level, a font's glyph quads — these have no resident form for either
+backend to hold, and they are drawn from `submitUndeclared` instead. It runs on every node and in
+every frame, including one where the instanced backend owns the declared tree. A model that declares
+nothing at all is allowed, for a renderer whose whole appearance is built rather than placed.
+
+Extend `gem.GemBER` for a block entity or `gem.GemEntityRenderer` for an entity. Both implement `submit`
+as final and build the model on first use — a part names a loaded mesh, and a subclass field holding one
+is still null while a superclass constructor runs. `render.Visuals` binds a block-entity type to the
+instanced backend, mirroring `Billboards`: neutral types in, engine types hidden, inert where no engine
+exists. Both registries must hold the same renderer instance, so registration takes a memoized supplier.
+`Visuals.owns(pos)` is how the two backends stay out of each other's way — the vanilla path asks whether
+a healthy visual already claimed this frame and returns without drawing when it has.
+
+## Item Display Frames
+
+`dev.golem.core.render.display` is the 1.7 half of an item icon. A ported icon is a **frame** times a
+**body**: the body is the mod's own `renderInventory`/`renderCommon` calls, which belong to the item and
+are transcribed wherever it is drawn; the frame is what the engine applied around it, which is shared by
+every item on the same 1.7 render class. `Pose17` holds the frames — CE 1.12.2's matrices from
+`render/item/ItemRenderBase.java` and `ItemRenderBaseLegacy.java`, op for op — one `Matrix4f` per
+`DisplaySlot`. Compose a pose as `frame(klass, slot).mul(body)`; nothing here parses or records GL calls,
+because joml already is that notation.
+
+`DisplayFrame` turns a pose into the triple a vanilla `display{}` stores, and that conversion is the
+point. A display entry is not a matrix: it is a translate/rotate/scale applied as `T . R . S`, and
+vanilla applies it whatever it says. **So a chain whose translate comes last has no display form at all**,
+and transcribing its numbers field by field silently moves the icon — in the case this was written for,
+most of a slot. `DisplayFrame` decomposes in closed form instead, signing all three scales for a mirrored
+basis, rounds to the decimals that will actually be written, rebuilds the triple, and throws when the
+result misses the pose it came from.
+
+Three more things vanilla does quietly, which are failures here rather than surprises later:
+`ItemTransform.Deserializer` clamps translation to ±5 blocks and scale to ±4 without a word; `apply`
+negates x, ry and rz for the two left hands regardless of the file, so those ship pre-negated; and a hand
+slot left out inherits its partner's transform rather than staying unposed, so half a pair is refused.
+
+`dejson`'s `Models.display(poses, shape)` is the way to wear one — the result is an ordinary `display{}`
+block on an ordinary model, so nothing at runtime knows this layer exists.
+
 ## Generated JSON
 
 `dev.golem.core.dejson` replaces hand-written JSON with a declaration made beside the registration.

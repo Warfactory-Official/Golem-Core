@@ -1,6 +1,11 @@
 package dev.golem.core.dejson;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import dev.golem.core.render.display.DisplayFrame;
+import dev.golem.core.render.display.DisplaySlot;
+import org.joml.Matrix4f;
+import org.joml.Vector3d;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -189,6 +194,77 @@ public final class Models {
             });
             return Collections.unmodifiableMap(tagged);
         };
+    }
+
+    /**
+     * The same shape, wearing the {@code display{}} block a set of poses composes to.
+     *
+     * <p>A {@code display{}} entry is not a matrix — it is a translate/rotate/scale triple vanilla
+     * applies whatever it says. {@link DisplayFrame} does the conversion and refuses the three shapes
+     * vanilla would corrupt in silence, so a pose either ships exactly or fails the run.
+     *
+     * <pre>{@code Models.display(Pose17.frames(Pose17.Klass.ITEM_RENDER_BASE),
+     *         Models.parented("minecraft:block/block", Slots.of("particle", "hbm:blocks/block_steel")))}</pre>
+     */
+    public static Shape display(Map<DisplaySlot, Matrix4f> poses, Shape shape) {
+        if (poses == null || poses.isEmpty()) {
+            throw new DejsonException("display() needs at least one posed slot");
+        }
+        if (shape == null) {
+            throw new DejsonException("display() was given a null shape");
+        }
+        return base -> {
+            JsonObject display = displayJson(base, poses);
+            Map<String, JsonObject> posed = new LinkedHashMap<>();
+            shape.models(base).forEach((id, model) -> {
+                JsonObject copy = model.deepCopy();
+                copy.add("display", display.deepCopy());
+                posed.put(id, copy);
+            });
+            return Collections.unmodifiableMap(posed);
+        };
+    }
+
+    /**
+     * The same shape, stating which lighting an inventory icon is drawn under. {@code side} is the
+     * three-quarter lighting a block gets; {@code front} is the flat lighting a sprite gets.
+     */
+    public static Shape guiLight(String guiLight, Shape shape) {
+        if (!"side".equals(guiLight) && !"front".equals(guiLight)) {
+            throw new DejsonException("guiLight() takes \"side\" or \"front\", not " + guiLight);
+        }
+        if (shape == null) {
+            throw new DejsonException("guiLight('" + guiLight + "') was given a null shape");
+        }
+        return base -> {
+            Map<String, JsonObject> lit = new LinkedHashMap<>();
+            shape.models(base).forEach((id, model) -> {
+                JsonObject copy = model.deepCopy();
+                copy.addProperty("gui_light", guiLight);
+                lit.put(id, copy);
+            });
+            return Collections.unmodifiableMap(lit);
+        };
+    }
+
+    private static JsonObject displayJson(String base, Map<DisplaySlot, Matrix4f> poses) {
+        JsonObject display = new JsonObject();
+        DisplayFrame.of(base, poses).forEach((slot, frame) -> {
+            JsonObject transform = new JsonObject();
+            transform.add("rotation", triple(frame.rotation()));
+            transform.add("translation", triple(frame.translation()));
+            transform.add("scale", triple(frame.scale()));
+            display.add(slot.serializedName(), transform);
+        });
+        return display;
+    }
+
+    private static JsonArray triple(Vector3d value) {
+        JsonArray array = new JsonArray();
+        array.add(value.x());
+        array.add(value.y());
+        array.add(value.z());
+        return array;
     }
 
     /**
