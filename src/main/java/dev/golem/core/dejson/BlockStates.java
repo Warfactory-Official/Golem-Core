@@ -22,6 +22,27 @@ public final class BlockStates {
 
     private BlockStates() {}
 
+    /**
+     * The registered block a declaration's id names, or {@code null} when nothing is registered
+     * under it.
+     *
+     * <p>Two separate differences meet in this one call. The lookup was renamed — 26.1 spells it
+     * {@code getValue} where older targets spell it {@code get} — and the block registry is
+     * <em>defaulted</em>, so on the older spelling an unregistered id is answered with air instead
+     * of with null. Both are normalised here, because "this declaration names a block that does not
+     * exist" has to read the same way on every node for a test to assert it. The cost is that
+     * {@code minecraft:air} itself cannot be looked up, which is not a block anything declares a
+     * model for.
+     */
+    public static Block block(String id) {
+        //? if >=26.1 {
+        Block block = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getValue(dev.golem.core.Ids.parse(id));
+        //?} else {
+        /*Block block = net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(dev.golem.core.Ids.parse(id));
+        *///?}
+        return block == null || block == net.minecraft.world.level.block.Blocks.AIR ? null : block;
+    }
+
     /** A state as property name to value name, the form {@link Dispatch#covers} takes. */
     public static Map<String, String> properties(BlockState state) {
         Map<String, String> values = new LinkedHashMap<>();

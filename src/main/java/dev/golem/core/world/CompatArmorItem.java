@@ -15,6 +15,15 @@ import net.minecraft.world.level.Level;
  *
  * <p>Pass a {@link GolemArmorMaterial} and an {@link ArmorSlot}; native material construction stays
  * inside Golem Core even though Minecraft moved the material API repeatedly.
+ *
+ * <p>Durability is the sharpest of those moves, because each era puts it somewhere else and the odd
+ * one out fails silently. 26.1's {@code ArmorMaterial} carries durability and {@code humanoidArmor}
+ * applies it; 1.20.1's {@code ArmorMaterial} answers {@code getDurabilityForType} and {@code
+ * ArmorItem}'s constructor applies it. 1.21.x does neither — its {@code ArmorMaterial} record has no
+ * durability field, its {@code ArmorItem} constructor only builds attribute modifiers, and vanilla's
+ * own item registrations pass {@code Properties.durability(type.getDurability(n))} at every call
+ * site. Omit that and the armour is not broken in any visible way: it registers, equips, and gives
+ * its full armour points, with {@code getMaxDamage() == 0} — armour that never wears out.
  */
 public class CompatArmorItem extends
     //? if >=26.1 {
@@ -32,7 +41,8 @@ public class CompatArmorItem extends
         super(configure((net.minecraft.world.item.equipment.ArmorMaterial) material.nativeMaterial(), slot,
                 properties, material.enchantmentValue()));
         //?} else if >=1.21.1 {
-        /*super((net.minecraft.core.Holder<net.minecraft.world.item.ArmorMaterial>) material.nativeMaterial(), type(slot), properties);
+        /*super((net.minecraft.core.Holder<net.minecraft.world.item.ArmorMaterial>) material.nativeMaterial(), type(slot),
+                properties.durability(type(slot).getDurability(material.durability())));
         *///?} else {
         /*super((net.minecraft.world.item.ArmorMaterial) material.nativeMaterial(), type(slot), properties);
         *///?}

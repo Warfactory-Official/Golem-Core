@@ -63,6 +63,18 @@ public final class GolemArmorMaterial {
         return enchantmentValue;
     }
 
+    /**
+     * The material's base durability, before the per-slot multiplier.
+     *
+     * <p>Read by {@link CompatArmorItem} on 1.21.x only. 26.1's {@code ArmorMaterial} carries durability
+     * itself and 1.20.1's interface answers {@code getDurabilityForType}, but 1.21.x's {@code
+     * ArmorMaterial} record has no durability at all — there it is the item's own {@code
+     * Properties.durability}, and nothing applies it on the consumer's behalf.
+     */
+    int durability() {
+        return durability;
+    }
+
     //? if >=26.1 {
     private TagKey<Item> repairTag() {
         return TagKey.create(Registries.ITEM,
