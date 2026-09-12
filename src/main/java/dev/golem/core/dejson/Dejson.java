@@ -6,6 +6,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -146,6 +147,7 @@ public final class Dejson {
         private String renderBase;
         private Shape itemShape;
         private String definitionModel;
+        private boolean authoredModel;
         private Map<String, JsonObject> models = Collections.emptyMap();
 
         private Declaration(String namespace, String path) {
@@ -229,6 +231,27 @@ public final class Dejson {
             return item(Models.blockItem(baseModel));
         }
 
+        /**
+         * A block whose blockstate is regular but whose model is not: the states are a facing or a
+         * single variant, and the geometry is hand-built {@code elements} that {@link Models}
+         * deliberately refuses to express. The blockstate names the block's own model id and the
+         * declaration emits nothing for it, so the file stays and the boilerplate around it goes.
+         *
+         * <p>{@link #rendered} is the other half of the same idea — there the model belongs to
+         * somebody else; here it belongs to this block and is simply written by hand.
+         */
+        public Declaration statesOnly() {
+            return statesOnly(baseModel);
+        }
+
+        /** The same, where the blockstate names an authored model other than the block's own. */
+        public Declaration statesOnly(String modelId) {
+            Models.requireId(modelId, "authored model");
+            this.authoredModel = true;
+            this.renderBase = modelId;
+            return models(Models.none());
+        }
+
         /** The block's registry id, and the path its blockstate JSON would live at. */
         public String blockId() {
             return blockId;
@@ -274,7 +297,7 @@ public final class Dejson {
 
         /** Whether this block's appearance comes from a renderer rather than from a model it owns. */
         public boolean isRendered() {
-            return renderBase != null;
+            return renderBase != null && !authoredModel;
         }
 
         public JsonObject blockStateJson() {
@@ -314,7 +337,8 @@ public final class Dejson {
                             + "; the shape and the blockstate disagree");
                 }
             } else if (!built.isEmpty()) {
-                throw new DejsonException(blockId + " is declared rendered(" + renderBase
+                throw new DejsonException(blockId + " is declared "
+                        + (authoredModel ? "statesOnly(" : "rendered(") + renderBase
                         + ") but its shape still emits " + built.keySet());
             }
 
@@ -354,6 +378,8 @@ public final class Dejson {
         private final String definitionId;
 
         private Shape shape;
+        private String definitionModel;
+        private List<Tint> tints = List.of();
         private Map<String, JsonObject> models = Collections.emptyMap();
 
         private ItemDeclaration(String namespace, String path) {
@@ -370,6 +396,34 @@ public final class Dejson {
                 throw new DejsonException(definitionId + " was given a null shape");
             }
             this.shape = shape;
+            return this;
+        }
+
+        /**
+         * An item that shows a model somebody else owns, and emits none itself. The block analogue
+         * is {@link Declaration#rendered}: ten kinds of reactor waste look identical and share one
+         * sprite, and a block item whose definition names the block model directly is the same idea.
+         *
+         * <p>Below 26.1 there is no definition layer, so {@code legacy-assets} derives
+         * {@code models/item/<path>.json} as a bare parent pointing at whatever the definition
+         * names. That is why this emits nothing here and still renders there.
+         */
+        public ItemDeclaration shares(String modelId) {
+            Models.requireId(modelId, "shared model");
+            this.definitionModel = modelId;
+            return models(Models.none());
+        }
+
+        /**
+         * The tints the definition layers over its model, positionally: entry <i>n</i> colours
+         * {@code layer<n>}. A two-layer item whose overlay alone takes the stack's colour passes
+         * {@link Tints#constant} at {@code -1} first.
+         */
+        public ItemDeclaration tints(Tint... tints) {
+            if (tints.length == 0) {
+                throw new DejsonException(definitionId + " was given an empty tint list");
+            }
+            this.tints = List.of(tints);
             return this;
         }
 
@@ -397,9 +451,14 @@ public final class Dejson {
             }
 
             Map<String, JsonObject> built = shape.models(itemId);
-            if (built.size() != 1 || !built.containsKey(itemId)) {
-                throw new DejsonException(definitionId
-                        + " has a shape that emits more than its own model: " + built.keySet());
+            if (definitionModel == null) {
+                if (built.size() != 1 || !built.containsKey(itemId)) {
+                    throw new DejsonException(definitionId
+                            + " has a shape that emits more than its own model: " + built.keySet());
+                }
+            } else if (!built.isEmpty()) {
+                throw new DejsonException(definitionId + " shares(" + definitionModel
+                        + ") but its shape still emits " + built.keySet());
             }
 
             if (MODELS.containsKey(itemId)) {
@@ -412,7 +471,8 @@ public final class Dejson {
 
             this.models = Collections.unmodifiableMap(new LinkedHashMap<>(built));
             MODELS.putAll(built);
-            ITEM_DEFINITIONS.put(itemId, Models.itemDefinition(itemId));
+            ITEM_DEFINITIONS.put(itemId,
+                    Models.itemDefinition(definitionModel == null ? itemId : definitionModel, tints));
             return this;
         }
     }

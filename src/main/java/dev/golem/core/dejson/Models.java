@@ -9,6 +9,7 @@ import org.joml.Vector3d;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -321,10 +322,22 @@ public final class Models {
      * definitions shipped are exactly this shape, which is why one declaration can emit both.
      */
     public static JsonObject itemDefinition(String modelId) {
+        return itemDefinition(modelId, List.of());
+    }
+
+    /** The same definition with a tint list layered over the model it names. */
+    public static JsonObject itemDefinition(String modelId, List<Tint> tints) {
         requireId(modelId, "item model");
         JsonObject model = new JsonObject();
         model.addProperty("type", "minecraft:model");
         model.addProperty("model", modelId);
+        if (!tints.isEmpty()) {
+            JsonArray entries = new JsonArray();
+            for (Tint tint : tints) {
+                entries.add(tint.toJson());
+            }
+            model.add("tints", entries);
+        }
         JsonObject definition = new JsonObject();
         definition.add("model", model);
         return definition;
