@@ -119,6 +119,16 @@ public final class Chunks {
         return keyOfBlock(pos.getMinBlockX(), pos.getMinBlockZ());
     }
 
+    /** A chunk's x, read through the bounds rather than the field {@link #key(ChunkPos)} avoids. */
+    public static int chunkX(ChunkPos pos) {
+        return net.minecraft.core.SectionPos.blockToSectionCoord(pos.getMinBlockX());
+    }
+
+    /** A chunk's z, read the same way as {@link #chunkX(ChunkPos)}. */
+    public static int chunkZ(ChunkPos pos) {
+        return net.minecraft.core.SectionPos.blockToSectionCoord(pos.getMinBlockZ());
+    }
+
     public static ChunkPos unkey(long key) {
         return new ChunkPos((int) key, (int) (key >> 32));
     }
