@@ -24,9 +24,15 @@ final class GolemClientNetwork {
 
     private static <P extends GolemPayload> void register(GolemNetwork.ClientRegistration<P> registration) {
         var type = registration.codec().type();
-        ClientPlayNetworking.registerGlobalReceiver(type, (payload, context) -> context.client().execute(() ->
-                GolemNetwork.dispatchClient(registration.codec(), payload,
-                        new GolemNetwork.ClientContext(context.client().level, context.client().player))));
+        boolean offThread = GolemNetwork.isOffThread(registration.codec());
+        ClientPlayNetworking.registerGlobalReceiver(type, (payload, context) -> {
+            if (offThread) {
+                GolemNetwork.dispatchClientOffThread(registration.codec(), payload);
+                return;
+            }
+            context.client().execute(() -> GolemNetwork.dispatchClient(registration.codec(), payload,
+                    new GolemNetwork.ClientContext(context.client().level, context.client().player)));
+        });
     }
 
     static <P extends GolemPayload> void sendToServer(GolemCodec<P> codec, P payload) {
@@ -39,8 +45,13 @@ final class GolemClientNetwork {
 
     private static <P extends GolemPayload> void register(GolemNetwork.ClientRegistration<P> registration) {
         GolemCodec<P> codec = registration.codec();
+        boolean offThread = GolemNetwork.isOffThread(codec);
         ClientPlayNetworking.registerGlobalReceiver(codec.id(), (client, ignored, buffer, sender) -> {
             P payload = codec.decode(buffer);
+            if (offThread) {
+                GolemNetwork.dispatchClientOffThread(codec, payload);
+                return;
+            }
             client.execute(() -> GolemNetwork.dispatchClient(codec, payload,
                     new GolemNetwork.ClientContext(client.level, client.player)));
         });

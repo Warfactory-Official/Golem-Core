@@ -47,6 +47,29 @@ public final class GolemNetwork {
     private static final List<ServerRegistration<?>> SERVER_REGISTRATIONS = new ArrayList<>();
     private static Supplier<ClientContext> clientContextSupplier;
 
+    /**
+     * Channels whose handler runs on the network thread rather than being handed to the game thread.
+     *
+     * <p>Every loader decodes on the network thread already and then defers the handler, which is the
+     * right default: a handler that touches the level, an entity, an item stack or a renderer must run
+     * where those are safe to touch. Skipping the hand-off is worth it only for a handler that touches
+     * none of them — recording a timestamp, answering a probe, pushing into a concurrent queue — and
+     * for those it removes a tick of latency and a scheduled task per packet.
+     *
+     * <p>The off-thread registration methods hand the handler the payload and nothing else, so the
+     * things it must not touch are not reachable from it rather than merely discouraged.
+     */
+    private static final java.util.Set<String> OFF_THREAD = new java.util.HashSet<>();
+
+    static boolean isOffThread(GolemCodec<?> codec) {
+        return OFF_THREAD.contains(codec.id().toString());
+    }
+
+    /** Whether this channel's handler runs on the network thread. */
+    public static boolean offThread(GolemCodec<?> codec) {
+        return isOffThread(codec);
+    }
+
     private GolemNetwork() {}
 
     /** Declares a clientbound payload in common code without loading client networking classes. */
@@ -54,15 +77,55 @@ public final class GolemNetwork {
         CLIENT_DECLARATIONS.add(codec);
     }
 
-    /** Attaches a clientbound handler. Call only from a physical-client entrypoint. */
+    /**
+     * Declares a clientbound payload whose handler runs on the network thread. Pair with
+     * {@link #registerPlayToClientOffThread}; the two must agree, so the channel is marked here where
+     * common code declares it rather than on the client where the handler is attached.
+     */
+    public static <P extends GolemPayload> void declarePlayToClientOffThread(GolemCodec<P> codec) {
+        OFF_THREAD.add(codec.id().toString());
+        CLIENT_DECLARATIONS.add(codec);
+    }
+
+    /**
+     * Attaches a clientbound handler. Call only from a physical-client entrypoint.
+     *
+     * <p>Refuses a channel declared off-thread. That pairing is the one mistake this API can make
+     * quietly: an off-thread dispatch has no context to give, so a handler expecting one would be
+     * called with null, be dropped by the null guard below, and simply never run.
+     */
     public static <P extends GolemPayload> void registerPlayToClient(GolemCodec<P> codec,
             BiConsumer<P, ClientContext> handler) {
+        if (isOffThread(codec)) {
+            throw new IllegalArgumentException(codec.id()
+                    + " is declared off-thread; use registerPlayToClientOffThread");
+        }
         CLIENT_REGISTRATIONS.add(new ClientRegistration<>(codec, handler));
+    }
+
+    /**
+     * Attaches a clientbound handler that runs on the network thread. It is given the payload alone:
+     * there is no level and no player, because neither may be touched from here.
+     */
+    public static <P extends GolemPayload> void registerPlayToClientOffThread(GolemCodec<P> codec,
+            java.util.function.Consumer<P> handler) {
+        if (!isOffThread(codec)) {
+            throw new IllegalArgumentException(codec.id()
+                    + " is not declared off-thread; declare it with declarePlayToClientOffThread");
+        }
+        CLIENT_REGISTRATIONS.add(new ClientRegistration<>(codec, (payload, ignored) -> handler.accept(payload)));
     }
 
     /** Supplies client state to transports which do not expose it in their receive context. */
     public static void setClientContextSupplier(Supplier<ClientContext> supplier) {
         clientContextSupplier = supplier;
+    }
+
+    /** Runs a network-thread handler, which is given no context because it may touch none. */
+    public static <P extends GolemPayload> void dispatchClientOffThread(GolemCodec<P> codec, P payload) {
+        for (ClientRegistration<?> registration : CLIENT_REGISTRATIONS) {
+            dispatchClient(registration, codec, payload, null);
+        }
     }
 
     static <P extends GolemPayload> void dispatchClient(GolemCodec<P> codec, P payload,
@@ -81,7 +144,22 @@ public final class GolemNetwork {
 
     public static <P extends GolemPayload> void registerPlayToServer(GolemCodec<P> codec,
             BiConsumer<P, ServerPlayer> handler) {
+        if (isOffThread(codec)) {
+            throw new IllegalArgumentException(codec.id()
+                    + " is declared off-thread; use registerPlayToServerOffThread");
+        }
         SERVER_REGISTRATIONS.add(new ServerRegistration<>(codec, handler));
+    }
+
+    /**
+     * Attaches a serverbound handler that runs on the network thread. It is given the sender's id
+     * rather than the sender: reading the identity is safe from here, and the player object is not.
+     */
+    public static <P extends GolemPayload> void registerPlayToServerOffThread(GolemCodec<P> codec,
+            BiConsumer<P, java.util.UUID> handler) {
+        OFF_THREAD.add(codec.id().toString());
+        SERVER_REGISTRATIONS.add(new ServerRegistration<>(codec,
+                (payload, sender) -> handler.accept(payload, sender.getUUID())));
     }
 
     // One branch for every payload-registry-era Fabric node. The 26.1 and 1.21.1 fabric-api spell the
@@ -114,8 +192,11 @@ public final class GolemNetwork {
     private static <P extends GolemPayload> void registerFabricServer(ServerRegistration<P> registration) {
         var type = registration.codec().type();
         PayloadTypeRegistry.serverboundPlay().register(type, registration.codec().streamCodec());
-        ServerPlayNetworking.registerGlobalReceiver(type, (payload, context) -> context.server().execute(() ->
-                registration.handler().accept(payload, context.player())));
+        boolean offThread = isOffThread(registration.codec());
+        ServerPlayNetworking.registerGlobalReceiver(type, (payload, context) -> {
+            if (offThread) registration.handler().accept(payload, context.player());
+            else context.server().execute(() -> registration.handler().accept(payload, context.player()));
+        });
     }
 
     public static <P extends GolemPayload> void sendToPlayer(ServerPlayer player, GolemCodec<P> codec, P payload) {
@@ -150,9 +231,11 @@ public final class GolemNetwork {
 
     private static <P extends GolemPayload> void registerFabricServer(ServerRegistration<P> registration) {
         GolemCodec<P> codec = registration.codec();
+        boolean offThread = isOffThread(codec);
         ServerPlayNetworking.registerGlobalReceiver(codec.id(), (server, player, ignored, buffer, sender) -> {
             P payload = codec.decode(buffer);
-            server.execute(() -> registration.handler().accept(payload, player));
+            if (offThread) registration.handler().accept(payload, player);
+            else server.execute(() -> registration.handler().accept(payload, player));
         });
     }
 
@@ -203,17 +286,32 @@ public final class GolemNetwork {
 
     private static <P extends GolemPayload> void registerForgeClient(GolemCodec<P> codec) {
         FORGE_DISCRIMINATORS.put(codec.id().toString(), nextMessageId);
-        CHANNEL.messageBuilder(codec.payloadType(), nextMessageId++, NetworkDirection.PLAY_TO_CLIENT)
-                .encoder(codec::encode).decoder(codec::decode).consumerMainThread((payload, context) ->
-                        dispatchClient(codec, payload,
-                                clientContextSupplier == null ? null : clientContextSupplier.get())).add();
+        var builder = CHANNEL.messageBuilder(codec.payloadType(), nextMessageId++, NetworkDirection.PLAY_TO_CLIENT)
+                .encoder(codec::encode).decoder(codec::decode);
+        if (isOffThread(codec)) {
+            builder.consumerNetworkThread((payload, context) -> {
+                dispatchClientOffThread(codec, payload);
+                context.get().setPacketHandled(true);
+            }).add();
+            return;
+        }
+        builder.consumerMainThread((payload, context) -> dispatchClient(codec, payload,
+                clientContextSupplier == null ? null : clientContextSupplier.get())).add();
     }
 
     private static <P extends GolemPayload> void registerForgeServer(ServerRegistration<P> registration) {
         GolemCodec<P> codec = registration.codec();
-        CHANNEL.messageBuilder(codec.payloadType(), nextMessageId++, NetworkDirection.PLAY_TO_SERVER)
-                .encoder(codec::encode).decoder(codec::decode)
-                .consumerMainThread((payload, context) -> registration.handler().accept(payload, context.get().getSender())).add();
+        var builder = CHANNEL.messageBuilder(codec.payloadType(), nextMessageId++, NetworkDirection.PLAY_TO_SERVER)
+                .encoder(codec::encode).decoder(codec::decode);
+        if (isOffThread(codec)) {
+            builder.consumerNetworkThread((payload, context) -> {
+                registration.handler().accept(payload, context.get().getSender());
+                context.get().setPacketHandled(true);
+            }).add();
+            return;
+        }
+        builder.consumerMainThread((payload, context) ->
+                registration.handler().accept(payload, context.get().getSender())).add();
     }
 
     public static <P extends GolemPayload> void sendToPlayer(ServerPlayer player, GolemCodec<P> codec, P payload) {
@@ -237,18 +335,32 @@ public final class GolemNetwork {
 
     private static <P extends GolemPayload> void registerNeoForgeClient(RegisterPayloadHandlersEvent event,
             GolemCodec<P> codec) {
+        boolean offThread = isOffThread(codec);
         event.registrar(codec.id().getNamespace()).playToClient(codec.type(),
                 codec.<net.minecraft.network.RegistryFriendlyByteBuf>streamCodec(),
-                (payload, context) -> context.enqueueWork(() -> dispatchClient(codec, payload,
-                        new ClientContext(context.player().level(), context.player()))));
+                (payload, context) -> {
+                    if (offThread) {
+                        dispatchClientOffThread(codec, payload);
+                        return;
+                    }
+                    context.enqueueWork(() -> dispatchClient(codec, payload,
+                            new ClientContext(context.player().level(), context.player())));
+                });
     }
 
     private static <P extends GolemPayload> void registerNeoForgeServer(RegisterPayloadHandlersEvent event,
             ServerRegistration<P> registration) {
+        boolean offThread = isOffThread(registration.codec());
         event.registrar(registration.codec().id().getNamespace()).playToServer(registration.codec().type(),
                 registration.codec().<net.minecraft.network.RegistryFriendlyByteBuf>streamCodec(),
-                (payload, context) -> context.enqueueWork(() -> registration.handler().accept(payload,
-                        (ServerPlayer) context.player())));
+                (payload, context) -> {
+                    if (offThread) {
+                        registration.handler().accept(payload, (ServerPlayer) context.player());
+                        return;
+                    }
+                    context.enqueueWork(() -> registration.handler().accept(payload,
+                            (ServerPlayer) context.player()));
+                });
     }
 
     public static <P extends GolemPayload> void sendToPlayer(ServerPlayer player, GolemCodec<P> codec, P payload) {
