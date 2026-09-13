@@ -44,7 +44,7 @@ public final class Visuals {
             BlockEntityType<T> type, Supplier<? extends GemBER<T, S>> renderer) {
         Objects.requireNonNull(type, "type");
         Objects.requireNonNull(renderer, "renderer");
-        //? if neoforge && >=26.1 {
+        //? if >=26.1 {
         dev.golem.core.flywheel.visual.GemBlockEntityVisual.register(type, renderer);
         //?}
     }
@@ -78,7 +78,7 @@ public final class Visuals {
     public static boolean owns(BlockPos pos) {
         Ownership test = external;
         if (test != null && test.owns(pos)) return true;
-        //? if neoforge && >=26.1 {
+        //? if >=26.1 {
         var manager = dev.golem.core.flywheel.visual.VisualizationLifecycle.current();
         if (manager == null) return false;
         return manager.blockEntityVisual(pos)

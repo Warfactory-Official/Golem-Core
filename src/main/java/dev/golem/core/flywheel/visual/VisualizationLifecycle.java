@@ -1,18 +1,18 @@
 package dev.golem.core.flywheel.visual;
 
-//? if neoforge && >=26.1 {
+//? if >=26.1 {
 
+import java.util.ArrayList;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Map;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
-import net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent;
-import net.neoforged.neoforge.event.level.LevelEvent;
 import org.jetbrains.annotations.Nullable;
 public final class VisualizationLifecycle {
 
@@ -31,40 +31,58 @@ public final class VisualizationLifecycle {
         return MANAGERS.get(level);
     }
 
-    public static void onLevelLoad(LevelEvent.Load event) {
-        if (!(event.getLevel() instanceof ClientLevel level)) return;
-        VisualizationManager manager = new VisualizationManager(level);
+    public static void onLevelLoad(LevelAccessor level) {
+        if (!(level instanceof ClientLevel client)) return;
+        VisualizationManager manager = new VisualizationManager(client);
+        VisualizationManager replaced;
         synchronized (VisualizationLifecycle.class) {
-            MANAGERS.put(level, manager);
+            replaced = MANAGERS.put(client, manager);
+        }
+        if (replaced != null) {
+            replaced.shutdown();
         }
     }
 
-    public static void onLevelUnload(LevelEvent.Unload event) {
-        if (!(event.getLevel() instanceof ClientLevel level)) return;
+    public static void onLevelUnload(LevelAccessor level) {
+        if (!(level instanceof ClientLevel client)) return;
         VisualizationManager manager;
         synchronized (VisualizationLifecycle.class) {
-            manager = MANAGERS.remove(level);
+            manager = MANAGERS.remove(client);
         }
         if (manager != null) {
             manager.shutdown();
         }
     }
 
-    public static void onEntityJoin(EntityJoinLevelEvent event) {
-        if (event.getLevel().isClientSide()) {
-            VisualizationManager manager = get(event.getLevel());
-            if (manager != null) {
-                manager.addEntity(event.getEntity(), 0.0F);
-            }
+    // Fabric announces the level the client moved to and never the one it left, so the departure
+    // has to be inferred: everything that is not the level now being rendered is gone.
+    public static void retainOnly(@Nullable LevelAccessor keep) {
+        List<VisualizationManager> closing = new ArrayList<>();
+        synchronized (VisualizationLifecycle.class) {
+            MANAGERS.entrySet().removeIf(entry -> {
+                if (entry.getKey() == keep) return false;
+                closing.add(entry.getValue());
+                return true;
+            });
+        }
+        for (VisualizationManager manager : closing) {
+            manager.shutdown();
         }
     }
 
-    public static void onEntityLeave(EntityLeaveLevelEvent event) {
-        if (event.getLevel().isClientSide()) {
-            VisualizationManager manager = get(event.getLevel());
-            if (manager != null) {
-                manager.removeEntity(event.getEntity().getUUID());
-            }
+    public static void onEntityJoin(LevelAccessor level, Entity entity) {
+        if (!level.isClientSide()) return;
+        VisualizationManager manager = get(level);
+        if (manager != null) {
+            manager.addEntity(entity, 0.0F);
+        }
+    }
+
+    public static void onEntityLeave(LevelAccessor level, Entity entity) {
+        if (!level.isClientSide()) return;
+        VisualizationManager manager = get(level);
+        if (manager != null) {
+            manager.removeEntity(entity.getUUID());
         }
     }
 

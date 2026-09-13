@@ -1,6 +1,6 @@
 package dev.golem.core.flywheel.visual;
 
-//? if neoforge && >=26.1 {
+//? if >=26.1 {
 
 import dev.golem.core.GolemCore;
 import dev.golem.core.flywheel.Instancer;

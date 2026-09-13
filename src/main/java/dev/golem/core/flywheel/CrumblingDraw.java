@@ -1,6 +1,6 @@
 package dev.golem.core.flywheel;
 
-//? if neoforge && >=26.1 {
+//? if >=26.1 {
 
 import dev.golem.core.flywheel.instance.Instance;
 import java.util.List;

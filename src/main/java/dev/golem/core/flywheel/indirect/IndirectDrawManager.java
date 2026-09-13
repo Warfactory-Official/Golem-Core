@@ -1,6 +1,6 @@
 package dev.golem.core.flywheel.indirect;
 
-//? if neoforge && >=26.1 {
+//? if >=26.1 {
 
 import dev.golem.core.GolemCore;
 import dev.golem.core.flywheel.*;
@@ -243,6 +243,7 @@ public final class IndirectDrawManager implements DrawManager {
                         (long) submission.firstDrawIndex() * IndirectStageGroup.INDIRECT_CMD_BYTES,
                         submission.drawCount(),
                         IndirectStageGroup.INDIRECT_CMD_BYTES);
+                dev.golem.core.flywheel.DrawStats.draw(submission.drawCount());
             }
 
             if (stage == Material.Stage.TRANSLUCENT && Minecraft.useShaderTransparency()) {
@@ -268,6 +269,7 @@ public final class IndirectDrawManager implements DrawManager {
                             (long) submission.firstDrawIndex() * IndirectStageGroup.INDIRECT_CMD_BYTES,
                             submission.drawCount(),
                             IndirectStageGroup.INDIRECT_CMD_BYTES);
+                    dev.golem.core.flywheel.DrawStats.draw(submission.drawCount());
                 }
             }
         }
@@ -543,6 +545,7 @@ public final class IndirectDrawManager implements DrawManager {
                         (long) bucket.firstDrawIndex() * IndirectStageGroup.INDIRECT_CMD_BYTES,
                         bucket.drawCount(),
                         IndirectStageGroup.INDIRECT_CMD_BYTES);
+                dev.golem.core.flywheel.DrawStats.draw(bucket.drawCount());
             }
         }
     }

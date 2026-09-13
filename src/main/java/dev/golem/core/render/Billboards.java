@@ -55,7 +55,7 @@ public final class Billboards {
 
     /** Monotonic client render-frame id where the vendored provider exists, otherwise -1. */
     public static int frameId() {
-        //? if neoforge && >=26.1 {
+        //? if >=26.1 {
         return dev.golem.core.flywheel.visual.GolemRenderSystem.currentFrameId();
         //?} else {
         /*return -1;
@@ -75,7 +75,7 @@ public final class Billboards {
         Objects.requireNonNull(source, "source");
         List<Layer> declaredLayers = List.copyOf(layers);
         if (declaredLayers.isEmpty()) throw new IllegalArgumentException("Billboard registration has no layers");
-        //? if neoforge && >=26.1 {
+        //? if >=26.1 {
         dev.golem.core.flywheel.visual.BillboardEntityVisual.register(
                 type, declaredLayers, source);
         //?}
@@ -86,7 +86,7 @@ public final class Billboards {
      * Returns false whenever no healthy visual owns the entity, so callers can render normally.
      */
     public static boolean owns(Entity entity) {
-        //? if neoforge && >=26.1 {
+        //? if >=26.1 {
         var manager = dev.golem.core.flywheel.visual.VisualizationLifecycle.get(entity.level());
         if (manager == null) return false;
         var visual = manager.entityVisual(entity.getUUID());

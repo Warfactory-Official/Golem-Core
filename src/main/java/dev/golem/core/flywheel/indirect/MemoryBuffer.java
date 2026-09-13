@@ -1,6 +1,6 @@
 package dev.golem.core.flywheel.indirect;
 
-//? if neoforge && >=26.1 {
+//? if >=26.1 {
 
 import org.lwjgl.system.MemoryUtil;
 

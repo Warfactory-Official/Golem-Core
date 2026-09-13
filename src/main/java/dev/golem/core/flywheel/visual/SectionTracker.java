@@ -1,6 +1,6 @@
 package dev.golem.core.flywheel.visual;
 
-//? if neoforge && >=26.1 {
+//? if >=26.1 {
 
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongArrayList;

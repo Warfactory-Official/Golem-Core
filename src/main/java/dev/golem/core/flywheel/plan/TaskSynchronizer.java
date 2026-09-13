@@ -3,7 +3,7 @@
 // Derived from Flywheel; see THIRD_PARTY_NOTICES.md.
 package dev.golem.core.flywheel.plan;
 
-//? if neoforge && >=26.1 {
+//? if >=26.1 {
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.LongAdder;

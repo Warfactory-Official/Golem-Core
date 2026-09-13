@@ -1,14 +1,14 @@
 package dev.golem.core.flywheel.visual;
 
-//? if neoforge && >=26.1 {
+//? if >=26.1 {
 
+import dev.golem.core.GolemCore;
+import dev.golem.core.flywheel.DrawStats;
 import dev.golem.core.flywheel.plan.CommonPoolTaskExecutor;
 import dev.golem.core.flywheel.plan.TaskExecutor;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.Vec3i;
-import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.neoforge.client.event.RenderFrameEvent;
 public final class GolemRenderSystem {
 
     private static final TaskExecutor EXECUTOR = createExecutor();
@@ -18,10 +18,29 @@ public final class GolemRenderSystem {
     private static int frameId;
     private static volatile Vec3i currentRenderOrigin = ORIGIN_ZERO;
 
+    /**
+     * How often to write the engine's own census to the log, or zero for never.
+     *
+     * <p>An instanced frame and a vanilla frame are indistinguishable on screen, so when the engine
+     * draws nothing there is no symptom at all — the machines simply keep rendering the slow way. This
+     * is the switch that makes that state visible from a log file rather than from a running game:
+     * {@code -Dgolem.flywheel.trace} or {@code GOLEM_FLYWHEEL_TRACE}.
+     */
+    private static final long TRACE_NANOS = traceInterval();
+    private static long lastTrace;
+    private static int peakWrites;
+    private static boolean warnedIdle;
+
+    private static long traceInterval() {
+        String on = System.getProperty("golem.flywheel.trace");
+        if (on == null || on.isEmpty()) on = System.getenv("GOLEM_FLYWHEEL_TRACE");
+        return on == null || on.isEmpty() ? 0L : 5_000_000_000L;
+    }
+
     private GolemRenderSystem() {
     }
 
-    public static void onClientTick(ClientTickEvent.Post event) {
+    public static void onClientTick() {
         LIMITER.tick();
         VisualizationManager manager = VisualizationLifecycle.current();
         if (manager != null) {
@@ -41,7 +60,9 @@ public final class GolemRenderSystem {
         return frameId - 1;
     }
 
-    public static void onRenderFramePre(RenderFrameEvent.Pre event) {
+    public static void onFrameStart(float partialTick) {
+        DrawStats.rollOver();
+        diagnose();
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level == null) {
             return;
@@ -53,13 +74,47 @@ public final class GolemRenderSystem {
             previousFramePlan = CompletableFuture.completedFuture(null);
             return;
         }
-        float partialTick = event.getPartialTick().getGameTimeDeltaPartialTick(false);
         var camera = minecraft.gameRenderer.getMainCamera();
         Vec3i origin = GolemFrameContext.originFor(camera);
         currentRenderOrigin = origin;
         var context = GolemFrameContext.create(camera, partialTick, frameId++, origin, LIMITER);
         manager.runFrameSynchronous(context);
         previousFramePlan = manager.runFrameAsync(EXECUTOR, context);
+    }
+
+    /**
+     * Reports what the engine is holding, and complains once if it is holding models it never draws.
+     *
+     * <p>Visuals with no instances is the one failure this engine cannot show you: every machine still
+     * appears, correctly, through the renderer the instanced path was meant to relieve.
+     */
+    private static void diagnose() {
+        int[] census = GemBlockEntityVisual.census();
+        long now = System.nanoTime();
+
+        // The peak matters as much as the last frame. Most of what forces a full rewrite — the render
+        // origin moving, a light update — lands on a single frame out of hundreds between two trace
+        // lines, so sampling the last frame alone reports a world at rest and says nothing about
+        // whether the rewrite ever happened.
+        int frameWrites = DrawStats.writes();
+        if (frameWrites > peakWrites) peakWrites = frameWrites;
+        if (TRACE_NANOS > 0 && now - lastTrace >= TRACE_NANOS) {
+            lastTrace = now;
+            GolemCore.LOG.info(
+                    "Golem flywheel: {} gem visuals ({} healthy, {} animated, {} moving), {} instances, "
+                            + "{} drew last frame, {} draw calls, {} transforms written (peak {}), "
+                            + "{} parts skipped",
+                    census[0], census[1], census[4], census[5], census[2], census[3], DrawStats.draws(),
+                    frameWrites, peakWrites, DrawStats.skipped());
+            peakWrites = 0;
+        }
+        if (!warnedIdle && census[0] > 0 && !GemBlockEntityVisual.announced() && frameId > 120) {
+            warnedIdle = true;
+            GolemCore.LOG.warn(
+                    "Golem flywheel holds {} gem visuals but has drawn none in {} frames; those machines "
+                            + "are rendering through their vanilla renderers",
+                    census[0], frameId);
+        }
     }
 
     private static TaskExecutor createExecutor() {

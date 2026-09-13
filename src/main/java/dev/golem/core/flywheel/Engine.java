@@ -1,6 +1,6 @@
 package dev.golem.core.flywheel;
 
-//? if neoforge && >=26.1 {
+//? if >=26.1 {
 
 import dev.golem.core.flywheel.instance.Instance;
 import dev.golem.core.flywheel.visual.BlockEntityVisual;
@@ -17,11 +17,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.state.level.BlockBreakingRenderState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
+import net.minecraft.client.renderer.state.level.LevelRenderState;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.loading.FMLEnvironment;
-import net.neoforged.neoforge.client.event.ClientResourceLoadFinishedEvent;
-import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
 import org.joml.Vector3f;
@@ -35,11 +32,12 @@ import org.joml.Vector4f;
 public final class Engine {
 
     static {
-        if (FMLEnvironment.getDist() == Dist.DEDICATED_SERVER) {
+        if (!dev.golem.core.platform.Platform.isClient()) {
             throw new UnsupportedOperationException();
         }
     }
 
+    private static final Matrix4f CAMERA_MODEL_VIEW = new Matrix4f();
     private static final Matrix4f MODEL_VIEW = new Matrix4f();
     private static final Matrix4f VIEW_PROJECTION = new Matrix4f();
     private static final Matrix4f TEXTURE_MATRIX = new Matrix4f();
@@ -50,12 +48,19 @@ public final class Engine {
     private Engine() {
     }
 
-    public static void onResourceLoadFinished(ClientResourceLoadFinishedEvent event) {
+    // What LevelRenderer is handed as its model-view is CameraRenderState.viewRotationMatrix, which
+    // is this. NeoForge's stage event carries it; Fabric's level render events carry no matrix at
+    // all, so that wiring reads it back off the camera here.
+    public static Matrix4fc cameraModelView() {
+        return Minecraft.getInstance().gameRenderer.getMainCamera().getViewRotationMatrix(CAMERA_MODEL_VIEW);
+    }
+
+    public static void onResourceReload() {
         MeshPool.releaseGpuResources();
     }
 
-    public static void onRenderOpaque(RenderLevelStageEvent.AfterOpaqueFeatures event) {
-        drawStage(event, Material.Stage.OPAQUE);
+    public static void drawOpaque(Matrix4fc modelView) {
+        drawStage(modelView, Material.Stage.OPAQUE);
     }
 
     // Normal (Fancy/Fast) transparency path: AfterWeather fires inside the weather framegraph
@@ -65,9 +70,9 @@ public final class Engine {
     // and didn't write depth, so we always overdraw them — fine, our particles are the focal
     // effect by design. Trade-off: weather (rain/snow) drew before us at AfterWeather, so Golem
     // composites on top — acceptable for explosion/fog clusters.
-    public static void onRenderTranslucent(RenderLevelStageEvent.AfterWeather event) {
+    public static void drawTranslucent(Matrix4fc modelView) {
         if (Minecraft.useShaderTransparency()) return;
-        drawStage(event, Material.Stage.TRANSLUCENT);
+        drawStage(modelView, Material.Stage.TRANSLUCENT);
     }
 
     // Fabulous transparency path: each translucent layer (translucent blocks, item-entities,
@@ -83,16 +88,12 @@ public final class Engine {
     // Our depth-test correctly z-fails behind water in the same target. Cross-layer sort uses
     // the translucent layer's depth as proxy, same approximation vanilla makes for its own
     // particles.
-    public static void onRenderTranslucentFabulous(RenderLevelStageEvent.AfterTranslucentBlocks event) {
+    public static void drawTranslucentFabulous(Matrix4fc modelView) {
         if (!Minecraft.useShaderTransparency()) return;
-        drawStage(event, Material.Stage.TRANSLUCENT);
+        drawStage(modelView, Material.Stage.TRANSLUCENT);
     }
 
-    public static void onRenderCrumbling(RenderLevelStageEvent.AfterTranslucentBlocks event) {
-        drawCrumbling(event);
-    }
-
-    private static void drawStage(RenderLevelStageEvent event, Material.Stage stage) {
+    private static void drawStage(Matrix4fc modelView, Material.Stage stage) {
         VisualizationManager vm = VisualizationLifecycle.current();
         if (vm == null) return;
         DrawManager dm = vm.drawManager();
@@ -100,14 +101,14 @@ public final class Engine {
         dm.flushAll();
         Vec3i origin = GolemRenderSystem.currentRenderOrigin();
         vm.lightBuffer().update(vm, origin.getX(), origin.getY(), origin.getZ());
-        FrameState state = buildFrameState(event, vm);
+        FrameState state = buildFrameState(modelView, vm);
         dm.drawStage(stage, state);
     }
 
-    private static void drawCrumbling(RenderLevelStageEvent.AfterTranslucentBlocks event) {
+    public static void drawCrumbling(Matrix4fc modelView, LevelRenderState levelState) {
         VisualizationManager vm = VisualizationLifecycle.current();
         if (vm == null) return;
-        List<BlockBreakingRenderState> breakingStates = event.getLevelRenderState().blockBreakingRenderStates;
+        List<BlockBreakingRenderState> breakingStates = levelState.blockBreakingRenderStates;
         if (breakingStates.isEmpty()) return;
 
         // Group by (meshHandle, progress). A multiblock's dummies point at a separate core block
@@ -148,19 +149,18 @@ public final class Engine {
         DrawManager dm = vm.drawManager();
         GolemRenderSystem.awaitFrame();
         dm.flushAll();
-        FrameState state = buildFrameState(event, vm);
+        FrameState state = buildFrameState(modelView, vm);
         dm.drawCrumbling(draws, state);
     }
 
-    // event.getModelViewMatrix() in 26.1 is camera-rotation only (LevelRenderer.java:582-3
-    // builds it from camera.getViewRotationMatrix). Compose Translate(renderOrigin -
+    // The model-view handed in is camera-rotation only (LevelRenderer.java:582-3 builds it from
+    // camera.getViewRotationMatrix, which is where the Fabric wiring reads it). Compose Translate(renderOrigin -
     // cameraPos): per-instance matrices are stored relative to the section-aligned render
     // origin, so the float multiply stays in single-precision range even when the world
     // coordinate is large. Subtract as doubles before casting so the cancellation happens
     // at full double precision.
-    private static FrameState buildFrameState(RenderLevelStageEvent event, VisualizationManager vm) {
+    private static FrameState buildFrameState(Matrix4fc modelView, VisualizationManager vm) {
         Minecraft minecraft = Minecraft.getInstance();
-        Matrix4fc modelView = event.getModelViewMatrix();
         var camera = minecraft.gameRenderer.getMainCamera();
         Vec3 cameraPos = camera.position();
         Vec3i origin = GolemRenderSystem.currentRenderOrigin();

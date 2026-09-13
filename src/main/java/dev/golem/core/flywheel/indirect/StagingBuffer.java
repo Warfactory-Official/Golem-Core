@@ -1,6 +1,6 @@
 package dev.golem.core.flywheel.indirect;
 
-//? if neoforge && >=26.1 {
+//? if >=26.1 {
 
 import dev.golem.core.flywheel.gl.GlFence;
 import it.unimi.dsi.fastutil.PriorityQueue;

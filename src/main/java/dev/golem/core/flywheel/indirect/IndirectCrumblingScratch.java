@@ -1,6 +1,6 @@
 package dev.golem.core.flywheel.indirect;
 
-//? if neoforge && >=26.1 {
+//? if >=26.1 {
 
 import dev.golem.core.flywheel.CrumblingDraw;
 import dev.golem.core.flywheel.Mesh;

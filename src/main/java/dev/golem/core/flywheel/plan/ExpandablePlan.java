@@ -1,6 +1,6 @@
 package dev.golem.core.flywheel.plan;
 
-//? if neoforge && >=26.1 {
+//? if >=26.1 {
 
 interface ExpandablePlan<C> extends Plan<C> {
 

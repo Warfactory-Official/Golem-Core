@@ -3,7 +3,7 @@
 // Derived from Flywheel; see THIRD_PARTY_NOTICES.md.
 package dev.golem.core.flywheel.visual;
 
-//? if neoforge && >=26.1 {
+//? if >=26.1 {
 
 import dev.golem.core.flywheel.DrawManager;
 import dev.golem.core.flywheel.backend.BackendManager;
@@ -136,10 +136,26 @@ public final class VisualizationManager {
         return PlanRunner.runAsync(NestedPlan.of(plans).then(drawManager.frameMaintenancePlan()), executor, context);
     }
 
+    /**
+     * Runs every visual that has to publish before the asynchronous backend work starts.
+     *
+     * <p>All three managers, not just entities: a {@link SynchronousDynamicVisual} is deliberately not
+     * a {@link DynamicVisual}, so it has no frame plan and this walk is its <em>only</em> route to
+     * {@code beginFrame}. Walking entities alone left every synchronous block entity — which is what a
+     * declared model is — holding instances it never wrote, drawing correctly through its vanilla
+     * renderer and reporting nothing wrong.
+     */
     public void runFrameSynchronous(DynamicVisual.Context context) {
-        List<EntityVisual<?>> snapshot = new ArrayList<>();
-        entities.snapshot(snapshot);
-        for (EntityVisual<?> visual : snapshot) {
+        beginSynchronous(blockEntities, context);
+        beginSynchronous(entities, context);
+        beginSynchronous(effects, context);
+    }
+
+    private static <K, V extends Visual> void beginSynchronous(VisualManager<K, V> manager,
+                                                               DynamicVisual.Context context) {
+        List<V> snapshot = new ArrayList<>();
+        manager.snapshot(snapshot);
+        for (V visual : snapshot) {
             if (visual instanceof SynchronousDynamicVisual synchronous) synchronous.beginFrame(context);
         }
     }

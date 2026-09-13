@@ -1,6 +1,6 @@
 package dev.golem.core.flywheel.indirect;
 
-//? if neoforge && >=26.1 {
+//? if >=26.1 {
 
 import com.mojang.blaze3d.opengl.GlTexture;
 import com.mojang.blaze3d.systems.RenderSystem;

@@ -39,6 +39,12 @@ repositories {
 val obfuscated = mcVersion.substringBefore('.').toInt() < 26
 val accessWidenerName = if (obfuscated) "golemcore.legacy.accesswidener" else "golemcore.accesswidener"
 
+// The vendored instancing backend names the blaze3d GPU-buffer API introduced with 26.1. The two
+// GlBuffer fields it reads are widened here by golemcore.accesswidener, which is also the file this
+// node already uses — so unlike NeoForge, where the widenings are a second access transformer that
+// has to be merged in, nothing else is needed to carry them.
+val hasVendoredFlywheel = !obfuscated
+
 dependencies {
     "minecraft"("com.mojang:minecraft:${prop("deps.minecraft")}")
     val cfg = if (obfuscated) "modImplementation" else "implementation"
@@ -78,6 +84,10 @@ tasks.processResources {
         "java_version" to javaVersion.toString(),
         "mixin_compatibility" to if (javaVersion <= 17) "JAVA_17" else "JAVA_21",
         "world_effect_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinWorldEffects\"" else "",
+        // Fabric is told about client block entities by fabric-api, so it needs no mixin for it.
+        "flywheel_be_mixins" to "",
+        // Fabric has no debug-screen entry registry, so the F3 lines are appended by a mixin there.
+        "debug_line_mixins" to if (hasVendoredFlywheel) ", \"MixinDebugScreenLines\"" else "",
         "legacy_client_mixins" to ", \"MixinMouseInput\"" +
             if (obfuscated) ", \"MixinLegacyCrosshair\"" else "",
         "pack_format" to prop("pack_format"),
@@ -97,11 +107,15 @@ tasks.processResources {
         "META-INF/accesstransformer.cfg",
         "META-INF/golemcore.neoforge.accesstransformer.cfg",
         "META-INF/golemcore.forge.accesstransformer.cfg",
-        // The flywheel widenings and golem_* shaders belong to the
-        // NeoForge-only vendored backend. Keep unrelated Core shaders such as depth_merge.
+        // NeoForge's spelling of the same two GlBuffer widenings this node gets from its access
+        // widener. Never both.
         "META-INF/golemcore.flywheel.accesstransformer.cfg",
-        "assets/golemcore/shaders/core/golem_*",
     )
+    // The golem_* shaders belong to the vendored backend, which exists only from 26.1. Keep
+    // unrelated Core shaders such as depth_merge.
+    if (!hasVendoredFlywheel) {
+        exclude("assets/golemcore/shaders/core/golem_*")
+    }
     exclude("META-INF/neoforge.mods.toml", "META-INF/mods.toml")
 }
 

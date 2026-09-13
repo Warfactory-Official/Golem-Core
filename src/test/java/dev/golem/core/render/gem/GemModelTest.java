@@ -53,6 +53,10 @@ final class GemModelTest {
         return new Matrix4f(stack.last().pose());
     }
 
+    private static void assertSameInstance(Object expected, Object actual, String what) {
+        assertTrue(expected == actual, what + " should be the same list once the model is sealed");
+    }
+
     private static void assertSame(Matrix4f expected, Matrix4f actual, String what) {
         assertTrue(expected.equals(actual, EPSILON), what + "\nexpected " + expected + "\nactual   " + actual);
     }
@@ -244,6 +248,79 @@ final class GemModelTest {
         assertEquals(1F, corner.x(), EPSILON);
         assertEquals(0.25F, corner.y(), EPSILON);
         assertEquals(1F, corner.z(), EPSILON);
+    }
+
+    /**
+     * {@code rigidTree} asks whether a subtree can be left alone; {@code fixed} asks whether one part
+     * contributes anything new. The instanced walk needs both, because it descends: it proves a
+     * parent still, and only then is a still child still in the world rather than merely still
+     * relative to something that moved.
+     */
+    @Test
+    void aFixedPartUnderAMovingOneIsNotItselfStill() {
+        Gem.Model<Probe> model = Gem.model();
+        Gem.Part<Probe> arm = model.joint().angle(Gem.Axes.Y, s -> s.value);
+        Gem.Part<Probe> bolt = arm.joint().translate(0F, 1F, 0F);
+        model.seal();
+
+        assertTrue(bolt.fixed(), "the bolt declares nothing that reads the state");
+        assertTrue(bolt.rigidTree(), "and neither does anything under it");
+        assertFalse(arm.fixed(), "but the arm it is bolted to turns");
+        assertFalse(arm.rigidTree());
+        assertFalse(model.rigid());
+    }
+
+    @Test
+    void aSealedSubtreeCountsItsOwnPartsAndSlots() {
+        Surface skin = Surface.cutout("golem:textures/skin.png");
+        Gem.Model<Probe> model = Gem.model();
+        Gem.Part<Probe> housing = model.part(new Lump("housing"), skin);
+        Gem.Part<Probe> pivot = housing.joint().translate(0F, 1F, 0F);
+        pivot.child(new Lump("blade"), skin);
+        pivot.child(new Lump("hub"), skin);
+        model.seal();
+
+        assertEquals(4, housing.subtreeNodes(), "housing, the joint, and two children");
+        assertEquals(3, housing.subtreeSlots(), "the joint carries no geometry, so no instance");
+        assertEquals(3, pivot.subtreeNodes());
+        assertEquals(2, pivot.subtreeSlots());
+    }
+
+    /**
+     * The walk asks every part for its children every frame, so a fresh copy each time is a per-frame
+     * allocation that can only ever return the same thing.
+     */
+    @Test
+    void aSealedTreeHandsBackTheSameListEveryTime() {
+        Gem.Model<Probe> model = Gem.model();
+        Gem.Part<Probe> root = model.joint();
+        root.joint();
+        model.seal();
+
+        assertSameInstance(model.roots(), model.roots(), "roots");
+        assertSameInstance(root.children(), root.children(), "children");
+    }
+
+    /**
+     * A part's own answer is not the whole answer: it falls back to the model for light and overlay,
+     * so a chooser up there is state that no part can see and nothing below it may be left alone.
+     */
+    @Test
+    void aModelWideChooserIsStateNoPartCanSee() {
+        Gem.Model<Probe> plain = Gem.model();
+        plain.joint().translate(0F, 1F, 0F);
+        assertTrue(plain.seal().channelsFixed());
+
+        Gem.Model<Probe> lit = Gem.model();
+        lit.light(s -> s.variant);
+        lit.joint().translate(0F, 1F, 0F);
+        assertFalse(lit.seal().channelsFixed());
+        assertTrue(lit.rigid(), "a model-wide light does not by itself make the tree dynamic");
+
+        Gem.Model<Probe> overlaid = Gem.model();
+        overlaid.overlay(s -> s.variant);
+        overlaid.joint().translate(0F, 1F, 0F);
+        assertFalse(overlaid.seal().channelsFixed());
     }
 
     @Test

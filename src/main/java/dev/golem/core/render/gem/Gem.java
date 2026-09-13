@@ -259,6 +259,7 @@ public final class Gem {
         private @Nullable IntOf<S> light;
         private @Nullable IntOf<S> overlay;
         private boolean sealed;
+        private @Nullable List<Part<S>> frozenRoots;
 
         private Model() {}
 
@@ -318,8 +319,15 @@ public final class Gem {
             return this;
         }
 
+        /**
+         * This model's top-level parts.
+         *
+         * <p>Frozen at {@link #seal}, for the same reason {@link Part#children} is: the instanced
+         * walk starts here every frame, and handing it a fresh copy each time is a per-frame
+         * allocation to hand back a list that cannot have changed.
+         */
         public List<Part<S>> roots() {
-            return List.copyOf(roots);
+            return frozenRoots == null ? List.copyOf(roots) : frozenRoots;
         }
 
         public int viewDistance() {
@@ -356,6 +364,17 @@ public final class Gem {
         }
 
         /**
+         * Whether the model-wide light and overlay channels are both fixed.
+         *
+         * <p>Every part falls back to these, so a chooser here is render state that looking at a part
+         * alone cannot see. No part is fixed under one, which is why the instanced walk asks this once
+         * before it trusts any part's own answer.
+         */
+        public boolean channelsFixed() {
+            return light == null && overlay == null;
+        }
+
+        /**
          * Closes the model to further declaration. A renderer's setup step runs once and the instanced
          * backend allocates against the tree it produced, so a part added later would exist on the
          * vanilla path and be invisible on the instanced one.
@@ -366,6 +385,7 @@ public final class Gem {
          */
         public Model<S> seal() {
             sealed = true;
+            frozenRoots = List.copyOf(roots);
             for (Part<S> root : roots) root.seal();
             return this;
         }
@@ -390,6 +410,9 @@ public final class Gem {
         private int order;
         private boolean dynamic;
         private boolean sealed;
+        private int subtreeNodes;
+        private int subtreeSlots;
+        private @Nullable List<Part<S>> frozen;
 
         private Part(@Nullable Geometry geometry, @Nullable Surface surface) {
             this.geometry = geometry;
@@ -597,8 +620,16 @@ public final class Gem {
             return skin == null ? surface : skin.of(state);
         }
 
+        /**
+         * This part's children.
+         *
+         * <p>Frozen once at {@link Model#seal}, so the instanced walk — which asks every part every
+         * frame — gets the same immutable list back rather than a fresh copy of it. Before sealing
+         * the list is still growing, and a caller holding a copy of a half-built tree is the reason
+         * this defends itself at all.
+         */
         public List<Part<S>> children() {
-            return List.copyOf(children);
+            return frozen == null ? List.copyOf(children) : frozen;
         }
 
         /** Whether this part's own transform reads the render state. */
@@ -606,13 +637,46 @@ public final class Gem {
             return dynamic;
         }
 
+        /**
+         * Whether this part's own contribution is fixed, whatever its children do.
+         *
+         * <p>{@link #rigidTree} asks the same question downwards, and that is what a whole model is
+         * judged on. This is the upward one the instanced walk needs: a part is only safe to leave
+         * alone when every ancestor is fixed too, and a fixed part under a spinning one moves.
+         */
+        public boolean fixed() {
+            return !dynamic && visible == null && mesh == null && skin == null && tint == null
+                    && light == null;
+        }
+
         /** Whether this part and everything under it is fixed. */
         public boolean rigidTree() {
-            if (dynamic || visible != null || mesh != null || skin != null || tint != null || light != null) {
-                return false;
-            }
+            if (!fixed()) return false;
             for (Part<S> child : children) if (!child.rigidTree()) return false;
             return true;
+        }
+
+        /**
+         * How many parts this subtree walks, this one included.
+         *
+         * <p>Sealed models only. The instanced walk numbers its cached poses by visit order, so
+         * stepping over a subtree it has proved unchanged means advancing that counter by exactly this
+         * many without visiting anything.
+         */
+        public int subtreeNodes() {
+            return subtreeNodes;
+        }
+
+        /**
+         * How many instance slots this subtree occupies.
+         *
+         * <p>Sealed models only, and only meaningful where {@link #rigidTree} holds: a part that
+         * chooses its mesh from the render state can draw or not draw from one frame to the next, so
+         * its subtree has no settled slot count. Such a part is never rigid, and rigidity is the only
+         * thing that lets the walk step over a subtree without counting its slots one at a time.
+         */
+        public int subtreeSlots() {
+            return subtreeSlots;
         }
 
         /** Applies this part's own transform to {@code matrix}, which already holds its parents'. */
@@ -653,7 +717,14 @@ public final class Gem {
 
         private void seal() {
             sealed = true;
-            for (Part<S> child : children) child.seal();
+            frozen = List.copyOf(children);
+            subtreeNodes = 1;
+            subtreeSlots = geometry == null ? 0 : 1;
+            for (Part<S> child : children) {
+                child.seal();
+                subtreeNodes += child.subtreeNodes;
+                subtreeSlots += child.subtreeSlots;
+            }
         }
 
         private void requireOpen() {

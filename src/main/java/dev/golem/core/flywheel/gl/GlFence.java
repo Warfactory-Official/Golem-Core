@@ -1,6 +1,6 @@
 package dev.golem.core.flywheel.gl;
 
-//? if neoforge && >=26.1 {
+//? if >=26.1 {
 
 import org.lwjgl.opengl.GL32;
 import org.lwjgl.system.MemoryStack;

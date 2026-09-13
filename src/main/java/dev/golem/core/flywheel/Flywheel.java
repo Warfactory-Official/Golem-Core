@@ -13,13 +13,14 @@ import org.jspecify.annotations.Nullable;
  *
  * <ul>
  *   <li><b>Where it exists.</b> The engine is written against the blaze3d GPU-buffer and pipeline API
-     *       introduced with 26.1, and it needs an access transformer that only NeoForge supplies — so it
-     *       compiles only on 26.1 NeoForge. This class does not: it is present
- *       everywhere with inert bodies, so a consumer calls {@link #init} unconditionally and asks
- *       {@link #isAvailable} when the answer actually changes what it draws.</li>
+ *       introduced with 26.1, so it compiles on every 26.1 node and on none below. It needs two
+ *       {@code GlBuffer} fields widened, which NeoForge supplies as an access transformer and Fabric
+ *       as an access widener. This class is not gated at all: it is present everywhere with inert
+ *       bodies, so a consumer calls {@link #init} unconditionally and asks {@link #isAvailable} when
+ *       the answer actually changes what it draws.</li>
  *   <li><b>How it starts.</b> CE registers thirteen listeners across two buses by hand at its own
- *       client-init site. Which bus each one belongs on is a property of the engine, not of the mod
- *       using it, so that wiring lives here and {@link #init} is the whole of it.</li>
+ *       client-init site. Which listener a loader spells where is a property of the engine, not of
+ *       the mod using it, so that wiring lives here and {@link #init} is the whole of it.</li>
  * </ul>
  *
  * <p>An available engine still draws nothing until visuals are registered against it; it is an
@@ -32,12 +33,36 @@ public final class Flywheel {
     private static @Nullable CrumblingCoreResolver crumblingCoreResolver;
     private static boolean initialized;
 
+    /**
+     * Whether {@code -Dgolem.flywheel.backend} asked for no engine at all.
+     *
+     * <p>The published Flywheel is a mod with a backend the player can switch off, and every consumer
+     * is written to survive that. The vendored engine had no equivalent, which left no way to put a
+     * scene side by side with itself — and an instanced draw that is subtly wrong looks like a correct
+     * one until you have that comparison.
+     */
+    private static final boolean DISABLED =
+            java.util.List.of("off", "none", "disabled").contains(backendSetting());
+
+    /**
+     * The requested backend, lowercased, or an empty string.
+     *
+     * <p>Read from the environment as well as the system properties because a dev client is launched
+     * through Loom, whose JVM arguments come from the buildscript and cannot be added on the command
+     * line — so the property alone would be unreachable from the one place it is most wanted.
+     */
+    public static String backendSetting() {
+        String forced = System.getProperty("golem.flywheel.backend");
+        if (forced == null || forced.isEmpty()) forced = System.getenv("GOLEM_FLYWHEEL_BACKEND");
+        return forced == null ? "" : forced.toLowerCase(java.util.Locale.ROOT);
+    }
+
     private Flywheel() {}
 
-    /** Whether this node has an engine at all. False everywhere but 26.1 NeoForge. */
+    /** Whether this node has an engine at all. False on every node below 26.1. */
     public static boolean isAvailable() {
-        //? if neoforge && >=26.1 {
-        return true;
+        //? if >=26.1 {
+        return !DISABLED;
         //?} else {
         /*return false;
         *///?}
@@ -50,12 +75,12 @@ public final class Flywheel {
      * <p>Narrower than {@link #isAvailable} and the one to ask before choosing an instanced path over a
      * vanilla renderer. It is false for a server level and false before a client level has loaded.
      *
-     * <p>Note that this engine has no player-facing off switch — {@code BackendManager} picks the best
-     * supported backend or fails — so unlike the published Flywheel there is no "installed but turned
-     * off" state to detect here.
+     * <p>{@code BackendManager} picks the best supported backend or fails, so the only "installed but
+     * turned off" state here is {@code -Dgolem.flywheel.backend=off}, which {@link #isAvailable}
+     * already reports.
      */
     public static boolean isVisualizing(@Nullable LevelAccessor level) {
-        //? if neoforge && >=26.1 {
+        //? if >=26.1 {
         return level != null
                 && dev.golem.core.flywheel.visual.VisualizationLifecycle.get(level) != null;
         //?} else {
@@ -69,32 +94,101 @@ public final class Flywheel {
      */
     public static void init() {
         //? if neoforge && >=26.1 {
-        if (initialized) return;
+        if (initialized || DISABLED) return;
         initialized = true;
         dev.golem.core.flywheel.backend.Backends.init();
+        dev.golem.core.client.ClientTicks.onEndTick(
+                dev.golem.core.flywheel.visual.GolemRenderSystem::onClientTick);
+
         // Pipelines are a registry event on the mod bus; everything else is a game-bus event.
         net.neoforged.bus.api.IEventBus modBus = dev.golem.core.platform.NeoForgeEntrypoint.modBus();
         modBus.addListener(Pipelines::register);
         modBus.addListener(dev.golem.core.flywheel.indirect.IndirectPipelines::register);
 
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.client.event.RenderFrameEvent.Pre event) ->
+                        dev.golem.core.flywheel.visual.GolemRenderSystem.onFrameStart(
+                                event.getPartialTick().getGameTimeDeltaPartialTick(false)));
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.client.event.RenderLevelStageEvent.AfterOpaqueFeatures event) ->
+                        Engine.drawOpaque(event.getModelViewMatrix()));
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.client.event.RenderLevelStageEvent.AfterWeather event) ->
+                        Engine.drawTranslucent(event.getModelViewMatrix()));
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.client.event.RenderLevelStageEvent.AfterTranslucentBlocks event) -> {
+                    Engine.drawTranslucentFabulous(event.getModelViewMatrix());
+                    Engine.drawCrumbling(event.getModelViewMatrix(), event.getLevelRenderState());
+                });
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.client.event.ClientResourceLoadFinishedEvent event) ->
+                        Engine.onResourceReload());
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.event.level.LevelEvent.Load event) ->
+                        dev.golem.core.flywheel.visual.VisualizationLifecycle.onLevelLoad(event.getLevel()));
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.event.level.LevelEvent.Unload event) ->
+                        dev.golem.core.flywheel.visual.VisualizationLifecycle.onLevelUnload(event.getLevel()));
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.event.entity.EntityJoinLevelEvent event) ->
+                        dev.golem.core.flywheel.visual.VisualizationLifecycle.onEntityJoin(
+                                event.getLevel(), event.getEntity()));
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent event) ->
+                        dev.golem.core.flywheel.visual.VisualizationLifecycle.onEntityLeave(
+                                event.getLevel(), event.getEntity()));
+        //?} elif fabric && >=26.1 {
+        /*if (initialized || DISABLED) return;
+        initialized = true;
+        dev.golem.core.flywheel.backend.Backends.init();
+        dev.golem.core.client.ClientTicks.onEndTick(
                 dev.golem.core.flywheel.visual.GolemRenderSystem::onClientTick);
-        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
-                dev.golem.core.flywheel.visual.GolemRenderSystem::onRenderFramePre);
-        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(Engine::onRenderOpaque);
-        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(Engine::onRenderTranslucent);
-        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(Engine::onRenderTranslucentFabulous);
-        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(Engine::onRenderCrumbling);
-        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(Engine::onResourceLoadFinished);
-        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
-                dev.golem.core.flywheel.visual.VisualizationLifecycle::onLevelLoad);
-        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
-                dev.golem.core.flywheel.visual.VisualizationLifecycle::onLevelUnload);
-        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
-                dev.golem.core.flywheel.visual.VisualizationLifecycle::onEntityJoin);
-        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
-                dev.golem.core.flywheel.visual.VisualizationLifecycle::onEntityLeave);
-        //?}
+        dev.golem.core.client.ClientResourceReloads.register(
+                dev.golem.core.GolemCore.MOD_ID, "flywheel_meshes", Engine::onResourceReload);
+
+        // Fabric has no pipeline registry to declare into, and a pipeline vanilla was never told
+        // about still compiles on first bind, so Pipelines builds itself from the first draw.
+        net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.END_EXTRACTION.register(
+                context -> dev.golem.core.flywheel.visual.GolemRenderSystem.onFrameStart(
+                        context.deltaTracker().getGameTimeDeltaPartialTick(false)));
+        net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.AFTER_SOLID_FEATURES.register(
+                context -> Engine.drawOpaque(Engine.cameraModelView()));
+        // Deviation: NeoForge draws the non-Fabulous translucent pass after weather, and Fabric
+        // offers no hook inside the weather pass at all. The end of the main pass is the last one
+        // it does offer, so on Fabric clouds and weather composite over these particles instead of
+        // under them. Everything else about the pass — depth state, what has already drawn into
+        // main — is the same at both points.
+        net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.END_MAIN.register(
+                context -> Engine.drawTranslucent(Engine.cameraModelView()));
+        net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.AFTER_TRANSLUCENT_TERRAIN.register(
+                context -> {
+                    org.joml.Matrix4fc modelView = Engine.cameraModelView();
+                    Engine.drawTranslucentFabulous(modelView);
+                    Engine.drawCrumbling(modelView, context.levelState());
+                });
+
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLevelEvents.AFTER_CLIENT_LEVEL_CHANGE.register(
+                (client, level) -> {
+                    dev.golem.core.flywheel.visual.VisualizationLifecycle.retainOnly(level);
+                    dev.golem.core.flywheel.visual.VisualizationLifecycle.onLevelLoad(level);
+                });
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register(
+                (handler, client) ->
+                        dev.golem.core.flywheel.visual.VisualizationLifecycle.retainOnly(null));
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientEntityEvents.ENTITY_LOAD.register(
+                (entity, level) ->
+                        dev.golem.core.flywheel.visual.VisualizationLifecycle.onEntityJoin(level, entity));
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientEntityEvents.ENTITY_UNLOAD.register(
+                (entity, level) ->
+                        dev.golem.core.flywheel.visual.VisualizationLifecycle.onEntityLeave(level, entity));
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientBlockEntityEvents.BLOCK_ENTITY_LOAD.register(
+                (blockEntity, level) ->
+                        dev.golem.core.flywheel.visual.VisualizationLifecycle.onBlockEntityAdded(level, blockEntity));
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientBlockEntityEvents.BLOCK_ENTITY_UNLOAD.register(
+                (blockEntity, level) ->
+                        dev.golem.core.flywheel.visual.VisualizationLifecycle.onBlockEntityRemoved(
+                                level, blockEntity.getBlockPos()));
+        *///?}
     }
 
     /**

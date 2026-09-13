@@ -1,6 +1,6 @@
 package dev.golem.core.flywheel.instance;
 
-//? if neoforge && >=26.1 {
+//? if >=26.1 {
 
 // Cross-package accessor for the package-private InstanceHandle bits. Visuals only ever see
 // the Instance interface; engines occasionally need to look behind the curtain — e.g., the

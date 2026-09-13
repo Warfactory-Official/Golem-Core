@@ -3,7 +3,7 @@
 // Derived from Flywheel; see THIRD_PARTY_NOTICES.md.
 package dev.golem.core.flywheel.visual;
 
-//? if neoforge && >=26.1 {
+//? if >=26.1 {
 
 public abstract class EffectVisual<E extends Effect> implements Visual {
 

@@ -1,6 +1,6 @@
 package dev.golem.core.flywheel;
 
-//? if neoforge && >=26.1 {
+//? if >=26.1 {
 
 import dev.golem.core.GolemCore;
 import dev.golem.core.flywheel.instance.AbstractInstancer;
@@ -16,14 +16,14 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormatElement;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
-import net.neoforged.neoforge.client.event.RegisterRenderPipelinesEvent;
 import org.lwjgl.opengl.GL31;
 
 public final class Pipelines {
 
-    // Sized at runtime from GL_MAX_UNIFORM_BLOCK_SIZE inside register(). Both vertex shaders read
+    // Sized at runtime from GL_MAX_UNIFORM_BLOCK_SIZE inside build(). Both vertex shaders read
     // this value via the pipeline-injected #define INSTANCE_CAP — they no longer carry an inline
-    // fallback, so register() must run before any pipeline is bound (see NTMClientRegistry).
+    // fallback, so it is baked into the pipeline and build() has to precede the first bind. Every
+    // route to a pipeline goes through pipelineFor, which is what makes that true on its own.
     public static int INSTANCE_CAP;
 
     // Hard upper cap. The instanced engine chunks per-bucket draws at INSTANCE_CAP instances,
@@ -46,21 +46,36 @@ public final class Pipelines {
 
     private static final RenderPipeline[] PIPELINES = new RenderPipeline[Material.VALUES.length];
 
+    private static boolean built;
+
     private Pipelines() {
     }
 
     public static RenderPipeline pipelineFor(Material material) {
+        build();
         return PIPELINES[material.ordinal()];
     }
 
-    public static void register(RegisterRenderPipelinesEvent event) {
+    // Queries GL, so it may only run on the render thread. NeoForge has a registry event that
+    // satisfies that and precompiles the result; Fabric has none, and a pipeline it was never
+    // told about still compiles on first bind, so there the first draw builds them.
+    public static synchronized void build() {
+        if (built) return;
+        built = true;
         INSTANCE_CAP = computeInstanceCap();
         for (Material material : Material.VALUES) {
-            RenderPipeline pipeline = buildPipeline(material);
-            PIPELINES[material.ordinal()] = pipeline;
+            PIPELINES[material.ordinal()] = buildPipeline(material);
+        }
+    }
+
+    //? if neoforge {
+    public static void register(net.neoforged.neoforge.client.event.RegisterRenderPipelinesEvent event) {
+        build();
+        for (RenderPipeline pipeline : PIPELINES) {
             event.registerPipeline(pipeline);
         }
     }
+    //?}
 
     private static int computeInstanceCap() {
         int maxBlockBytes = GL31.glGetInteger(GL31.GL_MAX_UNIFORM_BLOCK_SIZE);

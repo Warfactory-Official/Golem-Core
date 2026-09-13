@@ -62,6 +62,8 @@ tasks.processResources {
         "java_version" to javaVersion.toString(),
         "mixin_compatibility" to if (javaVersion <= 17) "JAVA_17" else "JAVA_21",
         "world_effect_mixins" to "",
+        // No vendored engine below 26.1, so nothing to feed.
+        "flywheel_be_mixins" to "",
         "pack_format" to prop("pack_format"),
         "pack_format_entry" to "\"pack_format\": ${prop("pack_format")}",
     )

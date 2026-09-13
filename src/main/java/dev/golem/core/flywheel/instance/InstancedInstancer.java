@@ -1,6 +1,6 @@
 package dev.golem.core.flywheel.instance;
 
-//? if neoforge && >=26.1 {
+//? if >=26.1 {
 
 import dev.golem.core.flywheel.Material;
 import com.mojang.blaze3d.buffers.GpuBuffer;

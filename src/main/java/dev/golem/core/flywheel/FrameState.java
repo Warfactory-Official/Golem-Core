@@ -1,6 +1,6 @@
 package dev.golem.core.flywheel;
 
-//? if neoforge && >=26.1 {
+//? if >=26.1 {
 
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import net.minecraft.client.Minecraft;

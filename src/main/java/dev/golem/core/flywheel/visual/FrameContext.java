@@ -1,6 +1,6 @@
 package dev.golem.core.flywheel.visual;
 
-//? if neoforge && >=26.1 {
+//? if >=26.1 {
 
 import net.minecraft.client.Camera;
 import net.minecraft.core.Vec3i;

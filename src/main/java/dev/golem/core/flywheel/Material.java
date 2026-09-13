@@ -1,8 +1,6 @@
 package dev.golem.core.flywheel;
 
-//? if neoforge && >=26.1 {
-
-import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+//? if >=26.1 {
 
 public enum Material {
     CUTOUT(Stage.OPAQUE, true, true, false, false, false),
@@ -98,21 +96,9 @@ public enum Material {
         this.requiresFabulousDepth = requiresFabulousDepth;
     }
 
-    public boolean isStage(RenderLevelStageEvent event) {
-        return stage.matches(event);
-    }
-
     public enum Stage {
         OPAQUE,
-        TRANSLUCENT;
-
-        boolean matches(RenderLevelStageEvent event) {
-            return switch (this) {
-                case OPAQUE -> event instanceof RenderLevelStageEvent.AfterOpaqueFeatures;
-                case TRANSLUCENT -> event instanceof RenderLevelStageEvent.AfterWeather
-                        || event instanceof RenderLevelStageEvent.AfterTranslucentBlocks;
-            };
-        }
+        TRANSLUCENT
     }
 }
 //?}

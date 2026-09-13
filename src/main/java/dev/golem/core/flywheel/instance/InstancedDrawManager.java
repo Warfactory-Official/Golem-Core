@@ -1,8 +1,9 @@
 package dev.golem.core.flywheel.instance;
 
-//? if neoforge && >=26.1 {
+//? if >=26.1 {
 
 import dev.golem.core.flywheel.CrumblingDraw;
+import dev.golem.core.flywheel.DrawStats;
 import dev.golem.core.flywheel.DrawManager;
 import dev.golem.core.flywheel.FrameState;
 import dev.golem.core.flywheel.Material;
@@ -144,6 +145,7 @@ public final class InstancedDrawManager implements DrawManager {
                         GpuBufferSlice slice = ubo.slice(byteOffset, byteLength);
                         pass.setUniform("Instances", slice);
                         pass.drawIndexed(mesh.baseVertex(), mesh.firstIndex(), mesh.indexCount(), chunkCount);
+                        DrawStats.draw(1);
                     }
                 }
             }
@@ -204,6 +206,7 @@ public final class InstancedDrawManager implements DrawManager {
                 }
                 pass.setUniform("Instances", slices.get(g));
                 pass.drawIndexed(mesh.baseVertex(), mesh.firstIndex(), mesh.indexCount(), draw.instances().size());
+                DrawStats.draw(1);
             }
         }
     }

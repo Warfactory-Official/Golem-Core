@@ -1,6 +1,6 @@
 package dev.golem.core.flywheel.indirect;
 
-//? if neoforge && >=26.1 {
+//? if >=26.1 {
 
 import dev.golem.core.GolemCore;
 import dev.golem.core.flywheel.Material;
@@ -17,7 +17,6 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import java.util.Optional;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
-import net.neoforged.neoforge.client.event.RegisterRenderPipelinesEvent;
 
 // INDIRECT-side pipelines. Same vertex format / depth / blend / cull config as the matching
 // INSTANCING pipeline, but without the "Instances" UBO declaration — INDIRECT binds an SSBO
@@ -41,30 +40,44 @@ public final class IndirectPipelines {
     // against clouds/weather). Sorting and this depth proxy are separate material requirements.
     private static final RenderPipeline[] DEPTH_ONLY_PIPELINES = new RenderPipeline[Material.VALUES.length];
 
+    private static boolean built;
+
     private IndirectPipelines() {
     }
 
     public static RenderPipeline pipelineFor(Material material) {
+        build();
         return PIPELINES[material.ordinal()];
     }
 
     public static RenderPipeline depthOnlyPipelineFor(Material material) {
+        build();
         return DEPTH_ONLY_PIPELINES[material.ordinal()];
     }
 
-    public static void register(RegisterRenderPipelinesEvent event) {
+    public static synchronized void build() {
+        if (built) return;
+        built = true;
         for (Material material : Material.VALUES) {
-            RenderPipeline pipeline = material == Material.CRUMBLING ? buildCrumblingPipeline() : buildPipeline(material);
-            PIPELINES[material.ordinal()] = pipeline;
-            event.registerPipeline(pipeline);
-
+            PIPELINES[material.ordinal()] =
+                    material == Material.CRUMBLING ? buildCrumblingPipeline() : buildPipeline(material);
             if (material.requiresFabulousDepth) {
-                RenderPipeline depthPipeline = buildDepthOnlyPipeline(material);
-                DEPTH_ONLY_PIPELINES[material.ordinal()] = depthPipeline;
-                event.registerPipeline(depthPipeline);
+                DEPTH_ONLY_PIPELINES[material.ordinal()] = buildDepthOnlyPipeline(material);
             }
         }
     }
+
+    //? if neoforge {
+    public static void register(net.neoforged.neoforge.client.event.RegisterRenderPipelinesEvent event) {
+        build();
+        for (Material material : Material.VALUES) {
+            event.registerPipeline(PIPELINES[material.ordinal()]);
+            if (material.requiresFabulousDepth) {
+                event.registerPipeline(DEPTH_ONLY_PIPELINES[material.ordinal()]);
+            }
+        }
+    }
+    //?}
 
     // Mirrors dev.golem.core.flywheel.Pipelines.buildCrumblingPipeline (INSTANCING side):
     // multiplicative blend (DST*SRC), depth-LE with depth-write OFF, polygon offset (-1, -10)
