@@ -307,4 +307,15 @@ public final class ItemStacks {
         /*return food.getSaturationModifier();
         *///?}
     }
+
+    /**
+     * Applies a stack's stored block-entity data to a block entity the item did not place directly. Vanilla
+     * applies it at the clicked position, which a folded multiblock has already removed by the time its real
+     * core exists elsewhere. Below 1.20.5 there are no components and the pre-existing behaviour stands.
+     */
+    public static void applyComponents(net.minecraft.world.level.block.entity.BlockEntity blockEntity, ItemStack stack) {
+        //? if >=1.20.5 {
+        blockEntity.applyComponentsFromItemStack(stack);
+        //?}
+    }
 }
