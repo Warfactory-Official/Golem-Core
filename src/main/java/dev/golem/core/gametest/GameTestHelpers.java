@@ -96,6 +96,70 @@ public final class GameTestHelpers {
         return count;
     }
 
+    /**
+     * How many payloads on the named channel reached this player, whichever transport carried them.
+     *
+     * <p>A test that asserts behaviour must not be able to tell the backends apart, so this counts an
+     * encoded packet and a finished wire buffer as the same thing.
+     */
+    public static int golemPayloads(Outbound outbound, String channelId) {
+        int count = golemPayloads(outbound.packets(), channelId);
+        for (byte[] wire : outbound.wires()) {
+            if (readChannel(wire) != null && readChannel(wire).equals(channelId)) count++;
+        }
+        return count;
+    }
+
+    /**
+     * The channel a finished wire buffer names, or null if it is not a custom payload at all. Reads
+     * the same prefix the client's decoder reads: the packet id, then the channel.
+     */
+    public static String readChannel(byte[] wire) {
+        io.netty.buffer.ByteBuf buffer = Unpooled.wrappedBuffer(wire);
+        try {
+            if (readVarInt(buffer) != dev.golem.core.net.GolemWire.packetId()) return null;
+            //? if >=26.1 {
+            return new FriendlyByteBuf(buffer).readIdentifier().toString();
+            //?} else {
+            /*return new FriendlyByteBuf(buffer).readResourceLocation().toString();
+            *///?}
+        } catch (RuntimeException malformed) {
+            return null;
+        }
+    }
+
+    /**
+     * The body of a finished wire buffer, decoded by the same codec that wrote it — which is what the
+     * client does with these bytes, so a frame that decodes here is one the client can read.
+     */
+    public static <P extends dev.golem.core.net.GolemPayload> P decodeWire(byte[] wire,
+            dev.golem.core.net.GolemCodec<P> codec) {
+        io.netty.buffer.ByteBuf buffer = Unpooled.wrappedBuffer(wire);
+        readVarInt(buffer);
+        FriendlyByteBuf reader = new FriendlyByteBuf(buffer);
+        //? if >=26.1 {
+        reader.readIdentifier();
+        //?} else {
+        /*reader.readResourceLocation();
+        *///?}
+        //? if forge && <1.20.5 {
+        /*reader.readByte();
+        *///?}
+        return codec.decode(reader);
+    }
+
+    private static int readVarInt(io.netty.buffer.ByteBuf buffer) {
+        int value = 0;
+        int shift = 0;
+        byte piece;
+        do {
+            piece = buffer.readByte();
+            value |= (piece & 0x7F) << shift;
+            shift += 7;
+        } while ((piece & 0x80) != 0);
+        return value;
+    }
+
     private static boolean isGolemPayload(Packet<?> packet, String channelId) {
         //? if >=1.20.5 {
         return packet instanceof net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket custom
@@ -108,6 +172,9 @@ public final class GameTestHelpers {
                 && custom.getIdentifier().getNamespace().equals(dev.golem.core.GolemCore.MOD_ID);
         *///?}
     }
+
+    /** What a mock player's channel received: encoded packets, and finished wire buffers. */
+    public record Outbound(List<Packet<?>> packets, List<byte[]> wires) {}
 
     public static MockServerPlayer mockServerPlayer(GameTestHelper helper) {
         return new MockServerPlayer(helper);
@@ -232,15 +299,43 @@ public final class GameTestHelpers {
             return player;
         }
 
-        /** Drains packets sent since the previous call, releasing any non-packet Netty message. */
+        /** Drains packets sent since the previous call, dropping raw wire buffers. */
         public List<Packet<?>> outboundPackets() {
+            return drainOutbound().packets();
+        }
+
+        /**
+         * Drains everything sent since the previous call.
+         *
+         * <p>Both forms have to be caught because the two transports do not put the same kind of
+         * object on the channel: the safe one writes an encoded {@code Packet}, and the accelerated
+         * one writes the finished bytes. Raw buffers are copied out and released here so a test never
+         * holds a Netty reference.
+         */
+        public Outbound drainOutbound() {
+            // A live connection's event loop runs continuously; an EmbeddedChannel's runs only when
+            // asked. The accelerated transport batches its writes onto that loop, so without this the
+            // queued bytes are real and simply never leave.
+            channel.runPendingTasks();
             List<Packet<?>> packets = new ArrayList<>();
+            List<byte[]> wires = new ArrayList<>();
             Object outbound;
             while ((outbound = channel.readOutbound()) != null) {
-                if (outbound instanceof Packet<?> packet) packets.add(packet);
-                else ReferenceCountUtil.release(outbound);
+                if (outbound instanceof Packet<?> packet) {
+                    packets.add(packet);
+                } else if (outbound instanceof io.netty.buffer.ByteBuf wire) {
+                    try {
+                        byte[] bytes = new byte[wire.readableBytes()];
+                        wire.getBytes(wire.readerIndex(), bytes);
+                        wires.add(bytes);
+                    } finally {
+                        ReferenceCountUtil.release(wire);
+                    }
+                } else {
+                    ReferenceCountUtil.release(outbound);
+                }
             }
-            return packets;
+            return new Outbound(packets, wires);
         }
 
         @Override

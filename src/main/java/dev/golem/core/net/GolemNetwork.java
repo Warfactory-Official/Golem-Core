@@ -178,6 +178,16 @@ public final class GolemNetwork {
             .simpleChannel();
     private static int nextMessageId;
 
+    // SimpleChannel writes this index as one byte ahead of the body, so the accelerated transport has
+    // to reproduce it to build the same wire. Nothing else needs it.
+    private static final java.util.Map<String, Integer> FORGE_DISCRIMINATORS = new java.util.HashMap<>();
+
+    static int forgeDiscriminator(GolemCodec<?> codec) {
+        Integer index = FORGE_DISCRIMINATORS.get(codec.id().toString());
+        if (index == null) throw new IllegalStateException("No Forge message index for " + codec.id());
+        return index;
+    }
+
     public static void flushCommonRegistrations() {
         CLIENT_DECLARATIONS.forEach(GolemNetwork::registerForgeClient);
         CLIENT_DECLARATIONS.clear();
@@ -192,6 +202,7 @@ public final class GolemNetwork {
     }
 
     private static <P extends GolemPayload> void registerForgeClient(GolemCodec<P> codec) {
+        FORGE_DISCRIMINATORS.put(codec.id().toString(), nextMessageId);
         CHANNEL.messageBuilder(codec.payloadType(), nextMessageId++, NetworkDirection.PLAY_TO_CLIENT)
                 .encoder(codec::encode).decoder(codec::decode).consumerMainThread((payload, context) ->
                         dispatchClient(codec, payload,

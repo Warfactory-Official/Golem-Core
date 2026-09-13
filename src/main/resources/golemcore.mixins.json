@@ -4,7 +4,7 @@
   "package": "dev.golem.core.mixin",
   "refmap": "golemcore.refmap.json",
   "compatibilityLevel": "${mixin_compatibility}",
-  "mixins": ["MixinServerGamePacketListener"],
+  "mixins": ["MixinServerGamePacketListener", "MixinConnection", "MixinPacketListenerConnection"],
   "client": ["MixinCamera", "MixinLivingEntityRenderer", "MixinHumanoidModel"${world_effect_mixins}],
   "server": [],
   "injectors": {

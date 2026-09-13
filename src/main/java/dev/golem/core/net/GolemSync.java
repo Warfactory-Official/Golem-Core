@@ -95,9 +95,13 @@ public final class GolemSync {
     public static void install() {
         if (installed) return;
         installed = true;
+        dev.golem.core.GolemCore.LOG.info("Payload transport: requested {}, channel accessors {}",
+                GolemTransport.requested(),
+                GolemWire.mixinsApplied() ? "present" : "ABSENT (will use the safe transport)");
         Lifecycle.onServerTick(server -> {
             TRACKING.clear();
             pump();
+            GolemTransport.endTick();
         });
         Lifecycle.onChunkUnload(GolemSync::evictChunk);
         Lifecycle.onLevelUnload((server, level) -> {
@@ -124,7 +128,7 @@ public final class GolemSync {
                 .computeIfAbsent(pos.asLong(), p -> new Entry());
         entry.published = new Published(codec, payload);
         entry.sent.clear();
-        heal(entry, tracking(level, chunk));
+        heal(level, entry, tracking(level, chunk), false);
     }
 
     /** Drops this position's entry. Call when the block entity is removed. */
@@ -164,8 +168,14 @@ public final class GolemSync {
         return positions == null ? null : positions.get(pos.asLong());
     }
 
-    /** Runs the heal pass now instead of waiting for the end of the tick. */
+    /** Runs the heal pass and the batched flush now instead of waiting for the end of the tick. */
     public static void pumpNow() {
+        pumpHealOnly();
+        GolemTransport.endTick();
+    }
+
+    /** The heal pass without the flush, so a test can see what batching left queued. */
+    public static void pumpHealOnly() {
         TRACKING.clear();
         pump();
     }
@@ -198,7 +208,7 @@ public final class GolemSync {
                         entry.sent.clear();
                     } else if (!inStep(entry, watching)) {
                         reconcile(entry, watching);
-                        heal(entry, watching);
+                        heal(level.getKey(), entry, watching, true);
                     }
                 }
             }
@@ -223,17 +233,28 @@ public final class GolemSync {
         });
     }
 
-    private static void heal(Entry entry, List<ServerPlayer> watching) {
+    /**
+     * Sends this entry's wire to every watcher not already holding it. A state change goes out at
+     * once; a replay to someone who has just come into view may wait for the end of the tick, which
+     * is what lets one player's arrival cost one wake-up rather than one per sender.
+     */
+    private static void heal(ServerLevel level, Entry entry, List<ServerPlayer> watching, boolean batched) {
         Published published = entry.published;
         if (published == null) return;
+        List<ServerPlayer> fresh = null;
         for (ServerPlayer player : watching) {
-            if (entry.sent.add(player.getUUID())) send(published, player);
+            if (!entry.sent.add(player.getUUID())) continue;
+            if (fresh == null) fresh = new ArrayList<>(2);
+            fresh.add(player);
         }
+        if (fresh != null) send(level, published, fresh, batched);
     }
 
     @SuppressWarnings("unchecked")
-    private static <P extends GolemPayload> void send(Published published, ServerPlayer player) {
-        GolemNetwork.sendToPlayer(player, (GolemCodec<P>) published.codec(), (P) published.payload());
+    private static <P extends GolemPayload> void send(ServerLevel level, Published published,
+            List<ServerPlayer> recipients, boolean batched) {
+        GolemTransport.send(recipients, (GolemCodec<P>) published.codec(), (P) published.payload(),
+                level, batched);
     }
 
     private static List<ServerPlayer> tracking(ServerLevel level, long chunk) {
