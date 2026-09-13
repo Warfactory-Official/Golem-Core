@@ -79,6 +79,36 @@ public final class GameTestHelpers {
     }
 
     /** Creates an owned server-player fixture with a real listener and an in-memory outbound connection. */
+    /**
+     * How many of these packets are Golem play payloads on the named channel.
+     *
+     * <p>The channel a payload travels on is not the same question on every loader. Where the vanilla
+     * payload registry exists the packet names the payload's own id, so this counts exactly that
+     * payload. Forge 1.20.1 has no such registry and every Golem payload rides one {@code SimpleChannel}
+     * whose own id is on the wire instead, so there the count is of Golem payloads in general — a test
+     * that needs to tell two of them apart has to provoke only one at a time.
+     */
+    public static int golemPayloads(List<Packet<?>> packets, String channelId) {
+        int count = 0;
+        for (Packet<?> packet : packets) {
+            if (isGolemPayload(packet, channelId)) count++;
+        }
+        return count;
+    }
+
+    private static boolean isGolemPayload(Packet<?> packet, String channelId) {
+        //? if >=1.20.5 {
+        return packet instanceof net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket custom
+                && custom.payload().type().id().toString().equals(channelId);
+        //?} elif fabric {
+        /*return packet instanceof net.minecraft.network.protocol.game.ClientboundCustomPayloadPacket custom
+                && custom.getIdentifier().toString().equals(channelId);
+        *///?} else {
+        /*return packet instanceof net.minecraft.network.protocol.game.ClientboundCustomPayloadPacket custom
+                && custom.getIdentifier().getNamespace().equals(dev.golem.core.GolemCore.MOD_ID);
+        *///?}
+    }
+
     public static MockServerPlayer mockServerPlayer(GameTestHelper helper) {
         return new MockServerPlayer(helper);
     }

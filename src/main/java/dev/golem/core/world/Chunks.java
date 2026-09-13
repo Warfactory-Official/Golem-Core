@@ -93,7 +93,37 @@ public final class Chunks {
         *///?}
     }
 
-    private static long pack(int chunkX, int chunkZ) {
+    /**
+     * A chunk's identity as one long, in Golem's own layout rather than vanilla's.
+     *
+     * <p>Vanilla's spelling moved — {@code ChunkPos.asLong}/{@code toLong} became
+     * {@code ChunkPos.pack}/{@code pack()} at 26.1 — so a key derived from it would need a version
+     * branch at every site that builds one. This packing is ours and therefore has no version, which
+     * is worth more than matching vanilla's bit order for a value that is only ever a map key.
+     */
+    public static long key(int chunkX, int chunkZ) {
         return (chunkX & 0xFFFFFFFFL) | ((long) chunkZ << 32);
+    }
+
+    /** The chunk containing a block position, as a {@link #key(int, int)}. */
+    public static long keyOfBlock(int blockX, int blockZ) {
+        return key(net.minecraft.core.SectionPos.blockToSectionCoord(blockX),
+                net.minecraft.core.SectionPos.blockToSectionCoord(blockZ));
+    }
+
+    /**
+     * 26.1 made {@code ChunkPos.x}/{@code z} private behind accessors that older versions do not have,
+     * so neither spelling of the field works everywhere. The block bounds are public on all of them.
+     */
+    public static long key(ChunkPos pos) {
+        return keyOfBlock(pos.getMinBlockX(), pos.getMinBlockZ());
+    }
+
+    public static ChunkPos unkey(long key) {
+        return new ChunkPos((int) key, (int) (key >> 32));
+    }
+
+    private static long pack(int chunkX, int chunkZ) {
+        return key(chunkX, chunkZ);
     }
 }
