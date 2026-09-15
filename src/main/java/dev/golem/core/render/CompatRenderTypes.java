@@ -95,6 +95,15 @@ public final class CompatRenderTypes {
         *///?}
     }
 
+    /** The vanilla line pipeline, moved alongside the other render-type factories in 26.1. */
+    public static RenderType lines() {
+        //? if >=26.1 {
+        return RenderTypes.lines();
+        //?} else {
+        /*return RenderType.lines();
+        *///?}
+    }
+
     public static RenderType entityTranslucentEmissive(
             //? if >=26.1 {
             Identifier
@@ -186,5 +195,10 @@ public final class CompatRenderTypes {
     /** Textureless alpha-weighted additive sheets, matching vanilla's lightning pipeline. */
     public static RenderType lightning() {
         return LightningRenderType.get();
+    }
+
+    /** Textureless, translucent, depth-tested smoke sheets with no depth writes. */
+    public static RenderType weaponSmoke() {
+        return WeaponSmokeRenderType.get();
     }
 }

@@ -1,6 +1,7 @@
 package dev.golem.core.render;
 
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.client.Minecraft;
 import org.joml.Quaternionf;
 
 /**
@@ -23,6 +24,17 @@ public final class CameraInfo {
         this.pos = pos;
         this.yRot = yRot;
         this.orientation = orientation;
+    }
+
+    /** The active world camera, normalized across the supported renderer APIs. */
+    public static CameraInfo current() {
+        //? if >=26.1 {
+        var state = Minecraft.getInstance().gameRenderer.getGameRenderState().levelRenderState.cameraRenderState;
+        return new CameraInfo(state.pos, state.yRot, state.orientation);
+        //?} else {
+        /*net.minecraft.client.Camera camera = Minecraft.getInstance().gameRenderer.getMainCamera();
+        return new CameraInfo(camera.getPosition(), camera.getYRot(), camera.rotation());
+        *///?}
     }
 
     /** Converts a camera-relative world vector to the coordinate space of a world renderer's pose. */

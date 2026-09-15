@@ -104,6 +104,8 @@ tasks.processResources {
         "neoforge_loader_range" to prop("deps.neoforge_loader_range"),
         "java_version" to javaVersion.toString(),
         "mixin_compatibility" to if (javaVersion <= 17) "JAVA_17" else "JAVA_21",
+        "legacy_item_owner_mixins" to if (mcVersion.substringBefore('.').toInt() < 26)
+            ", \"MixinItemRenderer\"" else "",
         "world_effect_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinWorldEffects\"" else "",
         "flywheel_be_mixins" to if (hasVendoredFlywheel) ", \"MixinLevelChunkVisuals\"" else "",
         "pack_format" to prop("pack_format"),

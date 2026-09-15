@@ -57,6 +57,18 @@ public class CompatItem extends Item {
         return 32;
     }
 
+    /** Stable use animation names for items whose held-use callback spans the supported API eras. */
+    protected UseAnimation compatUseAnimation(ItemStack stack) {
+        return UseAnimation.NONE;
+    }
+
+    /** Stable release callback; older targets discard the boolean result because their hook is void. */
+    protected boolean compatReleaseUsing(ItemStack stack, Level level, LivingEntity entity, int timeLeft) {
+        return false;
+    }
+
+    public enum UseAnimation { NONE, BOW }
+
     /**
      * Receives server-side inventory ticks with the optional equipped slot when vanilla provides it.
      *
@@ -102,10 +114,39 @@ public class CompatItem extends Item {
     public int getUseDuration(ItemStack stack, LivingEntity entity) {
         return compatUseDuration(stack, entity);
     }
+
     //?} else {
     /*@Override
     public int getUseDuration(ItemStack stack) {
         return compatUseDuration(stack, null);
+    }
+    *///?}
+
+    //? if >=26.1 {
+    @Override
+    public net.minecraft.world.item.ItemUseAnimation getUseAnimation(ItemStack stack) {
+        return switch (compatUseAnimation(stack)) {
+            case NONE -> net.minecraft.world.item.ItemUseAnimation.NONE;
+            case BOW -> net.minecraft.world.item.ItemUseAnimation.BOW;
+        };
+    }
+
+    @Override
+    public boolean releaseUsing(ItemStack stack, Level level, LivingEntity entity, int timeLeft) {
+        return compatReleaseUsing(stack, level, entity, timeLeft);
+    }
+    //?} else {
+    /*@Override
+    public net.minecraft.world.item.UseAnim getUseAnimation(ItemStack stack) {
+        return switch (compatUseAnimation(stack)) {
+            case NONE -> net.minecraft.world.item.UseAnim.NONE;
+            case BOW -> net.minecraft.world.item.UseAnim.BOW;
+        };
+    }
+
+    @Override
+    public void releaseUsing(ItemStack stack, Level level, LivingEntity entity, int timeLeft) {
+        compatReleaseUsing(stack, level, entity, timeLeft);
     }
     *///?}
 

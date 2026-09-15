@@ -5,6 +5,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.Consumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -27,6 +28,7 @@ public final class WorldEffects {
     private static boolean reported;
     private static com.mojang.blaze3d.pipeline.TextureTarget worldDepth;
     private static boolean depthCaptured;
+    private static final List<Consumer<CameraInfo>> BEGIN_HOOKS = new ArrayList<>();
 
     private WorldEffects() {}
 
@@ -106,10 +108,16 @@ public final class WorldEffects {
         clear();
         level = Minecraft.getInstance().level;
         collecting = level != null;
+        if (collecting) for (Consumer<CameraInfo> hook : List.copyOf(BEGIN_HOOKS)) hook.accept(CameraInfo.current());
     }
 
     public static boolean isCollecting() {
         return collecting && level == Minecraft.getInstance().level;
+    }
+
+    /** Registers client geometry that must be submitted at the start of the world frame. */
+    public static void onBegin(Consumer<CameraInfo> callback) {
+        BEGIN_HOOKS.add(callback);
     }
 
     /** Submission order is stable within a priority; GUI/hand previews are never carried into a world frame. */
@@ -160,7 +168,8 @@ public final class WorldEffects {
     public static void end() {
         Runnable restoreState = null;
         try {
-            if (!isCollecting() || ENTRIES.isEmpty()) return;
+            if (!isCollecting()) return;
+            if (ENTRIES.isEmpty()) return;
             collecting = false;
             MultiBufferSource.BufferSource buffers = Minecraft.getInstance().renderBuffers().bufferSource();
             buffers.endBatch();

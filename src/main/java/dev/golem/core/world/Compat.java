@@ -36,6 +36,24 @@ public final class Compat {
         *///?}
     }
 
+    /** Tests a block against the tool tier used by the shared HBM mining tools. */
+    public static boolean isCorrectToolForDrops(
+            net.minecraft.world.level.block.state.BlockState state, int tier) {
+        //? if >=1.21.1 {
+        if (tier >= 4) return !state.is(net.minecraft.tags.BlockTags.INCORRECT_FOR_NETHERITE_TOOL);
+        if (tier == 3) return !state.is(net.minecraft.tags.BlockTags.INCORRECT_FOR_DIAMOND_TOOL);
+        if (tier == 2) return !state.is(net.minecraft.tags.BlockTags.INCORRECT_FOR_IRON_TOOL);
+        if (tier == 1) return !state.is(net.minecraft.tags.BlockTags.INCORRECT_FOR_STONE_TOOL);
+        return !state.is(net.minecraft.tags.BlockTags.INCORRECT_FOR_WOODEN_TOOL);
+        //?} else {
+        /*if (tier >= 4) return true;
+        if (tier == 3) return !state.is(net.minecraft.tags.BlockTags.NEEDS_DIAMOND_TOOL);
+        if (tier == 2) return !state.is(net.minecraft.tags.BlockTags.NEEDS_IRON_TOOL);
+        if (tier == 1) return !state.is(net.minecraft.tags.BlockTags.NEEDS_STONE_TOOL);
+        return !state.requiresCorrectToolForDrops();
+        *///?}
+    }
+
     /**
      * Runs an entity's fall-damage path for a fall of {@code fallDistance} blocks.
      *
@@ -62,6 +80,26 @@ public final class Compat {
         return player.getInventory().getSelectedSlot();
         //?} else {
         /*return player.getInventory().selected;
+        *///?}
+    }
+
+    /** Sets the selected hotbar slot across the private-access change at 26.1. */
+    public static void setSelectedSlot(net.minecraft.world.entity.player.Player player, int slot) {
+        //? if >=26.1 {
+        player.getInventory().setSelectedSlot(slot);
+        //?} else {
+        /*player.getInventory().selected = slot;
+        *///?}
+    }
+
+    /** Tells the client about a server-side selected-slot change across the packet rename. */
+    public static void syncSelectedSlot(net.minecraft.server.level.ServerPlayer player) {
+        //? if >=26.1 {
+        player.connection.send(new net.minecraft.network.protocol.game.ClientboundSetHeldSlotPacket(
+                selectedSlot(player)));
+        //?} else {
+        /*player.connection.send(new net.minecraft.network.protocol.game.ClientboundSetCarriedItemPacket(
+                selectedSlot(player)));
         *///?}
     }
 

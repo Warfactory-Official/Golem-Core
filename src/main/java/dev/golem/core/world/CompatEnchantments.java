@@ -80,6 +80,29 @@ public final class CompatEnchantments {
         *///?}
     }
 
+    /** Adjusts only Fortune on a stack while retaining every other enchantment. */
+    public static void adjustFortune(ServerLevel level, ItemStack stack, int delta) {
+        //? if >=1.21.1 {
+        var fortune = level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.FORTUNE);
+        int result = EnchantmentHelper.getItemEnchantmentLevel(fortune, stack) + delta;
+        stack.update(net.minecraft.core.component.DataComponents.ENCHANTMENTS,
+                net.minecraft.world.item.enchantment.ItemEnchantments.EMPTY, old -> {
+                    var mutable = new net.minecraft.world.item.enchantment.ItemEnchantments.Mutable(old);
+                    if (result > 0) mutable.set(fortune, result);
+                    else mutable.removeIf(holder -> holder.is(Enchantments.FORTUNE));
+                    return mutable.toImmutable();
+                });
+        //?} else {
+        /*net.minecraft.world.item.enchantment.Enchantment fortune = Enchantments.BLOCK_FORTUNE;
+        java.util.Map<net.minecraft.world.item.enchantment.Enchantment, Integer> enchantments =
+                EnchantmentHelper.getEnchantments(stack);
+        int result = enchantments.getOrDefault(fortune, 0) + delta;
+        if (result > 0) enchantments.put(fortune, result);
+        else enchantments.remove(fortune);
+        EnchantmentHelper.setEnchantments(enchantments, stack);
+        *///?}
+    }
+
     /** Whether an equipped stack may not be removed by a non-creative player. */
     public static boolean preventsArmorChange(ItemStack stack) {
         //? if >=1.21.1 {

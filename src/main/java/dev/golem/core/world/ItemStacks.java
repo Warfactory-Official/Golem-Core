@@ -1,6 +1,7 @@
 package dev.golem.core.world;
 
 import dev.golem.core.Ids;
+import dev.golem.core.data.GolemComponent;
 
 //? if >=1.20.5 {
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -55,6 +56,21 @@ public final class ItemStacks {
         //?} else {
         /*return ItemStack.isSameItem(first, second)
                 && ItemStack.isSameItemSameTags(first, second);
+        *///?}
+    }
+
+    /** Returns whether a stack carries only the metadata and damage used by a flattened item family. */
+    public static boolean hasOnlyVariantAndDamage(ItemStack stack, GolemComponent<?> variant) {
+        //? if >=1.20.5 {
+        for (var component : stack.getComponentsPatch().entrySet()) {
+            if (component.getKey() != variant.type()
+                    && component.getKey() != net.minecraft.core.component.DataComponents.DAMAGE) {
+                return false;
+            }
+        }
+        return true;
+        //?} else {
+        /*return true;
         *///?}
     }
 

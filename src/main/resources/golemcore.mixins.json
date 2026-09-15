@@ -6,7 +6,7 @@
   "compatibilityLevel": "${mixin_compatibility}",
   "mixins": ["MixinServerGamePacketListener", "MixinConnection", "MixinPacketListenerConnection",
     "MixinChunkMapPromotion"],
-  "client": ["MixinCamera", "MixinLivingEntityRenderer", "MixinHumanoidModel"${world_effect_mixins}${flywheel_be_mixins}],
+  "client": ["MixinCamera", "MixinLivingEntityRenderer", "MixinHumanoidModel"${legacy_item_owner_mixins}${world_effect_mixins}${flywheel_be_mixins}],
   "server": [],
   "injectors": {
     "defaultRequire": 1

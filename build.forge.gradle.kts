@@ -61,6 +61,8 @@ tasks.processResources {
         "forge_loader_range" to prop("deps.forge_loader_range"),
         "java_version" to javaVersion.toString(),
         "mixin_compatibility" to if (javaVersion <= 17) "JAVA_17" else "JAVA_21",
+        "legacy_item_owner_mixins" to if (mcVersion.substringBefore('.').toInt() < 26)
+            ", \"MixinItemRenderer\"" else "",
         "world_effect_mixins" to "",
         // No vendored engine below 26.1, so nothing to feed.
         "flywheel_be_mixins" to "",

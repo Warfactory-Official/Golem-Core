@@ -2,7 +2,7 @@ package dev.golem.core.mixin;
 
 //? if fabric && >=26.1 {
 
-import dev.golem.core.client.DebugLines;
+/*import dev.golem.core.client.DebugLines;
 import java.util.List;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.DebugScreenOverlay;
@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
+/^*
  * Appends Golem's debug-screen lines on Fabric.
  *
  * <p>26.1 made the debug screen a registry of {@code DebugScreenEntry}, but its registration method is
@@ -20,7 +20,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * loader needs bytecode.
  *
  * <p>The left column, where vanilla already keeps its chunk and entity render statistics.
- */
+ ^/
 @Mixin(DebugScreenOverlay.class)
 public class MixinDebugScreenLines {
 
@@ -31,4 +31,4 @@ public class MixinDebugScreenLines {
         DebugLines.collectInto(lines::add);
     }
 }
-//?}
+*///?}

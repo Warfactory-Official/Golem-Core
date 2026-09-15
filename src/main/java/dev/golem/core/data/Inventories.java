@@ -4,6 +4,10 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Item-list persistence in vanilla's {@code "Items"} format.
@@ -62,6 +66,33 @@ public final class Inventories {
         /*return inventory.items;
         *///?}
     }
+
+    /**
+     * Copies every slot owned by a player, including armor and offhand, plus the selected hotbar slot.
+     * This is deliberately an in-memory snapshot: player NBT is not a legal write surface for restoring
+     * a live player and would also lose component values on some supported versions.
+     */
+    public static PlayerSnapshot snapshot(Player player) {
+        Inventory inventory = player.getInventory();
+        List<ItemStack> slots = new ArrayList<>(inventory.getContainerSize());
+        for (int slot = 0; slot < inventory.getContainerSize(); slot++) slots.add(inventory.getItem(slot).copy());
+        return new PlayerSnapshot(List.copyOf(slots), dev.golem.core.world.Compat.selectedSlot(player));
+    }
+
+    /** Restores the exact copied slots and selected slot, returning true only after component-aware verification. */
+    public static boolean restore(Player player, PlayerSnapshot snapshot) {
+        Inventory inventory = player.getInventory();
+        if (inventory.getContainerSize() != snapshot.slots().size()) return false;
+        for (int slot = 0; slot < snapshot.slots().size(); slot++)
+            inventory.setItem(slot, snapshot.slots().get(slot).copy());
+        dev.golem.core.world.Compat.setSelectedSlot(player, snapshot.selectedSlot());
+        inventory.setChanged();
+        for (int slot = 0; slot < snapshot.slots().size(); slot++)
+            if (!ItemStack.matches(snapshot.slots().get(slot), inventory.getItem(slot))) return false;
+        return dev.golem.core.world.Compat.selectedSlot(player) == snapshot.selectedSlot();
+    }
+
+    public record PlayerSnapshot(List<ItemStack> slots, int selectedSlot) {}
 
     //? if >=26.1 {
     private static net.minecraft.world.level.storage.ValueOutput unwrap(DataOut out) {

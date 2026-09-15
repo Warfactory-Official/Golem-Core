@@ -52,6 +52,9 @@ public abstract class CompatParticle extends
     private static final int FULLBRIGHT = 0xF000F0;
 
     private ParticleLayer golemLayer = ParticleLayer.TRANSLUCENT;
+    private boolean planeOriented;
+    private float planeYaw;
+    private float planePitch;
 
     //? if >=26.1 {
     // PARTICLE_SNIPPET keeps the vanilla particle atlas bindings while this replaces only blend/depth.
@@ -132,6 +135,13 @@ public abstract class CompatParticle extends
         this.golemLayer = layer;
     }
 
+    /** Makes the quad lie in a world-oriented plane instead of facing the camera. */
+    public final void setPlaneOrientation(float yaw, float pitch) {
+        this.planeOriented = true;
+        this.planeYaw = yaw;
+        this.planePitch = pitch;
+    }
+
     /** The layer this particle draws with. */
     public final ParticleLayer layer() {
         return this.golemLayer;
@@ -160,10 +170,8 @@ public abstract class CompatParticle extends
      * a quarter turn about X, and a subclass's {@code roll} still spins it in place because roll is
      * applied afterwards.
      *
-     * <p><b>Honoured on 1.21+ only.</b> 1.20.1's {@code SingleQuadParticle} has no
-     * {@code FacingCameraMode} seam at all — the camera rotation is baked into its {@code render} —
-     * so a flat particle billboards there instead. Overriding {@code render} to fix that would mean
-     * reimplementing the whole quad build for one era; the wrong orientation is the cheaper wrong.
+     * <p>The Core-owned plane orientation seam is honoured on both eras. The older flat-particle
+     * convenience remains intentionally limited to 1.21+, where vanilla exposes a facing-mode hook.
      */
     protected boolean isFlatOnGround() {
         return false;
@@ -172,6 +180,11 @@ public abstract class CompatParticle extends
     //? if >=1.21 {
     @Override
     public net.minecraft.client.particle.SingleQuadParticle.FacingCameraMode getFacingCameraMode() {
+        if (this.planeOriented) {
+            return (target, camera, partialTick) -> target.identity()
+                    .rotateY((float) Math.toRadians(this.planeYaw))
+                    .rotateX((float) Math.toRadians(this.planePitch));
+        }
         if (!this.isFlatOnGround()) return super.getFacingCameraMode();
         return (target, camera, partialTick) -> target.rotationX((float) (-Math.PI / 2D));
     }
@@ -255,7 +268,10 @@ public abstract class CompatParticle extends
         this.getFacingCameraMode().setRotation(rotation, camera, partialTick);
         //?} else {
         /^// 1.20.1 has no FacingCameraMode seam; the camera's own rotation is all there is.
-        rotation = new org.joml.Quaternionf(camera.rotation());
+        rotation = this.planeOriented
+                ? new org.joml.Quaternionf().rotateY((float) Math.toRadians(this.planeYaw))
+                        .rotateX((float) Math.toRadians(this.planePitch))
+                : new org.joml.Quaternionf(camera.rotation());
         ^///?}
         if (this.roll != 0.0F) {
             rotation.rotateZ(net.minecraft.util.Mth.lerp(partialTick, this.oRoll, this.roll));

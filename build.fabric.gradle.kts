@@ -83,6 +83,8 @@ tasks.processResources {
         "fabric_loader" to prop("deps.fabric_loader"),
         "java_version" to javaVersion.toString(),
         "mixin_compatibility" to if (javaVersion <= 17) "JAVA_17" else "JAVA_21",
+        "legacy_item_owner_mixins" to if (mcVersion.substringBefore('.').toInt() < 26)
+            ", \"MixinItemRenderer\"" else "",
         "world_effect_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinWorldEffects\"" else "",
         // Fabric is told about client block entities by fabric-api, so it needs no mixin for it.
         "flywheel_be_mixins" to "",
