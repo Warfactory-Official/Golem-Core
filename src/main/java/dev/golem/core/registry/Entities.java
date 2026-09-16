@@ -88,4 +88,26 @@ public final class Entities {
         /*return type.create(level);
         *///?}
     }
+
+    /**
+     * Creates a throwaway entity on any level (a client preview that is never added to the world),
+     * across the entity-construction API change.
+     */
+    public static <T extends Entity> T createDetached(EntityType<T> type, net.minecraft.world.level.Level level) {
+        //? if >=26.1 {
+        return type.create(level, net.minecraft.world.entity.EntitySpawnReason.LOAD);
+        //?} else {
+        /*return type.create(level);
+        *///?}
+    }
+
+    /** Loads entity save data from a compound tag across the ValueInput rename. */
+    public static void loadFromTag(Entity entity, net.minecraft.nbt.CompoundTag tag) {
+        //? if >=26.1 {
+        entity.load(net.minecraft.world.level.storage.TagValueInput.create(
+                net.minecraft.util.ProblemReporter.DISCARDING, entity.level().registryAccess(), tag));
+        //?} else {
+        /*entity.load(tag);
+        *///?}
+    }
 }
