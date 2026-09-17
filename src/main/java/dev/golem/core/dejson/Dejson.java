@@ -55,6 +55,7 @@ public final class Dejson {
     private static final Map<String, Declaration> DECLARATIONS = new ConcurrentHashMap<>();
     private static final Map<String, ItemDeclaration> ITEM_DECLARATIONS = new ConcurrentHashMap<>();
     private static final Map<String, JsonObject> ITEM_DEFINITIONS = new ConcurrentHashMap<>();
+    private static final Map<String, String> GENERATED_SPRITES = new ConcurrentHashMap<>();
 
     private Dejson() {}
 
@@ -113,6 +114,32 @@ public final class Dejson {
         return Collections.unmodifiableSet(MODELS.keySet());
     }
 
+    /**
+     * Declares that {@code source} is recoloured into one sprite per permutation while the atlas is
+     * stitched, so those sprites are never files.
+     *
+     * <p>The existence check would otherwise report every one of them missing, which is the right
+     * answer for a typo and the wrong one for a sprite that is computed. Naming the source here keeps
+     * the check strict in the way that still matters: the greyscale art the permutations are derived
+     * from has to be on disk, and a permutation of a source that is not gets reported against the
+     * source.
+     *
+     * @param source       the sprite id the art is shipped under, e.g. {@code hbm:items/plate_cast}
+     * @param separator    what joins the source id and the permutation name
+     * @param permutations the permutation names, e.g. the material names
+     * @see dev.golem.core.render.Sprites
+     */
+    public static void generatedSprites(String source, String separator, Collection<String> permutations) {
+        for (String permutation : permutations) {
+            GENERATED_SPRITES.put(source + separator + permutation, source);
+        }
+    }
+
+    /** Generated sprite id to the source it is computed from. */
+    public static Map<String, String> generatedSprites() {
+        return Collections.unmodifiableMap(GENERATED_SPRITES);
+    }
+
     /** Every sprite id named by every declaration, for the delivery layer's existence check. */
     public static Set<String> sprites() {
         Set<String> sprites = new LinkedHashSet<>();
@@ -132,6 +159,7 @@ public final class Dejson {
         DECLARATIONS.clear();
         ITEM_DECLARATIONS.clear();
         ITEM_DEFINITIONS.clear();
+        GENERATED_SPRITES.clear();
         Data.reset();
     }
 

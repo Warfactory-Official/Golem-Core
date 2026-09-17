@@ -209,6 +209,38 @@ exists. Both registries must hold the same renderer instance, so registration ta
 `Visuals.owns(pos)` is how the two backends stay out of each other's way — the vanilla path asks whether
 a healthy visual already claimed this frame and returns without drawing when it has.
 
+## Generated Sprites
+
+`dev.golem.core.render.Sprites` is for the textures a mod computes rather than ships. A declaration
+names one greyscale source and a table of colour pairs, and the atlas gains one sprite per pair while
+it is stitched:
+
+```java
+Sprites.remap(Sprites.Atlas.ITEMS)
+        .texture("hbm:items/plate_cast")
+        .permutation("iron", 0xFFFFFF, 0x353535)
+        .permutation("copper", 0xFDCA88, 0x601E0D)
+        .declare();
+```
+
+`hbm:items/plate_cast_iron` and `hbm:items/plate_cast_copper` are then sprite ids like any other, named
+by a model the ordinary way, and no file for either exists. The remap is per channel and linear —
+`ColorRamp` maps the source band (white down to `#505050` by default) onto the pair — so a highlight
+lands on the light colour and a shadow on the dark one. **A tint is not a substitute.** A multiply has
+no offset term, so it can reach one end of the pair or the other but never both, and shadows collapse
+toward hue-times-black; across HBM's material roster that is a mean error of 26.5/255 per channel.
+
+Declaring is the default and needs no resource at all. The same source type is registered for resource
+packs as `golemcore:interpolated_remap`, which is what a pack writes in its own `atlases/` file; a mod
+that ships only JSON calls `Sprites.install()` once so the type is known before the pack is read.
+Declared sources run *before* the atlas's own, so a real PNG at a generated sprite's path still wins and
+overriding one recoloured sprite stays a one-file job.
+
+`Atlas.ITEMS` is its own atlas from 1.21.4 and part of the block atlas before it. Everything else this
+touches also moved: the source list was renamed between 1.20.1 and 1.21, the registry of source types
+became a late-bound id mapper at 26.1, `SpriteSourceType` holds a `Codec` on 1.20.1 and a `MapCodec`
+after it, and only NeoForge publishes an event to register one. None of that reaches a consumer.
+
 ## Item Display Frames
 
 `dev.golem.core.render.display` is the 1.7 half of an item icon. A ported icon is a **frame** times a

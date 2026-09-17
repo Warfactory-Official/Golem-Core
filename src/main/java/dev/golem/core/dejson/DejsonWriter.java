@@ -114,7 +114,11 @@ public final class DejsonWriter {
      */
     public static List<String> missingSprites(Path authored) {
         List<String> missing = new ArrayList<>();
-        for (String sprite : Dejson.sprites()) {
+        Map<String, String> generated = Dejson.generatedSprites();
+        for (String declared : Dejson.sprites()) {
+            // A generated sprite has no file of its own; what has to exist is the art it is computed
+            // from, and reporting that is what points at the fixable thing.
+            String sprite = generated.getOrDefault(declared, declared);
             int colon = sprite.indexOf(':');
             String namespace = colon < 0 ? "minecraft" : sprite.substring(0, colon);
             String path = sprite.substring(colon + 1);
@@ -122,7 +126,7 @@ public final class DejsonWriter {
             if ("minecraft".equals(namespace) || !Files.isDirectory(textures)) {
                 continue;
             }
-            if (!Files.exists(textures.resolve(path + ".png"))) {
+            if (!Files.exists(textures.resolve(path + ".png")) && !missing.contains(sprite)) {
                 missing.add(sprite);
             }
         }
