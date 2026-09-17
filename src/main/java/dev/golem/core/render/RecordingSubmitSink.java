@@ -31,11 +31,20 @@ import java.util.List;
  ^/
 public final class RecordingSubmitSink implements SubmitSink {
 
-    private sealed interface Entry permits GeometryEntry, ItemEntry, TextEntry { int order(); }
+    private sealed interface Entry permits GeometryEntry, ItemEntry, TextEntry, BlockEntry, MovingBlockEntry,
+            BlockEntityEntry { int order(); }
     private record GeometryEntry(int order, Matrix4f pose, Matrix3f normal, RenderType renderType,
                                  CustomGeometry geometry) implements Entry {}
     private record ItemEntry(int order, PoseStack poseStack, CompatItemRenderState item, int light,
                              int overlay) implements Entry {}
+    private record BlockEntry(int order, PoseStack poseStack, net.minecraft.world.level.block.state.BlockState state,
+                              int light, int overlay) implements Entry {}
+    private record MovingBlockEntry(int order, PoseStack poseStack, net.minecraft.world.level.block.state.BlockState state,
+                                    net.minecraft.world.level.Level level, net.minecraft.core.BlockPos pos,
+                                    net.minecraft.core.BlockPos seedPos) implements Entry {}
+    private record BlockEntityEntry(int order, PoseStack poseStack,
+                                    net.minecraft.world.level.block.entity.BlockEntity blockEntity,
+                                    float partialTicks) implements Entry {}
     private record TextEntry(int order, PoseStack poseStack, Font font, float x, float y, FormattedCharSequence text,
                              boolean shadow, Font.DisplayMode mode, int light, int color, int background) implements Entry {}
 
@@ -96,6 +105,32 @@ public final class RecordingSubmitSink implements SubmitSink {
         sink().add(new ItemEntry(order, copy, item, light, overlay));
     }
 
+    private static PoseStack copyOf(PoseStack poseStack) {
+        PoseStack copy = new PoseStack();
+        copy.last().pose().set(poseStack.last().pose());
+        copy.last().normal().set(poseStack.last().normal());
+        return copy;
+    }
+
+    @Override
+    public void submitBlock(PoseStack poseStack, CompatBlockRenderState block, int light, int overlay) {
+        if (block.isEmpty() || block.state == null) return;
+        sink().add(new BlockEntry(order, copyOf(poseStack), block.state, light, overlay));
+    }
+
+    @Override
+    public void submitMovingBlock(PoseStack poseStack, CompatMovingBlock block) {
+        if (block.isEmpty() || block.blockState() == null || block.level == null || block.pos == null) return;
+        sink().add(new MovingBlockEntry(order, copyOf(poseStack), block.blockState(), block.level, block.pos,
+                block.seedPos == null ? block.pos : block.seedPos));
+    }
+
+    @Override
+    public void submitBlockEntity(PoseStack poseStack, CompatBlockEntityRenderState blockEntity) {
+        if (blockEntity.isEmpty() || blockEntity.blockEntity == null) return;
+        sink().add(new BlockEntityEntry(order, copyOf(poseStack), blockEntity.blockEntity, blockEntity.partialTicks));
+    }
+
     @Override
     public void submitText(PoseStack poseStack, Font font, float x, float y, FormattedCharSequence text,
                            boolean shadow, Font.DisplayMode mode, int light, int color, int background) {
@@ -135,6 +170,21 @@ public final class RecordingSubmitSink implements SubmitSink {
                     e.geometry().render(poseStack.last(), buffer);
                 } else if (entry instanceof ItemEntry e) {
                     e.item().draw(e.poseStack(), bufferSource, e.light(), e.overlay(), level);
+                } else if (entry instanceof BlockEntry e) {
+                    net.minecraft.client.Minecraft.getInstance().getBlockRenderer()
+                            .renderSingleBlock(e.state(), e.poseStack(), bufferSource, e.light(), e.overlay());
+                } else if (entry instanceof MovingBlockEntry e) {
+                    // Vanilla's falling-block path: the block is tesselated against the live level so it picks
+                    // up the light of the position it is passing through, seeded by where it started.
+                    net.minecraft.client.renderer.block.BlockRenderDispatcher dispatcher =
+                            net.minecraft.client.Minecraft.getInstance().getBlockRenderer();
+                    VertexConsumer buffer = bufferSource.getBuffer(
+                            net.minecraft.client.renderer.ItemBlockRenderTypes.getMovingBlockRenderType(e.state()));
+                    dispatcher.renderBatched(e.state(), e.pos(), e.level(), e.poseStack(), buffer, false,
+                            net.minecraft.util.RandomSource.create(e.state().getSeed(e.seedPos())));
+                } else if (entry instanceof BlockEntityEntry e) {
+                    net.minecraft.client.Minecraft.getInstance().getBlockEntityRenderDispatcher()
+                            .render(e.blockEntity(), e.partialTicks(), e.poseStack(), bufferSource);
                 } else if (entry instanceof TextEntry e) {
                     e.font().drawInBatch(e.text(), e.x(), e.y(), e.color(), e.shadow(), e.poseStack().last().pose(),
                             bufferSource, e.mode(), e.background(), e.light());

@@ -110,4 +110,29 @@ public final class Lifecycle {
                 });
         *///?}
     }
+    /** Runs once the server has finished starting, every level loaded. */
+    public static void onServerStarted(Consumer<MinecraftServer> handler) {
+        //? if fabric {
+        /*net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STARTED.register(handler::accept);
+        *///?} elif neoforge {
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.event.server.ServerStartedEvent event) -> handler.accept(event.getServer()));
+        //?} elif forge {
+        /*net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(
+                (net.minecraftforge.event.server.ServerStartedEvent event) -> handler.accept(event.getServer()));
+        *///?}
+    }
+
+    /** Runs when the server begins stopping, before levels are saved and unloaded. */
+    public static void onServerStopping(Consumer<MinecraftServer> handler) {
+        //? if fabric {
+        /*net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STOPPING.register(handler::accept);
+        *///?} elif neoforge {
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.event.server.ServerStoppingEvent event) -> handler.accept(event.getServer()));
+        //?} elif forge {
+        /*net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(
+                (net.minecraftforge.event.server.ServerStoppingEvent event) -> handler.accept(event.getServer()));
+        *///?}
+    }
 }

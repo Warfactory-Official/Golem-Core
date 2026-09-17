@@ -1,5 +1,6 @@
 package dev.golem.core.data;
 
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
@@ -46,6 +47,14 @@ public abstract class CompatEntity extends Entity {
         return shouldIgnoreExplosion();
     }
     //?}
+
+    //? if <26.1 {
+    /*// 26.1 Entity.isInvulnerableToBase: the vanilla invulnerability answer, backported so a subclass can
+    // spell it the 26.1 way on every node.
+    protected final boolean isInvulnerableToBase(net.minecraft.world.damagesource.DamageSource source) {
+        return super.isInvulnerableTo(source);
+    }
+    *///?}
 
     /** Reads this entity's persisted state. */
     protected void loadData(DataIn in) {}
@@ -158,6 +167,60 @@ public abstract class CompatEntity extends Entity {
     public final net.minecraft.world.InteractionResult interact(net.minecraft.world.entity.player.Player player,
                                                                 net.minecraft.world.InteractionHand hand) {
         return onInteract(player, hand);
+    }
+    *///?}
+
+    /**
+     * Client interpolation for this entity, or null for none (vanilla's default for a plain entity). An
+     * entity that overrides this owns one {@link dev.golem.core.world.EntityInterpolation} and calls its
+     * {@code interpolate()} from its client tick.
+     */
+    protected dev.golem.core.world.@org.jspecify.annotations.Nullable EntityInterpolation interpolation() {
+        return null;
+    }
+
+    //? if >=26.1 {
+    @Override
+    public final net.minecraft.world.entity.@org.jspecify.annotations.Nullable InterpolationHandler getInterpolation() {
+        dev.golem.core.world.EntityInterpolation interpolation = interpolation();
+        return interpolation == null ? null : interpolation.handler();
+    }
+    //?} elif >=1.21.1 {
+    /*@Override
+    public void lerpTo(double x, double y, double z, float yRot, float xRot, int steps) {
+        dev.golem.core.world.EntityInterpolation interpolation = interpolation();
+        if (interpolation == null) super.lerpTo(x, y, z, yRot, xRot, steps);
+        else interpolation.interpolateTo(new net.minecraft.world.phys.Vec3(x, y, z), yRot, xRot);
+    }
+    *///?} else {
+    /*@Override
+    public void lerpTo(double x, double y, double z, float yRot, float xRot, int steps, boolean teleport) {
+        dev.golem.core.world.EntityInterpolation interpolation = interpolation();
+        if (interpolation == null) super.lerpTo(x, y, z, yRot, xRot, steps, teleport);
+        else interpolation.interpolateTo(new net.minecraft.world.phys.Vec3(x, y, z), yRot, xRot);
+    }
+    *///?}
+
+    /** 26.1 {@code applyEffectsFromBlocks}; {@code checkInsideBlocks} before 1.21.2 (protected there, hence the facade). */
+    protected final void compatApplyEffectsFromBlocks() {
+        //? if >=26.1 {
+        applyEffectsFromBlocks();
+        //?} else {
+        /*checkInsideBlocks();
+        *///?}
+    }
+
+    //? if <26.1 {
+    /*public net.minecraft.world.entity.item.ItemEntity spawnAtLocation(ServerLevel level, net.minecraft.world.item.ItemStack stack) {
+        return super.spawnAtLocation(stack);
+    }
+
+    public net.minecraft.world.entity.item.ItemEntity spawnAtLocation(ServerLevel level, net.minecraft.world.item.ItemStack stack, float offset) {
+        return super.spawnAtLocation(stack, offset);
+    }
+
+    public net.minecraft.world.entity.item.ItemEntity spawnAtLocation(ServerLevel level, net.minecraft.world.level.ItemLike item) {
+        return super.spawnAtLocation(item);
     }
     *///?}
 }

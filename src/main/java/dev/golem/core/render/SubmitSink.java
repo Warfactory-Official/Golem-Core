@@ -45,6 +45,25 @@ public interface SubmitSink {
      */
     void submitItem(PoseStack poseStack, CompatItemRenderState item, int light, int overlay, int seed);
 
+    /**
+     * Draws a block state as a free-standing model at the pose — a disguise, a display block. The
+     * block is lit by {@code light}, not by the world, exactly like an item.
+     */
+    void submitBlock(PoseStack poseStack, CompatBlockRenderState block, int light, int overlay);
+
+    /**
+     * Draws a block in flight with the world lighting of the position it was extracted at, the way
+     * vanilla draws falling sand. The block model's origin is the pose; callers translate by
+     * {@code (-0.5, 0, -0.5)} to centre it on an entity.
+     */
+    void submitMovingBlock(PoseStack poseStack, CompatMovingBlock block);
+
+    /**
+     * Draws a block entity that is not in the world through its own registered renderer. Nothing is
+     * drawn for a block entity without one.
+     */
+    void submitBlockEntity(PoseStack poseStack, CompatBlockEntityRenderState blockEntity);
+
     /** Submits text with the same deferred-pose and ordering rules as geometry. */
     void submitText(PoseStack poseStack, Font font, float x, float y, FormattedCharSequence text,
                     boolean shadow, Font.DisplayMode mode, int light, int color, int backgroundColor);

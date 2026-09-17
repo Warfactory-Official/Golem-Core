@@ -83,6 +83,17 @@ public final class Effects {
      * what an effect re-applied every tick — a full-set armour bonus, say — needs if it is not to bury
      * the wearer in them.
      */
+    /** {@link #instanceRegistered(MobEffect, int, int)} with the ambient/visible flags. */
+    public static MobEffectInstance instanceRegistered(MobEffect effect, int duration, int amplifier,
+            boolean ambient, boolean visible) {
+        //? if >=1.21 {
+        return instance(net.minecraft.core.registries.BuiltInRegistries.MOB_EFFECT.wrapAsHolder(effect),
+                duration, amplifier, ambient, visible);
+        //?} else {
+        /*return instance(effect, duration, amplifier, ambient, visible);
+        *///?}
+    }
+
     public static MobEffectInstance instance(Object effect, int duration, int amplifier, boolean ambient,
             boolean visible) {
         return instance(effect, duration, amplifier, ambient, visible, true);
@@ -192,4 +203,9 @@ public final class Effects {
         *///?}
     }
 
+
+    /** {@link #ignite(Entity, int)} for the 26.1 float spelling. */
+    public static void ignite(Entity entity, float seconds) {
+        ignite(entity, (int) Math.ceil(seconds));
+    }
 }

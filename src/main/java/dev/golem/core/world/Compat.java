@@ -417,4 +417,270 @@ public final class Compat {
         /*oldState.onRemove(level, pos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), false);
         *///?}
     }
+
+    // --- game rules and entity world-mutation permissions ---
+
+    /**
+     * Whether {@code entity} may alter the world, the {@code mobGriefing} rule. NeoForge additionally
+     * fires an event here; the gamerule is the portable answer and what Fabric gives on every version.
+     */
+    public static boolean canEntityGrief(ServerLevel level, Entity entity) {
+        return mobGriefing(level);
+    }
+
+    /** The {@code mobGriefing} game rule across the 26.1 typed game-rule API change. */
+    public static boolean mobGriefing(ServerLevel level) {
+        //? if >=26.1 {
+        return level.getGameRules().get(net.minecraft.world.level.gamerules.GameRules.MOB_GRIEFING);
+        //?} else {
+        /*return level.getGameRules().getBoolean(net.minecraft.world.level.GameRules.RULE_MOBGRIEFING);
+        *///?}
+    }
+
+    /** The {@code doEntityDrops} game rule across the 26.1 typed game-rule API change. */
+    public static boolean entityDrops(ServerLevel level) {
+        //? if >=26.1 {
+        return level.getGameRules().get(net.minecraft.world.level.gamerules.GameRules.ENTITY_DROPS);
+        //?} else {
+        /*return level.getGameRules().getBoolean(net.minecraft.world.level.GameRules.RULE_DOENTITYDROPS);
+        *///?}
+    }
+
+    /** The {@code doTileDrops} game rule across the 26.1 typed game-rule API change. */
+    public static boolean blockDrops(ServerLevel level) {
+        //? if >=26.1 {
+        return level.getGameRules().get(net.minecraft.world.level.gamerules.GameRules.BLOCK_DROPS);
+        //?} else {
+        /*return level.getGameRules().getBoolean(net.minecraft.world.level.GameRules.RULE_DOBLOCKDROPS);
+        *///?}
+    }
+
+    /**
+     * Whether a mob may break {@code state} at {@code pos}. Vanilla has no such question; the loader
+     * events that answer it are not bridged, so this is the permissive Fabric answer everywhere.
+     */
+    public static boolean canEntityDestroyBlock(ServerLevel level, net.minecraft.core.BlockPos pos,
+                                                net.minecraft.world.level.block.state.BlockState state,
+                                                net.minecraft.world.entity.LivingEntity entity) {
+        return true;
+    }
+
+    /**
+     * Drops an item from an entity across the 26.1 {@code spawnAtLocation(ServerLevel, ...)} change.
+     * The override side lives in the {@code dev.golem.core.data} entity facades.
+     */
+    public static net.minecraft.world.entity.item.ItemEntity spawnAtLocation(Entity entity, ServerLevel level,
+                                                                             ItemStack stack) {
+        //? if >=26.1 {
+        return entity.spawnAtLocation(level, stack);
+        //?} else {
+        /*return entity.spawnAtLocation(stack);
+        *///?}
+    }
+
+    /** {@link #spawnAtLocation(Entity, ServerLevel, ItemStack)} with the vertical offset overload. */
+    public static net.minecraft.world.entity.item.ItemEntity spawnAtLocation(Entity entity, ServerLevel level,
+                                                                             ItemStack stack, float offset) {
+        //? if >=26.1 {
+        return entity.spawnAtLocation(level, stack, offset);
+        //?} else {
+        /*return entity.spawnAtLocation(stack, offset);
+        *///?}
+    }
+
+    /** {@code Mob.doHurtTarget} across the 26.1 explicit-level change. */
+    public static boolean doHurtTarget(net.minecraft.world.entity.Mob mob, ServerLevel level, Entity target) {
+        //? if >=26.1 {
+        return mob.doHurtTarget(level, target);
+        //?} else {
+        /*return mob.doHurtTarget(target);
+        *///?}
+    }
+
+    /** {@code LivingEntity.isInvulnerableTo} across the 26.1 explicit-level change. */
+    public static boolean isInvulnerableTo(net.minecraft.world.entity.LivingEntity entity, ServerLevel level,
+                                           DamageSource source) {
+        //? if >=26.1 {
+        return entity.isInvulnerableTo(level, source);
+        //?} else {
+        /*return entity.isInvulnerableTo(source);
+        *///?}
+    }
+
+    /** {@code Entity.lerpMotion} across the 26.1 vector-argument change. */
+    public static void lerpMotion(Entity entity, net.minecraft.world.phys.Vec3 movement) {
+        //? if >=26.1 {
+        entity.lerpMotion(movement);
+        //?} else {
+        /*entity.lerpMotion(movement.x, movement.y, movement.z);
+        *///?}
+    }
+    /** The explosion knockback resistance attribute (added in 1.21); 0 where the attribute does not exist. */
+    public static double explosionKnockbackResistance(net.minecraft.world.entity.LivingEntity living) {
+        //? if >=1.21.1 {
+        return living.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.EXPLOSION_KNOCKBACK_RESISTANCE);
+        //?} else {
+        /*return 0.0D;
+        *///?}
+    }
+
+    /**
+     * Pushes the entity's exact server position to every tracking client at once (1.7
+     * {@code setPositionAndUpdate} after a bounce), across the teleport-packet rename.
+     */
+    public static void syncPosition(Entity entity) {
+        if (!(entity.level() instanceof ServerLevel server)) return;
+        //? if >=26.1 {
+        server.getChunkSource().chunkMap.sendToTrackingPlayers(entity,
+                net.minecraft.network.protocol.game.ClientboundEntityPositionSyncPacket.of(entity));
+        //?} else {
+        /*server.getChunkSource().chunkMap.broadcast(entity,
+                new net.minecraft.network.protocol.game.ClientboundTeleportEntityPacket(entity));
+        *///?}
+    }
+
+
+    /** 26.1 {@code VehicleEntity.setInitialPos}: place a freshly created vehicle with no motion and no prior position. */
+    public static void setInitialPos(Entity entity, double x, double y, double z) {
+        entity.setPos(x, y, z);
+        entity.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+        entity.xo = x;
+        entity.yo = y;
+        entity.zo = z;
+    }
+
+    /** {@code Entity.kill}, which took the level from 26.1 on. */
+    public static void kill(Entity entity, ServerLevel level) {
+        //? if >=26.1 {
+        entity.kill(level);
+        //?} else {
+        /*entity.kill();
+        *///?}
+    }
+
+    /** Sends a packet to every client tracking {@code entity}, across the chunk-map method rename. */
+    public static void sendToTrackingPlayers(Entity entity,
+            net.minecraft.network.protocol.Packet<? super net.minecraft.network.protocol.game.ClientGamePacketListener> packet) {
+        if (!(entity.level() instanceof ServerLevel server)) return;
+        //? if >=26.1 {
+        server.getChunkSource().chunkMap.sendToTrackingPlayers(entity, packet);
+        //?} else {
+        /*server.getChunkSource().chunkMap.broadcast(entity, packet);
+        *///?}
+    }
+
+    /** 26.1 {@code Block.UPDATE_SKIP_BLOCK_ENTITY_SIDEEFFECTS}; no such flag exists before it (0 = no-op bit). */
+    public static final int UPDATE_SKIP_BLOCK_ENTITY_SIDEEFFECTS =
+            //? if >=26.1 {
+            net.minecraft.world.level.block.Block.UPDATE_SKIP_BLOCK_ENTITY_SIDEEFFECTS;
+            //?} else {
+            /*0;
+            *///?}
+
+    /** A dust particle of one packed RGB colour, across the colour-argument type change. */
+    public static net.minecraft.core.particles.DustParticleOptions dust(int rgb, float scale) {
+        //? if >=26.1 {
+        return new net.minecraft.core.particles.DustParticleOptions(rgb, scale);
+        //?} else {
+        /*return new net.minecraft.core.particles.DustParticleOptions(
+                net.minecraft.world.phys.Vec3.fromRGB24(rgb).toVector3f(), scale);
+        *///?}
+    }
+
+    /** A boss bar owned by {@code owner}; 26.1 keys it by the owner's UUID, older versions mint their own. */
+    public static net.minecraft.server.level.ServerBossEvent bossEvent(Entity owner, net.minecraft.network.chat.Component name,
+            net.minecraft.world.BossEvent.BossBarColor color, net.minecraft.world.BossEvent.BossBarOverlay overlay) {
+        //? if >=26.1 {
+        return new net.minecraft.server.level.ServerBossEvent(owner.getUUID(), name, color, overlay);
+        //?} else {
+        /*return new net.minecraft.server.level.ServerBossEvent(name, color, overlay);
+        *///?}
+    }
+
+    /** The rider's forward/back input as -1/0/1 (26.1 {@code getLastClientInput}; earlier the {@code zza} axis). */
+    public static int clientForwardInput(net.minecraft.server.level.ServerPlayer player) {
+        //? if >=26.1 {
+        boolean f = player.getLastClientInput().forward();
+        boolean b = player.getLastClientInput().backward();
+        return f == b ? 0 : f ? 1 : -1;
+        //?} else {
+        /*return player.zza > 0 ? 1 : player.zza < 0 ? -1 : 0;
+        *///?}
+    }
+
+    /** A random item of a tag, or empty when the tag is empty/absent (26.1 {@code Registry.getRandomElementOf}). */
+    public static java.util.Optional<net.minecraft.world.item.Item> randomItemOf(
+            net.minecraft.tags.TagKey<net.minecraft.world.item.Item> tag, net.minecraft.util.RandomSource random) {
+        //? if >=26.1 {
+        return net.minecraft.core.registries.BuiltInRegistries.ITEM.getRandomElementOf(tag, random)
+                .map(net.minecraft.core.Holder::value);
+        //?} else {
+        /*return net.minecraft.core.registries.BuiltInRegistries.ITEM.getTag(tag)
+                .flatMap(named -> named.getRandomElement(random)).map(net.minecraft.core.Holder::value);
+        *///?}
+    }
+
+    /** One large-ball firework burst of a single colour with trail and flicker, in each era's explosion format. */
+    public static void fireworkBurst(net.minecraft.world.level.Level level, double x, double y, double z, int color) {
+        //? if >=1.20.5 {
+        level.createFireworks(x, y, z, 0.0D, 0.0D, 0.0D, java.util.List.of(
+                new net.minecraft.world.item.component.FireworkExplosion(
+                        net.minecraft.world.item.component.FireworkExplosion.Shape.LARGE_BALL,
+                        it.unimi.dsi.fastutil.ints.IntList.of(color), it.unimi.dsi.fastutil.ints.IntList.of(), true, true)));
+        //?} else {
+        /*net.minecraft.nbt.CompoundTag explosion = new net.minecraft.nbt.CompoundTag();
+        explosion.putByte("Type", (byte) 1); // LARGE_BALL
+        explosion.putIntArray("Colors", new int[]{color});
+        explosion.putBoolean("Trail", true);
+        explosion.putBoolean("Flicker", true);
+        net.minecraft.nbt.ListTag explosions = new net.minecraft.nbt.ListTag();
+        explosions.add(explosion);
+        net.minecraft.nbt.CompoundTag fireworks = new net.minecraft.nbt.CompoundTag();
+        fireworks.put("Explosions", explosions);
+        level.createFireworks(x, y, z, 0.0D, 0.0D, 0.0D, fireworks);
+        *///?}
+    }
+
+    /** {@code -1} water pathfinding malus (26.1 {@code PathType.WATER}; {@code BlockPathTypes.WATER} before 1.20.5). */
+    public static void avoidWater(net.minecraft.world.entity.Mob mob) {
+        //? if >=1.20.5 {
+        mob.setPathfindingMalus(net.minecraft.world.level.pathfinder.PathType.WATER, -1.0F);
+        //?} else {
+        /*mob.setPathfindingMalus(net.minecraft.world.level.pathfinder.BlockPathTypes.WATER, -1.0F);
+        *///?}
+    }
+
+    /** The attacker's looting level (1.7 {@code EnchantmentHelper.getLootingModifier}), across the holder-keyed enchantment API. */
+    public static int lootingLevel(ServerLevel level, net.minecraft.world.entity.LivingEntity attacker) {
+        //? if >=1.21.1 {
+        net.minecraft.core.Holder<net.minecraft.world.item.enchantment.Enchantment> looting = level.registryAccess()
+                .lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT)
+                .getOrThrow(net.minecraft.world.item.enchantment.Enchantments.LOOTING);
+        return net.minecraft.world.item.enchantment.EnchantmentHelper.getEnchantmentLevel(looting, attacker);
+        //?} else {
+        /*return net.minecraft.world.item.enchantment.EnchantmentHelper.getMobLooting(attacker);
+        *///?}
+    }
+
+    /** Creative-style infinite materials (1.20.5 {@code hasInfiniteMaterials}; {@code instabuild} before). */
+    public static boolean hasInfiniteMaterials(net.minecraft.world.entity.player.Player player) {
+        //? if >=1.20.5 {
+        return player.hasInfiniteMaterials();
+        //?} else {
+        /*return player.getAbilities().instabuild;
+        *///?}
+    }
+
+    /** Post-attack enchantment effects on a hit (1.21.1's item-source form; the paired hurt/damage hooks before). */
+    public static void doPostAttackEffects(ServerLevel level, net.minecraft.world.entity.LivingEntity target,
+                                           net.minecraft.world.damagesource.DamageSource source) {
+        //? if >=1.21.1 {
+        net.minecraft.world.item.enchantment.EnchantmentHelper.doPostAttackEffectsWithItemSource(level, target, source, null);
+        //?} else {
+        /*if (source.getEntity() instanceof net.minecraft.world.entity.LivingEntity attacker) {
+            net.minecraft.world.item.enchantment.EnchantmentHelper.doPostHurtEffects(target, attacker);
+            net.minecraft.world.item.enchantment.EnchantmentHelper.doPostDamageEffects(attacker, target);
+        }
+        *///?}
+    }
 }

@@ -84,6 +84,13 @@ public class CompatItem extends Item {
                                        Entity owner, EquipmentSlot slot, boolean held) {
     }
 
+    /** Runs this item's server inventory tick from outside (an AI holding the item), in the 26.1 shape. */
+    public final void tickInventoryCompat(ItemStack stack, net.minecraft.server.level.ServerLevel level,
+                                          Entity owner, EquipmentSlot slot) {
+        compatInventoryTick(stack, level, owner, slot,
+                slot == EquipmentSlot.MAINHAND || slot == EquipmentSlot.OFFHAND);
+    }
+
     /**
      * Whether this item may break a block at all. Returning false leaves the block untouched, which is
      * what an item bound to the attack button — a gun — needs.

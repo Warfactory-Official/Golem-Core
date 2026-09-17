@@ -36,6 +36,15 @@ public final class Entities {
         *///?}
     }
 
+    /** The builder's eye height (1.20.5+); 1.20.1 derives it from the hitbox and has no such option. */
+    public static <T extends Entity> EntityType.Builder<T> eyeHeight(EntityType.Builder<T> builder, float eyeHeight) {
+        //? if >=1.20.5 {
+        return builder.eyeHeight(eyeHeight);
+        //?} else {
+        /*return builder;
+        *///?}
+    }
+
     /** Keeps moving entities' velocity packets enabled on loaders that expose that builder option. */
     public static <T extends Entity> EntityType.Builder<T> trackDeltas(EntityType.Builder<T> builder) {
         //? if neoforge || forge {
@@ -86,6 +95,20 @@ public final class Entities {
         return type.create(level, net.minecraft.world.entity.EntitySpawnReason.TRIGGERED);
         //?} else {
         /*return type.create(level);
+        *///?}
+    }
+
+    /**
+     * Creates an entity with an explicit spawn reason where the constructor takes one (26.1+); older
+     * versions only consumed the reason through {@code EntityType.spawn}, so {@code create(Level)} is used.
+     */
+    public static <T extends Entity> T create(EntityType<T> type, net.minecraft.world.level.Level level,
+            //? if >=26.1 {
+            net.minecraft.world.entity.EntitySpawnReason reason) {
+        return type.create(level, reason);
+        //?} else {
+        /*net.minecraft.world.entity.MobSpawnType reason) {
+        return type.create(level);
         *///?}
     }
 

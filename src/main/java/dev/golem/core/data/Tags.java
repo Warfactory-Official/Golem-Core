@@ -116,4 +116,35 @@ public final class Tags {
         /*return tag.getAllKeys();
         *///?}
     }
+
+    /** A compound-element list across the 26.1 typed-getter change (missing or wrongly typed: empty). */
+    public static net.minecraft.nbt.ListTag getListOrEmpty(CompoundTag tag, String name) {
+        //? if >=26.1 {
+        return tag.getListOrEmpty(name);
+        //?} else {
+        /*return tag.getList(name, net.minecraft.nbt.Tag.TAG_COMPOUND);
+        *///?}
+    }
+
+    /** The compound at {@code index} of a list, across the 26.1 typed-getter change. */
+    public static CompoundTag getCompoundOrEmpty(net.minecraft.nbt.ListTag list, int index) {
+        //? if >=26.1 {
+        return list.getCompoundOrEmpty(index);
+        //?} else {
+        /*return list.getCompound(index);
+        *///?}
+    }
+
+    /** Whether the tag holds {@code name} at all, across the key-lookup rename. */
+    public static boolean contains(CompoundTag tag, String name) {
+        return tag.contains(name);
+    }
+
+    /** Visits every entry of a compound (26.1 {@code CompoundTag.forEach}). */
+    public static void forEach(CompoundTag tag, java.util.function.BiConsumer<String, net.minecraft.nbt.Tag> visitor) {
+        for (String key : keys(tag)) {
+            net.minecraft.nbt.Tag value = tag.get(key);
+            if (value != null) visitor.accept(key, value);
+        }
+    }
 }

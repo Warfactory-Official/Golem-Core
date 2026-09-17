@@ -141,4 +141,41 @@ public final class BlockEntities {
         /*return BlockEntity.loadStatic(pos, state, tag);
         *///?}
     }
+    /** The block entity's custom data (no id/position), across the ValueOutput rewrite. */
+    public static CompoundTag saveWithoutMetadata(BlockEntity blockEntity, HolderLookup.Provider registries) {
+        //? if >=26.1 {
+        net.minecraft.world.level.storage.TagValueOutput output = net.minecraft.world.level.storage.TagValueOutput
+                .createWithContext(net.minecraft.util.ProblemReporter.DISCARDING, registries);
+        blockEntity.saveWithoutMetadata(output);
+        return output.buildResult();
+        //?} elif >=1.20.5 {
+        /*return blockEntity.saveWithoutMetadata(registries);
+        *///?} else {
+        /*return blockEntity.saveWithoutMetadata();
+        *///?}
+    }
+
+    /** Loads custom data plus the carried components into an existing block entity. */
+    public static void loadWithComponents(BlockEntity blockEntity, CompoundTag tag, HolderLookup.Provider registries) {
+        //? if >=26.1 {
+        blockEntity.loadWithComponents(net.minecraft.world.level.storage.TagValueInput.create(
+                net.minecraft.util.ProblemReporter.DISCARDING, registries, tag));
+        //?} elif >=1.20.5 {
+        /*blockEntity.loadWithComponents(tag, registries);
+        *///?} else {
+        /*blockEntity.load(tag);
+        *///?}
+    }
+
+    /** Loads custom data only (no components) into an existing block entity. */
+    public static void loadCustomOnly(BlockEntity blockEntity, CompoundTag tag, HolderLookup.Provider registries) {
+        //? if >=26.1 {
+        blockEntity.loadCustomOnly(net.minecraft.world.level.storage.TagValueInput.create(
+                net.minecraft.util.ProblemReporter.DISCARDING, registries, tag));
+        //?} elif >=1.20.5 {
+        /*blockEntity.loadCustomOnly(tag, registries);
+        *///?} else {
+        /*blockEntity.load(tag);
+        *///?}
+    }
 }

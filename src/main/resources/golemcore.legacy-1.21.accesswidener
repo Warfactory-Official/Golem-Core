@@ -1,0 +1,5 @@
+accessWidener v2 named
+accessible field net/minecraft/server/network/ServerGamePacketListenerImpl aboveGroundTickCount I
+# 1.21.1: VehicleEntity.getDropItem is package-private abstract; a minecart outside net.minecraft cannot
+# implement it without this (NeoForge widens it in its patch; 1.20.1 has no VehicleEntity, hence the separate file).
+transitive-extendable method net/minecraft/world/entity/vehicle/VehicleEntity getDropItem ()Lnet/minecraft/world/item/Item;

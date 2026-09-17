@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import java.util.function.Supplier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.saveddata.SavedData;
+import org.jspecify.annotations.Nullable;
 
 /** Codec-backed SavedData with stable lookup and serialization across SavedData API revisions. */
 public abstract class CompatSavedData<T extends CompatSavedData<T>> extends SavedData {
@@ -27,6 +28,27 @@ public abstract class CompatSavedData<T extends CompatSavedData<T>> extends Save
         *///?} else {
         /*return level.getDataStorage().computeIfAbsent(
                 tag -> codec.parse(net.minecraft.nbt.NbtOps.INSTANCE, tag).result().orElseGet(factory), factory, legacyFileId(id));
+        *///?}
+    }
+
+    /** As {@link #get} but never creates: null when the level has no such data yet. */
+    public static <T extends CompatSavedData<T>> @Nullable T getIfPresent(ServerLevel level, String id,
+                                                                          Supplier<T> factory, Codec<T> codec) {
+        //? if >=26.1 {
+        return level.getDataStorage().get(new net.minecraft.world.level.saveddata.SavedDataType<>(
+                net.minecraft.resources.Identifier.fromNamespaceAndPath(id.substring(0, id.indexOf(':')),
+                        id.substring(id.indexOf(':') + 1)), factory, codec,
+                net.minecraft.util.datafix.DataFixTypes.SAVED_DATA_MAP_DATA));
+        //?} elif >=1.21 {
+        /*return level.getDataStorage().get(
+                new SavedData.Factory<>(factory,
+                        (tag, registries) -> codec.parse(
+                                net.minecraft.resources.RegistryOps.create(net.minecraft.nbt.NbtOps.INSTANCE, registries), tag)
+                                .result().orElseGet(factory),
+                        net.minecraft.util.datafix.DataFixTypes.SAVED_DATA_MAP_DATA), legacyFileId(id));
+        *///?} else {
+        /*return level.getDataStorage().get(
+                tag -> codec.parse(net.minecraft.nbt.NbtOps.INSTANCE, tag).result().orElseGet(factory), legacyFileId(id));
         *///?}
     }
 

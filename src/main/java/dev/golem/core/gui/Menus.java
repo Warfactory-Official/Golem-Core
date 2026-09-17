@@ -39,6 +39,12 @@ public final class Menus {
     }
 
     /** Creates a menu type whose menu is opened with a {@link BlockPos} as extra data. */
+    /** A menu keyed by an entity id, for menus opened on a living vehicle or mob rather than a block. */
+    @FunctionalInterface
+    public interface EntityFactory<T extends AbstractContainerMenu> {
+        T create(int containerId, Inventory playerInventory, int entityId);
+    }
+
     public static <T extends AbstractContainerMenu> MenuType<T> typeWithPos(PosFactory<T> factory) {
         //? if fabric && >=26.1 {
         /*return new net.fabricmc.fabric.api.menu.v1.ExtendedMenuType<>(factory::create, BlockPos.STREAM_CODEC);
@@ -82,6 +88,27 @@ public final class Menus {
         /*return net.minecraftforge.common.extensions.IForgeMenuType.create(
                 (containerId, inventory, buffer) -> factory.create(containerId, inventory,
                         buffer.readVarInt() == 0 ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND));
+        *///?}
+    }
+
+    /** Opens a provider for the player, sending {@code pos} to the client alongside it. */
+    /** As {@link #typeWithHand} with an entity id instead of a hand. */
+    public static <T extends AbstractContainerMenu> MenuType<T> typeWithEntity(EntityFactory<T> factory) {
+        //? if fabric && >=26.1 {
+        /*return new net.fabricmc.fabric.api.menu.v1.ExtendedMenuType<>(factory::create,
+                net.minecraft.network.codec.ByteBufCodecs.VAR_INT);
+        *///?} elif fabric && >=1.20.5 {
+        /*return new net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerType<>(factory::create,
+                net.minecraft.network.codec.ByteBufCodecs.VAR_INT);
+        *///?} elif fabric {
+        /*return new net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerType<>(
+                (containerId, inventory, buffer) -> factory.create(containerId, inventory, buffer.readVarInt()));
+        *///?} elif neoforge {
+        return net.neoforged.neoforge.common.extensions.IMenuTypeExtension.create(
+                (containerId, inventory, buffer) -> factory.create(containerId, inventory, buffer.readVarInt()));
+        //?} elif forge {
+        /*return net.minecraftforge.common.extensions.IForgeMenuType.create(
+                (containerId, inventory, buffer) -> factory.create(containerId, inventory, buffer.readVarInt()));
         *///?}
     }
 
@@ -148,6 +175,57 @@ public final class Menus {
     /** Opens a provider for the player, sending the hand that owns a stack-backed menu. */
     public static void openWithHand(ServerPlayer player, MenuProvider provider, InteractionHand hand) {
         int value = hand == InteractionHand.MAIN_HAND ? 0 : 1;
+        //? if fabric && >=26.1 {
+        /*player.openMenu(new net.fabricmc.fabric.api.menu.v1.ExtendedMenuProvider<Integer>() {
+            @Override
+            public Integer getScreenOpeningData(ServerPlayer p) { return value; }
+
+            @Override
+            public Component getDisplayName() { return provider.getDisplayName(); }
+
+            @Override
+            public AbstractContainerMenu createMenu(int containerId, Inventory inventory, Player p) {
+                return provider.createMenu(containerId, inventory, p);
+            }
+        });
+        *///?} elif fabric && >=1.20.5 {
+        /*player.openMenu(new net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerFactory<Integer>() {
+            @Override
+            public Integer getScreenOpeningData(ServerPlayer p) { return value; }
+
+            @Override
+            public Component getDisplayName() { return provider.getDisplayName(); }
+
+            @Override
+            public AbstractContainerMenu createMenu(int containerId, Inventory inventory, Player p) {
+                return provider.createMenu(containerId, inventory, p);
+            }
+        });
+        *///?} elif fabric {
+        /*player.openMenu(new net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerFactory() {
+            @Override
+            public void writeScreenOpeningData(ServerPlayer p, net.minecraft.network.FriendlyByteBuf buffer) {
+                buffer.writeVarInt(value);
+            }
+
+            @Override
+            public Component getDisplayName() { return provider.getDisplayName(); }
+
+            @Override
+            public AbstractContainerMenu createMenu(int containerId, Inventory inventory, Player p) {
+                return provider.createMenu(containerId, inventory, p);
+            }
+        });
+        *///?} elif neoforge {
+        player.openMenu(provider, buffer -> buffer.writeVarInt(value));
+        //?} elif forge {
+        /*net.minecraftforge.network.NetworkHooks.openScreen(player, provider, buffer -> buffer.writeVarInt(value));
+        *///?}
+    }
+
+    /** As {@link #openWithHand} with an entity id instead of a hand. */
+    public static void openWithEntity(ServerPlayer player, MenuProvider provider, int entityId) {
+        int value = entityId;
         //? if fabric && >=26.1 {
         /*player.openMenu(new net.fabricmc.fabric.api.menu.v1.ExtendedMenuProvider<Integer>() {
             @Override

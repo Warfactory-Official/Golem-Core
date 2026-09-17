@@ -334,4 +334,87 @@ public final class ItemStacks {
         blockEntity.applyComponentsFromItemStack(stack);
         //?}
     }
+
+    /**
+     * {@code ItemStack.consume(count, player)}: shrinks the stack unless the player is in creative. The
+     * method arrived in 1.20.5; before it, this is the vanilla creative check spelled out.
+     */
+    public static void consume(ItemStack stack, int count, net.minecraft.world.entity.@org.jspecify.annotations.Nullable LivingEntity player) {
+        //? if >=1.21 {
+        stack.consume(count, player);
+        //?} else {
+        /*if (player == null || !(player instanceof net.minecraft.world.entity.player.Player p && p.getAbilities().instabuild)) {
+            stack.shrink(count);
+        }
+        *///?}
+    }
+
+    /** Every slot carried by an item (the CONTAINER component; the legacy block-entity "Items" list before 1.20.5). */
+    public static NonNullList<ItemStack> carriedItems(ItemStack carrier, int slotCount) {
+        NonNullList<ItemStack> items = NonNullList.withSize(slotCount, ItemStack.EMPTY);
+        //? if >=1.20.5 {
+        net.minecraft.world.item.component.ItemContainerContents contents =
+                carrier.get(net.minecraft.core.component.DataComponents.CONTAINER);
+        if (contents != null) contents.copyInto(items);
+        //?} else {
+        /*net.minecraft.nbt.CompoundTag data = legacyCarriedData(carrier);
+        if (data.contains("Items", 9)) net.minecraft.world.ContainerHelper.loadAllItems(data, items);
+        *///?}
+        return items;
+    }
+
+    /** Packs {@code items} onto the carrier the way {@link #carriedItems} reads them. */
+    public static void setCarriedItems(ItemStack carrier, List<ItemStack> items) {
+        //? if >=1.20.5 {
+        carrier.set(net.minecraft.core.component.DataComponents.CONTAINER,
+                net.minecraft.world.item.component.ItemContainerContents.fromItems(items));
+        //?} else {
+        /*NonNullList<ItemStack> list = NonNullList.withSize(items.size(), ItemStack.EMPTY);
+        for (int i = 0; i < items.size(); i++) list.set(i, items.get(i));
+        net.minecraft.nbt.CompoundTag data = carrier.getOrCreateTagElement("BlockEntityTag");
+        net.minecraft.world.ContainerHelper.saveAllItems(data, list);
+        *///?}
+    }
+
+    /** Sets the stack's display name (CUSTOM_NAME component / legacy display tag). */
+    public static void setCustomName(ItemStack stack, net.minecraft.network.chat.Component name) {
+        //? if >=1.20.5 {
+        stack.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, name);
+        //?} else {
+        /*stack.setHoverName(name);
+        *///?}
+    }
+
+    /** The compressed NBT size of a stack, for 1.7-style "too big to drop" guards. */
+    public static int compressedSize(ItemStack stack, net.minecraft.core.HolderLookup.Provider registries) {
+        try {
+            //? if >=1.20.5 {
+            net.minecraft.nbt.Tag encoded = ItemStack.CODEC.encodeStart(
+                    net.minecraft.resources.RegistryOps.create(net.minecraft.nbt.NbtOps.INSTANCE, registries), stack)
+                    .result().orElse(null);
+            if (!(encoded instanceof net.minecraft.nbt.CompoundTag tag)) return 0;
+            //?} else {
+            /*net.minecraft.nbt.CompoundTag tag = stack.save(new net.minecraft.nbt.CompoundTag());
+            *///?}
+            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            net.minecraft.nbt.NbtIo.writeCompressed(tag, out);
+            return out.size();
+        } catch (java.io.IOException ignored) {
+            return 0;
+        }
+    }
+
+    /** The stack's custom display name, or null (CUSTOM_NAME component / legacy display tag). */
+    public static net.minecraft.network.chat.@org.jspecify.annotations.Nullable Component customName(ItemStack stack) {
+        //? if >=1.20.5 {
+        return stack.get(net.minecraft.core.component.DataComponents.CUSTOM_NAME);
+        //?} else {
+        /*return stack.hasCustomHoverName() ? stack.getHoverName() : null;
+        *///?}
+    }
+
+    /** Caps the stack at {@code max} (1.20.5 {@code limitSize}). */
+    public static void limitSize(ItemStack stack, int max) {
+        if (stack.getCount() > max) stack.setCount(max);
+    }
 }

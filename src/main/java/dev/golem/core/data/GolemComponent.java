@@ -26,6 +26,7 @@ import net.minecraft.core.registries.Registries;
  * {@code GolemComponent.integer("example", "charge")}. Modern component registrations are added to
  * Golem Core's normal {@link DeferredRegister} queue automatically.
  */
+@SuppressWarnings({"rawtypes", "unchecked"})
 public final class GolemComponent<T> {
 
     //? if >=1.21.1 {
@@ -34,20 +35,33 @@ public final class GolemComponent<T> {
 
     private final String key;
     //? if >=1.21.1 {
-    private final RegistryObject<DataComponentType<T>> component;
+    // The registered type may hold a different value class than T: a component whose natural value
+    // is mutable (an ItemStack) is stored as an immutable wrapper, since the platform validates that
+    // component values implement equals/hashCode. toStored/fromStored bridge the two; identity by default.
+    private final RegistryObject<DataComponentType<Object>> component;
+    private final java.util.function.Function<T, Object> toStored;
+    private final java.util.function.Function<Object, T> fromStored;
     //?} else {
     /*private final Codec<T> codec;
     private final LegacyValue<T> legacy;
     *///?}
 
     private GolemComponent(String namespace, String name, Codec<T> codec) {
+        this(namespace, name, (Codec) codec, value -> value, stored -> (T) stored);
+    }
+
+    /** A component stored as {@code S} on modern platforms while exposing {@code T}; see the field note. */
+    private <S> GolemComponent(String namespace, String name, Codec<S> storedCodec,
+                               java.util.function.Function<T, S> toStored, java.util.function.Function<S, T> fromStored) {
         key = Ids.of(namespace, name).toString();
         //? if >=1.21.1 {
         DeferredRegister<DataComponentType<?>> register = REGISTERS.computeIfAbsent(namespace,
                 ns -> DeferredRegister.create(Registries.DATA_COMPONENT_TYPE, ns));
-        component = register.register(name, () -> componentType(codec));
+        component = register.register(name, () -> (DataComponentType) componentType(storedCodec));
+        this.toStored = (java.util.function.Function) toStored;
+        this.fromStored = (java.util.function.Function) fromStored;
         //?} else {
-        /*this.codec = codec;
+        /*this.codec = (Codec) storedCodec;
         legacy = null;
         *///?}
     }
@@ -93,16 +107,27 @@ public final class GolemComponent<T> {
     }
 
     //? if >=1.21.1 {
-    /** Native component handle for integrations that explicitly consume vanilla component types. */
+    /**
+     * Native component handle for integrations that explicitly consume vanilla component types. Its value
+     * class is the stored one, which differs from {@code T} only for {@link #itemStack}.
+     */
     public DataComponentType<T> type() {
-        return component.get();
+        return (DataComponentType) component.get();
     }
     //?}
 
-    /** A component holding one stack, including all of its item data. */
+    /**
+     * A component holding one stack, including all of its item data.
+     *
+     * <p>Modern platforms store it as a one-slot {@code ItemContainerContents}: a raw {@code ItemStack}
+     * is mutable and has no value equality, which NeoForge rejects the first time the component is set.
+     */
     public static GolemComponent<ItemStack> itemStack(String namespace, String name) {
         //? if >=1.21.1 {
-        return of(namespace, name, ItemStack.CODEC);
+        return new GolemComponent<>(namespace, name,
+                net.minecraft.world.item.component.ItemContainerContents.CODEC,
+                stack -> net.minecraft.world.item.component.ItemContainerContents.fromItems(java.util.List.of(stack)),
+                contents -> contents.copyOne());
         //?} else {
         /*return new GolemComponent<>(namespace, name, new LegacyValue<>() {
             @Override
@@ -133,7 +158,8 @@ public final class GolemComponent<T> {
     public Optional<T> get(ItemStack stack) {
         Objects.requireNonNull(stack);
         //? if >=1.21.1 {
-        return Optional.ofNullable(stack.get(component.get()));
+        Object stored = stack.get(component.get());
+        return stored == null ? Optional.empty() : Optional.of(fromStored.apply(stored));
         //?} else {
         /*CompoundTag tag = stack.getTag();
         if (tag == null || !tag.contains(key)) return Optional.empty();
@@ -155,7 +181,7 @@ public final class GolemComponent<T> {
         Objects.requireNonNull(stack);
         Objects.requireNonNull(value);
         //? if >=1.21.1 {
-        stack.set(component.get(), value);
+        stack.set(component.get(), toStored.apply(value));
         //?} else {
         /*if (legacy != null) {
             stack.getOrCreateTag().put(key, legacy.write(value));

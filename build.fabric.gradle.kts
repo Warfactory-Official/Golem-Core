@@ -37,7 +37,12 @@ repositories {
 // Note this is an ordinary Kotlin conditional, not a Stonecutter `//?` comment: Stonecutter only
 // preprocesses files under src/, never build scripts.
 val obfuscated = mcVersion.substringBefore('.').toInt() < 26
-val accessWidenerName = if (obfuscated) "golemcore.legacy.accesswidener" else "golemcore.accesswidener"
+// Loom validates every widened member against the node's jar, so 1.21.1 (which has VehicleEntity to widen)
+// and 1.20.1 (which does not) need separate legacy files.
+val accessWidenerName = if (!obfuscated) "golemcore.accesswidener"
+    else if (mcVersion.startsWith("1.21")) "golemcore.legacy-1.21.accesswidener"
+    else "golemcore.legacy.accesswidener"
+val allAccessWideners = listOf("golemcore.accesswidener", "golemcore.legacy.accesswidener", "golemcore.legacy-1.21.accesswidener")
 
 // The vendored instancing backend names the blaze3d GPU-buffer API introduced with 26.1. The two
 // GlBuffer fields it reads are widened here by golemcore.accesswidener, which is also the file this
@@ -104,7 +109,7 @@ tasks.processResources {
         filter { line -> if (line.trim() == "{")
             "{\n  \"accessWidener\": \"$accessWidenerName\"," else line }
     }
-    if (obfuscated) exclude("golemcore.accesswidener") else exclude("golemcore.legacy.accesswidener")
+    allAccessWideners.filter { it != accessWidenerName }.forEach { exclude(it) }
     exclude(
         "META-INF/accesstransformer.cfg",
         "META-INF/golemcore.neoforge.accesstransformer.cfg",

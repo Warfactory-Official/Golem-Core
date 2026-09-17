@@ -75,7 +75,7 @@ public abstract class CompatEntityRenderer<T extends Entity, S extends CompatEnt
     /** Bridges vanilla's submit signature to {@link #submit}. */
     @Override
     public void submit(S state, PoseStack poseStack, SubmitNodeCollector collector, CameraRenderState camera) {
-        submit(state, poseStack, new VanillaSubmitSink(collector),
+        submit(state, poseStack, new VanillaSubmitSink(collector, camera),
                 new CameraInfo(camera.pos, camera.yRot, camera.orientation));
     }
 

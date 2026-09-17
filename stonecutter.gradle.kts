@@ -44,5 +44,19 @@ stonecutter parameters {
             replace("BuiltInRegistries.DATA_COMPONENT_TYPE.getValue(Ids.parse(",
                     "BuiltInRegistries.DATA_COMPONENT_TYPE.get(Ids.parse(")
         }
+        // 26.1 moved these vanilla entity classes into per-animal/per-vehicle packages. The old
+        // spellings cannot occur in 26.1 code and the new ones cannot occur below it, so the rename
+        // is reversible; the entity facades in dev.golem.core.data extend them by 26.1 name.
+        string(current.parsed < "26.1") {
+            replace("net.minecraft.world.entity.animal.chicken.Chicken", "net.minecraft.world.entity.animal.Chicken")
+            replace("net.minecraft.world.entity.animal.squid.Squid", "net.minecraft.world.entity.animal.Squid")
+            replace("net.minecraft.world.entity.vehicle.minecart.AbstractMinecartContainer",
+                    "net.minecraft.world.entity.vehicle.AbstractMinecartContainer")
+            replace("net.minecraft.world.entity.vehicle.minecart.AbstractMinecart",
+                    "net.minecraft.world.entity.vehicle.AbstractMinecart")
+            replace("net.minecraft.world.entity.vehicle.minecart.MinecartTNT",
+                    "net.minecraft.world.entity.vehicle.MinecartTNT")
+            replace("net.minecraft.world.entity.vehicle.boat.Boat", "net.minecraft.world.entity.vehicle.Boat")
+        }
     }
 }
