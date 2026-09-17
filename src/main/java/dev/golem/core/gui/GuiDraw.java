@@ -90,6 +90,55 @@ public final class GuiDraw {
         *///?}
     }
 
+    /**
+     * Stretches a normalised source rectangle of a texture across the whole GUI.
+     *
+     * <p>Vanilla names a blit's source region in texels, so expressing a UV rectangle means knowing the
+     * texture's own dimensions; below 26.1 there is no overload that takes UVs at all. This draws the
+     * whole texture into an oversized rectangle and lets the screen edge crop it instead, which needs no
+     * texture dimensions, is exact for every one of them, and behaves identically on every version.
+     */
+    public static void blitUvFullscreen(
+            //? if >=26.1 {
+            GuiGraphicsExtractor graphics, Identifier texture,
+            //?} else {
+            /*GuiGraphics graphics, ResourceLocation texture,
+            *///?}
+            float u0, float v0, float u1, float v1) {
+        float uSpan = u1 - u0;
+        float vSpan = v1 - v0;
+        if (uSpan <= 0F || vSpan <= 0F) return;
+        int width = Math.round(graphics.guiWidth() / uSpan);
+        int height = Math.round(graphics.guiHeight() / vSpan);
+        blitUv(graphics, texture, Math.round(-u0 * width), Math.round(-v0 * height), width, height,
+                0F, 0F, 1F, 1F, 1, 1);
+    }
+
+    /**
+     * Draws a stitched atlas sprite into a GUI rectangle — a generated one included.
+     *
+     * <p>A GUI blit names a texture file, and a sprite that only exists on an atlas has none: it has an
+     * atlas and a corner of it. The atlas's own pixel size is not public on every version, but the
+     * sprite's is, and a sprite's size over its UV span is that same number exactly.
+     */
+    public static void blitSprite(
+            //? if >=26.1 {
+            GuiGraphicsExtractor graphics, dev.golem.core.render.Sprites.Atlas atlas, Identifier sprite,
+            //?} else {
+            /*GuiGraphics graphics, dev.golem.core.render.Sprites.Atlas atlas, ResourceLocation sprite,
+            *///?}
+            int x, int y, int width, int height) {
+        var stitched = dev.golem.core.render.Sprites.sprite(atlas, sprite);
+        float u0 = stitched.getU0();
+        float v0 = stitched.getV0();
+        float u1 = stitched.getU1();
+        float v1 = stitched.getV1();
+        if (u1 <= u0 || v1 <= v0) return;
+        blitUv(graphics, stitched.atlasLocation(), x, y, width, height, u0, v0, u1, v1,
+                Math.round(stitched.contents().width() / (u1 - u0)),
+                Math.round(stitched.contents().height() / (v1 - v0)));
+    }
+
     /** Draws a crosshair with vanilla's inverse-colour blend against the pixels behind it. */
     public static void crosshair(
             //? if >=26.1 {

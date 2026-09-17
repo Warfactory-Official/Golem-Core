@@ -26,7 +26,11 @@ import net.minecraft.client.renderer.texture.atlas.SpriteSource;
  * }</pre>
  *
  * puts {@code hbm:items/plate_cast_iron} and {@code hbm:items/plate_cast_copper} in the atlas, from one
- * 16×16 file. A model references them by those ids like any other sprite.
+ * 16×16 file. A model references them by those ids like any other sprite, and {@link #sprite} hands one
+ * to a screen that wants to draw it somewhere no model reaches.
+ *
+ * <p>A roster that carries one colour per variant rather than two declares
+ * {@link Remap#tint(String, int) tint} instead, which multiplies the art the way an item tint would.
  *
  * <p>Declaration is the default path and needs no resource of any kind — no atlas JSON, no generated
  * asset, nothing on disk but the greyscale source. The same source type is registered for resource
@@ -151,12 +155,39 @@ public final class Sprites {
         return sources == null ? List.of() : sources;
     }
 
+    /**
+     * The sprite an atlas stitched for {@code id}, or its missing-texture sprite when it holds none.
+     *
+     * <p>Where an atlas is reached from moved: 26.1 hands out an atlas manager keyed by the definition
+     * id an {@code atlases/} file is read for, and every version below it a lookup function keyed by the
+     * atlas <em>texture</em> — where the items atlas is the block atlas, so both enum constants answer
+     * the same one.
+     *
+     * <p>Client only, and only after the first resource load; before that an atlas holds nothing.
+     */
+    public static net.minecraft.client.renderer.texture.TextureAtlasSprite sprite(
+            Atlas atlas,
+            //? if >=26.1 {
+            net.minecraft.resources.Identifier id) {
+            //?} else {
+            /*net.minecraft.resources.ResourceLocation id) {
+            *///?}
+        //? if >=26.1 {
+        return net.minecraft.client.Minecraft.getInstance().getAtlasManager()
+                .getAtlasOrThrow(Ids.parse(atlas.id())).getSprite(id);
+        //?} else {
+        /*return net.minecraft.client.Minecraft.getInstance()
+                .getTextureAtlas(net.minecraft.world.inventory.InventoryMenu.BLOCK_ATLAS).apply(id);
+        *///?}
+    }
+
     /** A remap under construction. */
     public static final class Remap {
 
         private final Atlas atlas;
         private final List<String> textures = new ArrayList<>();
         private final Map<String, InterpolatedRemapSource.Band> permutations = new LinkedHashMap<>();
+        private final Map<String, Integer> tints = new LinkedHashMap<>();
         private InterpolatedRemapSource.Band band = InterpolatedRemapSource.DEFAULT_BAND;
         private String separator = "_";
 
@@ -197,9 +228,23 @@ public final class Sprites {
             return this;
         }
 
+        /**
+         * One output sprite: the art multiplied by {@code colour}, the way an item tint multiplies it.
+         *
+         * <p>A roster that carries a single colour per variant — a fluid, a dye, a team — has no second
+         * one to hand {@link #permutation}. Multiplying is still a remap: the band's own two ends, each
+         * multiplied by {@code colour}, are two points on the multiply's line, so the ramp drawn through
+         * them reproduces it for every pixel, inside the band and extrapolated outside it. Declaring the
+         * band as the art's full range, {@code band(0xFFFFFF, 0x000000)}, makes it exact.
+         */
+        public Remap tint(String name, int colour) {
+            tints.put(name, colour & 0xFFFFFF);
+            return this;
+        }
+
         /** Whether anything would be generated; a shape no material declares produces nothing. */
         public boolean isEmpty() {
-            return textures.isEmpty() || permutations.isEmpty();
+            return textures.isEmpty() || (permutations.isEmpty() && tints.isEmpty());
         }
 
         /**
@@ -211,6 +256,8 @@ public final class Sprites {
             if (textures.isEmpty()) {
                 throw new IllegalArgumentException("A remap needs at least one source texture");
             }
+            tints.forEach((name, colour) -> permutations.put(name, new InterpolatedRemapSource.Band(
+                    scale(band.light(), colour), scale(band.dark(), colour))));
             if (permutations.isEmpty()) {
                 throw new IllegalArgumentException("A remap needs at least one permutation");
             }
@@ -223,6 +270,15 @@ public final class Sprites {
                     .add(new InterpolatedRemapSource(textures, separator, band, permutations));
             GolemCore.LOG.debug("Declared {} remapped sprite(s) for {}",
                     textures.size() * permutations.size(), atlas.id());
+        }
+
+        /** {@code value} with each channel scaled by the matching channel of {@code colour}. */
+        private static int scale(int value, int colour) {
+            int scaled = 0;
+            for (int shift = 0; shift <= 16; shift += 8) {
+                scaled |= (((value >> shift) & 0xFF) * ((colour >> shift) & 0xFF) / 0xFF) << shift;
+            }
+            return scaled;
         }
     }
 }
