@@ -49,7 +49,39 @@ public final class Pose17 {
          * display block composes on top of the frame. Every block item takes the identity there, which is
          * why these matrices are the whole story for a machine and are not for a handheld.
          */
-        ITEM_RENDER_BASE_LEGACY
+        ITEM_RENDER_BASE_LEGACY,
+
+        /**
+         * {@code ItemRenderMissileGeneric}: 1.7's launchable missiles, which do not go through
+         * {@code ItemRenderBase} at all.
+         *
+         * <p>It implements {@code IItemRenderer} directly and wraps the body in nothing: no slot-centre
+         * translate, no {@code -1} flip, no {@code rotate(90, Y)} on the non-equipped types. So GUI here is
+         * the bare 1.7 pixel slot — origin top left, y down, sixteen units wide — and the hand, head, ground
+         * and item-frame slots are the same engine poses {@link #ITEM_RENDER_BASE} ends on with that class's
+         * own equipped preamble swapped for the missile renderer's
+         * ({@code translate(0.5, -0.25, 0) scale(0.15)} equipped, {@code translate(0.5, 0.25, 0) scale(0.1)}
+         * first person, {@code scale(0.15)} as a dropped entity).
+         */
+        ITEM_RENDER_MISSILE,
+
+        /**
+         * {@code ItemRenderWeaponBase}: the Sedna guns, and the one class here that stops at the engine.
+         *
+         * <p>The other classes fold a fixed preamble into the frame because every item on them shares it.
+         * This one cannot: {@code setupInv}, {@code setupThirdPerson} and {@code setupEntity} are ordinary
+         * overridable methods, every gun overrides the first two, and eight of the fifty-two replace
+         * {@code setupInv} outright rather than building on it. So the shared part of a weapon icon ends
+         * at the engine slot — the per-context matrix 1.7 had already applied when it called
+         * {@code renderItem} — and the whole setup chain, the base class's own included, belongs to the
+         * gun's body.
+         *
+         * <p>The slots are therefore {@link #ITEM_RENDER_BASE}'s chains with that class's preamble
+         * removed, which is the same wrapper {@link #ITEM_RENDER_MISSILE} is built on: dividing either
+         * class's frame by its own preamble recovers the identical eight matrices, and that agreement is
+         * what says these are the engine's and not a fit.
+         */
+        ITEM_RENDER_WEAPON
     }
 
     /** The frame one render class applies in one display slot. */
@@ -57,6 +89,8 @@ public final class Pose17 {
         return switch (klass) {
             case ITEM_RENDER_BASE -> itemRenderBase(slot);
             case ITEM_RENDER_BASE_LEGACY -> itemRenderBaseLegacy(slot);
+            case ITEM_RENDER_MISSILE -> itemRenderMissile(slot);
+            case ITEM_RENDER_WEAPON -> itemRenderWeapon(slot);
         };
     }
 
@@ -136,6 +170,101 @@ public final class Pose17 {
                     .translate(0.5F, 0F, 0.5F).translate(0F, 0.3F, 0F).scale(0.25F).rotateY(rad(90));
             case GUI -> new Matrix4f()
                     .rotateX(rad(30)).rotateY(rad(225)).scale(0.062F).translate(0F, 11.3F, -11.3F);
+        };
+    }
+
+    /**
+     * The missile frames. GUI is the 1.7 slot itself — {@code scale(1/16) translate(0, 16, 0) scale(1, -1, 1)}
+     * carries a pixel coordinate with y running down into block space — because the renderer poses its body
+     * from the slot origin rather than from its centre. The other slots keep {@link #ITEM_RENDER_BASE}'s
+     * engine poses and end on the missile renderer's own equipped preamble; GROUND and FIXED are that
+     * class's {@code ENTITY} mapping (half size on the floor, turned about for a frame) applied to
+     * {@code scale(0.15)} instead of to {@code scale(0.375)}.
+     */
+    private static Matrix4f itemRenderMissile(DisplaySlot slot) {
+        return switch (slot) {
+            case FIRST_PERSON_RIGHT_HAND -> new Matrix4f()
+                    .translate(0.5F, 0.5F, 0.5F).rotateY(rad(45)).scale(0.4F)
+                    .translate(0F, -0.3F, 0F).scale(1.5F).rotateY(rad(50)).rotateZ(rad(335))
+                    .translate(-0.9375F, -0.0625F, 0F)
+                    .translate(0.5F, 0.25F, 0F).scale(0.1F);
+            case FIRST_PERSON_LEFT_HAND -> new Matrix4f()
+                    .translate(0.5F, 0.5F, 0.5F).rotateY(rad(-45)).scale(0.4F)
+                    .translate(0F, -0.3F, 0F).scale(1.5F).rotateY(rad(-50)).rotateZ(rad(-335))
+                    .translate(0.9375F, -0.0625F, 0F)
+                    .translate(-0.5F, 0.25F, 0F).scale(0.1F);
+            case THIRD_PERSON_RIGHT_HAND -> new Matrix4f()
+                    .translate(0.4375F, 0.375F, 1.125F).rotateY(rad(180)).rotateX(rad(90))
+                    .translate(0.1875F, 0.625F, -0.125F).scale(0.375F)
+                    .rotateZ(rad(60)).rotateX(rad(-90)).rotateZ(rad(20))
+                    .translate(0F, -0.3F, 0F).scale(1.5F).rotateY(rad(50)).rotateZ(rad(335))
+                    .translate(-0.9375F, -0.0625F, 0F)
+                    .translate(0.5F, -0.25F, 0F).scale(0.15F);
+            case THIRD_PERSON_LEFT_HAND -> new Matrix4f()
+                    .translate(0.5625F, 0.375F, 1.125F).rotateY(rad(180)).rotateX(rad(90))
+                    .translate(-0.1875F, 0.625F, -0.125F).scale(0.375F)
+                    .rotateZ(rad(-60)).rotateX(rad(-90)).rotateZ(rad(-20))
+                    .translate(0F, -0.3F, 0F).scale(1.5F).rotateY(rad(-50)).rotateZ(rad(-335))
+                    .translate(0.9375F, -0.0625F, 0F)
+                    .translate(-0.5F, -0.25F, 0F).scale(0.15F);
+            case HEAD -> new Matrix4f()
+                    .translate(0.5F, 0.5F, 0.5F).scale(1.6F, -1.6F, -1.6F).rotateY(rad(180))
+                    .translate(0F, 0.25F, 0F)
+                    .translate(0F, -0.3F, 0F).scale(1.5F).rotateY(rad(50)).rotateZ(rad(335))
+                    .translate(-0.9375F, -0.0625F, 0F)
+                    .translate(0.5F, -0.25F, 0F).scale(0.15F);
+            case GUI -> new Matrix4f()
+                    .translate(0F, 1F, 0F).scale(0.0625F, -0.0625F, 0.0625F);
+            case GROUND -> new Matrix4f()
+                    .translate(0.5F, 0.25F, 0.5F).scale(0.075F);
+            case FIXED -> new Matrix4f()
+                    .translate(0.5F, 0.34F, 0.53125F).rotateY(rad(180)).scale(0.15F);
+        };
+    }
+
+    /**
+     * The bare engine slot, with no renderer preamble on it.
+     *
+     * <p>Each of these is the matching {@link #ITEM_RENDER_BASE} chain with that class's own preamble
+     * dropped from the end — GUI loses {@code translate(8, 10, 0) rotate(-30, X) rotate(45, Y)
+     * scale(-1)}, the hands and head lose {@code translate(0.5, 0.25, 0) scale(0.25)} and, off the
+     * equipped slot, {@code rotate(90, Y)}, and the floor and frame lose {@code scale(1.5) scale(0.25)
+     * rotate(90, Y)}. GUI is consequently 1.7's pixel slot itself, sixteen units wide with y running
+     * down, which is why a weapon body is written in whole pixels.
+     */
+    private static Matrix4f itemRenderWeapon(DisplaySlot slot) {
+        return switch (slot) {
+            case FIRST_PERSON_RIGHT_HAND -> new Matrix4f()
+                    .translate(0.5F, 0.5F, 0.5F).rotateY(rad(45)).scale(0.4F)
+                    .translate(0F, -0.3F, 0F).scale(1.5F).rotateY(rad(50)).rotateZ(rad(335))
+                    .translate(-0.9375F, -0.0625F, 0F);
+            case FIRST_PERSON_LEFT_HAND -> new Matrix4f()
+                    .translate(0.5F, 0.5F, 0.5F).rotateY(rad(-45)).scale(0.4F)
+                    .translate(0F, -0.3F, 0F).scale(1.5F).rotateY(rad(-50)).rotateZ(rad(-335))
+                    .translate(0.9375F, -0.0625F, 0F);
+            case THIRD_PERSON_RIGHT_HAND -> new Matrix4f()
+                    .translate(0.4375F, 0.375F, 1.125F).rotateY(rad(180)).rotateX(rad(90))
+                    .translate(0.1875F, 0.625F, -0.125F).scale(0.375F)
+                    .rotateZ(rad(60)).rotateX(rad(-90)).rotateZ(rad(20))
+                    .translate(0F, -0.3F, 0F).scale(1.5F).rotateY(rad(50)).rotateZ(rad(335))
+                    .translate(-0.9375F, -0.0625F, 0F);
+            case THIRD_PERSON_LEFT_HAND -> new Matrix4f()
+                    .translate(0.5625F, 0.375F, 1.125F).rotateY(rad(180)).rotateX(rad(90))
+                    .translate(-0.1875F, 0.625F, -0.125F).scale(0.375F)
+                    .rotateZ(rad(-60)).rotateX(rad(-90)).rotateZ(rad(-20))
+                    .translate(0F, -0.3F, 0F).scale(1.5F).rotateY(rad(-50)).rotateZ(rad(-335))
+                    .translate(0.9375F, -0.0625F, 0F);
+            case HEAD -> new Matrix4f()
+                    .translate(0.5F, 0.5F, 0.5F).scale(1.6F, -1.6F, -1.6F).rotateY(rad(180))
+                    .translate(0F, 0.25F, 0F)
+                    .translate(0F, -0.3F, 0F).scale(1.5F).rotateY(rad(50)).rotateZ(rad(335))
+                    .translate(-0.9375F, -0.0625F, 0F);
+            case GUI -> new Matrix4f()
+                    .translate(0F, 1F, 0F).scale(0.0625F, -0.0625F, 0.0625F);
+            case GROUND -> new Matrix4f()
+                    .translate(0.5F, 0.25F, 0.5F).scale(0.5F);
+            case FIXED -> new Matrix4f()
+                    .translate(0.5F, 0.34F, 0.53125F).rotateY(rad(180));
         };
     }
 

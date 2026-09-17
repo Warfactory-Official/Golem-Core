@@ -129,6 +129,46 @@ Use `Entities.byId(id)` for built-in entity-type lookup. It owns the 26.1 regist
 Use `Fires.canSpreadAround`, `Entities.createForConversion`, `Entities.createTriggered`, and
 `Permissions.gamemasters()` rather than branching on their vanilla signatures in consumer code.
 
+## Carried-Item Scans
+
+`dev.golem.core.player.InventoryScan` does per-slot work on what players are carrying — the shape a
+radiation system, a curio-style effect or a set bonus needs — without the inventory sweep such a
+system is usually written as.
+
+```java
+private static final InventoryScan<HazardEntry[]> CARRIED = InventoryScan
+        .of(HazardSystem::carriedHazards, HazardSystem::applyCarried)
+        .every(() -> RadiationConfig.hazardRate);
+
+CARRIED.install();   // once, from setup
+```
+
+The `Resolver` turns a stack into whatever the consumer acts on and runs **once per slot edit, off
+the server thread**; the result is memoised per slot. The `Application` runs on the server thread at
+the declared cadence and does nothing but walk that memo. A sweep re-derives every slot's answer
+every pass and pays for the derivation each time; this pays for it once per change.
+
+The changes are vanilla's own. `AbstractContainerMenu` already compares each slot against its
+last-sent copy every tick, by value — so a component or NBT edit counts, not only a swap — and
+notifies its listeners. `InventoryScan.MenuWatch` is that listener and a `ServerPlayer` mixin installs one
+on every menu the player opens; only the player's own inventory slots are taken. While a foreign menu
+is open the player's own menu is polled, which is the only way an armour or offhand edit is seen.
+
+The contract:
+
+- A resolver may read the stack it is handed and immutable registries, **and nothing else** — it does
+  not run on the server thread. The stack it gets is the menu's private copy, replaced and never
+  mutated, so it stays valid past the tick that produced it.
+- The application is handed the **live** stack, not the resolved copy, so anything count- or
+  component-sensitive still reads current values. Only the resolved value is memoised.
+- A memo entry records the item it was resolved for and is skipped when the live slot no longer holds
+  it. A lagging memo can miss a tick; it can never apply one stack's answer to another.
+- `invalidate()` when the data a resolver reads changes. It queues the re-resolve rather than doing
+  it, because a batch may be in flight and replacing the memo underneath one loses whatever it writes.
+- `scanNow(player)` resolves and applies one player's inventory on the calling thread, for a caller
+  that has just rewritten an inventory and for tests. `drainNow()`, `applyNow(player)` and `forget()`
+  exist so the delivery path can be asserted without racing the server tick.
+
 ## GPU Instancing
 
 `dev.golem.core.flywheel` vendors a GPU instancing engine, relocated from the 26.1 port in NTM-CE.
