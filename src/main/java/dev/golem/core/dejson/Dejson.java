@@ -407,6 +407,7 @@ public final class Dejson {
 
         private Shape shape;
         private String definitionModel;
+        private String selectProperty;
         private List<Tint> tints = List.of();
         private Map<String, JsonObject> models = Collections.emptyMap();
 
@@ -440,6 +441,27 @@ public final class Dejson {
             Models.requireId(modelId, "shared model");
             this.definitionModel = modelId;
             return models(Models.none());
+        }
+
+        /**
+         * An item that picks its model from a property carrying a variant number, the way an enum-backed
+         * family does: the models this declaration emits <i>are</i> the cases, in the order the shape
+         * emits them, and variant <i>n</i> takes the <i>n</i>th.
+         *
+         * <p>The order is the enum's, so a {@link Models#group} whose entries are listed in constant
+         * order is the whole declaration. Case zero is also the fallback, which is what a stack carrying
+         * no such property gets — and what the family's own model id has to be, since that is the model
+         * every other target loads by path.
+         *
+         * <pre>{@code Dejson.item("hbm", "ammo_arty")
+         *         .models(Models.group().and("", Models.generated("hbm:items/ammo_arty"))
+         *                               .and("_classic", Models.generated("hbm:items/ammo_arty_classic")))
+         *         .selects("hbm:item_variant")}</pre>
+         */
+        public ItemDeclaration selects(String property) {
+            Models.requireId(property, "select property");
+            this.selectProperty = property;
+            return this;
         }
 
         /**
@@ -479,7 +501,20 @@ public final class Dejson {
             }
 
             Map<String, JsonObject> built = shape.models(itemId);
-            if (definitionModel == null) {
+            if (selectProperty != null) {
+                if (definitionModel != null) {
+                    throw new DejsonException(definitionId + " both shares(" + definitionModel
+                            + ") and selects(" + selectProperty + ")");
+                }
+                if (built.size() < 2) {
+                    throw new DejsonException(definitionId + " selects(" + selectProperty
+                            + ") but its shape emits " + built.size() + " model(s): " + built.keySet());
+                }
+                if (!itemId.equals(built.keySet().iterator().next())) {
+                    throw new DejsonException(definitionId + " selects(" + selectProperty
+                            + ") but its first case is not " + itemId + ": " + built.keySet());
+                }
+            } else if (definitionModel == null) {
                 if (built.size() != 1 || !built.containsKey(itemId)) {
                     throw new DejsonException(definitionId
                             + " has a shape that emits more than its own model: " + built.keySet());
@@ -499,8 +534,9 @@ public final class Dejson {
 
             this.models = Collections.unmodifiableMap(new LinkedHashMap<>(built));
             MODELS.putAll(built);
-            ITEM_DEFINITIONS.put(itemId,
-                    Models.itemDefinition(definitionModel == null ? itemId : definitionModel, tints));
+            ITEM_DEFINITIONS.put(itemId, selectProperty == null
+                    ? Models.itemDefinition(definitionModel == null ? itemId : definitionModel, tints)
+                    : Models.itemSelection(selectProperty, List.copyOf(built.keySet()), tints));
             return this;
         }
     }

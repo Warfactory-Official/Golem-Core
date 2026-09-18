@@ -327,6 +327,43 @@ public final class Models {
 
     /** The same definition with a tint list layered over the model it names. */
     public static JsonObject itemDefinition(String modelId, List<Tint> tints) {
+        JsonObject definition = new JsonObject();
+        definition.add("model", modelEntry(modelId, tints));
+        return definition;
+    }
+
+    /**
+     * The definition of an item that picks its model from a numbered property: case <i>n</i> is the
+     * <i>n</i>th model named, and the first is also the fallback.
+     *
+     * <p>Only 26.1 reads this file. Below it the same choice is an {@code overrides} list on the
+     * item's own model, which is why the first case has to <i>be</i> the item's own model: an
+     * override whose predicate the value does not clear leaves that file's own content standing, and
+     * that file is what every older target resolves the item to.
+     */
+    public static JsonObject itemSelection(String property, List<String> modelIds, List<Tint> tints) {
+        requireId(property, "select property");
+        if (modelIds.size() < 2) {
+            throw new DejsonException("a selection needs at least two cases, not " + modelIds);
+        }
+        JsonArray cases = new JsonArray();
+        for (int variant = 0; variant < modelIds.size(); variant++) {
+            JsonObject entry = new JsonObject();
+            entry.addProperty("when", String.valueOf(variant));
+            entry.add("model", modelEntry(modelIds.get(variant), tints));
+            cases.add(entry);
+        }
+        JsonObject select = new JsonObject();
+        select.addProperty("type", "minecraft:select");
+        select.addProperty("property", property);
+        select.add("cases", cases);
+        select.add("fallback", modelEntry(modelIds.get(0), tints));
+        JsonObject definition = new JsonObject();
+        definition.add("model", select);
+        return definition;
+    }
+
+    private static JsonObject modelEntry(String modelId, List<Tint> tints) {
         requireId(modelId, "item model");
         JsonObject model = new JsonObject();
         model.addProperty("type", "minecraft:model");
@@ -338,9 +375,7 @@ public final class Models {
             }
             model.add("tints", entries);
         }
-        JsonObject definition = new JsonObject();
-        definition.add("model", model);
-        return definition;
+        return model;
     }
 
     static JsonObject json(String parent, Slots slots) {
