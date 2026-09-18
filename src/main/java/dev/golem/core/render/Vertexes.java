@@ -52,6 +52,38 @@ public final class Vertexes {
         *///?}
     }
 
+    /**
+     * Emits a vertex of the line pipeline, which wants the segment's direction as its normal and, from
+     * 26.1, a per-vertex width where earlier versions carried one width on the render type itself.
+     */
+    public static void line(VertexConsumer buffer, PoseStack.Pose pose,
+                            float x, float y, float z, int color,
+                            float normalX, float normalY, float normalZ) {
+        //? if >=26.1 {
+        buffer.addVertex(pose, x, y, z)
+                .setColor(color)
+                .setNormal(pose, normalX, normalY, normalZ)
+                .setLineWidth(lineWidth());
+        //?} elif >=1.21 {
+        /*buffer.addVertex(pose, x, y, z)
+                .setColor(color)
+                .setNormal(pose, normalX, normalY, normalZ);
+        *///?} else {
+        /*buffer.vertex(pose.pose(), x, y, z)
+                .color(color)
+                .normal(pose.normal(), normalX, normalY, normalZ)
+                .endVertex();
+        *///?}
+    }
+
+    //? if >=26.1 {
+    /** The width vanilla gives its own block outline, scaled for the window. */
+    private static float lineWidth() {
+        return net.minecraft.client.Minecraft.getInstance().gameRenderer
+                .getGameRenderState().windowRenderState.appropriateLineWidth;
+    }
+    //?}
+
     /** Emits a position/color vertex for render types that do not consume texture or light attributes. */
     public static void color(VertexConsumer buffer, PoseStack.Pose pose,
                              float x, float y, float z, int color) {

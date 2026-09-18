@@ -27,6 +27,24 @@ public class CompatItem extends Item {
     }
     *///?}
 
+    /**
+     * Whether the item already raised in hand is still this one, its components having changed.
+     *
+     * <p>The hand renderer lowers and raises the item whenever the held stack stops matching the one it
+     * is showing, components and all. An item that rewrites its own state every tick — a weapon
+     * counting an animation down, a tool running a timer — therefore never finishes being raised and
+     * stays where a freshly drawn item starts, some six tenths of a block below where it belongs. Only
+     * a renderer that keeps the pose vanilla hands it can see that, which is why it hides so well.
+     *
+     * <p>1.7 compared the item and its damage and nothing else, so this is the question it asked.
+     * Answering {@code true} keeps the raise the item has already made; a genuine change of item is a
+     * different question and still lowers the hand, so an item normally answers by comparing the two
+     * items alone.
+     */
+    public boolean compatIsSameHeldItem(ItemStack shown, ItemStack held) {
+        return false;
+    }
+
     /** Adds this item's custom tooltip lines after vanilla's lines. */
     protected void appendCompatHoverText(ItemStack stack, CompatTooltipContext context,
                                           List<Component> tooltip, TooltipFlag flag) {

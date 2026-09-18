@@ -8,9 +8,12 @@ import dev.golem.core.render.anim.BusAnimationSequence;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Consumer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
+import org.joml.Vector3f;
+import org.joml.Vector3fc;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -730,6 +733,36 @@ public final class Gem {
         private void requireOpen() {
             if (sealed) throw new IllegalStateException("A gem part cannot be changed after the model is sealed");
         }
+    }
+
+    /**
+     * The corners of every part a model draws in one state, carried through the same walk the draw uses
+     * and into {@code start}'s frame.
+     *
+     * <p>This is the box a model is framed on, and it is the declaration's box rather than the mesh's.
+     * A rest pose that turns or offsets what it holds — which is most of them — displaces the drawing
+     * from the mesh's own bounds by exactly that transform, and a consumer that frames on the mesh
+     * instead sizes and places its picture around geometry nobody draws there.
+     *
+     * <p>Nothing here reads a clock: the state is the caller's, so a model that moves is framed by
+     * sampling this over the phases it moves through, not by taking it at the current instant.
+     */
+    public static <S> void extents(Model<S> model, S state, Matrix4fc start, Consumer<Vector3fc> output) {
+        for (Part<S> root : model.roots) corners(root, state, new Matrix4f(start), output);
+    }
+
+    private static <S> void corners(Part<S> part, S state, Matrix4f parent, Consumer<Vector3fc> output) {
+        if (!part.visible(state)) return;
+        Matrix4f here = new Matrix4f(parent);
+        part.applyTo(here, state);
+        Geometry geometry = part.geometryOf(state);
+        float[][] box = geometry == null ? null : geometry.bounds();
+        if (box != null) {
+            for (int x = 0; x < 2; x++) for (int y = 0; y < 2; y++) for (int z = 0; z < 2; z++) {
+                output.accept(here.transformPosition(new Vector3f(box[x][0], box[y][1], box[z][2])));
+            }
+        }
+        for (Part<S> child : part.children) corners(child, state, here, output);
     }
 
     /**

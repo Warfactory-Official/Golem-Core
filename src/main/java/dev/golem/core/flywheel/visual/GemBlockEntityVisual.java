@@ -388,6 +388,7 @@ public final class GemBlockEntityVisual<T extends BlockEntity, S extends CompatR
             case CUTOUT_NO_CULL -> Material.CUTOUT_NO_CULL;
             case TRANSLUCENT -> Material.TRANSLUCENT;
             case TRANSLUCENT_EMISSIVE -> Material.TRANSLUCENT_NO_DEPTH_WRITE;
+            case PLASMA_GLOW -> Material.SOURCE_ALPHA_ADDITIVE_NO_CULL;
         };
     }
 

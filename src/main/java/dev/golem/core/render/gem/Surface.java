@@ -39,7 +39,8 @@ public final class Surface {
         CUTOUT_CULL,
         CUTOUT_NO_CULL,
         TRANSLUCENT,
-        TRANSLUCENT_EMISSIVE
+        TRANSLUCENT_EMISSIVE,
+        PLASMA_GLOW
     }
 
     private final String texture;
@@ -90,6 +91,14 @@ public final class Surface {
         return new Surface(texture, Blend.TRANSLUCENT_EMISSIVE);
     }
 
+    /**
+     * Alpha-weighted additive over solid geometry, depth-tested but not depth-writing and unculled —
+     * 1.7's {@code SRC_ALPHA/ONE} glow. See {@code PlasmaGlowRenderType} for why no stock type fits.
+     */
+    public static Surface glow(String texture) {
+        return new Surface(texture, Blend.PLASMA_GLOW);
+    }
+
     public String texture() {
         return texture;
     }
@@ -109,6 +118,7 @@ public final class Surface {
                 case CUTOUT_NO_CULL -> CompatRenderTypes.entityCutoutNoCull(Ids.parse(texture));
                 case TRANSLUCENT -> CompatRenderTypes.entityTranslucent(Ids.parse(texture), false);
                 case TRANSLUCENT_EMISSIVE -> CompatRenderTypes.entityTranslucentEmissive(Ids.parse(texture));
+                case PLASMA_GLOW -> CompatRenderTypes.plasmaGlow(Ids.parse(texture));
             };
             renderType = resolved;
         }

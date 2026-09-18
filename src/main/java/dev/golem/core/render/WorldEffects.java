@@ -10,6 +10,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.MultiBufferSource;
 import org.joml.Matrix4f;
+import org.joml.Quaternionf;
 //? if >=26.1 {
 import net.minecraft.client.renderer.rendertype.RenderType;
 //?} else {
@@ -29,6 +30,8 @@ public final class WorldEffects {
     private static com.mojang.blaze3d.pipeline.TextureTarget worldDepth;
     private static boolean depthCaptured;
     private static final List<Consumer<CameraInfo>> BEGIN_HOOKS = new ArrayList<>();
+    private static final Matrix4f HOOK_MODEL_VIEW = new Matrix4f();
+    private static boolean dispatchingHooks;
 
     private WorldEffects() {}
 
@@ -108,14 +111,32 @@ public final class WorldEffects {
         clear();
         level = Minecraft.getInstance().level;
         collecting = level != null;
-        if (collecting) for (Consumer<CameraInfo> hook : List.copyOf(BEGIN_HOOKS)) hook.accept(CameraInfo.current());
+        if (!collecting) return;
+        CameraInfo camera = CameraInfo.current();
+        HOOK_MODEL_VIEW.rotation(new Quaternionf(camera.orientation).conjugate());
+        dispatchingHooks = true;
+        try {
+            for (Consumer<CameraInfo> hook : List.copyOf(BEGIN_HOOKS)) hook.accept(camera);
+        } finally {
+            dispatchingHooks = false;
+        }
     }
 
     public static boolean isCollecting() {
         return collecting && level == Minecraft.getInstance().level;
     }
 
-    /** Registers client geometry that must be submitted at the start of the world frame. */
+    /**
+     * Registers client geometry that must be submitted at the start of the world frame.
+     *
+     * <p>A hook runs before the world model-view exists — 1.20 puts the view rotation in the pose
+     * stack it hands renderers, and 1.21 onwards pushes it onto the global matrix, but both do so
+     * after the world frame has already started. So a hook cannot capture it the way an in-frame
+     * renderer does, and {@link #submit} supplies it instead. Poses passed from here are therefore
+     * <b>world-axis and camera-relative</b> on every version: translate by world minus
+     * {@link CameraInfo#pos}, keep world axes, and billboard by rotating with
+     * {@link CameraInfo#orientation}.
+     */
     public static void onBegin(Consumer<CameraInfo> callback) {
         BEGIN_HOOKS.add(callback);
     }
@@ -126,7 +147,9 @@ public final class WorldEffects {
         PoseStack copy = new PoseStack();
         copy.last().pose().set(pose.last().pose());
         copy.last().normal().set(pose.last().normal());
-        ENTRIES.add(new Entry(order, copy, new Matrix4f(RenderSystem.getModelViewMatrix()), captureDrawState(), type, geometry));
+        Matrix4f modelView = dispatchingHooks ? new Matrix4f(HOOK_MODEL_VIEW)
+                : new Matrix4f(RenderSystem.getModelViewMatrix());
+        ENTRIES.add(new Entry(order, copy, modelView, captureDrawState(), type, geometry));
     }
 
     private static Runnable captureDrawState() {
@@ -155,6 +178,60 @@ public final class WorldEffects {
             RenderSystem.setShaderColor(color[0], color[1], color[2], color[3]);
         };
         *///?}
+    }
+
+    /**
+     * Routes a declared model's geometry into this pass, so a {@code Gem} model can be replayed here
+     * the way {@code CompatBER} replays one into the world frame.
+     *
+     * <p>Only geometry is carried. An item, a text run or a block model has no business in a late
+     * effects pass — each of those wants the world's own batching and ordering, which this pass has
+     * already ended by the time it draws.
+     */
+    public static SubmitSink sink(int order) {
+        return new EffectSink(order);
+    }
+
+    private record EffectSink(int order) implements SubmitSink {
+
+        @Override
+        public void submitCustomGeometry(PoseStack poseStack, RenderType renderType,
+                                         SubmitSink.CustomGeometry geometry) {
+            submit(poseStack, renderType, order, geometry);
+        }
+
+        @Override
+        public SubmitSink order(int order) {
+            return order == this.order ? this : new EffectSink(order);
+        }
+
+        @Override
+        public void submitItem(PoseStack poseStack, CompatItemRenderState item, int light, int overlay, int seed) {
+            throw new UnsupportedOperationException("World effects draw geometry only");
+        }
+
+        @Override
+        public void submitBlock(PoseStack poseStack, CompatBlockRenderState block, int light, int overlay) {
+            throw new UnsupportedOperationException("World effects draw geometry only");
+        }
+
+        @Override
+        public void submitMovingBlock(PoseStack poseStack, CompatMovingBlock block) {
+            throw new UnsupportedOperationException("World effects draw geometry only");
+        }
+
+        @Override
+        public void submitBlockEntity(PoseStack poseStack, CompatBlockEntityRenderState blockEntity) {
+            throw new UnsupportedOperationException("World effects draw geometry only");
+        }
+
+        @Override
+        public void submitText(PoseStack poseStack, net.minecraft.client.gui.Font font, float x, float y,
+                               net.minecraft.util.FormattedCharSequence text, boolean shadow,
+                               net.minecraft.client.gui.Font.DisplayMode mode, int light, int color,
+                               int backgroundColor) {
+            throw new UnsupportedOperationException("World effects draw geometry only");
+        }
     }
 
     public static void clear() {

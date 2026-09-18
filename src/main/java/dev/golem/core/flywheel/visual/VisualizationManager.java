@@ -100,6 +100,19 @@ public final class VisualizationManager {
         effects.add(effect, visual);
     }
 
+    /**
+     * Adds an effect whose visual the caller already built. {@link VisualizerRegistry} keys on the
+     * effect's own class, which cannot separate two pools that share one adapter type, so a caller
+     * holding its own registration hands the visual over directly.
+     */
+    public <E extends Effect> void addEffect(E effect, EffectVisualizer<E> visualizer, float partialTick) {
+        effects.add(effect, visualizer.createVisual(context, effect, partialTick));
+    }
+
+    public @Nullable EffectVisual<?> effectVisual(Effect effect) {
+        return effects.get(effect);
+    }
+
     public void removeEffect(Effect effect) {
         effects.remove(effect);
     }
