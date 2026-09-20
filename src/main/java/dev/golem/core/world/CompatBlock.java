@@ -99,7 +99,12 @@ public class CompatBlock extends Block {
         //? if >=26.1 {
         onExplosionHit(state, level, pos, explosion, onHit);
         //?} else {
-        /*wasExploded(level, pos, explosion);
+        /*// Vanilla's 26.1 default in this era's spelling: a hook that answers false loses the block with
+        // its explosion drops, then wasExploded runs on the empty cell as it always did.
+        if (!onExplosion(state, level, pos, explosion, (stack, dropPos) -> {})) {
+            level.destroyBlock(pos, dropFromExplosion(explosion));
+            wasExploded(level, pos, explosion);
+        }
         *///?}
     }
 
@@ -203,13 +208,41 @@ public class CompatBlock extends Block {
     }
     *///?}
 
-    //? if <26.1 {
-    /*@Override
-    public void wasExploded(Level level, BlockPos pos, Explosion explosion) {
-        if (!(level instanceof ServerLevel server)
-                || !onExplosion(level.getBlockState(pos), server, pos, explosion, (stack, dropPos) -> {})) {
-            super.wasExploded(level, pos, explosion);
+    //? if >=1.21 && <26.1 {
+    /*/^*
+     * 1.21's vanilla hook, called before the block is removed, with the same contract as 26.1's: a hook
+     * that answers true owns the block's removal. Both loaders route explosions through it in this era.
+     ^/
+    @Override
+    protected void onExplosionHit(BlockState state, Level level, BlockPos pos, Explosion explosion,
+                                  BiConsumer<ItemStack, BlockPos> onHit) {
+        if (level instanceof ServerLevel server && onExplosion(state, server, pos, explosion, onHit)) {
+            return;
         }
+        super.onExplosionHit(state, level, pos, explosion, onHit);
+    }
+    *///?} elif forge {
+    /*/^*
+     * Forge's pre-removal hook carries the state; vanilla's {@code wasExploded} runs after the block is
+     * already air, which is why the HBM hook is routed from here on Forge 1.20.1.
+     ^/
+    @Override
+    public void onBlockExploded(BlockState state, Level level, BlockPos pos, Explosion explosion) {
+        // Same contract as 26.1 onExplosionHit: a hook that answers true owns the block's removal.
+        if (level instanceof ServerLevel server
+                && onExplosion(state, server, pos, explosion, (stack, dropPos) -> {})) {
+            return;
+        }
+        super.onBlockExploded(state, level, pos, explosion);
+    }
+    *///?} elif fabric {
+    /*/^*
+     * Fabric 1.20.1 has no pre-removal hook at all — vanilla calls {@code wasExploded} after the block
+     * is air — so {@code MixinExplosionBlockHook} calls this from the explosion's block loop instead.
+     * Returns true when the hook owns the block's removal.
+     ^/
+    public final boolean golem$explosionHit(BlockState state, ServerLevel level, BlockPos pos, Explosion explosion) {
+        return onExplosion(state, level, pos, explosion, (stack, dropPos) -> {});
     }
     *///?}
 

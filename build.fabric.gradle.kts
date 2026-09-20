@@ -95,6 +95,8 @@ tasks.processResources {
         "flywheel_be_mixins" to "",
         // Fabric has no debug-screen entry registry, so the F3 lines are appended by a mixin there.
         "debug_line_mixins" to if (hasVendoredFlywheel) ", \"MixinDebugScreenLines\"" else "",
+        // 1.20.1 has no pre-removal explosion hook for blocks (1.21 added onExplosionHit); see CompatBlock.
+        "legacy_explosion_mixins" to if (mcVersion.startsWith("1.20.")) "\"MixinExplosionBlockHook\"" else "",
         "legacy_client_mixins" to ", \"MixinMouseInput\"" +
             if (obfuscated) ", \"MixinLegacyCrosshair\"" else "",
         "pack_format" to prop("pack_format"),

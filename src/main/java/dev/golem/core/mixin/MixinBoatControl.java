@@ -16,7 +16,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 //? if >=26.1 {
 @Mixin(net.minecraft.world.entity.vehicle.boat.AbstractBoat.class)
 //?} else {
-/*@Mixin(net.minecraft.world.entity.vehicle.Boat.class)
+/*@Mixin(net.minecraft.world.entity.vehicle.boat.Boat.class)
 *///?}
 public abstract class MixinBoatControl implements BoatInputs {
 

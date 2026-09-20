@@ -67,8 +67,15 @@ public final class ItemStacks {
         secondCopy.remove(net.minecraft.core.component.DataComponents.DAMAGE);
         return ItemStack.isSameItemSameComponents(firstCopy, secondCopy);
         //?} else {
-        /*return ItemStack.isSameItem(first, second)
-                && ItemStack.isSameItemSameTags(first, second);
+        /*// Damage is an NBT tag here; isSameItemSameTags would compare it, so it is stripped from copies.
+        ItemStack firstCopy = first.copy();
+        ItemStack secondCopy = second.copy();
+        if (firstCopy.hasTag()) firstCopy.getTag().remove("Damage");
+        if (secondCopy.hasTag()) secondCopy.getTag().remove("Damage");
+        if (firstCopy.hasTag() && firstCopy.getTag().isEmpty()) firstCopy.setTag(null);
+        if (secondCopy.hasTag() && secondCopy.getTag().isEmpty()) secondCopy.setTag(null);
+        return ItemStack.isSameItem(firstCopy, secondCopy)
+                && ItemStack.isSameItemSameTags(firstCopy, secondCopy);
         *///?}
     }
 
@@ -169,8 +176,10 @@ public final class ItemStacks {
         //?} else {
         /*net.minecraft.nbt.CompoundTag display = stack.getOrCreateTagElement("display");
         net.minecraft.nbt.ListTag lore = new net.minecraft.nbt.ListTag();
+        // 1.20.1 lore entries are JSON components, exactly as the LORE component holds them later.
         for (String line : lines) {
-            lore.add(net.minecraft.nbt.StringTag.valueOf("\u00a7r\u00a77" + line));
+            lore.add(net.minecraft.nbt.StringTag.valueOf(net.minecraft.network.chat.Component.Serializer.toJson(
+                    net.minecraft.network.chat.Component.literal(line).withStyle(net.minecraft.ChatFormatting.GRAY))));
         }
         display.put("Lore", lore);
         stack.setHoverName(net.minecraft.network.chat.Component.literal(name));
@@ -190,7 +199,11 @@ public final class ItemStacks {
         if (!display.contains("Lore", 9)) return List.of();
         net.minecraft.nbt.ListTag lore = display.getList("Lore", 8);
         java.util.ArrayList<String> lines = new java.util.ArrayList<>();
-        for (int i = 0; i < lore.size(); i++) lines.add(lore.getString(i));
+        for (int i = 0; i < lore.size(); i++) {
+            net.minecraft.network.chat.Component line =
+                    net.minecraft.network.chat.Component.Serializer.fromJson(lore.getString(i));
+            lines.add(line == null ? lore.getString(i) : line.getString());
+        }
         return List.copyOf(lines);
         *///?}
     }

@@ -65,7 +65,29 @@ public final class GameTestHelpers {
         //? if >=1.21 {
         return helper.makeMockPlayer(gameType);
         //?} else {
-        /*return helper.makeMockPlayer();
+        /*// This era's helper has no game-type overload and always answers creative; the requested mode
+        // is what 1.21's makeMockPlayer(GameType) reports, so it is reproduced here.
+        boolean creative = gameType == GameType.CREATIVE;
+        boolean spectator = gameType == GameType.SPECTATOR;
+        Player player = new Player(helper.getLevel(), BlockPos.ZERO, 0.0F,
+                new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(), "test-mock-player")) {
+            @Override public boolean isSpectator() { return spectator; }
+            @Override public boolean isCreative() { return creative; }
+            @Override public boolean isLocalPlayer() { return true; }
+            //? if fabric {
+            // Vanilla's Player.drop only builds the item entity; ServerPlayer is what puts it in the
+            // level (Forge's toss hook does it for every player, so only Fabric needs this).
+            @Override public net.minecraft.world.entity.item.ItemEntity drop(net.minecraft.world.item.ItemStack stack, boolean dropAround,
+                                                                            boolean includeThrower) {
+                net.minecraft.world.entity.item.ItemEntity dropped = super.drop(stack, dropAround, includeThrower);
+                if (dropped != null && !level().isClientSide()) level().addFreshEntity(dropped);
+                return dropped;
+            }
+            //?}
+        };
+        player.getAbilities().instabuild = creative;
+        player.getAbilities().invulnerable = creative;
+        return player;
         *///?}
     }
 
@@ -176,8 +198,56 @@ public final class GameTestHelpers {
     /** What a mock player's channel received: encoded packets, and finished wire buffers. */
     public record Outbound(List<Packet<?>> packets, List<byte[]> wires) {}
 
+    /**
+     * Whether a packed resource exists, spelled the 26.1 way. Below 1.21 the datapack folders carry their
+     * old plural names ({@code recipes}, {@code loot_tables}, {@code advancements}, {@code structures},
+     * {@code tags/items}...), which {@code legacy-recipes.gradle.kts} renames at build time; this maps the
+     * asked-for path the same way so an asset test states one path for every node.
+     */
+    public static boolean resourceExists(Class<?> owner, String path) {
+        String resolved = path;
+        //? if <1.21 {
+        /*resolved = resolved
+                .replaceFirst("^(data/\\w+/)recipe/", "$1recipes/")
+                .replaceFirst("^(data/\\w+/)loot_table/", "$1loot_tables/")
+                .replaceFirst("^(data/\\w+/)advancement/", "$1advancements/")
+                .replaceFirst("^(data/\\w+/)structure/", "$1structures/")
+                .replaceFirst("^(data/\\w+/tags/)block/", "$1blocks/")
+                .replaceFirst("^(data/\\w+/tags/)item/", "$1items/")
+                .replaceFirst("^(data/\\w+/tags/)fluid/", "$1fluids/")
+                .replaceFirst("^(data/\\w+/tags/)entity_type/", "$1entity_types/")
+                .replaceFirst("^(data/\\w+/tags/)game_event/", "$1game_events/");
+        *///?}
+        // The owner's loader: on Forge each mod is its own module, and this class cannot see the mod's data.
+        return owner.getClassLoader().getResource(resolved) != null;
+    }
+
     public static MockServerPlayer mockServerPlayer(GameTestHelper helper) {
         return new MockServerPlayer(helper);
+    }
+
+    /**
+     * Vanilla's {@code makeMockServerPlayerInLevel}, made to survive Forge 1.20.1: that loader's login
+     * hooks read {@code connection.channel()} inside {@code placeNewPlayer}, and the vanilla mock hands it a
+     * {@link Connection} that never had a channel, so the helper itself throws before any test code runs.
+     * Binding an {@link EmbeddedChannel} first gives the hooks a channel (with no FML attributes, so the
+     * player counts as a vanilla client, which is what a mock should be). Every other era uses the helper.
+     */
+    public static ServerPlayer mockServerPlayerInLevel(GameTestHelper helper) {
+        //? if forge && <1.20.5 {
+        /*ServerLevel level = helper.getLevel();
+        ServerPlayer player = new ServerPlayer(level.getServer(), level,
+                new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(), "test-mock-player")) {
+            @Override public boolean isSpectator() { return false; }
+            @Override public boolean isCreative() { return true; }
+        };
+        Connection connection = new Connection(PacketFlow.SERVERBOUND);
+        new EmbeddedChannel(connection);
+        level.getServer().getPlayerList().placeNewPlayer(connection, player);
+        return player;
+        *///?} else {
+        return helper.makeMockServerPlayerInLevel();
+        //?}
     }
 
     /** The common fields carried by a loader's menu-opening packet. */
@@ -279,7 +349,7 @@ public final class GameTestHelpers {
 
         private MockServerPlayer(GameTestHelper helper) {
             level = helper.getLevel();
-            player = helper.makeMockServerPlayerInLevel();
+            player = mockServerPlayerInLevel(helper);
             connection = new Connection(PacketFlow.SERVERBOUND);
             channel = new EmbeddedChannel(connection);
             //? if neoforge {

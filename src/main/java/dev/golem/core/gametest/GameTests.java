@@ -190,14 +190,7 @@ public final class GameTests {
             /*// The structure is namespaced to the MOD, not to this library: generated tests are filtered by
         // their structure's namespace when enabledGameTestNamespaces is set, so a golemcore structure
         // would see every one of them silently dropped.
-        PENDING.add(new TestFunction(
-                "defaultBatch",
-                function.id(),
-                function.namespace + ":" + EMPTY_STRUCTURE,
-                function.timeoutTicks,
-                0L,
-                true,
-                function.body.get()));
+        addLegacy(function);
 
         if (!generatorRegistered) {
             generatorRegistered = true;
@@ -210,14 +203,7 @@ public final class GameTests {
     /*public static void register(net.minecraftforge.event.RegisterGameTestsEvent event,
                                   Suite suite) {
         for (Function function : suite.functions) {
-            PENDING.add(new TestFunction(
-                "defaultBatch",
-                function.id(),
-                function.namespace + ":" + EMPTY_STRUCTURE,
-                function.timeoutTicks,
-                0L,
-                true,
-                function.body.get()));
+            addLegacy(function);
 
             if (!generatorRegistered) {
                 generatorRegistered = true;
@@ -227,9 +213,54 @@ public final class GameTests {
     }
         *///?}
 
+    //? if fabric && <26.1 {
+    /*/^*
+     * Fabric has no registration event: the mod's {@code fabric-gametest} entrypoint calls this for every
+     * suite from its {@code @GameTestGenerator}, then returns {@link #pending()}.
+     ^/
+    public static void register(Suite suite) {
+        for (Function function : suite.functions) addLegacy(function);
+    }
+    *///?}
+
     //? if <26.1 {
-    /*/^* The tests collected so far, for the generator to hand to the framework. ^/
-    static List<TestFunction> pending() {
+    /*/^*
+     * Padding below 26.1. This framework spaces plots by the structure's own size + 5 and the origin is
+     * always the template's corner, so a padded test gets a wider empty template (24 + 2 * padding, see
+     * port-tools/gen_empty_structures.py) AND a non-required no-op spacer with the same template placed
+     * right before it: the template keeps the next plot away, the spacer keeps the previous one away.
+     * The stock 24-wide template with its 5-block gap already covers a padding of 8.
+     ^/
+    private static void addLegacy(Function function) {
+        // -Dgolem.gametest.filter=<regex> runs only the tests whose id matches (spacers follow their test).
+        String filter = System.getProperty("golem.gametest.filter");
+        if (filter != null && !filter.isBlank() && !function.id().matches(filter)) return;
+        String structure = function.namespace + ":" + EMPTY_STRUCTURE;
+        if (function.padding > 64) structure = function.namespace + ":" + EMPTY_STRUCTURE + "_184";
+        else if (function.padding > 28) structure = function.namespace + ":" + EMPTY_STRUCTURE + "_152";
+        else if (function.padding > 8) structure = function.namespace + ":" + EMPTY_STRUCTURE + "_80";
+        if (function.padding > 8) {
+            PENDING.add(new TestFunction(
+                    "defaultBatch",
+                    function.id() + "_spacer",
+                    structure,
+                    20,
+                    0L,
+                    false,
+                    GameTestHelper::succeed));
+        }
+        PENDING.add(new TestFunction(
+                "defaultBatch",
+                function.id(),
+                structure,
+                function.timeoutTicks,
+                0L,
+                true,
+                function.body.get()));
+    }
+
+    /^* The tests collected so far, for the generator to hand to the framework. ^/
+    public static List<TestFunction> pending() {
         return PENDING;
     }
     *///?}

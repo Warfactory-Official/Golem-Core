@@ -61,7 +61,9 @@ public final class Harvests {
 
     private static boolean remove(ServerLevel level, BlockPos pos, BlockState state, boolean canHarvest,
                                    Player player, ItemStack tool) {
-        return level.destroyBlock(pos, canHarvest, player);
+        // Never let the level drop the loot here: the harvest branch drops through playerDestroy with the
+        // real tool, and a second loot roll from destroyBlock(pos, true) doubled every drop on 1.20.1.
+        return level.destroyBlock(pos, false, player);
     }
 
     private static boolean fireBreakEvent(ServerLevel level, ServerPlayer player, BlockPos pos,

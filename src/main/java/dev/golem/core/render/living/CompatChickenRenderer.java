@@ -9,7 +9,7 @@ import net.minecraft.client.renderer.entity.state.ChickenRenderState;
 import net.minecraft.resources.Identifier;
 //?} else {
 /*import net.minecraft.resources.ResourceLocation;
-import net.minecraft.world.entity.animal.Chicken;
+import net.minecraft.world.entity.animal.chicken.Chicken;
 *///?}
 
 /**

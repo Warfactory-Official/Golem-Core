@@ -69,6 +69,21 @@ public final class Chunks {
         *///?}
     }
 
+    /**
+     * Loads or generates a chunk on the calling server thread and returns it, blocking until it is a full
+     * chunk. The synchronous fallback for a claim the chunk system does not answer.
+     */
+    public static net.minecraft.world.level.chunk.LevelChunk loadNow(ServerLevel level, int chunkX, int chunkZ) {
+        //? if >=1.21 {
+        net.minecraft.world.level.chunk.ChunkAccess chunk = level.getChunkSource().getChunk(chunkX, chunkZ,
+                net.minecraft.world.level.chunk.status.ChunkStatus.FULL, true);
+        //?} else {
+        /*net.minecraft.world.level.chunk.ChunkAccess chunk = level.getChunkSource().getChunk(chunkX, chunkZ,
+                net.minecraft.world.level.chunk.ChunkStatus.FULL, true);
+        *///?}
+        return chunk instanceof net.minecraft.world.level.chunk.LevelChunk full ? full : null;
+    }
+
     /** Drops a claim taken by {@link #claimForLoading}. */
     public static synchronized void releaseForLoading(ServerLevel level, int chunkX, int chunkZ) {
         long key = pack(chunkX, chunkZ);

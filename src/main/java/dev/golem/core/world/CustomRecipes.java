@@ -198,7 +198,7 @@ public final class CustomRecipes {
             @Override
             public T fromJson(net.minecraft.resources.ResourceLocation id, com.google.gson.JsonObject json) {
                 ComponentIngredient ingredient = ComponentIngredient.fromJson(json.get("ingredient"));
-                net.minecraft.world.item.ItemStack result = net.minecraft.world.item.crafting.ShapedRecipe.itemStackFromJson(
+                net.minecraft.world.item.ItemStack result = legacyResult(
                         net.minecraft.util.GsonHelper.getAsJsonObject(json, "result"));
                 float experience = net.minecraft.util.GsonHelper.getAsFloat(json, "experience", 0F);
                 int cookingTime = net.minecraft.util.GsonHelper.getAsInt(json, "cookingtime", 200);
@@ -278,7 +278,7 @@ public final class CustomRecipes {
                 for (java.util.Map.Entry<String, com.google.gson.JsonElement> entry : jsonKey.entrySet()) {
                     key.put(entry.getKey(), ComponentIngredient.fromJson(entry.getValue()));
                 }
-                ItemStack result = net.minecraft.world.item.crafting.ShapedRecipe.itemStackFromJson(
+                ItemStack result = legacyResult(
                         net.minecraft.util.GsonHelper.getAsJsonObject(json, "result"));
                 return factory.create(id.getNamespace(), id.getPath(), pattern, key, ItemStackSpec.of(result));
             }
@@ -386,7 +386,7 @@ public final class CustomRecipes {
                 com.google.gson.JsonElement copyElement = json.get("copy_from");
                 if (copyElement == null) throw new com.google.gson.JsonSyntaxException("Missing copy_from");
                 Ingredient copyFrom = legacyIngredient(copyElement);
-                ItemStack result = net.minecraft.world.item.crafting.ShapedRecipe.itemStackFromJson(
+                ItemStack result = legacyResult(
                         net.minecraft.util.GsonHelper.getAsJsonObject(json, "result"));
                 return factory.create(id.getNamespace(), id.getPath(), ingredients, copyFrom, ItemStackSpec.of(result));
             }
@@ -420,6 +420,27 @@ public final class CustomRecipes {
                 return Ingredient.fromJson(element);
             }
         };
+    }
+    *///?}
+
+    //? if <1.21.1 {
+    /*/^*
+     * A crafting result with its NBT: vanilla's itemStackFromJson reads item and count only, and the
+     * component-era declarations arrive here with their components folded into a {@code tag} object by
+     * legacy-recipes.gradle.kts.
+     ^/
+    private static ItemStack legacyResult(com.google.gson.JsonObject json) {
+        ItemStack stack = net.minecraft.world.item.crafting.ShapedRecipe.itemStackFromJson(json);
+        com.google.gson.JsonObject tag = json.has("tag") ? net.minecraft.util.GsonHelper.getAsJsonObject(json, "tag")
+                : json.has("nbt") ? net.minecraft.util.GsonHelper.getAsJsonObject(json, "nbt") : null;
+        if (tag != null) {
+            try {
+                stack.setTag(net.minecraft.nbt.TagParser.parseTag(tag.toString()));
+            } catch (com.mojang.brigadier.exceptions.CommandSyntaxException e) {
+                throw new com.google.gson.JsonSyntaxException("Invalid result tag: " + tag, e);
+            }
+        }
+        return stack;
     }
     *///?}
 }
