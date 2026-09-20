@@ -33,6 +33,17 @@ public final class GolemComponent<T> {
     private static final Map<String, DeferredRegister<DataComponentType<?>>> REGISTERS = new HashMap<>();
     //?}
 
+    /**
+     * Every component id declared through this facade, in declaration order.
+     *
+     * <p>A component's id is a string in the places that name one from data — a recipe matching an
+     * ingredient on {@code hbm:item_variant}, or handing {@code hbm:heat} to its result — and below
+     * 1.20.5 there is no component registry for such a name to be wrong against. This is what a
+     * consumer can hold those names up to on every target.
+     */
+    private static final java.util.Set<String> KEYS =
+            java.util.Collections.synchronizedSet(new java.util.LinkedHashSet<>());
+
     private final String key;
     //? if >=1.21.1 {
     // The registered type may hold a different value class than T: a component whose natural value
@@ -53,7 +64,7 @@ public final class GolemComponent<T> {
     /** A component stored as {@code S} on modern platforms while exposing {@code T}; see the field note. */
     private <S> GolemComponent(String namespace, String name, Codec<S> storedCodec,
                                java.util.function.Function<T, S> toStored, java.util.function.Function<S, T> fromStored) {
-        key = Ids.of(namespace, name).toString();
+        key = declare(namespace, name);
         //? if >=1.21.1 {
         DeferredRegister<DataComponentType<?>> register = REGISTERS.computeIfAbsent(namespace,
                 ns -> DeferredRegister.create(Registries.DATA_COMPONENT_TYPE, ns));
@@ -75,11 +86,29 @@ public final class GolemComponent<T> {
 
     //? if <1.21.1 {
     /*private GolemComponent(String namespace, String name, LegacyValue<T> legacy) {
-        key = Ids.of(namespace, name).toString();
+        key = declare(namespace, name);
         codec = null;
         this.legacy = legacy;
     }
     *///?}
+
+    private static String declare(String namespace, String name) {
+        String key = Ids.of(namespace, name).toString();
+        KEYS.add(key);
+        return key;
+    }
+
+    /** The id this component is registered under, {@code namespace:name}. */
+    public String key() {
+        return key;
+    }
+
+    /** Every component id declared through this facade so far. */
+    public static java.util.Set<String> declaredKeys() {
+        synchronized (KEYS) {
+            return java.util.Set.copyOf(KEYS);
+        }
+    }
 
     /** Creates a component backed by the supplied persistent codec. */
     public static <T> GolemComponent<T> of(String namespace, String name, Codec<T> codec) {
