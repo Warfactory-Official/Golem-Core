@@ -55,6 +55,22 @@ public final class Compat {
     }
 
     /**
+     * A player's empty-hand use of a block, as the server's interaction dispatch would run it.
+     *
+     * <p>26.1 split the block hook into {@code useWithoutItem}/{@code useItemOn}; below that a single
+     * {@code use} took the hand. Tests that walk the real right-click path call this one method.
+     */
+    public static net.minecraft.world.InteractionResult useBlockWithoutItem(
+            net.minecraft.world.level.block.state.BlockState state, Level level,
+            net.minecraft.world.entity.player.Player player, net.minecraft.world.phys.BlockHitResult hit) {
+        //? if >=1.21.1 {
+        return state.useWithoutItem(level, player, hit);
+        //?} else {
+        /*return state.use(level, player, net.minecraft.world.InteractionHand.MAIN_HAND, hit);
+        *///?}
+    }
+
+    /**
      * Runs an entity's fall-damage path for a fall of {@code fallDistance} blocks.
      *
      * <p>The first parameter widened from {@code float} to {@code double} at 26.1. Callers keep passing a

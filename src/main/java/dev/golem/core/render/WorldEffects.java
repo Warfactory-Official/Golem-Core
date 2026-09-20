@@ -32,6 +32,7 @@ public final class WorldEffects {
     private static final List<Consumer<CameraInfo>> BEGIN_HOOKS = new ArrayList<>();
     private static final Matrix4f HOOK_MODEL_VIEW = new Matrix4f();
     private static boolean dispatchingHooks;
+    private static final Matrix4f VIEW_ROTATION = new Matrix4f();
 
     private WorldEffects() {}
 
@@ -55,20 +56,24 @@ public final class WorldEffects {
         //?}
         //?} else {
         /*//? if fabric {
-        net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.START.register(context -> begin());
+        //? if >=1.21 {
+        net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.START.register(context -> begin(context.positionMatrix()));
+        //?} else {
+        /^net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.START.register(context -> begin(context.matrixStack().last().pose()));
+        ^///?}
         net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.AFTER_TRANSLUCENT.register(context -> captureDepth());
         net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.LAST.register(context -> end());
         //?} elif neoforge {
         /^net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 (net.neoforged.neoforge.client.event.RenderLevelStageEvent event) -> {
-                    if (event.getStage() == net.neoforged.neoforge.client.event.RenderLevelStageEvent.Stage.AFTER_SKY) begin();
+                    if (event.getStage() == net.neoforged.neoforge.client.event.RenderLevelStageEvent.Stage.AFTER_SKY) begin(event.getModelViewMatrix());
                     if (event.getStage() == net.neoforged.neoforge.client.event.RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) captureDepth();
                     if (event.getStage() == net.neoforged.neoforge.client.event.RenderLevelStageEvent.Stage.AFTER_LEVEL) end();
                 });
         ^///?} elif forge {
         /^net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(
                 (net.minecraftforge.client.event.RenderLevelStageEvent event) -> {
-                    if (event.getStage() == net.minecraftforge.client.event.RenderLevelStageEvent.Stage.AFTER_SKY) begin();
+                    if (event.getStage() == net.minecraftforge.client.event.RenderLevelStageEvent.Stage.AFTER_SKY) begin(event.getPoseStack().last().pose());
                     if (event.getStage() == net.minecraftforge.client.event.RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) captureDepth();
                     if (event.getStage() == net.minecraftforge.client.event.RenderLevelStageEvent.Stage.AFTER_LEVEL) end();
                 });
@@ -107,8 +112,24 @@ public final class WorldEffects {
         }
     }
 
+    /** 26.1 entry, from the {@code renderLevel} head: the frame's view rotation is the camera state's. */
     public static void begin() {
+        //? if >=26.1 {
+        begin(Minecraft.getInstance().gameRenderer.getGameRenderState().levelRenderState.cameraRenderState.viewRotationMatrix);
+        //?} else {
+        /*begin(new Matrix4f());
+        *///?}
+    }
+
+    /**
+     * Starts a world frame. {@code viewRotation} is the matrix the game renderer applies to
+     * camera-relative world coordinates this frame — on 26.1 the camera state's view rotation, on
+     * 1.21.1 the loader event's model-view matrix, on 1.20.1 the pose vanilla passes down (which also
+     * carries view bob and any loader camera roll). See {@link #viewRotation()}.
+     */
+    public static void begin(org.joml.Matrix4fc viewRotation) {
         clear();
+        VIEW_ROTATION.set(viewRotation);
         level = Minecraft.getInstance().level;
         collecting = level != null;
         if (!collecting) return;
@@ -120,6 +141,24 @@ public final class WorldEffects {
         } finally {
             dispatchingHooks = false;
         }
+    }
+
+    /**
+     * The view rotation of the frame being collected, for geometry submitted from an
+     * {@link #onBegin} hook.
+     *
+     * <p>Such a submission is drawn against the model-view matrix captured when it was made, and at
+     * frame start that matrix is still the identity on every supported version: 26.1's
+     * {@code LevelRenderer.renderLevel} multiplies the view rotation onto the global stack after its
+     * head, 1.21.1 does so after the sky pass, and 1.20.1 never puts it on the global stack at all.
+     * A frame-start submitter therefore builds its pose as {@code mulPose(viewRotation())} first and
+     * then translates by {@code (world - camera.pos)}; a pose that only translates is drawn as if the
+     * camera always looked north, and one that rotates after translating spins the geometry about its
+     * own origin. Submissions made from inside an entity or block-entity pass already sit under the
+     * view rotation and must not apply this.
+     */
+    public static Matrix4f viewRotation() {
+        return new Matrix4f(VIEW_ROTATION);
     }
 
     public static boolean isCollecting() {

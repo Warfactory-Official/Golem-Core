@@ -201,4 +201,19 @@ public final class CompatRenderTypes {
     public static RenderType weaponSmoke() {
         return WeaponSmokeRenderType.get();
     }
+
+    /**
+     * Alpha-tested, unculled, lightmapped geometry with no cardinal lighting — a 1.7 renderer's
+     * {@code glDisable(GL_LIGHTING)} sheet. Emit an upward normal; see {@link FlatCutoutRenderType}
+     * for why the stock cutout darkens the back side of a double-sided sheet on 26.1.
+     */
+    public static RenderType flatCutout(
+            //? if >=26.1 {
+            Identifier
+            //?} else {
+            /*ResourceLocation
+            *///?}
+            texture) {
+        return FlatCutoutRenderType.of(texture);
+    }
 }

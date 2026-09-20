@@ -45,6 +45,19 @@ public final class ItemStacks {
         *///?}
     }
 
+    /**
+     * A hash consistent with {@link #sameItemAndData}: the item and its data, never the count. Same
+     * guard as {@code ItemContents.hashCode}: 1.20.5 has components but only 1.21.1 hashes them itself.
+     */
+    public static int hashItemAndData(ItemStack stack) {
+        if (stack.isEmpty()) return 0;
+        //? if >=1.21.1 {
+        return ItemStack.hashItemAndComponents(stack);
+        //?} else {
+        /*return java.util.Objects.hash(stack.getItem(), stack.getTag());
+        *///?}
+    }
+
     /** Compares item data while ignoring durability, matching the old wildcard filter. */
     public static boolean sameItemAndDataIgnoringDamage(ItemStack first, ItemStack second) {
         //? if >=1.20.5 {

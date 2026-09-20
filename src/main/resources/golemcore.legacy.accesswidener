@@ -3,3 +3,5 @@ accessible field net/minecraft/server/network/ServerGamePacketListenerImpl above
 # 1.20.1: AbstractMinecart.getDropItem is package-private abstract in vanilla (Forge patches it protected);
 # a minecart outside net.minecraft cannot implement it without this. 1.21.1 moved it to VehicleEntity (see the -1.21 file).
 transitive-extendable method net/minecraft/world/entity/vehicle/AbstractMinecart getDropItem ()Lnet/minecraft/world/item/Item;
+# BlockSetType.register is private in vanilla (NeoForge/Forge widen it in their patches); BlockSets.type registers HBM door sets through it.
+accessible method net/minecraft/world/level/block/state/properties/BlockSetType register (Lnet/minecraft/world/level/block/state/properties/BlockSetType;)Lnet/minecraft/world/level/block/state/properties/BlockSetType;

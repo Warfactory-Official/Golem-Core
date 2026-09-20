@@ -186,6 +186,46 @@ public final class Tints {
     }
 
     /**
+     * Registers one state-keyed tint per tint index: {@code byIndex.get(n)} colours every quad whose model
+     * declared {@code tintindex n}. 26.1 takes the list directly (its per-block source list is indexed the
+     * same way); older versions get one callback that dispatches on the index it is handed. A quad whose
+     * index is outside the list keeps white, as vanilla does for an unregistered index.
+     */
+    @SafeVarargs
+    public static void registerBlockTints(java.util.List<BlockTint> byIndex,
+            java.util.function.Supplier<? extends net.minecraft.world.level.block.Block>... blocks) {
+        java.util.List<BlockTint> tints = java.util.List.copyOf(byIndex);
+        whenColorsRegisterable(() -> {
+            net.minecraft.client.color.block.BlockColors colors =
+                    net.minecraft.client.Minecraft.getInstance().getBlockColors();
+            net.minecraft.world.level.block.Block[] resolved =
+                    new net.minecraft.world.level.block.Block[blocks.length];
+            for (int i = 0; i < blocks.length; i++) resolved[i] = blocks[i].get();
+            //? if >=26.1 {
+            java.util.List<net.minecraft.client.color.block.BlockTintSource> sources = new java.util.ArrayList<>();
+            for (BlockTint tint : tints) {
+                sources.add(new net.minecraft.client.color.block.BlockTintSource() {
+                    @Override
+                    public int color(net.minecraft.world.level.block.state.BlockState state) {
+                        return tint.color(state);
+                    }
+
+                    @Override
+                    public java.util.Set<net.minecraft.world.level.block.state.properties.Property<?>> relevantProperties() {
+                        return tint.relevantProperties();
+                    }
+                });
+            }
+            colors.register(sources, resolved);
+            //?} else {
+            /*colors.register((state, level, pos, tintIndex) -> tintIndex >= 0 && tintIndex < tints.size()
+                    ? tints.get(tintIndex).color(state) : -1, resolved);
+            *///?}
+            GolemCore.LOG.info("Indexed block tints ({}) installed for {} block(s)", tints.size(), resolved.length);
+        });
+    }
+
+    /**
      * Runs {@code action} at the first moment this loader allows colour handlers to be registered.
      *
      * <p>Fabric's client initializer runs before the {@code Minecraft} instance exists, and NeoForge's

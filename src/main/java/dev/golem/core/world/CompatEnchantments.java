@@ -80,6 +80,16 @@ public final class CompatEnchantments {
         *///?}
     }
 
+    /** Applies Silk Touch to a tool for APIs which synthesize a harvesting stack. */
+    public static void enchantSilkTouch(ServerLevel level, ItemStack tool) {
+        //? if >=1.21.1 {
+        tool.enchant(level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT)
+                .getOrThrow(Enchantments.SILK_TOUCH), 1);
+        //?} else {
+        /*tool.enchant(Enchantments.SILK_TOUCH, 1);
+        *///?}
+    }
+
     /** Adjusts only Fortune on a stack while retaining every other enchantment. */
     public static void adjustFortune(ServerLevel level, ItemStack stack, int delta) {
         //? if >=1.21.1 {

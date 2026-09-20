@@ -203,6 +203,16 @@ public final class GolemNetwork {
         ServerPlayNetworking.send(player, payload);
     }
 
+    /^*
+     * Whether {@code player}'s connection has negotiated the channel for {@code codec}, so a send will
+     * reach it rather than fail. A player without the mod (or a test's bare in-level mock player, whose
+     * connection never ran a handshake) answers false; a broadcast that sweeps {@code level.players()}
+     * must skip those, because the loader refuses the send with an exception instead of dropping it.
+     ^/
+    public static boolean canSendToPlayer(ServerPlayer player, GolemCodec<?> codec) {
+        return ServerPlayNetworking.canSend(player, codec.type());
+    }
+
     public static <P extends GolemPayload> void sendToTracking(ServerLevel level, BlockPos pos, GolemCodec<P> codec, P payload) {
         for (ServerPlayer player : PlayerLookup.tracking(level, pos)) ServerPlayNetworking.send(player, payload);
     }
@@ -243,6 +253,16 @@ public final class GolemNetwork {
         FriendlyByteBuf buffer = PacketByteBufs.create();
         codec.encode(payload, buffer);
         ServerPlayNetworking.send(player, codec.id(), buffer);
+    }
+
+    /^*
+     * Whether {@code player}'s connection has negotiated the channel for {@code codec}, so a send will
+     * reach it rather than fail. A player without the mod (or a test's bare in-level mock player, whose
+     * connection never ran a handshake) answers false; a broadcast that sweeps {@code level.players()}
+     * must skip those, because the loader refuses the send with an exception instead of dropping it.
+     ^/
+    public static boolean canSendToPlayer(ServerPlayer player, GolemCodec<?> codec) {
+        return ServerPlayNetworking.canSend(player, codec.id());
     }
 
     public static <P extends GolemPayload> void sendToTracking(ServerLevel level, BlockPos pos, GolemCodec<P> codec, P payload) {
@@ -318,6 +338,16 @@ public final class GolemNetwork {
         CHANNEL.send(PacketDistributor.PLAYER.with(() -> player), payload);
     }
 
+    /^*
+     * Whether {@code player}'s connection has negotiated the channel for {@code codec}, so a send will
+     * reach it rather than fail. A player without the mod (or a test's bare in-level mock player, whose
+     * connection never ran a handshake) answers false; a broadcast that sweeps {@code level.players()}
+     * must skip those, because the loader refuses the send with an exception instead of dropping it.
+     ^/
+    public static boolean canSendToPlayer(ServerPlayer player, GolemCodec<?> codec) {
+        return CHANNEL.isRemotePresent(player.connection.connection);
+    }
+
     public static <P extends GolemPayload> void sendToTracking(ServerLevel level, BlockPos pos, GolemCodec<P> codec, P payload) {
         CHANNEL.send(PacketDistributor.TRACKING_CHUNK.with(() -> level.getChunkAt(pos)), payload);
     }
@@ -365,6 +395,16 @@ public final class GolemNetwork {
 
     public static <P extends GolemPayload> void sendToPlayer(ServerPlayer player, GolemCodec<P> codec, P payload) {
         PacketDistributor.sendToPlayer(player, payload);
+    }
+
+    /**
+     * Whether {@code player}'s connection has negotiated the channel for {@code codec}, so a send will
+     * reach it rather than fail. A player without the mod (or a test's bare in-level mock player, whose
+     * connection never ran a handshake) answers false; a broadcast that sweeps {@code level.players()}
+     * must skip those, because the loader refuses the send with an exception instead of dropping it.
+     */
+    public static boolean canSendToPlayer(ServerPlayer player, GolemCodec<?> codec) {
+        return player.connection.hasChannel(codec.type());
     }
 
     public static <P extends GolemPayload> void sendToTracking(ServerLevel level, BlockPos pos, GolemCodec<P> codec, P payload) {
