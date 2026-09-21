@@ -14,6 +14,8 @@ public final class ForgeEntrypoint {
     public ForgeEntrypoint() {
         modBus = FMLJavaModLoadingContext.get().getModEventBus();
         GolemCore.LOG.info("Golem Core loaded on {} for MC {}", GolemCore.loader(), GolemCore.MC_VERSION);
+        // Dev-only visual test harness; a no-op unless -Dgolem.harness.port is set on a client.
+        if (Platform.isClient()) dev.golem.core.harness.Harness.init();
     }
 
     public static IEventBus modBus() {

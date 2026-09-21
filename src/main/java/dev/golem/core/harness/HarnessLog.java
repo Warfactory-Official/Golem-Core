@@ -1,0 +1,88 @@
+package dev.golem.core.harness;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import dev.golem.core.GolemCore;
+import java.util.ArrayDeque;
+import java.util.regex.Pattern;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.LogEvent;
+import org.apache.logging.log4j.core.Logger;
+import org.apache.logging.log4j.core.appender.AbstractAppender;
+import org.apache.logging.log4j.core.config.Property;
+import org.apache.logging.log4j.core.layout.PatternLayout;
+
+/**
+ * Ring buffer of recent log lines, filled by a Log4j appender on the root logger. Chat also lands here
+ * because vanilla logs every chat line as {@code [CHAT] ...}.
+ */
+final class HarnessLog {
+
+    private static final int CAPACITY = 4000;
+    private static final ArrayDeque<String> lines = new ArrayDeque<>(CAPACITY);
+    private static long dropped;
+
+    private HarnessLog() {}
+
+    static void install() {
+        try {
+            if (!(LogManager.getRootLogger() instanceof Logger root)) {
+                GolemCore.LOG.warn("[harness] root logger is not log4j-core; log queries are unavailable");
+                return;
+            }
+            PatternLayout layout = PatternLayout.newBuilder()
+                    .withPattern("%d{HH:mm:ss.SSS} [%t/%level] [%logger{1}]: %msg")
+                    .build();
+            //? if >=1.21 {
+            AbstractAppender appender = new AbstractAppender("GolemHarness", null, layout, true, new Property[0]) {
+            //?} else {
+            /*// 1.20.1 ships a Log4j without the Property[] constructor.
+            AbstractAppender appender = new AbstractAppender("GolemHarness", null, layout, true) {
+            *///?}
+                @Override
+                public void append(LogEvent event) {
+                    add(layout.toSerializable(event));
+                }
+            };
+            appender.start();
+            root.addAppender(appender);
+        } catch (Throwable t) {
+            GolemCore.LOG.warn("[harness] could not attach the log appender: {}", t.toString());
+        }
+    }
+
+    static void add(String line) {
+        synchronized (lines) {
+            if (lines.size() >= CAPACITY) {
+                lines.removeFirst();
+                dropped++;
+            }
+            lines.addLast(line);
+        }
+    }
+
+    /** Of the last {@code count} lines, those matching {@code regex} (all of them when empty). */
+    static JsonObject tail(int count, String regex) {
+        Pattern pattern = regex == null || regex.isEmpty() ? null : Pattern.compile(regex);
+        JsonArray out = new JsonArray();
+        synchronized (lines) {
+            java.util.Iterator<String> it = lines.descendingIterator();
+            java.util.ArrayDeque<String> picked = new java.util.ArrayDeque<>();
+            int seen = 0;
+            while (it.hasNext() && seen++ < count) {
+                String line = it.next();
+                if (pattern == null || pattern.matcher(line).find()) picked.addFirst(line);
+            }
+            picked.forEach(out::add);
+        }
+        JsonObject json = Json.ok();
+        json.add("lines", out);
+        json.addProperty("dropped", dropped);
+        synchronized (lines) {
+            // Running count of every line ever buffered; a client stores it as a mark and later asks
+            // only for lines after the mark.
+            json.addProperty("total", dropped + lines.size());
+        }
+        return json;
+    }
+}

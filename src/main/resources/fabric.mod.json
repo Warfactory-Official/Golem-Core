@@ -12,6 +12,9 @@
     "entrypoints": {
         "main": [
             "dev.golem.core.platform.FabricEntrypoint"
+        ],
+        "client": [
+            "dev.golem.core.harness.HarnessFabricClient"
         ]
     },
     "mixins": [
