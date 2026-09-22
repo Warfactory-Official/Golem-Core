@@ -85,7 +85,7 @@ public class CompatItem extends Item {
         return false;
     }
 
-    public enum UseAnimation { NONE, BOW }
+    public enum UseAnimation { NONE, BOW, DRINK }
 
     /**
      * Receives server-side inventory ticks with the optional equipped slot when vanilla provides it.
@@ -153,6 +153,7 @@ public class CompatItem extends Item {
         return switch (compatUseAnimation(stack)) {
             case NONE -> net.minecraft.world.item.ItemUseAnimation.NONE;
             case BOW -> net.minecraft.world.item.ItemUseAnimation.BOW;
+            case DRINK -> net.minecraft.world.item.ItemUseAnimation.DRINK;
         };
     }
 
@@ -166,6 +167,7 @@ public class CompatItem extends Item {
         return switch (compatUseAnimation(stack)) {
             case NONE -> net.minecraft.world.item.UseAnim.NONE;
             case BOW -> net.minecraft.world.item.UseAnim.BOW;
+            case DRINK -> net.minecraft.world.item.UseAnim.DRINK;
         };
     }
 

@@ -2,5 +2,8 @@ accessWidener v2 official
 accessible field net/minecraft/client/renderer/item/properties/select/SelectItemModelProperties ID_MAPPER Lnet/minecraft/util/ExtraCodecs$LateBoundIdMapper;
 accessible field com/mojang/blaze3d/opengl/GlBuffer handle I
 accessible field com/mojang/blaze3d/opengl/GlBuffer persistentBuffer Ljava/nio/ByteBuffer;
+# Fabric GameTest API exposes this field through its own class tweaker, but that widener is not
+# inherited by Core's compile classpath. The modern Fabric bridge reads the current dynamic registry.
+accessible field net/minecraft/resources/RegistryLoadTask registry Lnet/minecraft/core/WritableRegistry;
 # BlockSetType.register is private in vanilla (NeoForge/Forge widen it in their patches); BlockSets.type registers HBM door sets through it.
 accessible method net/minecraft/world/level/block/state/properties/BlockSetType register (Lnet/minecraft/world/level/block/state/properties/BlockSetType;)Lnet/minecraft/world/level/block/state/properties/BlockSetType;

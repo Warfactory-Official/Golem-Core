@@ -97,6 +97,10 @@ tasks.processResources {
         "debug_line_mixins" to if (hasVendoredFlywheel) ", \"MixinDebugScreenLines\"" else "",
         // 1.20.1 has no pre-removal explosion hook for blocks (1.21 added onExplosionHit); see CompatBlock.
         "legacy_explosion_mixins" to if (mcVersion.startsWith("1.20.")) "\"MixinExplosionBlockHook\"" else "",
+        // Modern Fabric's GameTest API has no public dynamic-instance registration callback. The
+        // exact mixin is compiled and named only where Fabric's 26.1 implementation provides it.
+        // It follows the legacy explosion entry, which is empty on these modern nodes.
+        "fabric_gametest_mixins" to if (!obfuscated) "\"MixinFabricGameTestModInitializer\"" else "",
         "legacy_client_mixins" to ", \"MixinMouseInput\"" +
             if (obfuscated) ", \"MixinLegacyCrosshair\"" else "",
         "pack_format" to prop("pack_format"),

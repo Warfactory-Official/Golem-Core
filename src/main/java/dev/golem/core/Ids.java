@@ -29,6 +29,16 @@ public final class Ids {
 
     private Ids() {}
 
+    /** Normalizes historical vanilla item registry names to the newest API's spelling. */
+    public static String canonicalItemId(String id) {
+        return switch (id) {
+            case "minecraft:chain" -> "minecraft:iron_chain";
+            case "minecraft:grass" -> "minecraft:short_grass";
+            case "minecraft:scute" -> "minecraft:turtle_scute";
+            default -> id;
+        };
+    }
+
     /** The id type for the target version: {@code Identifier} on 26.1+, {@code ResourceLocation} below. */
     public static
             //? if >=26.1 {

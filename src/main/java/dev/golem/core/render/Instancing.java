@@ -43,13 +43,10 @@ public final class Instancing {
         if (!dev.golem.core.flywheel.Flywheel.isAvailable()) {
             return new Report("off", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         }
-        var backend = dev.golem.core.flywheel.backend.BackendManager.selected();
-        int[] census = dev.golem.core.flywheel.visual.GemBlockEntityVisual.census();
-        return new Report(backend == null ? "starting" : backend.name(),
-                census[0], census[1], census[2], census[3],
-                dev.golem.core.flywheel.DrawStats.draws(), dev.golem.core.flywheel.DrawStats.buckets(),
-                census[4], census[5],
-                dev.golem.core.flywheel.DrawStats.writes(), dev.golem.core.flywheel.DrawStats.skipped());
+        if (!dev.golem.core.platform.Platform.isClient()) {
+            return new Report("server", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        }
+        return Client.report();
         //?} else {
         /*return new Report("absent", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
         *///?}
@@ -67,6 +64,9 @@ public final class Instancing {
     /** Whether Core's engine is currently drawing the supplied level. */
     public static boolean isVisualizing(@Nullable LevelAccessor level) {
         //? if >=26.1 {
+        // Keep the common facade server-safe before resolving the client-only Flywheel implementation.
+        // The level-side check is the contract: a dedicated-server query can never be visualized.
+        if (level == null || !level.isClientSide()) return false;
         return dev.golem.core.flywheel.Flywheel.isVisualizing(level);
         //?} else {
         /*return false;
@@ -81,4 +81,23 @@ public final class Instancing {
                 resolver == null ? null : resolver::coreOf);
         //?}
     }
+
+    //? if >=26.1 {
+    /** Client-only report implementation kept out of the common facade's verified method bodies. */
+    private static final class Client {
+
+        private Client() {}
+
+        private static Report report() {
+            var backend = dev.golem.core.flywheel.backend.BackendManager.selected();
+            int[] census = dev.golem.core.flywheel.visual.GemBlockEntityVisual.census();
+            return new Report(backend == null ? "starting" : backend.name(),
+                    census[0], census[1], census[2], census[3],
+                    dev.golem.core.flywheel.DrawStats.draws(), dev.golem.core.flywheel.DrawStats.buckets(),
+                    census[4], census[5],
+                    dev.golem.core.flywheel.DrawStats.writes(),
+                    dev.golem.core.flywheel.DrawStats.skipped());
+        }
+    }
+    //?}
 }

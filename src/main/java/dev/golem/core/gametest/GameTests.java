@@ -19,8 +19,15 @@ import net.minecraft.gametest.framework.TestEnvironmentDefinition;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+//? if fabric && >=26.1 {
+/*import net.minecraft.core.Registry;
+import net.minecraft.gametest.framework.GameTestInstance;
+import net.minecraft.resources.RegistryLoadTask;
+import net.minecraft.resources.Identifier;
+*///?}
 //?} else {
 /*import net.minecraft.gametest.framework.TestFunction;
+import net.minecraft.world.level.block.Rotation;
 import java.util.ArrayList;
 import java.util.List;
 *///?}
@@ -117,6 +124,9 @@ public final class GameTests {
      */
     private static final Map<String, DeferredRegister<Consumer<GameTestHelper>>> REGISTERS = new HashMap<>();
 
+    /** Every declared function, used by loaders whose API provides no registration event. */
+    private static final List<Function> FUNCTIONS = new ArrayList<>();
+
     /**
      * Environments, one per namespace <b>per registry load</b> — keyed by the event, not held statically.
      *
@@ -156,11 +166,13 @@ public final class GameTests {
 
     public static Function function(String namespace, String name, int timeoutTicks, int padding,
                                     Supplier<Consumer<GameTestHelper>> body) {
+        Function function = new Function(namespace, name, timeoutTicks, padding, body);
         //? if >=26.1 {
         REGISTERS.computeIfAbsent(namespace, ns -> DeferredRegister.create(Registries.TEST_FUNCTION, ns))
                 .register(name, body);
+        FUNCTIONS.add(function);
         //?}
-        return new Function(namespace, name, timeoutTicks, padding, body);
+        return function;
     }
 
     //? if neoforge {
@@ -223,6 +235,44 @@ public final class GameTests {
     }
     *///?}
 
+    //? if fabric && >=26.1 {
+    /*/^*
+     * Fabric's modern GameTest API has no public registration event for data-driven test instances.
+     * Its own initializer registers annotated tests, then its registry-data hook supplies the fresh
+     * dynamic registries. Register the same instances NeoForge creates from this neutral declaration
+     * list when that hook hands us the current registry set.
+     ^/
+    @SuppressWarnings("unchecked")
+    public static void registerFabricDynamicEntries(List<RegistryLoadTask<?>> loadTasks) {
+        Map<ResourceKey<? extends Registry<?>>, Registry<?>> registries = new java.util.IdentityHashMap<>(loadTasks.size());
+        for (RegistryLoadTask<?> entry : loadTasks) {
+            registries.put(entry.registry.key(), entry.registry);
+        }
+
+        Registry<GameTestInstance> testInstances = (Registry<GameTestInstance>) registries.get(Registries.TEST_INSTANCE);
+        if (testInstances == null) return;
+        Registry<TestEnvironmentDefinition<?>> environmentRegistry =
+                (Registry<TestEnvironmentDefinition<?>>) java.util.Objects.requireNonNull(
+                        registries.get(Registries.TEST_ENVIRONMENT));
+
+        Map<String, Holder<TestEnvironmentDefinition<?>>> environments = new HashMap<>();
+        for (Function function : FUNCTIONS) {
+            Holder<TestEnvironmentDefinition<?>> environment = environments.computeIfAbsent(function.namespace,
+                    namespace -> Registry.registerForHolder(environmentRegistry,
+                            dev.golem.core.Ids.of(namespace, "test_environment"),
+                            new TestEnvironmentDefinition.Functions(Optional.empty(), Optional.empty())));
+
+            TestData<Holder<TestEnvironmentDefinition<?>>> data = new TestData<>(
+                    environment, Identifier.withDefaultNamespace(EMPTY_STRUCTURE),
+                    function.timeoutTicks, 0, true, Rotation.NONE, false, 1, 1, false, function.padding);
+            ResourceKey<Consumer<GameTestHelper>> key = ResourceKey.create(
+                    Registries.TEST_FUNCTION, dev.golem.core.Ids.of(function.namespace, function.name));
+            Registry.register(testInstances, dev.golem.core.Ids.of(function.namespace, function.name),
+                    new FunctionGameTestInstance(key, data));
+        }
+    }
+    *///?}
+
     //? if <26.1 {
     /*/^*
      * Padding below 26.1. This framework spaces plots by the structure's own size + 5 and the origin is
@@ -239,24 +289,65 @@ public final class GameTests {
         if (function.padding > 64) structure = function.namespace + ":" + EMPTY_STRUCTURE + "_184";
         else if (function.padding > 28) structure = function.namespace + ":" + EMPTY_STRUCTURE + "_152";
         else if (function.padding > 8) structure = function.namespace + ":" + EMPTY_STRUCTURE + "_80";
+        // The short TestFunction constructor hard-codes skyAccess=false. That is harmless for 26.1's
+        // 1x1x1 minecraft:empty (its enclosure is outside the test body), but 1.21.1's legacy padding
+        // templates are deliberately large so their synthetic roof/walls would land inside the test
+        // scenery. Use the full constructor there to keep the fixture open. 1.20.1 has no sky-access
+        // field; retain its original constructor and enclosure behavior for that node.
         if (function.padding > 8) {
+            //? if >=1.21.1 {
             PENDING.add(new TestFunction(
                     "defaultBatch",
                     function.id() + "_spacer",
                     structure,
+                    Rotation.NONE,
                     20,
                     0L,
                     false,
+                    false,
+                    1,
+                    1,
+                    true,
                     GameTestHelper::succeed));
+            //?} else {
+            /^PENDING.add(new TestFunction(
+                    "defaultBatch",
+                    function.id() + "_spacer",
+                    structure,
+                    Rotation.NONE,
+                    20,
+                    0L,
+                    false,
+                    1,
+                    1,
+                    GameTestHelper::succeed));^///?}
         }
+        //? if >=1.21.1 {
         PENDING.add(new TestFunction(
                 "defaultBatch",
                 function.id(),
                 structure,
+                Rotation.NONE,
                 function.timeoutTicks,
                 0L,
                 true,
+                false,
+                1,
+                1,
+                true,
                 function.body.get()));
+        //?} else {
+        /^PENDING.add(new TestFunction(
+                "defaultBatch",
+                function.id(),
+                structure,
+                Rotation.NONE,
+                function.timeoutTicks,
+                0L,
+                true,
+                1,
+                1,
+                function.body.get()));^///?}
     }
 
     /^* The tests collected so far, for the generator to hand to the framework. ^/
