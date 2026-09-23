@@ -130,8 +130,14 @@ final class HarnessCommands {
             return null;
         });
 
+        handlers.put("orbit", HarnessCamera::start);
+        handlers.put("orbit_stop", (mc, req) -> {
+            HarnessCamera.stop();
+            return null;
+        });
         handlers.put("look", (mc, req) -> {
             if (mc.player == null) return Json.error("no player");
+            HarnessCamera.stop();
             float yaw = (float) Json.number(req, "yaw", mc.player.getYRot());
             float pitch = (float) Json.number(req, "pitch", mc.player.getXRot());
             setRotation(mc, yaw, pitch);
@@ -139,6 +145,7 @@ final class HarnessCommands {
         });
         handlers.put("look_at", (mc, req) -> {
             if (mc.player == null) return Json.error("no player");
+            HarnessCamera.stop();
             double tx = Json.number(req, "x", 0);
             double ty = Json.number(req, "y", 0);
             double tz = Json.number(req, "z", 0);
@@ -185,6 +192,7 @@ final class HarnessCommands {
         });
 
         handlers.put("leave_world", (mc, req) -> {
+            HarnessCamera.stop();
             HarnessWorld.leave(mc);
             long start = Harness.tick();
             return (HarnessServer.Pending) m -> m.level == null && m.getOverlay() == null
@@ -210,6 +218,7 @@ final class HarnessCommands {
         handlers.put("log", (mc, req) -> HarnessLog.tail(Json.integer(req, "lines", 50), Json.str(req, "filter", "")));
         handlers.put("teleport", (mc, req) -> {
             if (mc.player == null) return Json.error("no player");
+            HarnessCamera.stop();
             mc.player.connection.sendCommand(String.format(java.util.Locale.ROOT, "tp @s %s %s %s",
                     Json.number(req, "x", mc.player.getX()), Json.number(req, "y", mc.player.getY()), Json.number(req, "z", mc.player.getZ())));
             BlockPos target = new BlockPos((int) Math.floor(Json.number(req, "x", 0)), (int) Math.floor(Json.number(req, "y", 0)), (int) Math.floor(Json.number(req, "z", 0)));

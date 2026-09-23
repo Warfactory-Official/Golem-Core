@@ -82,6 +82,7 @@ public final class Harness {
             HarnessWindow.tick(minecraft);
             HarnessInput.tick(minecraft);
             HarnessScreenshot.tick(minecraft);
+            HarnessCamera.tick(minecraft);
             HarnessServer.drain(minecraft);
         } catch (Throwable t) {
             GolemCore.LOG.error("[harness] tick failed", t);
