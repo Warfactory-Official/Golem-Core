@@ -9,7 +9,9 @@ import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 
+import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -43,6 +45,7 @@ public final class BlockEntities {
             new ConcurrentHashMap<>();
     private static final Map<BlockEntityType<?>, BlockEntityTicker<?>> CLIENT_TICKERS =
             new ConcurrentHashMap<>();
+    private static final Map<BlockEntityType<?>, Set<Block>> VALID_BLOCKS = new ConcurrentHashMap<>();
 
     private BlockEntities() {}
 
@@ -52,16 +55,42 @@ public final class BlockEntities {
     }
 
     public static <T extends BlockEntity> BlockEntityType<T> type(Factory<T> factory, Block... blocks) {
-        //? if fabric {
+        //? if fabric && >=1.21.2 {
         /*return net.fabricmc.fabric.api.object.builder.v1.block.entity.FabricBlockEntityTypeBuilder
                 .<T>create(factory::create, blocks).build();
-        *///?} elif neoforge && >=26.1 {
-        return new BlockEntityType<>(factory::create, java.util.Set.of(blocks));
-        //?} elif neoforge {
-        /*return new BlockEntityType<T>(factory::create, java.util.Set.of(blocks), null);
-        *///?} elif forge {
-        /*return BlockEntityType.Builder.of(factory::create, blocks).build(null);
+        *///?} else {
+        Set<Block> valid = ConcurrentHashMap.newKeySet();
+        Collections.addAll(valid, blocks);
+        //? if >=1.21.2 {
+        BlockEntityType<T> type = new BlockEntityType<>(factory::create, valid);
+        //?} else {
+        /*BlockEntityType<T> type = new BlockEntityType<>(factory::create, valid, null);
         *///?}
+        VALID_BLOCKS.put(type, valid);
+        return type;
+        //?}
+    }
+
+    /**
+     * Accepts blocks registered after {@code type} was built, e.g. content minted by a startup script.
+     * Only for types built here. NeoForge {@code BlockEntityTypeAddBlocksEvent} replaces the set => later
+     * additions fail loudly.
+     */
+    public static void addBlocks(BlockEntityType<?> type, Block... blocks) {
+        //? if fabric && >=1.21.2 {
+        /*for (Block block : blocks) {
+            ((net.fabricmc.fabric.api.object.builder.v1.block.entity.FabricBlockEntityType) type).addValidBlock(block);
+        }
+        *///?} else {
+        Set<Block> valid = VALID_BLOCKS.get(type);
+        if (valid == null) throw new IllegalArgumentException("Block entity type not built by BlockEntities: " + type);
+        Collections.addAll(valid, blocks);
+        //?}
+        for (Block block : blocks) {
+            if (!type.isValid(block.defaultBlockState())) {
+                throw new IllegalStateException(block + " was not accepted by " + type);
+            }
+        }
     }
 
     /** A type that ticks on the server only, which is almost every machine. */

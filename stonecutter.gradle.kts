@@ -25,6 +25,7 @@ stonecutter parameters {
     // works regardless of the loader suffix in the node name.
     // True only where the node declares JEI coordinates, so the integration compiles out elsewhere.
     constants["jei"] = !(node.project.findProperty("deps.jei") as String?).isNullOrBlank()
+    constants["kubejs"] = !(node.project.findProperty("deps.kubejs") as String?).isNullOrBlank()
 
     swaps["mc_version"] = "\"${node.metadata.version}\";"
 

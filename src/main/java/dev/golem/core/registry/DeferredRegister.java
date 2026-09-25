@@ -102,10 +102,6 @@ public class DeferredRegister<T> {
     }
 
     /**
-     * Flush every register, honouring {@link #FLUSH_ORDER} so dependencies (blocks before items) are
-     * registered first. Used by Fabric, which registers everything synchronously at init time.
-     */
-    /**
      * Flushes every register straight into the vanilla registries.
      *
      * <p>This is what a loader with no deferred-registration phase (Fabric) wants, and writing it out
@@ -113,18 +109,26 @@ public class DeferredRegister<T> {
      * that changed: 26.1 looks up by {@code ResourceKey} and throws when absent, older versions look
      * up by location and return the value. That belongs here, not in every consumer's initializer.
      */
-    @SuppressWarnings({"unchecked", "rawtypes"})
     public static void flushAllToVanilla() {
-        flushAll((registryKey, entryKey, value) -> {
-            //? if >=26.1 {
-            Registry<Object> registry = (Registry<Object>) (Registry<?>)
-                    BuiltInRegistries.REGISTRY.getValueOrThrow((ResourceKey) registryKey);
-            //?} else {
-            /*Registry<Object> registry = (Registry<Object>) (Registry<?>)
-                    BuiltInRegistries.REGISTRY.get(registryKey.location());
-            *///?}
-            Registry.register(registry, (ResourceKey<Object>) (ResourceKey<?>) entryKey, value.get());
-        });
+        flushAll(DeferredRegister::registerToVanilla);
+    }
+
+    /** This register alone, straight into its vanilla registry: one created after {@link #flushAllToVanilla}. */
+    public void flushToVanilla() {
+        flushTo(DeferredRegister::registerToVanilla);
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static void registerToVanilla(ResourceKey<? extends Registry<?>> registryKey, ResourceKey<?> entryKey,
+            Supplier<?> value) {
+        //? if >=26.1 {
+        Registry<Object> registry = (Registry<Object>) (Registry<?>)
+                BuiltInRegistries.REGISTRY.getValueOrThrow((ResourceKey) registryKey);
+        //?} else {
+        /*Registry<Object> registry = (Registry<Object>) (Registry<?>)
+                BuiltInRegistries.REGISTRY.get(registryKey.location());
+        *///?}
+        Registry.register(registry, (ResourceKey<Object>) (ResourceKey<?>) entryKey, value.get());
     }
 
     public static void flushAll(RegistrationSink sink) {

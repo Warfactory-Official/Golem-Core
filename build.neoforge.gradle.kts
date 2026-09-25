@@ -89,6 +89,14 @@ neoForge {
 repositories {
     mavenCentral()
     maven("https://maven.blamejared.com") { name = "BlameJared" }
+    maven("https://maven.latvian.dev/releases") {
+        name = "LatvianDev"
+        content { includeGroup("dev.latvian.mods") }
+    }
+    maven("https://maven.architectury.dev") {
+        name = "Architectury"
+        content { includeGroup("dev.architectury") }
+    }
 }
 
 tasks.processResources {
@@ -175,4 +183,19 @@ tasks.test {
     useJUnitPlatform()
     dependsOn(tasks.named("stonecutterGenerateTest"))
     testLogging { events("passed", "failed", "skipped") }
+}
+
+// KubeJS, compile-only and per-node optional: dev.golem.core.script hides the 6.x/7.x/8.x plugin split.
+// Blank `deps.kubejs` compiles the bridge out (the `kubejs` constant).
+dependencies {
+    val kubejs = (findProperty("deps.kubejs") as String?)?.takeIf { it.isNotBlank() }
+    if (kubejs != null) {
+        val legacy = mcVersion.startsWith("1.20")
+        val cfg = "compileOnly"
+        cfg("dev.latvian.mods:kubejs-neoforge:$kubejs") { isTransitive = false }
+        cfg(if (legacy) "dev.latvian.mods:rhino-neoforge:${prop("deps.rhino")}" else "dev.latvian.mods:rhino:${prop("deps.rhino")}") { isTransitive = false }
+        (findProperty("deps.architectury") as String?)?.takeIf { it.isNotBlank() }?.let {
+            cfg("dev.architectury:architectury-neoforge:$it") { isTransitive = false }
+        }
+    }
 }

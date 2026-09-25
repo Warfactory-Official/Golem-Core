@@ -21,6 +21,14 @@ java {
 repositories {
     mavenCentral()
     maven("https://maven.blamejared.com") { name = "BlameJared" }
+    maven("https://maven.latvian.dev/releases") {
+        name = "LatvianDev"
+        content { includeGroup("dev.latvian.mods") }
+    }
+    maven("https://maven.architectury.dev") {
+        name = "Architectury"
+        content { includeGroup("dev.architectury") }
+    }
 }
 
 // Loom's configurations are referenced by name rather than through generated accessors: Kotlin DSL
@@ -171,4 +179,19 @@ tasks.test {
     useJUnitPlatform()
     dependsOn(tasks.named("stonecutterGenerateTest"))
     testLogging { events("passed", "failed", "skipped") }
+}
+
+// KubeJS, compile-only and per-node optional: dev.golem.core.script hides the 6.x/7.x/8.x plugin split.
+// Blank `deps.kubejs` compiles the bridge out (the `kubejs` constant).
+dependencies {
+    val kubejs = (findProperty("deps.kubejs") as String?)?.takeIf { it.isNotBlank() }
+    if (kubejs != null) {
+        val legacy = mcVersion.startsWith("1.20")
+        val cfg = if (obfuscated) "modCompileOnly" else "compileOnly"
+        cfg("dev.latvian.mods:kubejs-fabric:$kubejs") { isTransitive = false }
+        cfg(if (legacy) "dev.latvian.mods:rhino-fabric:${prop("deps.rhino")}" else "dev.latvian.mods:rhino:${prop("deps.rhino")}") { isTransitive = false }
+        (findProperty("deps.architectury") as String?)?.takeIf { it.isNotBlank() }?.let {
+            cfg("dev.architectury:architectury-fabric:$it") { isTransitive = false }
+        }
+    }
 }
