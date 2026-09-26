@@ -8,7 +8,9 @@ import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.MenuType;
+import net.minecraft.world.level.block.Block;
 
 /**
  * Menus that carry a {@link BlockPos} to the client when they open.
@@ -282,5 +284,16 @@ public final class Menus {
         //?} else {
         /*menu.clicked(slotId, button, net.minecraft.world.inventory.ClickType.valueOf(action.name()), player);
         *///?}
+    }
+
+    /**
+     * Machine-menu {@code stillValid}: {@code block} still at the bound position and the player in range; a
+     * {@link dev.golem.core.multiblock.MultiblockCore} measures its footprint (bound position = core), else 8 blocks.
+     */
+    public static boolean stillValid(ContainerLevelAccess access, Player player, Block block) {
+        return access.evaluate((level, pos) -> level.getBlockState(pos).is(block)
+                && (block instanceof dev.golem.core.multiblock.MultiblockCore
+                ? dev.golem.core.multiblock.MultiblockCore.isWithinInteractionRange(level, pos, player)
+                : player.distanceToSqr(pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D) <= 64.0D), true);
     }
 }

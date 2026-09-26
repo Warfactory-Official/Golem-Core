@@ -100,14 +100,16 @@ public final class ItemStacks {
         return stack.is(net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(Ids.parse(id)));
     }
 
-    /** Tests one integer component, or its namespaced legacy NBT representation on 1.20.1. */
-    public static boolean matchesIntComponent(ItemStack stack, String key, int value) {
+    /** Tests one integer or string component, or its namespaced legacy NBT representation on 1.20.1. */
+    public static boolean matchesComponent(ItemStack stack, String key, Object value) {
         //? if >=1.21.1 {
         net.minecraft.core.component.DataComponentType<?> type =
                 net.minecraft.core.registries.BuiltInRegistries.DATA_COMPONENT_TYPE.getValue(Ids.parse(key));
-        return type != null && stack.has(type) && Integer.valueOf(value).equals(stack.get(type));
+        return type != null && stack.has(type) && value.equals(stack.get(type));
         //?} else {
-        /*return stack.hasTag() && stack.getTag().contains(key, 3) && stack.getTag().getInt(key) == value;
+        /*if (!stack.hasTag()) return false;
+        return value instanceof Integer i ? stack.getTag().contains(key, 3) && stack.getTag().getInt(key) == i
+                : stack.getTag().contains(key, 8) && stack.getTag().getString(key).equals(value);
         *///?}
     }
 
@@ -238,6 +240,17 @@ public final class ItemStacks {
         return data == null ? 0 : dev.golem.core.data.Tags.getIntOr(data.copyTag(), key, 0);
         //?} else {
         /*return legacyCarriedData(carrier).getInt(key);
+        *///?}
+    }
+
+    /** Reads a string ("" when absent) from an item's carried block custom data. */
+    public static String carriedString(ItemStack carrier, String key) {
+        //? if >=1.20.5 {
+        net.minecraft.world.item.component.CustomData data =
+                carrier.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+        return data == null ? "" : dev.golem.core.data.Tags.getStringOr(data.copyTag(), key, "");
+        //?} else {
+        /*return legacyCarriedData(carrier).getString(key);
         *///?}
     }
 

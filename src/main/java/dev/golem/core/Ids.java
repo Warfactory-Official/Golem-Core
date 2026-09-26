@@ -73,6 +73,21 @@ public final class Ids {
         *///?}
     }
 
+    /** {@link #parse}, or null for a malformed id (saved data from another mod set). */
+    public static
+            //? if >=26.1 {
+            Identifier
+            //?} else {
+            /*ResourceLocation
+            *///?}
+            tryParse(String id) {
+        //? if >=26.1 {
+        return Identifier.tryParse(id);
+        //?} else {
+        /*return ResourceLocation.tryParse(id);
+        *///?}
+    }
+
     /** Creates an id in Minecraft's namespace. */
     public static
             //? if >=26.1 {

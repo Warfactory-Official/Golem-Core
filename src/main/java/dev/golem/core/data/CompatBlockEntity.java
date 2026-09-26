@@ -88,6 +88,14 @@ public abstract class CompatBlockEntity extends BlockEntity {
     }
     *///?}
 
+    /** Sends the update tag (see {@link #syncFullTagOnChunkLoad}) to clients tracking this block. Server only. */
+    protected final void syncToClients() {
+        if (!(level instanceof net.minecraft.server.level.ServerLevel server)) return;
+        var packet = net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+        var chunk = new net.minecraft.world.level.ChunkPos(worldPosition.getX() >> 4, worldPosition.getZ() >> 4);
+        for (var player : server.getChunkSource().chunkMap.getPlayers(chunk, false)) player.connection.send(packet);
+    }
+
     /** Reads this block entity's persisted state. */
     protected void loadData(DataIn in) {}
 

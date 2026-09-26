@@ -240,9 +240,9 @@ public final class Crafting {
 
         private final String id;
         private final int count;
-        private final Map<String, Integer> components;
+        private final Map<String, Object> components;
 
-        private Stack(String id, int count, Map<String, Integer> components) {
+        private Stack(String id, int count, Map<String, Object> components) {
             this.id = id;
             this.count = count;
             this.components = components;
@@ -250,6 +250,10 @@ public final class Crafting {
 
         /** The same result, wearing one more component. */
         public Stack with(String component, int value) {
+            return new Stack(id, count, plus(components, component, value));
+        }
+
+        public Stack with(String component, String value) {
             return new Stack(id, count, plus(components, component, value));
         }
 
@@ -280,11 +284,11 @@ public final class Crafting {
     public static final class Ingredient {
 
         private final String id;
-        private final Map<String, Integer> components;
+        private final Map<String, Object> components;
         private final List<String> absent;
         private final String remainder;
 
-        private Ingredient(String id, Map<String, Integer> components, List<String> absent,
+        private Ingredient(String id, Map<String, Object> components, List<String> absent,
                            String remainder) {
             this.id = id;
             this.components = components;
@@ -294,6 +298,10 @@ public final class Crafting {
 
         /** The same ingredient, matching only stacks carrying this component value. */
         public Ingredient with(String component, int value) {
+            return new Ingredient(id, plus(components, component, value), absent, remainder);
+        }
+
+        public Ingredient with(String component, String value) {
             return new Ingredient(id, plus(components, component, value), absent, remainder);
         }
 
@@ -469,20 +477,23 @@ public final class Crafting {
         return list;
     }
 
-    private static Map<String, Integer> plus(Map<String, Integer> components, String component,
-                                             int value) {
+    private static Map<String, Object> plus(Map<String, Object> components, String component,
+                                             Object value) {
         Models.requireId(component, "component");
         if (components.containsKey(component)) {
             throw new DejsonException(component + " is given a value twice");
         }
-        Map<String, Integer> plus = new LinkedHashMap<>(components);
+        Map<String, Object> plus = new LinkedHashMap<>(components);
         plus.put(component, value);
         return plus;
     }
 
-    private static JsonObject componentMap(Map<String, Integer> components) {
+    private static JsonObject componentMap(Map<String, Object> components) {
         JsonObject json = new JsonObject();
-        components.forEach(json::addProperty);
+        components.forEach((key, value) -> {
+            if (value instanceof Integer i) json.addProperty(key, i);
+            else json.addProperty(key, (String) value);
+        });
         return json;
     }
 

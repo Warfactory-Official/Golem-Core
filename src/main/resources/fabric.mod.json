@@ -14,7 +14,11 @@
             "dev.golem.core.platform.FabricEntrypoint"
         ],
         "client": [
+            "dev.golem.core.platform.FabricClientEntrypoint",
             "dev.golem.core.harness.HarnessFabricClient"
+        ],
+        "fabric-gametest": [
+            "dev.golem.core.gametest.GolemTestGenerator"
         ]
     },
     "mixins": [

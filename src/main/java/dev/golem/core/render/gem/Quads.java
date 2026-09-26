@@ -1,5 +1,7 @@
 package dev.golem.core.render.gem;
 
+import net.minecraft.core.Direction;
+
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.golem.core.render.Vertexes;
@@ -32,6 +34,75 @@ public final class Quads {
     /** Starts a lump. The name keys its uploaded mesh, so it must be distinct across the mod. */
     public static Builder named(String name) {
         return new Builder(name);
+    }
+
+    /** A unit-texture box: every face maps the sub-rectangle of a 16x16 sprite its bounds cover. */
+    public static Geometry box(String name, double minX, double minY, double minZ, double maxX, double maxY, double maxZ) {
+        return box(name, minX, minY, minZ, maxX, maxY, maxZ, 0x3F, 0);
+    }
+
+    /**
+     * Only the faces in {@code faceMask} ({@code 1 << Direction.ordinal()} bits); {@code rotateMask} faces swap u and
+     * v, a quarter turn.
+     */
+    public static Geometry box(String name, double minX, double minY, double minZ, double maxX, double maxY, double maxZ,
+                        int faceMask, int rotateMask) {
+        Builder builder = named(name);
+        float x0 = (float) minX, y0 = (float) minY, z0 = (float) minZ;
+        float x1 = (float) maxX, y1 = (float) maxY, z1 = (float) maxZ;
+        for (Direction face : Direction.values()) {
+            if ((faceMask & (1 << face.ordinal())) == 0) continue;
+            boolean rotate = (rotateMask & (1 << face.ordinal())) != 0;
+            switch (face) {
+                case DOWN -> quad(builder, 0, -1, 0, rotate,
+                        x0, y0, z1, x0, z1,
+                        x0, y0, z0, x0, z0,
+                        x1, y0, z0, x1, z0,
+                        x1, y0, z1, x1, z1);
+                case UP -> quad(builder, 0, 1, 0, rotate,
+                        x1, y1, z1, x1, z1,
+                        x1, y1, z0, x1, z0,
+                        x0, y1, z0, x0, z0,
+                        x0, y1, z1, x0, z1);
+                case NORTH -> quad(builder, 0, 0, -1, rotate,
+                        x0, y1, z0, 1 - x0, 1 - y1,
+                        x1, y1, z0, 1 - x1, 1 - y1,
+                        x1, y0, z0, 1 - x1, 1 - y0,
+                        x0, y0, z0, 1 - x0, 1 - y0);
+                case SOUTH -> quad(builder, 0, 0, 1, rotate,
+                        x0, y1, z1, x0, 1 - y1,
+                        x0, y0, z1, x0, 1 - y0,
+                        x1, y0, z1, x1, 1 - y0,
+                        x1, y1, z1, x1, 1 - y1);
+                case WEST -> quad(builder, -1, 0, 0, rotate,
+                        x0, y1, z1, z1, 1 - y1,
+                        x0, y1, z0, z0, 1 - y1,
+                        x0, y0, z0, z0, 1 - y0,
+                        x0, y0, z1, z1, 1 - y0);
+                case EAST -> quad(builder, 1, 0, 0, rotate,
+                        x1, y0, z1, 1 - z1, 1 - y0,
+                        x1, y0, z0, 1 - z0, 1 - y0,
+                        x1, y1, z0, 1 - z0, 1 - y1,
+                        x1, y1, z1, 1 - z1, 1 - y1);
+            }
+        }
+        return builder.build();
+    }
+
+    /** One face; {@code rotate} swaps each corner's u and v, the quarter turn 1.7's uvRotate applied. */
+    private static void quad(Builder builder, float nx, float ny, float nz, boolean rotate,
+                             float ax, float ay, float az, float au, float av,
+                             float bx, float by, float bz, float bu, float bv,
+                             float cx, float cy, float cz, float cu, float cv,
+                             float dx, float dy, float dz, float du, float dv) {
+        builder.normal(nx, ny, nz);
+        if (rotate) {
+            builder.vertex(ax, ay, az, av, au).vertex(bx, by, bz, bv, bu)
+                   .vertex(cx, cy, cz, cv, cu).vertex(dx, dy, dz, dv, du);
+        } else {
+            builder.vertex(ax, ay, az, au, av).vertex(bx, by, bz, bu, bv)
+                   .vertex(cx, cy, cz, cu, cv).vertex(dx, dy, dz, du, dv);
+        }
     }
 
     public static final class Builder {

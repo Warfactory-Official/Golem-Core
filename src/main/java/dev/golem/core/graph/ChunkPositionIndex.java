@@ -1,0 +1,46 @@
+package dev.golem.core.graph;
+
+import dev.golem.core.world.Chunks;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import net.minecraft.core.BlockPos;
+import org.jspecify.annotations.Nullable;
+
+/**
+ * A chunk to positions index kept beside a level-resident side table, never folded into it as a
+ * two-level map: the fold costs a second hash on every lookup, this costs one set insert per write
+ * and nothing on the read path. Server thread only, like the tables it indexes.
+ */
+public final class ChunkPositionIndex {
+
+    private final Long2ObjectOpenHashMap<LongOpenHashSet> byChunk = new Long2ObjectOpenHashMap<>();
+
+    public static long chunkOf(long posKey) {
+        return Chunks.keyOfBlock(BlockPos.getX(posKey), BlockPos.getZ(posKey));
+    }
+
+    public void add(long posKey) {
+        byChunk.computeIfAbsent(chunkOf(posKey), k -> new LongOpenHashSet()).add(posKey);
+    }
+
+    public void remove(long posKey) {
+        long chunkKey = chunkOf(posKey);
+        LongOpenHashSet inChunk = byChunk.get(chunkKey);
+        if (inChunk == null) return;
+        inChunk.remove(posKey);
+        if (inChunk.isEmpty()) byChunk.remove(chunkKey);
+    }
+
+    public @Nullable LongOpenHashSet take(long chunkKey) {
+        return byChunk.remove(chunkKey);
+    }
+
+    public int chunkCount() {
+        return byChunk.size();
+    }
+
+    public int positionCount(long chunkKey) {
+        LongOpenHashSet inChunk = byChunk.get(chunkKey);
+        return inChunk == null ? 0 : inChunk.size();
+    }
+}

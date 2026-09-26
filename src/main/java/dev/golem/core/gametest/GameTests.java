@@ -63,6 +63,14 @@ public final class GameTests {
     /** The structure every test uses: a 1×1×1 air template the test then builds its own scenery in. */
     private static final String EMPTY_STRUCTURE = "empty";
 
+    private static final List<Suite> SUITES = new ArrayList<>();
+
+    /** {@code -Dgolem.gametest.filter=<regex>}: only matching test ids run. */
+    private static boolean included(Function function) {
+        String filter = System.getProperty("golem.gametest.filter");
+        return filter == null || filter.isBlank() || function.id().matches(filter);
+    }
+
     /** A named test body and its execution budget, declared once and registered per target. */
     public static final class Function {
 
@@ -87,7 +95,7 @@ public final class GameTests {
         }
     }
 
-    /** An ordered collection of a mod's tests, so loaders only need to forward their event once. */
+    /** An ordered collection of a mod's tests. Every suite is registered by Golem Core's own bootstrap. */
     public static final class Suite {
 
         private final String namespace;
@@ -95,6 +103,7 @@ public final class GameTests {
 
         private Suite(String namespace) {
             this.namespace = namespace;
+            SUITES.add(this);
         }
 
         public Function function(String name, int timeoutTicks, Supplier<Consumer<GameTestHelper>> body) {
@@ -159,12 +168,7 @@ public final class GameTests {
         return new Suite(namespace);
     }
 
-    public static Function function(String namespace, String name, int timeoutTicks,
-                                    Supplier<Consumer<GameTestHelper>> body) {
-        return function(namespace, name, timeoutTicks, 0, body);
-    }
-
-    public static Function function(String namespace, String name, int timeoutTicks, int padding,
+    private static Function function(String namespace, String name, int timeoutTicks, int padding,
                                     Supplier<Consumer<GameTestHelper>> body) {
         Function function = new Function(namespace, name, timeoutTicks, padding, body);
         //? if >=26.1 {
@@ -176,13 +180,15 @@ public final class GameTests {
     }
 
     //? if neoforge {
-    /**
-     * Registers a declared body as a runnable test. Call from NeoForge's {@code RegisterGameTestsEvent}.
-     */
-    public static void register(net.neoforged.neoforge.event.RegisterGameTestsEvent event,
-                                 Suite suite) {
+    /** Every declared suite, from Golem Core's {@code RegisterGameTestsEvent} listener. */
+    public static void registerAll(net.neoforged.neoforge.event.RegisterGameTestsEvent event) {
+        SUITES.forEach(suite -> register(event, suite));
+    }
+
+    private static void register(net.neoforged.neoforge.event.RegisterGameTestsEvent event, Suite suite) {
         for (Function function : suite.functions) {
             //? if >=26.1 {
+            if (!included(function)) continue;
             // Per event: one environment per namespace within THIS registry load. See ENVIRONMENTS.
             Holder<TestEnvironmentDefinition<?>> environment = ENVIRONMENTS
                     .computeIfAbsent(event, e -> new HashMap<>())
@@ -212,8 +218,12 @@ public final class GameTests {
         }
     }
     //?} else if forge {
-    /*public static void register(net.minecraftforge.event.RegisterGameTestsEvent event,
-                                  Suite suite) {
+    /*/^* Every declared suite, from Golem Core's {@code RegisterGameTestsEvent} listener. ^/
+    public static void registerAll(net.minecraftforge.event.RegisterGameTestsEvent event) {
+        SUITES.forEach(suite -> register(event, suite));
+    }
+
+    private static void register(net.minecraftforge.event.RegisterGameTestsEvent event, Suite suite) {
         for (Function function : suite.functions) {
             addLegacy(function);
 
@@ -224,16 +234,6 @@ public final class GameTests {
         }
     }
         *///?}
-
-    //? if fabric && <26.1 {
-    /*/^*
-     * Fabric has no registration event: the mod's {@code fabric-gametest} entrypoint calls this for every
-     * suite from its {@code @GameTestGenerator}, then returns {@link #pending()}.
-     ^/
-    public static void register(Suite suite) {
-        for (Function function : suite.functions) addLegacy(function);
-    }
-    *///?}
 
     //? if fabric && >=26.1 {
     /*/^*
@@ -257,6 +257,7 @@ public final class GameTests {
 
         Map<String, Holder<TestEnvironmentDefinition<?>>> environments = new HashMap<>();
         for (Function function : FUNCTIONS) {
+            if (!included(function)) continue;
             Holder<TestEnvironmentDefinition<?>> environment = environments.computeIfAbsent(function.namespace,
                     namespace -> Registry.registerForHolder(environmentRegistry,
                             dev.golem.core.Ids.of(namespace, "test_environment"),
@@ -282,9 +283,7 @@ public final class GameTests {
      * The stock 24-wide template with its 5-block gap already covers a padding of 8.
      ^/
     private static void addLegacy(Function function) {
-        // -Dgolem.gametest.filter=<regex> runs only the tests whose id matches (spacers follow their test).
-        String filter = System.getProperty("golem.gametest.filter");
-        if (filter != null && !filter.isBlank() && !function.id().matches(filter)) return;
+        if (!included(function)) return;
         String structure = function.namespace + ":" + EMPTY_STRUCTURE;
         if (function.padding > 64) structure = function.namespace + ":" + EMPTY_STRUCTURE + "_184";
         else if (function.padding > 28) structure = function.namespace + ":" + EMPTY_STRUCTURE + "_152";
@@ -350,8 +349,11 @@ public final class GameTests {
                 function.body.get()));^///?}
     }
 
-    /^* The tests collected so far, for the generator to hand to the framework. ^/
-    public static List<TestFunction> pending() {
+    /^* Every declared suite's tests, for the generator to hand to the framework. ^/
+    static List<TestFunction> pending() {
+        //? if fabric {
+        /^if (PENDING.isEmpty()) SUITES.forEach(suite -> suite.functions.forEach(GameTests::addLegacy));
+        ^///?}
         return PENDING;
     }
     *///?}

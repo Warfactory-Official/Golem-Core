@@ -1,29 +1,17 @@
 plugins {
-    id("java-library")
+    id("dev.golem.node")
     id("maven-publish")
-    id("net.neoforged.moddev") version "2.0.141"
 }
 
-fun prop(name: String): String = property(name) as String
-
 val mcVersion = stonecutter.current.version
-val javaVersion = prop("java_version").toInt()
-
-// The vendored Flywheel backend in dev.golem.core.flywheel only exists from 26.1 — it is written
-// against the blaze3d GPU-buffer/pipeline API that arrived with it. Both its access transformer and
-// its access transformer names types that do not exist before then, so declaring it on an older
-// node fails the build outright rather than being ignored.
+// Vendored Flywheel backend = 26.1 blaze3d GPU-buffer API; its AT names types absent before 26.1 (fails the node).
 val hasVendoredFlywheel = mcVersion.substringBefore('.').toInt() >= 26
 
-// NeoForge reads exactly one META-INF/accesstransformer.cfg per jar, so the backend's widenings
-// cannot ship as a second file — and they cannot join the shared one either, because GlBuffer does
-// not exist before 26.1 and an access transformer naming a missing class fails the node outright.
-// The shipped file is therefore assembled from whichever sources apply to this node.
+// NeoForge reads one META-INF/accesstransformer.cfg per jar: shipped file = merge of the sources this node applies.
+// Node projects sit in versions/<node>/; the shared tree is two levels up.
 val accessTransformerFiles = listOfNotNull(
-    file("../../src/main/resources/META-INF/golemcore.neoforge.accesstransformer.cfg")
-        .takeIf { it.exists() },
-    file("../../src/main/resources/META-INF/golemcore.flywheel.accesstransformer.cfg")
-        .takeIf { hasVendoredFlywheel && it.exists() },
+    file("../../src/main/resources/META-INF/golemcore.neoforge.accesstransformer.cfg").takeIf { it.exists() },
+    file("../../src/main/resources/META-INF/golemcore.flywheel.accesstransformer.cfg").takeIf { hasVendoredFlywheel && it.exists() },
 )
 val mergedAccessTransformer = layout.buildDirectory.file("golemcore-at/accesstransformer.cfg")
 val mergeAccessTransformers = tasks.register("mergeAccessTransformers") {
@@ -36,112 +24,38 @@ val mergeAccessTransformers = tasks.register("mergeAccessTransformers") {
     }
 }
 
-group = prop("mod.group")
-version = "${prop("mod.version")}+$mcVersion"
-base.archivesName = "${prop("mod.id")}-neoforge-$mcVersion"
+java { withSourcesJar() }
 
-java {
-    toolchain.languageVersion = JavaLanguageVersion.of(javaVersion)
-    withSourcesJar()
+repositories {
+    maven("https://maven.blamejared.com") { name = "BlameJared" }
 }
 
 neoForge {
-    version = prop("deps.neoforge")
-
-    // Node projects live in versions/<node>/ and have no src/ of their own — the shared tree is two
-    // levels up. A bare "src/main/..." here resolves to nothing, and because the declaration is
-    // guarded on exists() that failure is silent: the transformer is simply never applied.
     for (at in accessTransformerFiles) accessTransformers.from(at)
-
-    runs {
-        configureEach {
-            ideName = "NeoForge ${name.replaceFirstChar { it.uppercase() }} ($mcVersion)"
-        }
-        register("client") {
-            client()
-            gameDirectory = file("runs/client")
-        }
-        register("server") {
-            server()
-            gameDirectory = file("runs/server")
-        }
-    }
-
-    mods {
-        register(prop("mod.id")) { sourceSet(sourceSets["main"]) }
-    }
-
-    // Unit tests compile against Minecraft too — the data backends are built on CompoundTag/NbtOps.
-    // MDG only wires the modding dependencies into `main` by default.
     addModdingDependenciesTo(sourceSets["test"])
-
-    // And some of them have to *run* under FML. NeoForge's SharedConstants asks FMLEnvironment
-    // whether it is in production during its static init, which throws "There is no current FML
-    // Loader" in a plain test JVM — so any test that touches Bootstrap or a vanilla registry dies
-    // in @BeforeAll rather than failing an assertion. This launches the test JVM through FML's own
-    // JUnit entry point, which is the only thing that makes registry-backed tests possible here.
+    // NeoForge's SharedConstants asks FMLEnvironment during static init => registry-backed tests need FML's JUnit launcher.
     unitTest {
         enable()
         testedMod = mods.named(prop("mod.id"))
     }
 }
 
-repositories {
-    mavenCentral()
-    maven("https://maven.blamejared.com") { name = "BlameJared" }
-    maven("https://maven.latvian.dev/releases") {
-        name = "LatvianDev"
-        content { includeGroup("dev.latvian.mods") }
-    }
-    maven("https://maven.architectury.dev") {
-        name = "Architectury"
-        content { includeGroup("dev.architectury") }
-    }
-}
+golem.resourceProperties.putAll(mapOf(
+    "legacy_item_owner_mixins" to if (mcVersion.substringBefore('.').toInt() < 26) ", \"MixinItemRenderer\"" else "",
+    "world_effect_mixins" to if (hasVendoredFlywheel) ", \"MixinWorldEffects\"" else "",
+    "flywheel_be_mixins" to if (hasVendoredFlywheel) ", \"MixinLevelChunkVisuals\"" else "",
+))
 
 tasks.processResources {
-    val props = mapOf(
-        "mod_id" to prop("mod.id"),
-        "mod_name" to prop("mod.name"),
-        "mod_version" to prop("mod.version"),
-        "mod_author" to prop("mod.author"),
-        "mod_license" to prop("mod.license"),
-        "mod_description" to prop("mod.description"),
-        "minecraft_range" to prop("deps.minecraft_range"),
-        "neoforge_version" to prop("deps.neoforge"),
-        "neoforge_loader_range" to prop("deps.neoforge_loader_range"),
-        "java_version" to javaVersion.toString(),
-        "mixin_compatibility" to if (javaVersion <= 17) "JAVA_17" else "JAVA_21",
-        "legacy_item_owner_mixins" to if (mcVersion.substringBefore('.').toInt() < 26)
-            ", \"MixinItemRenderer\"" else "",
-        "world_effect_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinWorldEffects\"" else "",
-        "flywheel_be_mixins" to if (hasVendoredFlywheel) ", \"MixinLevelChunkVisuals\"" else "",
-        "pack_format" to prop("pack_format"),
-        "pack_format_entry" to if (mcVersion.substringBefore('.').toInt() >= 26)
-            "\"min_format\": ${prop("pack_format")}, \"max_format\": ${prop("pack_format")}" 
-        else
-            "\"pack_format\": ${prop("pack_format")}",
-    )
-    inputs.properties(props)
-    filesMatching(listOf("META-INF/neoforge.mods.toml", "pack.mcmeta", "*.mixins.json")) { expand(props) }
     exclude(
-        "fabric.mod.json", "golemcore.fabric.mixins.json",
         "META-INF/accesstransformer.cfg", "META-INF/golemcore.neoforge.accesstransformer.cfg",
         "META-INF/golemcore.forge.accesstransformer.cfg",
         "META-INF/golemcore.flywheel.accesstransformer.cfg",
     )
     dependsOn(mergeAccessTransformers)
     from(mergedAccessTransformer) { into("META-INF") }
-    // The golem_* shaders belong to the vendored Flywheel backend, which only exists on 26.1.
-    // Keep unrelated Core shaders such as depth_merge.
-    if (!hasVendoredFlywheel) {
-        exclude("assets/golemcore/shaders/core/golem_*")
-    }
+    if (!hasVendoredFlywheel) exclude("assets/golemcore/shaders/core/golem_*")
 }
-
-// Stonecutter writes this project's sources from the root src/ tree; the toolkit must not read them
-// before that has happened.
-tasks.named("createMinecraftArtifacts") { dependsOn(tasks.named("stonecutterGenerate")) }
 
 publishing {
     publications {
@@ -152,29 +66,11 @@ publishing {
     }
 }
 
-// Stonecutter rewrites the shared src/ tree in place for the active node. Both compilation and
-// resource processing must wait for that rewrite, or they consume the previous node's source state.
-tasks.compileJava { dependsOn(tasks.named("stonecutterGenerate")) }
-tasks.processResources { dependsOn(tasks.named("stonecutterGenerate")) }
-
 dependencies {
-    // Nullness annotations. NeoForge ships jspecify transitively on 26.1 but not on older versions,
-    // so declare it explicitly: it is an annotations-only jar with no runtime component, safe on every
-    // target, and keeps @Nullable usable in shared code across the whole matrix.
-    compileOnly("org.jspecify:jspecify:1.0.0")
-    compileOnly("org.spongepowered:mixin:0.8.5")
-
-    // JEI, compile-only and per-node optional: the facade in dev.golem.core.jei exists to hide the
-    // 19.x/29.x API split from consumers, so this library has to see whichever line the node targets.
-    // A node that declares no coordinates compiles the facade out entirely (the `jei` constant).
+    // dev.golem.core.jei hides the JEI 19.x/29.x split; blank `deps.jei` compiles it out.
     val jeiMc = (findProperty("deps.jei_mc") as String?)?.takeIf { it.isNotBlank() }
     val jeiVer = (findProperty("deps.jei") as String?)?.takeIf { it.isNotBlank() }
     if (jeiMc != null && jeiVer != null) compileOnly("mezz.jei:jei-$jeiMc-common-api:$jeiVer")
-}
-
-// Plain-JVM unit tests. The data backends are pure logic over CompoundTag/NbtOps and need no game
-// bootstrap, which makes them the one part of the compat layer that is cheaply testable off-thread.
-dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
@@ -185,17 +81,4 @@ tasks.test {
     testLogging { events("passed", "failed", "skipped") }
 }
 
-// KubeJS, compile-only and per-node optional: dev.golem.core.script hides the 6.x/7.x/8.x plugin split.
-// Blank `deps.kubejs` compiles the bridge out (the `kubejs` constant).
-dependencies {
-    val kubejs = (findProperty("deps.kubejs") as String?)?.takeIf { it.isNotBlank() }
-    if (kubejs != null) {
-        val legacy = mcVersion.startsWith("1.20")
-        val cfg = "compileOnly"
-        cfg("dev.latvian.mods:kubejs-neoforge:$kubejs") { isTransitive = false }
-        cfg(if (legacy) "dev.latvian.mods:rhino-neoforge:${prop("deps.rhino")}" else "dev.latvian.mods:rhino:${prop("deps.rhino")}") { isTransitive = false }
-        (findProperty("deps.architectury") as String?)?.takeIf { it.isNotBlank() }?.let {
-            cfg("dev.architectury:architectury-neoforge:$it") { isTransitive = false }
-        }
-    }
-}
+fun prop(name: String): String = property(name) as String

@@ -1,7 +1,6 @@
 package dev.golem.core.registry;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,9 +22,9 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
  * but is implemented purely against vanilla APIs so the same code compiles and runs on every loader.
  *
  * <p>Common content classes ({@code ModItems}, {@code ModBlocks}, ...) declare their entries against
- * instances of this class. Each entry is stored as a deferred factory; the actual registration is
- * driven later by the loader-specific bootstrap via {@link #flushTo(RegistrationSink)} (NeoForge,
- * per {@code RegisterEvent}) or {@link #flushAll(RegistrationSink)} (Fabric, during init).
+ * instances of this class. Each entry is stored as a deferred factory; Golem Core's bootstrap flushes every
+ * register of every mod once: per {@code RegisterEvent} on Forge-like loaders, after all Golem mods'
+ * {@code init} on Fabric. Registering into a flushed register throws; after the flush use {@link #late}.
  *
  * <p>Every entry's id is set on its {@link Item.Properties}/{@link BlockBehaviour.Properties} before
  * construction, as required by 26.1.
@@ -50,6 +49,7 @@ public class DeferredRegister<T> {
     protected final ResourceKey<? extends Registry<T>> registryKey;
     protected final String namespace;
     private final Map<ResourceKey<T>, Function<ResourceKey<T>, ? extends T>> entries = new LinkedHashMap<>();
+    private boolean flushed;
 
     protected DeferredRegister(ResourceKey<? extends Registry<T>> registryKey, String namespace) {
         this.registryKey = Objects.requireNonNull(registryKey);
@@ -75,6 +75,7 @@ public class DeferredRegister<T> {
      */
     public <I extends T> RegistryObject<I> register(String name, Function<ResourceKey<T>, ? extends I> factory) {
         var id = dev.golem.core.Ids.of(namespace, name);
+        if (flushed) throw new IllegalStateException("Register " + registryKey + " of " + namespace + " already flushed: " + id);
         ResourceKey<T> key = ResourceKey.create(registryKey, id);
         if (entries.putIfAbsent(key, factory) != null) {
             throw new IllegalArgumentException("Duplicate registration: " + id);
@@ -90,30 +91,51 @@ public class DeferredRegister<T> {
         return registryKey;
     }
 
-    /** Push every entry of this register into the given sink. */
-    public void flushTo(RegistrationSink sink) {
+    private void flushTo(RegistrationSink sink) {
+        if (flushed) throw new IllegalStateException("Register " + registryKey + " of " + namespace + " already flushed");
+        flushed = true;
         entries.forEach((key, factory) -> sink.accept(registryKey, key, () -> factory.apply(key)));
     }
 
-    // --- static flush helpers used by the loader bootstraps ---
-
-    public static List<DeferredRegister<?>> all() {
-        return Collections.unmodifiableList(ALL);
+    /** Every unflushed register of {@code registry}, e.g. from one {@code RegisterEvent}. */
+    public static synchronized void flushPending(ResourceKey<? extends Registry<?>> registry, RegistrationSink sink) {
+        for (DeferredRegister<?> register : new ArrayList<>(ALL)) {
+            if (!register.flushed && register.registryKey.equals(registry)) register.flushTo(sink);
+        }
     }
 
     /**
-     * Flushes every register straight into the vanilla registries.
-     *
-     * <p>This is what a loader with no deferred-registration phase (Fabric) wants, and writing it out
-     * at the call site meant writing the root-registry lookup too — which is exactly the kind of thing
-     * that changed: 26.1 looks up by {@code ResourceKey} and throws when absent, older versions look
-     * up by location and return the value. That belongs here, not in every consumer's initializer.
+     * Every unflushed register straight into the vanilla registries: the loader with no deferred-registration
+     * phase (Fabric). 26.1 looks the root registry up by {@code ResourceKey}, older versions by location.
      */
-    public static void flushAllToVanilla() {
-        flushAll(DeferredRegister::registerToVanilla);
+    public static void flushPendingToVanilla() {
+        flushPending(DeferredRegister::registerToVanilla);
+        vanillaFlushed = true;
     }
 
-    /** This register alone, straight into its vanilla registry: one created after {@link #flushAllToVanilla}. */
+    private static boolean vanillaFlushed;
+
+    /**
+     * {@code own} while unflushed; after the Fabric bootstrap flush, a fresh register of the same registry and namespace,
+     * flushed by {@link #flushLate} (content phases do this after each late handler). Forge-like registries are frozen
+     * after their {@code RegisterEvent}: throws.
+     */
+    @SuppressWarnings("unchecked")
+    public static synchronized <T, R extends DeferredRegister<T>> R late(R own) {
+        DeferredRegister<T> base = own;
+        if (!base.flushed) return own;
+        if (!vanillaFlushed) throw new IllegalStateException("Registry " + base.registryKey + " is frozen; register in init");
+        if (base instanceof Items) return (R) new Items(base.namespace);
+        if (base instanceof Blocks) return (R) new Blocks(base.namespace);
+        return (R) new DeferredRegister<>(base.registryKey, base.namespace);
+    }
+
+    /** Every register created by {@link #late}, into vanilla. No-op before the Fabric bootstrap flush. */
+    public static synchronized void flushLate() {
+        if (vanillaFlushed) flushPending(DeferredRegister::registerToVanilla);
+    }
+
+    /** This register alone, straight into its vanilla registry: one created after the bootstrap flush. */
     public void flushToVanilla() {
         flushTo(DeferredRegister::registerToVanilla);
     }
@@ -131,8 +153,9 @@ public class DeferredRegister<T> {
         Registry.register(registry, (ResourceKey<Object>) (ResourceKey<?>) entryKey, value.get());
     }
 
-    public static void flushAll(RegistrationSink sink) {
+    private static synchronized void flushPending(RegistrationSink sink) {
         List<DeferredRegister<?>> remaining = new ArrayList<>(ALL);
+        remaining.removeIf(register -> register.flushed);
         for (ResourceKey<? extends Registry<?>> order : FLUSH_ORDER) {
             remaining.removeIf(dr -> {
                 if (dr.registryKey.equals(order)) {

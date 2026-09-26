@@ -135,4 +135,22 @@ public final class Lifecycle {
                 (net.minecraftforge.event.server.ServerStoppingEvent event) -> handler.accept(event.getServer()));
         *///?}
     }
+
+    /** Runs when a player finishes joining the server (play phase). */
+    public static void onPlayerJoin(Consumer<net.minecraft.server.level.ServerPlayer> handler) {
+        //? if fabric {
+        /*net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.JOIN
+                .register((listener, sender, server) -> handler.accept(listener.getPlayer()));
+        *///?} elif neoforge {
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent event) -> {
+                    if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer player) handler.accept(player);
+                });
+        //?} elif forge {
+        /*net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(
+                (net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent event) -> {
+                    if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer player) handler.accept(player);
+                });
+        *///?}
+    }
 }
