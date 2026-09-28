@@ -5,3 +5,11 @@ accessible field net/minecraft/server/network/ServerGamePacketListenerImpl above
 transitive-extendable method net/minecraft/world/entity/vehicle/AbstractMinecart getDropItem ()Lnet/minecraft/world/item/Item;
 # BlockSetType.register is private in vanilla (NeoForge/Forge widen it in their patches); BlockSets.type registers HBM door sets through it.
 accessible method net/minecraft/world/level/block/state/properties/BlockSetType register (Lnet/minecraft/world/level/block/state/properties/BlockSetType;)Lnet/minecraft/world/level/block/state/properties/BlockSetType;
+# Mobs.goals: Mob.goalSelector is protected on Fabric (NeoForge/Forge publicize it); HBM adds goals to vanilla mobs (1.7 MobUtil.addFireTask).
+accessible field net/minecraft/world/entity/Mob goalSelector Lnet/minecraft/world/entity/ai/goal/GoalSelector;
+# EquipProgress: the first-person hand raise, 1.7 equippedProgress (pinned by the crucible's renderer)
+accessible field net/minecraft/client/renderer/ItemInHandRenderer mainHandHeight F
+accessible field net/minecraft/client/renderer/ItemInHandRenderer oMainHandHeight F
+accessible field net/minecraft/client/renderer/ItemInHandRenderer mainHandItem Lnet/minecraft/world/item/ItemStack;
+# FlatCutoutRenderType: reads the two shader light directions to write a flat-lit normal
+accessible field com/mojang/blaze3d/systems/RenderSystem shaderLightDirections [Lorg/joml/Vector3f;

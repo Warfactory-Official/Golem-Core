@@ -151,4 +151,49 @@ public final class Chunks {
     private static long pack(int chunkX, int chunkZ) {
         return key(chunkX, chunkZ);
     }
+
+    /**
+     * The saved (on-disk) height map of a chunk that is not loaded, read without loading or generating it: 1.7's
+     * {@code provideChunk} off the region file, minus the chunk. Completes with 256 absolute heights (index
+     * {@code x + z * 16}, the {@code heightmap} type's first free y, as {@code Level.getHeight} answers it), or
+     * with null when the chunk was never saved, is not a finished chunk, or carries no such height map. The
+     * read runs on the chunk map's IO worker; completion may come on any thread.
+     */
+    public static java.util.concurrent.CompletableFuture<int @org.jspecify.annotations.Nullable []> readSavedHeights(
+            ServerLevel level, int chunkX, int chunkZ, net.minecraft.world.level.levelgen.Heightmap.Types heightmap) {
+        //? if >=1.21.2 {
+        int minY = level.getMinY();
+        //?} else {
+        /*int minY = level.getMinBuildHeight();
+        *///?}
+        int height = level.getHeight();
+        return level.getChunkSource().chunkMap.read(new ChunkPos(chunkX, chunkZ)).handle((stored, error) -> {
+            if (error != null || stored == null || stored.isEmpty()) return null;
+            return savedHeights(stored.get(), heightmap.getSerializationKey(), minY, height);
+        });
+    }
+
+    private static int @org.jspecify.annotations.Nullable [] savedHeights(net.minecraft.nbt.CompoundTag chunk, String key,
+                                                                          int minY, int height) {
+        //? if >=26.1 {
+        String status = chunk.getStringOr("Status", "");
+        net.minecraft.nbt.CompoundTag maps = chunk.getCompoundOrEmpty("Heightmaps");
+        long[] data = maps.getLongArray(key).orElse(null);
+        //?} else {
+        /*String status = chunk.getString("Status");
+        net.minecraft.nbt.CompoundTag maps = chunk.getCompound("Heightmaps");
+        long[] data = maps.contains(key, 12) ? maps.getLongArray(key) : null;
+        *///?}
+        if (!status.equals("minecraft:full") && !status.equals("full")) return null;
+        if (data == null) return null;
+        int bits = net.minecraft.util.Mth.ceillog2(height + 1);
+        try {
+            net.minecraft.util.SimpleBitStorage storage = new net.minecraft.util.SimpleBitStorage(bits, 256, data);
+            int[] out = new int[256];
+            for (int i = 0; i < 256; i++) out[i] = storage.get(i) + minY;
+            return out;
+        } catch (RuntimeException badLength) {
+            return null;
+        }
+    }
 }

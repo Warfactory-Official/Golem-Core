@@ -30,6 +30,16 @@ public final class Vertexes {
         *///?}
     }
 
+    /** Emits a {@code POSITION_TEX} vertex, the glint pipeline's format. */
+    public static void positionTex(VertexConsumer buffer, PoseStack.Pose pose, float x, float y, float z,
+                                   float u, float v) {
+        //? if >=1.21 {
+        buffer.addVertex(pose, x, y, z).setUv(u, v);
+        //?} else {
+        /*buffer.vertex(pose.pose(), x, y, z).uv(u, v).endVertex();
+        *///?}
+    }
+
     /** Float-channel counterpart of {@link #vertex(VertexConsumer, PoseStack.Pose, float, float, float, int, float, float, int, int, float, float, float)}. */
     public static void vertex(VertexConsumer buffer, PoseStack.Pose pose,
                               float x, float y, float z, float red, float green, float blue, float alpha,
@@ -73,6 +83,23 @@ public final class Vertexes {
                 .color(color)
                 .normal(pose.normal(), normalX, normalY, normalZ)
                 .endVertex();
+        *///?}
+    }
+
+    /**
+     * A line vertex at an explicit pixel width, for {@link LineRenderTypes#lines(float)} of the same width: 26.1
+     * writes it into the vertex, older versions carry it in the render type and ignore it here.
+     */
+    public static void line(VertexConsumer buffer, PoseStack.Pose pose,
+                            float x, float y, float z, int color,
+                            float normalX, float normalY, float normalZ, float width) {
+        //? if >=26.1 {
+        buffer.addVertex(pose, x, y, z)
+                .setColor(color)
+                .setNormal(pose, normalX, normalY, normalZ)
+                .setLineWidth(width);
+        //?} else {
+        /*line(buffer, pose, x, y, z, color, normalX, normalY, normalZ);
         *///?}
     }
 

@@ -164,6 +164,8 @@ public final class RecordingSubmitSink implements SubmitSink {
                     } else {
                         buffer = bufferSource.getBuffer(e.renderType());
                     }
+                    // flatCutout: 1.7 drew these with GL_LIGHTING off; see FlatCutoutRenderType.flatten
+                    if (FlatCutoutRenderType.isFlat(e.renderType())) buffer = FlatCutoutRenderType.flatten(buffer);
                     PoseStack poseStack = new PoseStack();
                     poseStack.last().pose().set(e.pose());
                     poseStack.last().normal().set(e.normal());

@@ -61,13 +61,13 @@ public final class Tints {
      *
      * <p>A constant carries a finished ARGB value and is returned verbatim. A custom-model-data tint
      * reads a colour the stack carries, falling back to the declared default; that colour is RGB in
-     * both eras, so full alpha is added. {@code colorIndex} is kept for fidelity even though this era
-     * can only store one colour per stack — every tint in practice reads index 0.
+     * both eras, so full alpha is added. {@code colorIndex} picks the colour: index 0 is the one
+     * {@code ModelData.setColor} stores, higher indices come from {@code ModelData.setColors}.
      ^/
     private record Tint(boolean constant, int value, int colorIndex, int defaultColor) {
 
         int resolve(ItemStack stack) {
-            return constant ? value : OPAQUE | (ModelData.color(stack, defaultColor) & 0xFFFFFF);
+            return constant ? value : OPAQUE | (ModelData.color(stack, colorIndex, defaultColor) & 0xFFFFFF);
         }
     }
 

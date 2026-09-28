@@ -58,6 +58,15 @@ public final class Effects {
         *///?}
     }
 
+    /** Instant health: {@code HEAL} until 1.21.2 renamed it {@code INSTANT_HEALTH}. */
+    public static Object instantHealth() {
+        //? if >=1.21.2 {
+        return net.minecraft.world.effect.MobEffects.INSTANT_HEALTH;
+        //?} else {
+        /*return net.minecraft.world.effect.MobEffects.HEAL;
+        *///?}
+    }
+
     public static MobEffectInstance instance(Object effect, int duration, int amplifier) {
         //? if >=1.21 {
         return new MobEffectInstance((net.minecraft.core.Holder<MobEffect>) effect, duration, amplifier);
@@ -189,6 +198,20 @@ public final class Effects {
         //?} else {
         /*entity.removeEffect(effect);
         *///?}
+    }
+
+    /** Whether an active effect is a harmful one — legacy {@code Potion.isBadEffect}. */
+    public static boolean isHarmful(MobEffectInstance instance) {
+        //? if >=1.21 {
+        return instance.getEffect().value().getCategory() == net.minecraft.world.effect.MobEffectCategory.HARMFUL;
+        //?} else {
+        /*return instance.getEffect().getCategory() == net.minecraft.world.effect.MobEffectCategory.HARMFUL;
+        *///?}
+    }
+
+    /** The effect kind of an active instance, typed loosely to pair with {@link #remove}. */
+    public static Object kind(MobEffectInstance instance) {
+        return instance.getEffect();
     }
 
     public static void clear(LivingEntity entity) {

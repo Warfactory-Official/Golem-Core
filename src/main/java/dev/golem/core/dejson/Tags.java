@@ -45,6 +45,79 @@ public final class Tags {
         return tag("damage_type", namespace, path, values);
     }
 
+    /** An entity-type tag: {@code data/<namespace>/tags/entity_type/<path>.json}. */
+    public static JsonObject entityType(String namespace, String path, String... values) {
+        return tag("entity_type", namespace, path, values);
+    }
+
+    /**
+     * A tag built member by member, for the two things the one-line forms refuse: members that are
+     * {@linkplain Tag#optional optional}, and a tag that is deliberately declared with no members.
+     *
+     * <p>An empty tag is not nothing. A repair ingredient or a block list that names a tag needs the tag
+     * to exist on every loader even while the mod has nothing to put in it, and declaring it empty is
+     * how that is said.
+     *
+     * @param registry the registry folder: {@code item}, {@code block}, {@code entity_type}, ...
+     */
+    public static Tag of(String registry, String namespace, String path) {
+        if (registry == null || registry.isEmpty() || namespace == null || namespace.isEmpty()
+                || path == null || path.isEmpty()) {
+            throw new DejsonException("a tag needs a registry, a namespace and a path");
+        }
+        return new Tag(registry, namespace, path);
+    }
+
+    /** A tag under construction; see {@link #of}. */
+    public static final class Tag {
+
+        private final String registry;
+        private final String namespace;
+        private final String path;
+        private final JsonArray members = new JsonArray();
+
+        private Tag(String registry, String namespace, String path) {
+            this.registry = registry;
+            this.namespace = namespace;
+            this.path = path;
+        }
+
+        /** Required members: an id that must exist, or a {@code #tag} reference. */
+        public Tag values(String... values) {
+            for (String value : values) {
+                requireMember(value);
+                members.add(value);
+            }
+            return this;
+        }
+
+        /** Members that are skipped rather than failing the tag when absent, e.g. another mod's block. */
+        public Tag optional(String... values) {
+            for (String value : values) {
+                requireMember(value);
+                JsonObject member = new JsonObject();
+                member.addProperty("id", value);
+                member.addProperty("required", false);
+                members.add(member);
+            }
+            return this;
+        }
+
+        public JsonObject register() {
+            JsonObject tag = new JsonObject();
+            tag.addProperty("replace", false);
+            tag.add("values", members.deepCopy());
+            return Data.declare("data/" + namespace + "/tags/" + registry + "/" + path + ".json", tag);
+        }
+
+        private void requireMember(String value) {
+            if (value == null || value.isEmpty()) {
+                throw new DejsonException("tag " + namespace + ":" + path + " has an empty member");
+            }
+            Models.requireId(value.startsWith("#") ? value.substring(1) : value, "tag member");
+        }
+    }
+
     private static JsonObject tag(String registry, String namespace, String path, String... values) {
         if (namespace == null || namespace.isEmpty() || path == null || path.isEmpty()) {
             throw new DejsonException("a tag needs a namespace and a path");

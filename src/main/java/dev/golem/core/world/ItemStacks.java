@@ -133,6 +133,61 @@ public final class ItemStacks {
         *///?}
     }
 
+    /**
+     * Whether the stack, held in the main hand, carries an attack-damage attribute modifier - legacy
+     * {@code stack.getAttributeModifiers().containsKey(attackDamage)}, i.e. "is this a weapon or tool".
+     */
+    public static boolean hasAttackDamageModifier(ItemStack stack) {
+        if (stack.isEmpty()) return false;
+        //? if >=1.21 {
+        return stack.getOrDefault(net.minecraft.core.component.DataComponents.ATTRIBUTE_MODIFIERS,
+                        net.minecraft.world.item.component.ItemAttributeModifiers.EMPTY).modifiers().stream()
+                .anyMatch(entry -> entry.attribute().value()
+                        == net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE.value());
+        //?} else {
+        /*return stack.getAttributeModifiers(EquipmentSlot.MAINHAND)
+                .containsKey(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
+        *///?}
+    }
+
+    /**
+     * Strips every attribute modifier from this one stack ({@code suppressed}), or gives it back its item's own
+     * modifiers - a legacy per-stack {@code getAttributeModifiers(stack)} override that returned an empty map in some
+     * states (an out-of-charge weapon). 1.20.5+ overrides the {@code attribute_modifiers} component on the stack
+     * (setting it back to the item's default value drops the override from the patch); before that a present, empty
+     * {@code AttributeModifiers} tag list replaces the item's modifiers, and removing the tag restores them.
+     */
+    public static void suppressAttributeModifiers(ItemStack stack, boolean suppressed) {
+        if (stack.isEmpty()) return;
+        //? if >=1.20.5 {
+        var type = net.minecraft.core.component.DataComponents.ATTRIBUTE_MODIFIERS;
+        if (suppressed) {
+            stack.set(type, net.minecraft.world.item.component.ItemAttributeModifiers.EMPTY);
+        } else {
+            var def = stack.getItem().components().get(type);
+            if (def != null) stack.set(type, def); else stack.remove(type);
+        }
+        //?} else {
+        /*if (suppressed) {
+            stack.getOrCreateTag().put("AttributeModifiers", new net.minecraft.nbt.ListTag());
+        } else if (stack.getTag() != null) {
+            stack.getTag().remove("AttributeModifiers");
+        }
+        *///?}
+    }
+
+    /** Whether {@link #suppressAttributeModifiers} currently holds this stack's modifiers off. */
+    public static boolean attributeModifiersSuppressed(ItemStack stack) {
+        //? if >=1.20.5 {
+        var value = stack.get(net.minecraft.core.component.DataComponents.ATTRIBUTE_MODIFIERS);
+        return value != null && value.modifiers().isEmpty()
+                && !value.equals(stack.getItem().components().get(net.minecraft.core.component.DataComponents.ATTRIBUTE_MODIFIERS));
+        //?} else {
+        /*return stack.getTag() != null && stack.getTag().contains("AttributeModifiers", 9)
+                && stack.getTag().getList("AttributeModifiers", 10).isEmpty();
+        *///?}
+    }
+
     /** Damages a held item and broadcasts its break animation across the callback signature change. */
     public static void hurtAndBreak(ItemStack stack, int amount, Player player, InteractionHand hand) {
         //? if >=1.21.1 {
@@ -241,6 +296,24 @@ public final class ItemStacks {
         *///?}
     }
 
+    /** Writes a boolean into an item's carried block custom data, where {@link #carriedBoolean} reads it; false removes it. */
+    public static void setCarriedBoolean(ItemStack carrier, String key, boolean value) {
+        //? if >=1.20.5 {
+        net.minecraft.world.item.component.CustomData data =
+                carrier.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+        net.minecraft.nbt.CompoundTag tag = data == null ? new net.minecraft.nbt.CompoundTag() : data.copyTag();
+        if (value) tag.putBoolean(key, true);
+        else tag.remove(key);
+        if (tag.isEmpty()) carrier.remove(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+        else carrier.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
+                net.minecraft.world.item.component.CustomData.of(tag));
+        //?} else {
+        /*net.minecraft.nbt.CompoundTag data = carrier.getOrCreateTagElement("BlockEntityTag");
+        if (value) data.putBoolean(key, true);
+        else data.remove(key);
+        *///?}
+    }
+
     /** Reads a boolean from an item's carried block custom data. */
     public static boolean carriedBoolean(ItemStack carrier, String key) {
         //? if >=1.20.5 {
@@ -256,7 +329,11 @@ public final class ItemStacks {
     /*private static net.minecraft.nbt.CompoundTag legacyCarriedData(ItemStack carrier) {
         net.minecraft.nbt.CompoundTag root = carrier.getTag();
         if (root == null) return new net.minecraft.nbt.CompoundTag();
-        return root.contains("BlockEntityTag", 10) ? root.getCompound("BlockEntityTag") : root;
+        if (!root.contains("BlockEntityTag", 10)) return root;
+        net.minecraft.nbt.CompoundTag data = root.getCompound("BlockEntityTag");
+        String carried = dev.golem.core.data.CompatBlockEntity.LEGACY_CARRIED_KEY;
+        // a mined block's collectCarriedData() arrives nested (loot copy_nbt); read it like the flat keys
+        return data.contains(carried, 10) ? data.copy().merge(data.getCompound(carried)) : data;
     }
     *///?}
 
@@ -353,12 +430,23 @@ public final class ItemStacks {
     /**
      * Applies a stack's stored block-entity data to a block entity the item did not place directly. Vanilla
      * applies it at the clicked position, which a folded multiblock has already removed by the time its real
-     * core exists elsewhere. Below 1.20.5 there are no components and the pre-existing behaviour stands.
+     * core exists elsewhere. Below 1.20.5 the same data is the item's {@code BlockEntityTag}, merged into the block
+     * entity exactly as vanilla's {@code BlockItem.updateCustomBlockEntityTag} does at the clicked position.
      */
     public static void applyComponents(net.minecraft.world.level.block.entity.BlockEntity blockEntity, ItemStack stack) {
         //? if >=1.20.5 {
         blockEntity.applyComponentsFromItemStack(stack);
-        //?}
+        //?} else {
+        /*net.minecraft.nbt.CompoundTag data = net.minecraft.world.item.BlockItem.getBlockEntityData(stack);
+        if (data == null) return;
+        net.minecraft.nbt.CompoundTag current = blockEntity.saveWithoutMetadata();
+        net.minecraft.nbt.CompoundTag before = current.copy();
+        current.merge(data);
+        if (!current.equals(before)) {
+            blockEntity.load(current);
+            blockEntity.setChanged();
+        }
+        *///?}
     }
 
     /**
@@ -402,6 +490,71 @@ public final class ItemStacks {
         *///?}
     }
 
+    /**
+     * Every slot a block entity's item form carries, for block entities that save their inventory under a
+     * child key ({@code legacyInventoryKey}, vanilla's {@code "Items"} list inside it): the CONTAINER component
+     * from 1.20.5, the {@code BlockEntityTag.<key>} compound before it.
+     */
+    public static NonNullList<ItemStack> carriedItems(ItemStack carrier, String legacyInventoryKey, int slotCount) {
+        //? if >=1.20.5 {
+        return carriedItems(carrier, slotCount);
+        //?} else {
+        /*NonNullList<ItemStack> items = NonNullList.withSize(slotCount, ItemStack.EMPTY);
+        net.minecraft.nbt.CompoundTag data = legacyCarriedData(carrier);
+        if (data.contains(legacyInventoryKey, 10)) {
+            net.minecraft.world.ContainerHelper.loadAllItems(data.getCompound(legacyInventoryKey), items);
+        }
+        return items;
+        *///?}
+    }
+
+    /** Writes {@code items} the way {@link #carriedItems(ItemStack, String, int)} reads them. */
+    public static void setCarriedItems(ItemStack carrier, String legacyInventoryKey, List<ItemStack> items) {
+        //? if >=1.20.5 {
+        setCarriedItems(carrier, items);
+        //?} else {
+        /*NonNullList<ItemStack> list = NonNullList.withSize(items.size(), ItemStack.EMPTY);
+        for (int i = 0; i < items.size(); i++) list.set(i, items.get(i));
+        net.minecraft.nbt.CompoundTag data = carrier.getOrCreateTagElement("BlockEntityTag");
+        net.minecraft.nbt.CompoundTag inventory = new net.minecraft.nbt.CompoundTag();
+        net.minecraft.world.ContainerHelper.saveAllItems(inventory, list, true);
+        data.put(legacyInventoryKey, inventory);
+        *///?}
+    }
+
+    /** A book and quill holding {@code pages} (WRITABLE_BOOK_CONTENT from 1.20.5, the "pages" string list before). */
+    public static ItemStack writableBook(List<String> pages) {
+        ItemStack book = new ItemStack(net.minecraft.world.item.Items.WRITABLE_BOOK);
+        //? if >=1.20.5 {
+        List<net.minecraft.server.network.Filterable<String>> list = new java.util.ArrayList<>();
+        for (String page : pages) list.add(net.minecraft.server.network.Filterable.passThrough(page));
+        book.set(net.minecraft.core.component.DataComponents.WRITABLE_BOOK_CONTENT,
+                new net.minecraft.world.item.component.WritableBookContent(list));
+        //?} else {
+        /*net.minecraft.nbt.ListTag list = new net.minecraft.nbt.ListTag();
+        for (String page : pages) list.add(net.minecraft.nbt.StringTag.valueOf(page));
+        book.getOrCreateTag().put("pages", list);
+        *///?}
+        return book;
+    }
+
+    /** The pages of a book and quill; empty when it has none. */
+    public static List<String> writableBookPages(ItemStack book) {
+        List<String> out = new java.util.ArrayList<>();
+        //? if >=1.20.5 {
+        net.minecraft.world.item.component.WritableBookContent content =
+                book.get(net.minecraft.core.component.DataComponents.WRITABLE_BOOK_CONTENT);
+        if (content != null) content.pages().forEach(page -> out.add(page.raw()));
+        //?} else {
+        /*net.minecraft.nbt.CompoundTag tag = book.getTag();
+        if (tag != null) {
+            net.minecraft.nbt.ListTag list = tag.getList("pages", 8);
+            for (int i = 0; i < list.size(); i++) out.add(list.getString(i));
+        }
+        *///?}
+        return out;
+    }
+
     /** Sets the stack's display name (CUSTOM_NAME component / legacy display tag). */
     public static void setCustomName(ItemStack stack, net.minecraft.network.chat.Component name) {
         //? if >=1.20.5 {
@@ -442,5 +595,20 @@ public final class ItemStacks {
     /** Caps the stack at {@code max} (1.20.5 {@code limitSize}). */
     public static void limitSize(ItemStack stack, int max) {
         if (stack.getCount() > max) stack.setCount(max);
+    }
+
+    /** A player head showing {@code player}'s skin (legacy {@code SkullOwner}, modern profile component). */
+    public static ItemStack playerHead(Player player) {
+        ItemStack head = new ItemStack(net.minecraft.world.item.Items.PLAYER_HEAD);
+        //? if >=26.1 {
+        head.set(net.minecraft.core.component.DataComponents.PROFILE,
+                net.minecraft.world.item.component.ResolvableProfile.createResolved(player.getGameProfile()));
+        //?} else if >=1.21.1 {
+        /*head.set(net.minecraft.core.component.DataComponents.PROFILE,
+                new net.minecraft.world.item.component.ResolvableProfile(player.getGameProfile()));
+        *///?} else {
+        /*head.getOrCreateTag().putString("SkullOwner", player.getGameProfile().getName());
+        *///?}
+        return head;
     }
 }

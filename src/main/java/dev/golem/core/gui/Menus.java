@@ -176,9 +176,11 @@ public final class Menus {
     public static void openWithHand(ServerPlayer player, MenuProvider provider, InteractionHand hand) {
         int value = hand == InteractionHand.MAIN_HAND ? 0 : 1;
         //? if fabric && >=26.1 {
-        /*player.openMenu(new net.fabricmc.fabric.api.menu.v1.ExtendedMenuProvider<Integer>() {
+        /*player.openMenu(new net.fabricmc.fabric.api.menu.v1.ExtendedMenuProvider<InteractionHand>() {
+            // The menu type's codec (typeWithHand) is a StreamCodec<InteractionHand>: handing it the Integer
+            // threw a ClassCastException in the open-screen payload and no hand-opened menu ever opened on Fabric.
             @Override
-            public Integer getScreenOpeningData(ServerPlayer p) { return value; }
+            public InteractionHand getScreenOpeningData(ServerPlayer p) { return hand; }
 
             @Override
             public Component getDisplayName() { return provider.getDisplayName(); }
@@ -189,9 +191,10 @@ public final class Menus {
             }
         });
         *///?} elif fabric && >=1.20.5 {
-        /*player.openMenu(new net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerFactory<Integer>() {
+        /*player.openMenu(new net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerFactory<InteractionHand>() {
+            // As above: the type's codec encodes an InteractionHand, not the Integer.
             @Override
-            public Integer getScreenOpeningData(ServerPlayer p) { return value; }
+            public InteractionHand getScreenOpeningData(ServerPlayer p) { return hand; }
 
             @Override
             public Component getDisplayName() { return provider.getDisplayName(); }

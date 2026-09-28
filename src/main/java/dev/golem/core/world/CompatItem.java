@@ -27,6 +27,20 @@ public class CompatItem extends Item {
     }
     *///?}
 
+    // SwingReceiver dispatch through the loader's own item hook (Fabric: MixinLivingEntitySwing).
+    //? if neoforge {
+    @Override
+    public boolean onEntitySwing(net.minecraft.world.item.ItemStack stack, net.minecraft.world.entity.LivingEntity entity,
+                                 net.minecraft.world.InteractionHand hand) {
+        return SwingReceiver.dispatch(stack, entity, hand);
+    }
+    //?} elif forge {
+    /*@Override
+    public boolean onEntitySwing(net.minecraft.world.item.ItemStack stack, net.minecraft.world.entity.LivingEntity entity) {
+        return SwingReceiver.dispatch(stack, entity, SwingReceiver.handOf(stack, entity));
+    }
+    *///?}
+
     /**
      * Whether the item already raised in hand is still this one, its components having changed.
      *
@@ -85,7 +99,7 @@ public class CompatItem extends Item {
         return false;
     }
 
-    public enum UseAnimation { NONE, BOW, DRINK }
+    public enum UseAnimation { NONE, BOW, DRINK, EAT }
 
     /**
      * Receives server-side inventory ticks with the optional equipped slot when vanilla provides it.
@@ -154,6 +168,7 @@ public class CompatItem extends Item {
             case NONE -> net.minecraft.world.item.ItemUseAnimation.NONE;
             case BOW -> net.minecraft.world.item.ItemUseAnimation.BOW;
             case DRINK -> net.minecraft.world.item.ItemUseAnimation.DRINK;
+            case EAT -> net.minecraft.world.item.ItemUseAnimation.EAT;
         };
     }
 
@@ -168,6 +183,7 @@ public class CompatItem extends Item {
             case NONE -> net.minecraft.world.item.UseAnim.NONE;
             case BOW -> net.minecraft.world.item.UseAnim.BOW;
             case DRINK -> net.minecraft.world.item.UseAnim.DRINK;
+            case EAT -> net.minecraft.world.item.UseAnim.EAT;
         };
     }
 

@@ -48,6 +48,49 @@ public final class ModelData {
         *///?}
     }
 
+    // Every colour of a multi-colour stack, below 26.1 (index 0 also stays where setColor puts it).
+    private static final String LEGACY_COLORS = "GolemCoreModelColors";
+
+    /**
+     * Tags a stack with several tint colours: a custom-model-data tint of index {@code n} reads
+     * {@code colors[n]}. 26.1 keeps them as the component's colour list; older versions have one colour
+     * slot, so index 0 goes there as {@link #setColor} would put it and the whole list rides custom data.
+     */
+    public static void setColors(ItemStack stack, int... colors) {
+        //? if >=26.1 {
+        List<Integer> list = new java.util.ArrayList<>(colors.length);
+        for (int color : colors) list.add(color);
+        stack.set(DataComponents.CUSTOM_MODEL_DATA,
+                new CustomModelData(List.of(), List.of(), List.of(), list));
+        //?} elif >=1.20.5 {
+        /*if (colors.length > 0) stack.set(DataComponents.DYED_COLOR, new DyedItemColor(colors[0], false));
+        net.minecraft.world.item.component.CustomData.update(DataComponents.CUSTOM_DATA, stack,
+                tag -> tag.putIntArray(LEGACY_COLORS, colors));
+        *///?} else {
+        /*if (colors.length > 0) stack.getOrCreateTag().putInt(LEGACY_COLOR, colors[0]);
+        stack.getOrCreateTag().putIntArray(LEGACY_COLORS, colors);
+        *///?}
+    }
+
+    /** The colour at {@code index} set by {@link #setColors} (or {@link #setColor} for index 0), or the default. */
+    public static int color(ItemStack stack, int index, int defaultColor) {
+        //? if >=26.1 {
+        CustomModelData data = stack.get(DataComponents.CUSTOM_MODEL_DATA);
+        return data == null || data.colors().size() <= index ? defaultColor : data.colors().get(index);
+        //?} elif >=1.20.5 {
+        /*if (index == 0) return color(stack, defaultColor);
+        net.minecraft.world.item.component.CustomData custom = stack.get(DataComponents.CUSTOM_DATA);
+        if (custom == null) return defaultColor;
+        int[] colors = custom.copyTag().getIntArray(LEGACY_COLORS);
+        return colors.length > index ? colors[index] : defaultColor;
+        *///?} else {
+        /*if (index == 0) return color(stack, defaultColor);
+        if (!stack.hasTag()) return defaultColor;
+        int[] colors = stack.getTag().getIntArray(LEGACY_COLORS);
+        return colors.length > index ? colors[index] : defaultColor;
+        *///?}
+    }
+
     /** Removes the tint and model data created by {@link #setColor}. */
     public static void removeColor(ItemStack stack) {
         //? if >=26.1 {

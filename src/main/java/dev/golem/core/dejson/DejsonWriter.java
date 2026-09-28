@@ -167,6 +167,8 @@ public final class DejsonWriter {
             files.put(path(declaration.definitionId(), "items"),
                     Dejson.itemDefinition(declaration.itemId()));
         }
+        Dejson.standaloneModels().forEach((id, model) -> files.put(path(id, "models"), model));
+        States.files().forEach((id, state) -> files.put(path(id, "blockstates"), state));
         files.putAll(Data.files());
         return files;
     }

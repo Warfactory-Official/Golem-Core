@@ -1,6 +1,5 @@
 package dev.golem.core.world;
 
-import dev.golem.core.Ids;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -11,7 +10,13 @@ import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.level.Level;
 
-/** A shaped recipe whose ingredient predicates include exact item component state. */
+/**
+ * A shaped recipe whose ingredient predicates include exact item component state.
+ *
+ * <p>With a {@code copy_key} symbol, the result takes every component of the stack matched by that
+ * symbol - 1.7's {@code ContainerUpgradeCraftingHandler}, which set the crafted crate's NBT to the
+ * ingredient crate's so the contents survive the upgrade.
+ */
 public class ComponentShapedRecipe extends CompatCustomRecipe {
 
     public static final RecipeSerializer<ComponentShapedRecipe> SERIALIZER =
@@ -23,10 +28,20 @@ public class ComponentShapedRecipe extends CompatCustomRecipe {
     private final int width;
     private final int height;
     private final ItemStackSpec result;
+    private final String copyFrom;
 
     protected ComponentShapedRecipe(String namespace, String path, List<String> pattern,
                                     Map<String, ComponentIngredient> key, ItemStackSpec result) {
+        this(namespace, path, pattern, key, result, "");
+    }
+
+    protected ComponentShapedRecipe(String namespace, String path, List<String> pattern,
+                                    Map<String, ComponentIngredient> key, ItemStackSpec result, String copyFrom) {
         super(namespace, path);
+        this.copyFrom = copyFrom == null ? "" : copyFrom;
+        if (!this.copyFrom.isEmpty() && !key.containsKey(this.copyFrom)) {
+            throw new IllegalArgumentException("copy_key names no key symbol: " + this.copyFrom);
+        }
         if (pattern.isEmpty()) throw new IllegalArgumentException("empty shaped recipe pattern");
         this.pattern = List.copyOf(pattern);
         this.key = Map.copyOf(key);
@@ -64,6 +79,11 @@ public class ComponentShapedRecipe extends CompatCustomRecipe {
 
     public final ItemStack result() {
         return result.create();
+    }
+
+    /** The key symbol whose stack the result copies its components from, or {@code ""}. */
+    public final String copyFrom() {
+        return copyFrom;
     }
 
     //? if >=26.1 {
@@ -121,7 +141,20 @@ public class ComponentShapedRecipe extends CompatCustomRecipe {
 
     @Override
     protected ItemStack assembleGrid(int gridWidth, int gridHeight, List<ItemStack> input) {
-        return matchesGrid(gridWidth, gridHeight, input, null) ? result.create() : ItemStack.EMPTY;
+        if (!matchesGrid(gridWidth, gridHeight, input, null)) return ItemStack.EMPTY;
+        ItemStack assembled = result.create();
+        if (!copyFrom.isEmpty()) {
+            ComponentIngredient source = key.get(copyFrom);
+            for (int slot = 0; slot < input.size(); slot++) {
+                // the first stack in grid order, as ContainerUpgradeCraftingHandler.getFirstContainer
+                if (expectedAt(gridWidth, gridHeight, input, slot) == source) {
+                    ItemStack copied = assembled.copy();
+                    ItemStacks.copyCustomState(input.get(slot), copied);
+                    return copied;
+                }
+            }
+        }
+        return assembled;
     }
 
     private ComponentIngredient expectedAt(int gridWidth, int gridHeight, List<ItemStack> input,
@@ -141,19 +174,12 @@ public class ComponentShapedRecipe extends CompatCustomRecipe {
         return ComponentIngredient.EMPTY;
     }
 
-    private static ItemStack remainderStack(String id) {
-        net.minecraft.world.item.Item item =
-                net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(Ids.parse(id));
-        return item == net.minecraft.world.item.Items.AIR ? ItemStack.EMPTY : new ItemStack(item);
-    }
-
     private NonNullList<ItemStack> remaining(int gridWidth, int gridHeight, List<ItemStack> input) {
         NonNullList<ItemStack> result = NonNullList.withSize(input.size(), ItemStack.EMPTY);
         for (int slot = 0; slot < input.size(); slot++) {
-            ComponentIngredient expected = expectedAt(gridWidth, gridHeight, input, slot);
-            ItemStack remainder = expected.remainder().isEmpty()
-                    ? Compat.craftingRemainder(input.get(slot))
-                    : remainderStack(expected.remainder());
+            ItemStack stack = input.get(slot);
+            if (stack.isEmpty()) continue;
+            ItemStack remainder = expectedAt(gridWidth, gridHeight, input, slot).remainderFor(stack);
             if (!remainder.isEmpty()) result.set(slot, remainder);
         }
         return result;

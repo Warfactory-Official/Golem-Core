@@ -63,6 +63,8 @@ tasks.processResources {
         "mixin_compatibility" to if (javaVersion <= 17) "JAVA_17" else "JAVA_21",
         "legacy_item_owner_mixins" to if (mcVersion.substringBefore('.').toInt() < 26)
             ", \"MixinItemRenderer\"" else "",
+        // Forge 1.20.1 routes carts through getRailMaxSpeed/onMinecartPass itself.
+        "rail_mixins" to "",
         "world_effect_mixins" to "",
         // No vendored engine below 26.1, so nothing to feed.
         "flywheel_be_mixins" to "",

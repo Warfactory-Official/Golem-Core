@@ -15,11 +15,12 @@ import net.minecraft.nbt.CompoundTag;
  */
 public final class Tags {
 
-    private static final int TAG_BYTE = 1;
-    private static final int TAG_INT = 3;
-    private static final int TAG_LONG = 4;
-    private static final int TAG_FLOAT = 5;
-    private static final int TAG_DOUBLE = 6;
+    /**
+     * 26.1's {@code getIntOr}/{@code getLongOr}/... read any numeric tag ({@code NumericTag.asInt()} etc.), so a
+     * short or byte where an int is asked for still answers; legacy {@code contains(name, 99)} is that same test.
+     * (1.7 structure files store item ids as shorts.)
+     */
+    private static final int TAG_ANY_NUMERIC = 99;
     private static final int TAG_STRING = 8;
     private static final int TAG_INT_ARRAY = 11;
 
@@ -29,7 +30,7 @@ public final class Tags {
         //? if >=26.1 {
         return tag.getIntOr(name, defaultValue);
         //?} else {
-        /*return tag.contains(name, TAG_INT) ? tag.getInt(name) : defaultValue;
+        /*return tag.contains(name, TAG_ANY_NUMERIC) ? tag.getInt(name) : defaultValue;
         *///?}
     }
 
@@ -37,7 +38,7 @@ public final class Tags {
         //? if >=26.1 {
         return tag.getLongOr(name, defaultValue);
         //?} else {
-        /*return tag.contains(name, TAG_LONG) ? tag.getLong(name) : defaultValue;
+        /*return tag.contains(name, TAG_ANY_NUMERIC) ? tag.getLong(name) : defaultValue;
         *///?}
     }
 
@@ -45,7 +46,7 @@ public final class Tags {
         //? if >=26.1 {
         return tag.getFloatOr(name, defaultValue);
         //?} else {
-        /*return tag.contains(name, TAG_FLOAT) ? tag.getFloat(name) : defaultValue;
+        /*return tag.contains(name, TAG_ANY_NUMERIC) ? tag.getFloat(name) : defaultValue;
         *///?}
     }
 
@@ -53,7 +54,7 @@ public final class Tags {
         //? if >=26.1 {
         return tag.getDoubleOr(name, defaultValue);
         //?} else {
-        /*return tag.contains(name, TAG_DOUBLE) ? tag.getDouble(name) : defaultValue;
+        /*return tag.contains(name, TAG_ANY_NUMERIC) ? tag.getDouble(name) : defaultValue;
         *///?}
     }
 
@@ -65,7 +66,7 @@ public final class Tags {
         //? if >=26.1 {
         return tag.getBooleanOr(name, defaultValue);
         //?} else {
-        /*return tag.contains(name, TAG_BYTE) ? tag.getBoolean(name) : defaultValue;
+        /*return tag.contains(name, TAG_ANY_NUMERIC) ? tag.getBoolean(name) : defaultValue;
         *///?}
     }
 
@@ -73,7 +74,7 @@ public final class Tags {
         //? if >=26.1 {
         return tag.getByteOr(name, defaultValue);
         //?} else {
-        /*return tag.contains(name, TAG_BYTE) ? tag.getByte(name) : defaultValue;
+        /*return tag.contains(name, TAG_ANY_NUMERIC) ? tag.getByte(name) : defaultValue;
         *///?}
     }
 
@@ -89,7 +90,7 @@ public final class Tags {
         //? if >=26.1 {
         return tag.getInt(name).isPresent();
         //?} else {
-        /*return tag.contains(name, TAG_INT);
+        /*return tag.contains(name, TAG_ANY_NUMERIC);
         *///?}
     }
 
@@ -97,7 +98,7 @@ public final class Tags {
         //? if >=26.1 {
         return tag.getDouble(name).isPresent();
         //?} else {
-        /*return tag.contains(name, TAG_DOUBLE);
+        /*return tag.contains(name, TAG_ANY_NUMERIC);
         *///?}
     }
 

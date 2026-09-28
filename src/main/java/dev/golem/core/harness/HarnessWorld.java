@@ -61,11 +61,29 @@ final class HarnessWorld {
         };
     }
 
+    /** Save folder name of the open singleplayer world, or null. */
+    static String currentSave(Minecraft minecraft) {
+        var server = minecraft.getSingleplayerServer();
+        if (server == null) return null;
+        java.nio.file.Path root = server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT).toAbsolutePath().normalize();
+        return root.getFileName() == null ? null : root.getFileName().toString();
+    }
+
+    static boolean exists(Minecraft minecraft, String name) {
+        return minecraft.getLevelSource().levelExists(name);
+    }
+
     /**
-     * Drives vanilla's world-creation UI state: superflat, creative, peaceful, commands on, then the
-     * screen's own create action. Resolves when the new world has loaded.
+     * Drives vanilla's world-creation UI state: creative, peaceful, commands on, then the screen's own
+     * create action. {@code type} "flat" (default) picks the superflat preset; "seeded" picks the default
+     * (normal) preset with the fixed {@code seed}. Resolves when the new world has loaded.
      */
     static HarnessServer.Pending create(Minecraft minecraft, String name) {
+        return create(minecraft, name, "flat", 0L);
+    }
+
+    static HarnessServer.Pending create(Minecraft minecraft, String name, String type, long seed) {
+        boolean seeded = "seeded".equals(type);
         long start = Harness.tick();
         return new HarnessServer.Pending() {
             boolean opened;
@@ -96,18 +114,22 @@ final class HarnessWorld {
                     //?} else {
                     /*state.setAllowCheats(true);
                     *///?}
-                    WorldCreationUiState.WorldTypeEntry flat = null;
+                    var wanted = seeded ? WorldPresets.NORMAL : WorldPresets.FLAT;
+                    WorldCreationUiState.WorldTypeEntry preset = null;
                     for (WorldCreationUiState.WorldTypeEntry entry : state.getNormalPresetList()) {
-                        if (entry.preset() != null && entry.preset().is(WorldPresets.FLAT)) flat = entry;
+                        if (entry.preset() != null && entry.preset().is(wanted)) preset = entry;
                     }
-                    if (flat == null) {
+                    if (preset == null) {
                         for (WorldCreationUiState.WorldTypeEntry entry : state.getAltPresetList()) {
-                            if (entry.preset() != null && entry.preset().is(WorldPresets.FLAT)) flat = entry;
+                            if (entry.preset() != null && entry.preset().is(wanted)) preset = entry;
                         }
                     }
-                    if (flat == null) return Json.error("no superflat preset in the world-type list");
-                    state.setWorldType(flat);
-                    GolemCore.LOG.info("[harness] creating world '{}' (superflat, creative)", name);
+                    if (preset == null) return Json.error("no " + (seeded ? "default" : "superflat") + " preset in the world-type list");
+                    state.setWorldType(preset);
+                    // The seed text is parsed like the vanilla field: a number is used as-is.
+                    if (seeded) state.setSeed(Long.toString(seed));
+                    GolemCore.LOG.info("[harness] creating world '{}' ({}, creative)", name,
+                            seeded ? "default preset, seed " + seed : "superflat");
                     ((HarnessCreateWorldScreenAccessor) screen).golem$onCreate();
                     submitted = true;
                     return null;

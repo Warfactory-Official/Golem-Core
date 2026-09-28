@@ -12,8 +12,10 @@ import net.minecraft.world.item.Item;
  * global mutable {@code FuelRegistry} until 26.1, which replaced it with a {@code FuelValues} builder
  * assembled per-server. A consumer holding a map of item to ticks should not have to care which.
  *
- * <p>On NeoForge and Forge this is a no-op by design: the data map (or the {@code getBurnTime}
- * override) already carries the values, and registering them twice would be the bug.
+ * <p>On NeoForge this is a no-op by design: the {@code neoforge:furnace_fuels} data map already carries
+ * the values, and registering them twice would be the bug. Forge 1.20.1 has no fuel data map; there the
+ * values answer Forge's {@code FurnaceFuelBurnTimeEvent}, which every furnace-like consumer of
+ * {@code ForgeHooks.getBurnTime} fires, exactly where an item's own {@code getBurnTime} would have.
  */
 public final class Fuels {
 
@@ -32,6 +34,25 @@ public final class Fuels {
         /*// Pre-26.1 fabric-api keeps one global mutable registry.
         burnTimes.forEach((item, ticks) -> net.fabricmc.fabric.api.registry.FuelRegistry.INSTANCE.add(item.get(), ticks));
         *///?}
-        // Forge-like loaders: nothing to do — see the class note.
+        //? if forge {
+        /*java.util.concurrent.atomic.AtomicReference<Map<Item, Integer>> resolved =
+                new java.util.concurrent.atomic.AtomicReference<>();
+        // Resolved once, on the first event (registries are frozen by then): the event fires for every
+        // burn-time query of every stack, so it must not walk the whole table each time.
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(
+                (net.minecraftforge.event.furnace.FurnaceFuelBurnTimeEvent event) -> {
+                    Map<Item, Integer> table = resolved.get();
+                    if (table == null) {
+                        // later entries for the same item win, as the per-event walk they replace did
+                        Map<Item, Integer> built = new java.util.IdentityHashMap<>();
+                        burnTimes.forEach((item, ticks) -> built.put(item.get(), ticks));
+                        resolved.compareAndSet(null, built);
+                        table = resolved.get();
+                    }
+                    Integer ticks = table.get(event.getItemStack().getItem());
+                    if (ticks != null) event.setBurnTime(ticks);
+                });
+        *///?}
+        // NeoForge: nothing to do — see the class note.
     }
 }

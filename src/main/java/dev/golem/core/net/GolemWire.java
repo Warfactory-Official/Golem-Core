@@ -238,7 +238,14 @@ public final class GolemWire {
         if (!(player.connection instanceof ChannelAccess.HasConnection holder)) return null;
         Connection connection = holder.golem$connection();
         if (!(connection instanceof ChannelAccess.HasChannel owner)) return null;
-        return owner.golem$channel();
+        Channel channel = owner.golem$channel();
+        // A raw buffer is only a packet to a pipeline that frames and decodes bytes. The integrated
+        // server's in-memory (LocalChannel) connection hands Packet objects straight across with no
+        // encoder, so a compiled buffer written there is silently discarded by the client's packet
+        // handler: every block-entity sync on a 1.20.1 singleplayer world was lost this way. Such
+        // channels take the loader's transport instead.
+        if (channel == null || channel instanceof io.netty.channel.local.LocalChannel) return null;
+        return channel;
     }
 
     /**

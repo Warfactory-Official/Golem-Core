@@ -49,6 +49,32 @@ public class CompatArmorItem extends
         this.armorSlot = slot;
     }
 
+    /**
+     * Marks the armour as never wearing out - the legacy {@code setMaxDamage(0)} / no-op {@code setDamage}
+     * idiom. From 1.21 that is the hidden {@code UNBREAKABLE} component. 1.20.1 has no component, and its
+     * {@code ArmorItem} constructor applies the material durability through {@code defaultDurability}, which
+     * only fills a max damage of exactly 0. So there the properties carry a max damage of -1: {@code
+     * defaultDurability} leaves it alone, and vanilla's own {@code ItemStack.isDamageableItem} ({@code
+     * getMaxDamage() > 0}) and {@code Item.canBeDepleted} both answer false on every loader.
+     *
+     * <p>Overriding {@code canBeDepleted} instead is not enough: only Forge routes {@code isDamageableItem}
+     * through it. Fabric 1.20.1 reads the final {@code getMaxDamage()} directly, so such armour still wore
+     * down and reported itself damageable there. Pass the result straight to this class's constructor.
+     */
+    public static Item.Properties unbreakable(Item.Properties properties) {
+        //? if >=26.1 {
+        return properties.component(net.minecraft.core.component.DataComponents.UNBREAKABLE, net.minecraft.util.Unit.INSTANCE)
+                .component(net.minecraft.core.component.DataComponents.TOOLTIP_DISPLAY,
+                        net.minecraft.world.item.component.TooltipDisplay.DEFAULT
+                                .withHidden(net.minecraft.core.component.DataComponents.UNBREAKABLE, true));
+        //?} else if >=1.21 {
+        /*return properties.component(net.minecraft.core.component.DataComponents.UNBREAKABLE,
+                new net.minecraft.world.item.component.Unbreakable(false));
+        *///?} else {
+        /*return properties.durability(-1);
+        *///?}
+    }
+
     /** The equipment slot represented by this item, including on versions without an item-side accessor. */
     public final ArmorSlot armorSlot() {
         return armorSlot;

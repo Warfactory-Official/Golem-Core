@@ -66,7 +66,8 @@ public final class Harvests {
         return level.destroyBlock(pos, false, player);
     }
 
-    private static boolean fireBreakEvent(ServerLevel level, ServerPlayer player, BlockPos pos,
+    /** Posts the loader's block-break event (or Fabric's BEFORE callback); false when a listener cancels. */
+    public static boolean fireBreakEvent(ServerLevel level, ServerPlayer player, BlockPos pos,
                                           BlockState state) {
         GameType gameType = player.gameMode.getGameModeForPlayer();
         boolean restricted = !level.mayInteract(player, pos)

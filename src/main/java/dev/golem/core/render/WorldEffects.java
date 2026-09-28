@@ -5,6 +5,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -19,8 +20,15 @@ import net.minecraft.client.renderer.rendertype.RenderType;
 
 /** Frame-scoped geometry drawn after world translucency, with the submitting renderer's exact pose. */
 public final class WorldEffects {
+    /** One submission: geometry into {@code type}'s buffer, or (type null) a text run drawn into the pass's buffers. */
     private record Entry(int order, PoseStack pose, Matrix4f modelView, Runnable drawState, RenderType type,
-                         SubmitSink.CustomGeometry geometry) {}
+                         SubmitSink.CustomGeometry geometry,
+                         BiConsumer<PoseStack, MultiBufferSource> buffered) {
+        Entry(int order, PoseStack pose, Matrix4f modelView, Runnable drawState, RenderType type,
+              SubmitSink.CustomGeometry geometry) {
+            this(order, pose, modelView, drawState, type, geometry, null);
+        }
+    }
 
     private static final List<Entry> ENTRIES = new ArrayList<>();
     private static ClientLevel level;
@@ -134,7 +142,14 @@ public final class WorldEffects {
         collecting = level != null;
         if (!collecting) return;
         CameraInfo camera = CameraInfo.current();
+        // 1.20.1's Camera.rotation() is rotationYXZ(-yaw, pitch, 0), not the 1.21+ rotationYXZ(pi - yaw, -pitch,
+        // roll): its conjugate faces the other way, so every hook submission was drawn behind the camera. The view
+        // rotation there is the pose vanilla passed down (pitch, yaw + 180, loader roll), recorded as viewRotation.
+        //? if >=1.21 {
         HOOK_MODEL_VIEW.rotation(new Quaternionf(camera.orientation).conjugate());
+        //?} else {
+        /*HOOK_MODEL_VIEW.set(viewRotation);
+        *///?}
         dispatchingHooks = true;
         try {
             for (Consumer<CameraInfo> hook : List.copyOf(BEGIN_HOOKS)) hook.accept(camera);
@@ -144,18 +159,14 @@ public final class WorldEffects {
     }
 
     /**
-     * The view rotation of the frame being collected, for geometry submitted from an
-     * {@link #onBegin} hook.
+     * The view rotation of the frame being collected.
      *
-     * <p>Such a submission is drawn against the model-view matrix captured when it was made, and at
-     * frame start that matrix is still the identity on every supported version: 26.1's
-     * {@code LevelRenderer.renderLevel} multiplies the view rotation onto the global stack after its
-     * head, 1.21.1 does so after the sky pass, and 1.20.1 never puts it on the global stack at all.
-     * A frame-start submitter therefore builds its pose as {@code mulPose(viewRotation())} first and
-     * then translates by {@code (world - camera.pos)}; a pose that only translates is drawn as if the
-     * camera always looked north, and one that rotates after translating spins the geometry about its
-     * own origin. Submissions made from inside an entity or block-entity pass already sit under the
-     * view rotation and must not apply this.
+     * <p>Not for {@link #onBegin} hooks: their submissions are drawn under the hook model-view
+     * ({@code HOOK_MODEL_VIEW}), which already is this rotation on every node, so a hook pose only
+     * translates by {@code (world - camera.pos)}. Multiplying this in as well rotates the geometry
+     * twice (the conveyor-wand and rebar previews were drawn into the sky that way, History
+     * §19ed-followups). Submissions made from inside an entity or block-entity pass already sit
+     * under the view rotation too.
      */
     public static Matrix4f viewRotation() {
         return new Matrix4f(VIEW_ROTATION);
@@ -189,6 +200,23 @@ public final class WorldEffects {
         Matrix4f modelView = dispatchingHooks ? new Matrix4f(HOOK_MODEL_VIEW)
                 : new Matrix4f(RenderSystem.getModelViewMatrix());
         ENTRIES.add(new Entry(order, copy, modelView, captureDrawState(), type, geometry));
+    }
+
+    /**
+     * A run of text in this pass, at {@code pose}: the font's own glyph render types (see-through with
+     * {@link net.minecraft.client.gui.Font.DisplayMode#SEE_THROUGH}), drawn in submission order among the geometry.
+     */
+    public static void submitText(PoseStack pose, int order, net.minecraft.client.gui.Font font, String text, float x,
+                                  float y, int color, boolean shadow, net.minecraft.client.gui.Font.DisplayMode mode,
+                                  int backgroundColor, int light) {
+        if (!isCollecting()) return;
+        PoseStack copy = new PoseStack();
+        copy.last().pose().set(pose.last().pose());
+        copy.last().normal().set(pose.last().normal());
+        Matrix4f modelView = dispatchingHooks ? new Matrix4f(HOOK_MODEL_VIEW)
+                : new Matrix4f(RenderSystem.getModelViewMatrix());
+        ENTRIES.add(new Entry(order, copy, modelView, captureDrawState(), null, null, (drawPose, buffers) ->
+                font.drawInBatch(text, x, y, color, shadow, drawPose.last().pose(), buffers, mode, backgroundColor, light)));
     }
 
     private static Runnable captureDrawState() {
@@ -296,9 +324,23 @@ public final class WorldEffects {
             *///?}
             ENTRIES.sort(Comparator.comparingInt(Entry::order));
             restoreState = captureDrawState();
+            // Before 26.1 a render type's NO_DEPTH_TEST shard does nothing: vanilla's DepthTestStateShard only
+            // enables/disables for functions other than ALWAYS, relying on each type's clear leaving the depth
+            // test off. At the level-end event it is still on, so every see-through type was depth tested.
+            // Start from that between-types default, and put the event's state back afterwards.
+            //? if <26.1 {
+            /*boolean depthWasOn = org.lwjgl.opengl.GL11.glIsEnabled(org.lwjgl.opengl.GL11.GL_DEPTH_TEST);
+            RenderSystem.disableDepthTest();
+            Runnable drawState = restoreState;
+            restoreState = () -> {
+                drawState.run();
+                if (depthWasOn) RenderSystem.enableDepthTest();
+                else RenderSystem.disableDepthTest();
+            };
+            *///?}
             boolean captured = false;
             for (Entry entry : ENTRIES) {
-                if (!captured && HeatDistortionRenderType.isSceneSampling(entry.type())) {
+                if (!captured && entry.type() != null && HeatDistortionRenderType.isSceneSampling(entry.type())) {
                     HeatDistortionRenderType.prepareSceneForPass();
                     captured = true;
                 }
@@ -315,7 +357,8 @@ public final class WorldEffects {
                 RenderSystem.applyModelViewMatrix();
                 *///?}
                 try {
-                    entry.geometry().render(entry.pose().last(), buffers.getBuffer(entry.type()));
+                    if (entry.buffered() != null) entry.buffered().accept(entry.pose(), buffers);
+                    else entry.geometry().render(entry.pose().last(), buffers.getBuffer(entry.type()));
                     buffers.endBatch();
                 } finally {
                     //? if >=1.21 {

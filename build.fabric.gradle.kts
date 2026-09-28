@@ -56,6 +56,13 @@ dependencies {
     if (obfuscated) "mappings"(loom.officialMojangMappings())
     cfg("net.fabricmc:fabric-loader:${prop("deps.fabric_loader")}")
     cfg("net.fabricmc.fabric-api:fabric-api:${prop("deps.fabric_api")}")
+    // Team Reborn Energy: an optional peer for EnergyCompat/EnergyExposure (RebornEnergy), compiled against,
+    // never shipped or required. Published on the Fabric maven Loom already adds.
+    if (project.hasProperty("deps.tr_energy")) {
+        (if (obfuscated) "modCompileOnly" else "compileOnly")("teamreborn:energy:${prop("deps.tr_energy")}") {
+            isTransitive = false
+        }
+    }
 }
 
 loom {
@@ -90,19 +97,23 @@ tasks.processResources {
         "mixin_compatibility" to if (javaVersion <= 17) "JAVA_17" else "JAVA_21",
         "legacy_item_owner_mixins" to if (mcVersion.substringBefore('.').toInt() < 26)
             ", \"MixinItemRenderer\"" else "",
+        // Fabric API has no minecart events, so every Fabric node calls the rail hooks through a mixin.
+        "rail_mixins" to ", \"MixinMinecartRails\"",
         "world_effect_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinWorldEffects\"" else "",
         // Fabric is told about client block entities by fabric-api, so it needs no mixin for it.
         "flywheel_be_mixins" to "",
         // Fabric has no debug-screen entry registry, so the F3 lines are appended by a mixin there.
         "debug_line_mixins" to if (hasVendoredFlywheel) ", \"MixinDebugScreenLines\"" else "",
         // 1.20.1 has no pre-removal explosion hook for blocks (1.21 added onExplosionHit); see CompatBlock.
-        "legacy_explosion_mixins" to if (mcVersion.startsWith("1.20.")) "\"MixinExplosionBlockHook\"" else "",
+        "legacy_explosion_mixins" to if (mcVersion.startsWith("1.20.")) ", \"MixinExplosionBlockHook\"" else "",
         // Modern Fabric's GameTest API has no public dynamic-instance registration callback. The
         // exact mixin is compiled and named only where Fabric's 26.1 implementation provides it.
-        // It follows the legacy explosion entry, which is empty on these modern nodes.
-        "fabric_gametest_mixins" to if (!obfuscated) "\"MixinFabricGameTestModInitializer\"" else "",
+        // Both entries follow MixinLivingEntitySwing, so each carries its own leading comma.
+        "fabric_gametest_mixins" to if (!obfuscated) ", \"MixinFabricGameTestModInitializer\"" else "",
         "legacy_client_mixins" to ", \"MixinMouseInput\"" +
-            if (obfuscated) ", \"MixinLegacyCrosshair\"" else "",
+            (if (obfuscated) ", \"MixinLegacyCrosshair\"" else "") +
+            // VanillaHud: Fabric API before 26.1 has no named HUD elements to suppress hearts/armour by.
+            (if (obfuscated) ", \"MixinLegacyHudRows\"" else ""),
         "pack_format" to prop("pack_format"),
         "pack_format_entry" to if (mcVersion.substringBefore('.').toInt() >= 26)
             "\"min_format\": ${prop("pack_format")}, \"max_format\": ${prop("pack_format")}" 

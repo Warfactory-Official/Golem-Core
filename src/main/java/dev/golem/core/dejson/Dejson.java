@@ -56,6 +56,7 @@ public final class Dejson {
     private static final Map<String, ItemDeclaration> ITEM_DECLARATIONS = new ConcurrentHashMap<>();
     private static final Map<String, JsonObject> ITEM_DEFINITIONS = new ConcurrentHashMap<>();
     private static final Map<String, String> GENERATED_SPRITES = new ConcurrentHashMap<>();
+    private static final Map<String, JsonObject> STANDALONE_MODELS = new ConcurrentHashMap<>();
 
     private Dejson() {}
 
@@ -77,6 +78,38 @@ public final class Dejson {
      */
     public static ItemDeclaration item(String namespace, String path) {
         return new ItemDeclaration(namespace, path);
+    }
+
+    /**
+     * Declares a model no one block or item owns: a part a multipart blockstate assembles, a model a
+     * renderer loads by id, a parent other models inherit from.
+     *
+     * <p>A block's or item's own models belong in its {@link #block} or {@link #item} declaration, where
+     * the blockstate or definition that points at them is checked against them. This is for the rest,
+     * which otherwise stay loose files nobody's declaration mentions.
+     *
+     * @param modelId the full model id, e.g. {@code hbm:block/pipe_anchor_down}
+     */
+    public static void model(String modelId, Shape shape) {
+        Models.requireId(modelId, "model");
+        if (shape == null) {
+            throw new DejsonException(modelId + " was given a null shape");
+        }
+        Map<String, JsonObject> built = shape.models(modelId);
+        if (built.size() != 1 || !built.containsKey(modelId)) {
+            throw new DejsonException(modelId + " has a shape that emits more than its own model: "
+                    + built.keySet());
+        }
+        JsonObject model = built.get(modelId);
+        if (MODELS.putIfAbsent(modelId, model) != null) {
+            throw new DejsonException("model " + modelId + " is declared twice");
+        }
+        STANDALONE_MODELS.put(modelId, model);
+    }
+
+    /** Every model declared through {@link #model}, keyed by model id. */
+    public static Map<String, JsonObject> standaloneModels() {
+        return Collections.unmodifiableMap(STANDALONE_MODELS);
     }
 
     /** The generated {@code models/<path>.json} for a model id, or null if none was declared. */
@@ -149,6 +182,7 @@ public final class Dejson {
         for (ItemDeclaration declaration : ITEM_DECLARATIONS.values()) {
             sprites.addAll(declaration.sprites());
         }
+        sprites.addAll(spritesOf(STANDALONE_MODELS));
         return sprites;
     }
 
@@ -160,6 +194,8 @@ public final class Dejson {
         ITEM_DECLARATIONS.clear();
         ITEM_DEFINITIONS.clear();
         GENERATED_SPRITES.clear();
+        STANDALONE_MODELS.clear();
+        States.reset();
         Data.reset();
     }
 
@@ -408,6 +444,8 @@ public final class Dejson {
         private Shape shape;
         private String definitionModel;
         private String selectProperty;
+        private ItemModel definition;
+        private boolean oversizedInGui;
         private List<Tint> tints = List.of();
         private Map<String, JsonObject> models = Collections.emptyMap();
 
@@ -477,6 +515,30 @@ public final class Dejson {
             return this;
         }
 
+        /**
+         * The 26.1 definition's model tree, stated in full: a {@code special} renderer, a
+         * {@code select} whose cases are not all this item's own models, a type the mod defines.
+         *
+         * <p>The shape, if one is given, still emits the item's own model, which the tree may or may
+         * not name. With no shape the declaration emits the definition alone.
+         */
+        public ItemDeclaration definition(ItemModel definition) {
+            if (definition == null) {
+                throw new DejsonException(definitionId + " was given a null definition");
+            }
+            this.definition = definition;
+            return this;
+        }
+
+        /**
+         * Sets the definition's {@code oversized_in_gui} flag: the icon is allowed to draw past its slot,
+         * as a large machine's does, instead of being clipped to it.
+         */
+        public ItemDeclaration oversizedInGui() {
+            this.oversizedInGui = true;
+            return this;
+        }
+
         /** The item's registry id, and the path its item definition would live at. */
         public String definitionId() {
             return definitionId;
@@ -496,12 +558,21 @@ public final class Dejson {
         }
 
         public ItemDeclaration register() {
-            if (shape == null) {
+            if (shape == null && definition == null) {
                 throw new DejsonException(definitionId + " declares no model; call models(...)");
             }
 
-            Map<String, JsonObject> built = shape.models(itemId);
-            if (selectProperty != null) {
+            Map<String, JsonObject> built = shape == null ? Map.of() : shape.models(itemId);
+            if (definition != null) {
+                if (selectProperty != null || definitionModel != null || !tints.isEmpty()) {
+                    throw new DejsonException(definitionId + " states its definition in full; "
+                            + "shares(), selects() and tints() belong inside it");
+                }
+                if (built.size() > 1 || (built.size() == 1 && !built.containsKey(itemId))) {
+                    throw new DejsonException(definitionId
+                            + " has a shape that emits more than its own model: " + built.keySet());
+                }
+            } else if (selectProperty != null) {
                 if (definitionModel != null) {
                     throw new DejsonException(definitionId + " both shares(" + definitionModel
                             + ") and selects(" + selectProperty + ")");
@@ -524,7 +595,7 @@ public final class Dejson {
                         + ") but its shape still emits " + built.keySet());
             }
 
-            if (MODELS.containsKey(itemId)) {
+            if (MODELS.containsKey(itemId) && (definition == null || built.containsKey(itemId))) {
                 throw new DejsonException("model " + itemId + " is declared twice; "
                         + definitionId + " collides with an earlier declaration");
             }
@@ -534,9 +605,19 @@ public final class Dejson {
 
             this.models = Collections.unmodifiableMap(new LinkedHashMap<>(built));
             MODELS.putAll(built);
-            ITEM_DEFINITIONS.put(itemId, selectProperty == null
-                    ? Models.itemDefinition(definitionModel == null ? itemId : definitionModel, tints)
-                    : Models.itemSelection(selectProperty, List.copyOf(built.keySet()), tints));
+            JsonObject file;
+            if (definition != null) {
+                file = new JsonObject();
+                file.add("model", definition.toJson());
+            } else {
+                file = selectProperty == null
+                        ? Models.itemDefinition(definitionModel == null ? itemId : definitionModel, tints)
+                        : Models.itemSelection(selectProperty, List.copyOf(built.keySet()), tints);
+            }
+            if (oversizedInGui) {
+                file.addProperty("oversized_in_gui", true);
+            }
+            ITEM_DEFINITIONS.put(itemId, file);
             return this;
         }
     }

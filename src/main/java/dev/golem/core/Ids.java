@@ -39,6 +39,19 @@ public final class Ids {
         };
     }
 
+    /**
+     * Whether a vanilla item tag exists on older versions but not in the newest API. Such a tag can hold a mod's
+     * items on an old node through vanilla's own nesting, yet no id roster generated against the newest version
+     * can name it. {@code minecraft:tools} is 1.19.4–1.20.4's aggregate of the per-tool tags; 26.1 ships only
+     * the per-tool tags ({@code swords}, {@code axes}, ...).
+     */
+    public static boolean isRetiredVanillaItemTag(String id) {
+        return switch (id) {
+            case "minecraft:tools" -> true;
+            default -> false;
+        };
+    }
+
     /** The id type for the target version: {@code Identifier} on 26.1+, {@code ResourceLocation} below. */
     public static
             //? if >=26.1 {

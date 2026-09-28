@@ -145,6 +145,52 @@ public final class Crafting {
         return shapedRecipe("hbm:component_shaped", namespace, id, result, pattern, List.of(key));
     }
 
+    /**
+     * A shaped recipe matched on components whose result takes every component of the stack under the
+     * {@code copyFrom} symbol - 1.7's {@code ContainerUpgradeCraftingHandler}, a crate upgraded with its
+     * contents.
+     */
+    public static JsonObject componentShapedCopy(String namespace, String id, Stack result, String copyFrom,
+                                                 String[] pattern, Key... key) {
+        boolean present = false;
+        for (Key entry : key) present |= entry.symbol.equals(copyFrom);
+        if (!present) {
+            throw new DejsonException(id + " copies components from '" + copyFrom
+                    + "', which is not one of its symbols");
+        }
+        JsonObject recipe = shapedRecipe("hbm:component_shaped", namespace, id, result, pattern, List.of(key));
+        // not "copy_from": legacy-recipes.gradle.kts rewrites that field as an ingredient (copyShapeless)
+        recipe.addProperty("copy_key", copyFrom);
+        return recipe;
+    }
+
+    /**
+     * A shapeless recipe over component-matched ingredients (1.7's {@code ShapelessOreRecipe} with
+     * metadata, NBT, tag and {@code getDict} fluid-container ingredients). Each ingredient consumes one
+     * stack and leaves that ingredient's remainder.
+     */
+    public static JsonObject componentShapeless(String namespace, String id, Stack result,
+                                                Ingredient... ingredients) {
+        if (ingredients.length == 0) {
+            throw new DejsonException(id + " has no ingredients");
+        }
+        if (ingredients.length > GRID * GRID) {
+            throw new DejsonException(id + " has " + ingredients.length
+                    + " ingredients and the grid holds " + GRID * GRID);
+        }
+        JsonArray list = new JsonArray();
+        for (Ingredient ingredient : ingredients) {
+            if (ingredient == null) throw new DejsonException(id + " has a missing ingredient");
+            list.add(ingredient.json(id));
+        }
+        JsonObject recipe = new JsonObject();
+        recipe.addProperty("type", "hbm:component_shapeless");
+        recipe.addProperty("category", "misc");
+        recipe.add("ingredients", list);
+        recipe.add("result", result.json(id));
+        return declare(namespace, id, recipe);
+    }
+
     /** A furnace recipe matched on components, producing a stack that carries its own. */
     public static JsonObject componentSmelt(String namespace, String id, Ingredient ingredient,
                                             Stack result, double experience) {
@@ -213,7 +259,29 @@ public final class Crafting {
 
     /** An ingredient matched on its components as well as its id. */
     public static Ingredient item(String id) {
-        return new Ingredient(id, Map.of(), List.of(), null);
+        return new Ingredient(List.of(id), Map.of(), List.of(), null, null, 0, null, false);
+    }
+
+    /** Any one of these item ids or {@code #tags} (a 1.7 ore-dictionary name with several members). */
+    public static Ingredient anyOf(String... ids) {
+        if (ids.length == 0) throw new DejsonException("anyOf was given no ids");
+        return new Ingredient(List.of(ids), Map.of(), List.of(), null, null, 0, null, false);
+    }
+
+    /** An item tag, written {@code #namespace:path}. */
+    public static Ingredient tag(String tag) {
+        if (!tag.startsWith("#")) throw new DejsonException("tag '" + tag + "' has no leading #");
+        return anyOf(tag);
+    }
+
+    /**
+     * Any full fluid container of exactly {@code amount} of {@code fluid} - 1.7's
+     * {@code Fluids.X.getDict(amount)}. The grid keeps the emptied container.
+     */
+    public static Ingredient fluid(String fluid, int amount) {
+        if (fluid == null || fluid.isEmpty()) throw new DejsonException("fluid ingredient names no fluid");
+        if (amount <= 0) throw new DejsonException("fluid ingredient " + fluid + " holds " + amount);
+        return new Ingredient(List.of(), Map.of(), List.of(), null, fluid, amount, null, false);
     }
 
     /** One symbol of a {@link #componentShaped} pattern and the ingredient it stands for. */
@@ -279,22 +347,35 @@ public final class Crafting {
      */
     public static final class Ingredient {
 
-        private final String id;
+        private final List<String> ids;
         private final Map<String, Integer> components;
         private final List<String> absent;
         private final String remainder;
+        private final String fluid;
+        private final int amount;
+        private final String potion;
+        private final boolean degrade;
 
-        private Ingredient(String id, Map<String, Integer> components, List<String> absent,
-                           String remainder) {
-            this.id = id;
+        private Ingredient(List<String> ids, Map<String, Integer> components, List<String> absent,
+                           String remainder, String fluid, int amount, String potion, boolean degrade) {
+            this.ids = ids;
             this.components = components;
             this.absent = absent;
             this.remainder = remainder;
+            this.fluid = fluid;
+            this.amount = amount;
+            this.potion = potion;
+            this.degrade = degrade;
+        }
+
+        private String name() {
+            return ids.isEmpty() ? fluid + "@" + amount : ids.get(0);
         }
 
         /** The same ingredient, matching only stacks carrying this component value. */
         public Ingredient with(String component, int value) {
-            return new Ingredient(id, plus(components, component, value), absent, remainder);
+            return new Ingredient(ids, plus(components, component, value), absent, remainder, fluid, amount,
+                    potion, degrade);
         }
 
         /** The same ingredient, matching only stacks carrying none of these components. */
@@ -303,32 +384,51 @@ public final class Crafting {
             for (String component : components) {
                 Models.requireId(component, "component");
                 if (absent.contains(component)) {
-                    throw new DejsonException(id + " excludes " + component + " twice");
+                    throw new DejsonException(name() + " excludes " + component + " twice");
                 }
                 absent.add(component);
             }
-            return new Ingredient(id, this.components, List.copyOf(absent), remainder);
+            return new Ingredient(ids, this.components, List.copyOf(absent), remainder, fluid, amount, potion,
+                    degrade);
         }
 
         /** What the grid keeps when this ingredient is consumed. */
         public Ingredient remainder(String id) {
             Models.requireId(id, "remainder");
-            return new Ingredient(this.id, components, absent, id);
+            return new Ingredient(ids, components, absent, id, fluid, amount, potion, degrade);
+        }
+
+        /** The same ingredient, matching only stacks carrying this potion ({@code minecraft:water}). */
+        public Ingredient potion(String potion) {
+            Models.requireId(potion, "potion");
+            return new Ingredient(ids, components, absent, remainder, fluid, amount, potion, degrade);
+        }
+
+        /** A crafting tool: it stays in the grid, one point more worn (1.7 ItemCraftingDegradation). */
+        public Ingredient degrade() {
+            return new Ingredient(ids, components, absent, remainder, fluid, amount, potion, true);
         }
 
         private JsonObject json(String recipe) {
-            Models.requireId(id, "ingredient");
+            for (String id : ids) {
+                Models.requireId(id.startsWith("#") ? id.substring(1) : id, "ingredient");
+            }
             for (String component : absent) {
                 if (components.containsKey(component)) {
-                    throw new DejsonException(recipe + " wants " + id + " both carrying and "
+                    throw new DejsonException(recipe + " wants " + name() + " both carrying and "
                             + "without " + component);
                 }
             }
-            JsonArray items = new JsonArray();
-            items.add(id);
+            if ((fluid != null ? 1 : 0) + (remainder != null ? 1 : 0) + (degrade ? 1 : 0) > 1) {
+                throw new DejsonException(recipe + " gives " + name() + " more than one remainder rule");
+            }
 
             JsonObject json = new JsonObject();
-            json.add("items", items);
+            if (!ids.isEmpty()) {
+                JsonArray items = new JsonArray();
+                ids.forEach(items::add);
+                json.add("items", items);
+            }
             if (!components.isEmpty()) {
                 json.add("components", componentMap(components));
             }
@@ -339,6 +439,16 @@ public final class Crafting {
             }
             if (remainder != null) {
                 json.addProperty("remainder", remainder);
+            }
+            if (fluid != null) {
+                json.addProperty("fluid", fluid);
+                json.addProperty("fluid_amount", amount);
+            }
+            if (potion != null) {
+                json.addProperty("potion", potion);
+            }
+            if (degrade) {
+                json.addProperty("degrade", true);
             }
             return json;
         }

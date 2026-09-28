@@ -373,8 +373,17 @@ public final class GolemNetwork {
                         dispatchClientOffThread(codec, payload);
                         return;
                     }
-                    context.enqueueWork(() -> dispatchClient(codec, payload,
-                            new ClientContext(context.player().level(), context.player())));
+                    context.enqueueWork(() -> {
+                        // A play payload can still sit in the main-thread queue when the connection has already gone
+                        // back to configuration (leaving/joining a world): its session is over and there is no player
+                        // to hand it to; vanilla drops its own play packets at that switch too.
+                        // The payload belongs to the live play session only if its connection is the client's current
+                        // game connection and that session has a player.
+                        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+                        if (mc.player == null || mc.getConnection() == null
+                                || mc.getConnection().getConnection() != context.connection()) return;
+                        dispatchClient(codec, payload, new ClientContext(context.player().level(), context.player()));
+                    });
                 });
     }
 

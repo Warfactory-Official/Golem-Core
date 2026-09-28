@@ -30,6 +30,7 @@ public final class DejsonMain {
         String mode = args[0];
         Path out = Path.of(args[1]);
         Path authored = Path.of(args[2]);
+        Data.authoredRoot(authored);
 
         for (int index = 3; index < args.length; index++) {
             Method declare = Class.forName(args[index]).getDeclaredMethod("declare");

@@ -19,9 +19,8 @@ import java.util.function.Supplier;
  * Forge take an {@code IEnergyStorage}, whose simulate flag asks the same question without changing
  * anything, and the snapshot pair is never used there.
  *
- * <p>Fabric ships no standard energy capability, so {@link #expose} does nothing and nothing on that
- * node can see our energy. That is the same answer {@link EnergyCompat} gives in the other direction,
- * and for the same reason: picking a third-party API on the mod's behalf is not this layer's call.
+ * <p>Fabric ships no standard energy capability; there {@link #expose} registers with Team Reborn Energy
+ * when that optional mod is loaded ({@link RebornEnergy}) and does nothing otherwise.
  *
  * <p>Call this once, while the mod bus is still accepting listeners — the loaders that have a
  * registration event subscribe to it here.
@@ -35,7 +34,7 @@ public final class EnergyExposure {
         //? if forgelike {
         return true;
         //?} else {
-        /*return false;
+        /*return RebornEnergy.present(); // Fabric: only with the optional Team Reborn Energy
         *///?}
     }
 
@@ -76,6 +75,8 @@ public final class EnergyExposure {
                         return;
                     }
                 });
+        *///?} elif fabric {
+        /*if (RebornEnergy.present()) RebornEnergy.expose(source, blocks);
         *///?}
     }
 

@@ -72,4 +72,81 @@ public final class Attributes {
                 .getBytes(java.nio.charset.StandardCharsets.UTF_8)));
         *///?}
     }
+
+    /** The three legacy modifier operations, in their legacy order 0, 1, 2. */
+    public enum Op { ADD, MULTIPLY_BASE, MULTIPLY_TOTAL }
+
+    /**
+     * Sets a non-persistent modifier with an explicit legacy operation. Leaves an identical modifier
+     * alone, so a caller may re-assert it every tick without marking the attribute dirty (and so
+     * without resyncing it to the client every tick).
+     */
+    public static void setTransient(AttributeInstance attribute, String id, double amount, Op op) {
+        if (attribute == null || matches(attribute, id, amount, op)) return;
+        //? if >=1.21 {
+        var identifier = dev.golem.core.Ids.parse(id);
+        attribute.removeModifier(identifier);
+        attribute.addTransientModifier(new AttributeModifier(identifier, amount, operation(op)));
+        //?} else {
+        /*java.util.UUID uuid = uuid(id);
+        attribute.removeModifier(uuid);
+        attribute.addTransientModifier(new AttributeModifier(uuid, id, amount, operation(op)));
+        *///?}
+    }
+
+    /** As {@link #setTransient}, but the modifier is saved with the entity. */
+    public static void setPermanent(AttributeInstance attribute, String id, double amount, Op op) {
+        if (attribute == null || matches(attribute, id, amount, op)) return;
+        //? if >=1.21 {
+        var identifier = dev.golem.core.Ids.parse(id);
+        attribute.removeModifier(identifier);
+        attribute.addPermanentModifier(new AttributeModifier(identifier, amount, operation(op)));
+        //?} else {
+        /*java.util.UUID uuid = uuid(id);
+        attribute.removeModifier(uuid);
+        attribute.addPermanentModifier(new AttributeModifier(uuid, id, amount, operation(op)));
+        *///?}
+    }
+
+    /** Whether a modifier with this id is present on the attribute. */
+    public static boolean has(AttributeInstance attribute, String id) {
+        if (attribute == null) return false;
+        //? if >=1.21 {
+        return attribute.getModifier(dev.golem.core.Ids.parse(id)) != null;
+        //?} else {
+        /*return attribute.getModifier(uuid(id)) != null;
+        *///?}
+    }
+
+    private static boolean matches(AttributeInstance attribute, String id, double amount, Op op) {
+        //? if >=1.21 {
+        AttributeModifier present = attribute.getModifier(dev.golem.core.Ids.parse(id));
+        return present != null && present.amount() == amount && present.operation() == operation(op);
+        //?} else {
+        /*AttributeModifier present = attribute.getModifier(uuid(id));
+        return present != null && present.getAmount() == amount && present.getOperation() == operation(op);
+        *///?}
+    }
+
+    private static AttributeModifier.Operation operation(Op op) {
+        //? if >=1.21 {
+        return switch (op) {
+            case ADD -> AttributeModifier.Operation.ADD_VALUE;
+            case MULTIPLY_BASE -> AttributeModifier.Operation.ADD_MULTIPLIED_BASE;
+            case MULTIPLY_TOTAL -> AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL;
+        };
+        //?} else {
+        /*return switch (op) {
+            case ADD -> AttributeModifier.Operation.ADDITION;
+            case MULTIPLY_BASE -> AttributeModifier.Operation.MULTIPLY_BASE;
+            case MULTIPLY_TOTAL -> AttributeModifier.Operation.MULTIPLY_TOTAL;
+        };
+        *///?}
+    }
+
+    //? if <1.21 {
+    /*private static java.util.UUID uuid(String id) {
+        return java.util.UUID.nameUUIDFromBytes(id.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
+    *///?}
 }

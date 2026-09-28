@@ -110,6 +110,40 @@ public final class Lifecycle {
                 });
         *///?}
     }
+    /**
+     * Runs when a server player is replaced by a fresh copy - respawn after death ({@code alive} false) or the
+     * return from the End ({@code alive} true) - with the old and the new player. Forge/NeoForge
+     * {@code PlayerEvent.Clone}, Fabric {@code ServerPlayerEvents.COPY_FROM}: state a mod keeps on the player
+     * object itself is lost unless it is copied here.
+     */
+    public static void onPlayerCopy(PlayerCopy handler) {
+        //? if fabric {
+        /*net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents.COPY_FROM.register(handler::copy);
+        *///?} elif neoforge {
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.event.entity.player.PlayerEvent.Clone event) -> {
+                    if (event.getOriginal() instanceof net.minecraft.server.level.ServerPlayer old
+                            && event.getEntity() instanceof net.minecraft.server.level.ServerPlayer copy) {
+                        handler.copy(old, copy, !event.isWasDeath());
+                    }
+                });
+        //?} elif forge {
+        /*net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(
+                (net.minecraftforge.event.entity.player.PlayerEvent.Clone event) -> {
+                    if (event.getOriginal() instanceof net.minecraft.server.level.ServerPlayer old
+                            && event.getEntity() instanceof net.minecraft.server.level.ServerPlayer copy) {
+                        handler.copy(old, copy, !event.isWasDeath());
+                    }
+                });
+        *///?}
+    }
+
+    @FunctionalInterface
+    public interface PlayerCopy {
+        void copy(net.minecraft.server.level.ServerPlayer oldPlayer, net.minecraft.server.level.ServerPlayer newPlayer,
+                  boolean alive);
+    }
+
     /** Runs once the server has finished starting, every level loaded. */
     public static void onServerStarted(Consumer<MinecraftServer> handler) {
         //? if fabric {

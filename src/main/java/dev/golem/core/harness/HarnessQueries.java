@@ -210,14 +210,33 @@ final class HarnessQueries {
         return new BlockPos(Json.integer(req, "x", 0), Json.integer(req, "y", 0), Json.integer(req, "z", 0));
     }
 
+    /**
+     * Entities near the player. {@code server:true} reads them on the integrated server thread instead of the client
+     * level, so positions are authoritative and {@code game_time} is the server tick they belong to (a client-side
+     * position is interpolated and the client's tick count drifts against the server's).
+     */
     static JsonObject entities(Minecraft minecraft, JsonObject req) {
         if (minecraft.level == null || minecraft.player == null) return Json.error("no level");
         double radius = Json.number(req, "radius", 32);
         String filter = Json.str(req, "type", "");
+        boolean server = Json.bool(req, "server", false);
+        java.util.UUID self = minecraft.player.getUUID();
+        return onSide(minecraft, server,
+                () -> entitiesView(minecraft.level, minecraft.level.entitiesForRendering(), minecraft.player, radius, filter, false),
+                level -> {
+                    Entity player = level.getPlayerByUUID(self);
+                    if (player == null) return Json.error("server player missing");
+                    return entitiesView(level, ((net.minecraft.server.level.ServerLevel) level).getAllEntities(), player,
+                            radius, filter, true);
+                });
+    }
+
+    private static JsonObject entitiesView(Level level, Iterable<Entity> entities, Entity player, double radius,
+                                           String filter, boolean server) {
         JsonArray list = new JsonArray();
-        for (Entity entity : minecraft.level.entitiesForRendering()) {
-            if (entity == minecraft.player) continue;
-            if (entity.distanceTo(minecraft.player) > radius) continue;
+        for (Entity entity : entities) {
+            if (entity == player) continue;
+            if (entity.distanceTo(player) > radius) continue;
             String type = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString();
             if (!filter.isEmpty() && !type.contains(filter)) continue;
             JsonObject e = new JsonObject();
@@ -228,10 +247,26 @@ final class HarnessQueries {
             e.addProperty("y", entity.getY());
             e.addProperty("z", entity.getZ());
             e.addProperty("alive", entity.isAlive());
-            e.addProperty("distance", entity.distanceTo(minecraft.player));
+            e.addProperty("distance", entity.distanceTo(player));
+            if (entity instanceof net.minecraft.world.entity.LivingEntity living) {
+                // by description id: the saved form differs per era and loader (1.20.1 stores a numeric Id, and only
+                // Forge adds a named "forge:id"), and a mob's effects reach the client only as particles, so
+                // read these with server:true
+                JsonArray effects = new JsonArray();
+                for (net.minecraft.world.effect.MobEffectInstance effect : living.getActiveEffects()) {
+                    JsonObject fx = new JsonObject();
+                    fx.addProperty("id", effect.getDescriptionId());
+                    fx.addProperty("amplifier", effect.getAmplifier());
+                    fx.addProperty("duration", effect.getDuration());
+                    effects.add(fx);
+                }
+                e.add("effects", effects);
+            }
             list.add(e);
         }
         JsonObject json = Json.ok();
+        json.addProperty("side", server ? "server" : "client");
+        json.addProperty("game_time", level.getGameTime());
         json.add("entities", list);
         return json;
     }

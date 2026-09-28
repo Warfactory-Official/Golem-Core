@@ -180,6 +180,21 @@ public final class GuiDraw {
     }
 
     /**
+     * Fills a rectangle whose colour runs from {@code colorTop} at {@code y0} to {@code colorBottom} at
+     * {@code y1}, each channel interpolated — alpha included, which is what makes it useful for a fade.
+     * Same name and argument order on every version; only the graphics type differs.
+     */
+    public static void fillGradient(
+            //? if >=26.1 {
+            GuiGraphicsExtractor graphics,
+            //?} else {
+            /*GuiGraphics graphics,
+            *///?}
+            int x0, int y0, int x1, int y1, int colorTop, int colorBottom) {
+        graphics.fillGradient(x0, y0, x1, y1, colorTop, colorBottom);
+    }
+
+    /**
      * Draws a tinted sub-rectangle. 26.1 takes the ARGB tint as a trailing {@code blit} argument;
      * older versions have no such parameter and must set, draw, then reset the shader colour.
      */

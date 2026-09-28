@@ -4,7 +4,7 @@
   "package": "dev.golem.core.mixin",
   "refmap": "golemcore.refmap.json",
   "compatibilityLevel": "${mixin_compatibility}",
-  "mixins": [${legacy_explosion_mixins}${fabric_gametest_mixins}],
+  "mixins": ["MixinLivingEntitySwing"${legacy_explosion_mixins}${fabric_gametest_mixins}],
   "client": ["MixinCameraFov"${legacy_client_mixins}${debug_line_mixins}],
   "server": [],
   "injectors": {

@@ -216,4 +216,30 @@ public final class CompatRenderTypes {
             texture) {
         return FlatCutoutRenderType.of(texture);
     }
+
+    /** {@link #flatCutout}, depth-biased toward the camera: a decal a hair in front of a surface. */
+    public static RenderType flatCutoutDecal(
+            //? if >=26.1 {
+            Identifier
+            //?} else {
+            /*ResourceLocation
+            *///?}
+            texture) {
+        return FlatCutoutRenderType.decal(texture);
+    }
+
+    /**
+     * The item glint over a texture and UVs of the caller's choosing; {@code additive} picks {@code ONE, ONE}
+     * over the glint's {@code SRC_COLOR, ONE}. See {@link GlintRenderType}: depth {@code EQUAL}, so submit it
+     * after (a higher order than) the surface it coats, with {@link Vertexes#positionTex}.
+     */
+    public static RenderType glint(
+            //? if >=26.1 {
+            Identifier
+            //?} else {
+            /*ResourceLocation
+            *///?}
+            texture, boolean additive) {
+        return GlintRenderType.of(texture, additive);
+    }
 }

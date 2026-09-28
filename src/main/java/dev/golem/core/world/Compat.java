@@ -147,7 +147,14 @@ public final class Compat {
     public static int burnDuration(Level level, ItemStack stack) {
         //? if >=26.1 {
         return level == null ? 0 : level.fuelValues().burnDuration(stack);
-        //?} else {
+        //?} elif forge {
+        /*// ForgeHooks asks the item and then FurnaceFuelBurnTimeEvent, as the vanilla furnace does;
+        // the static vanilla fuel map alone misses every modded fuel on Forge.
+        return stack.isEmpty() ? 0 : Math.max(0, net.minecraftforge.common.ForgeHooks.getBurnTime(stack, null));
+        *///?} elif neoforge {
+        /*// the neoforge:furnace_fuels data map and the burn-time event, as the vanilla furnace reads them
+        return stack.isEmpty() ? 0 : Math.max(0, stack.getBurnTime(null));
+        *///?} else {
         /*if (stack.isEmpty()) return 0;
         Integer time = net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity
                 .getFuel().get(stack.getItem());
@@ -415,6 +422,20 @@ public final class Compat {
     }
 
     /**
+     * Whether a chunk is in the level's forced-chunk set (a {@code /forceload}, a GameTest plot, another mod's
+     * {@code setChunkForced}). That set is one flag per chunk, not a refcount, so a caller that forces a chunk
+     * already in it must not clear it again when it lets go. 26.1 renamed {@code getForcedChunks} to
+     * {@code getForceLoadedChunks} and {@code ChunkPos.asLong} to {@code ChunkPos.pack}.
+     */
+    public static boolean isChunkForced(ServerLevel level, int chunkX, int chunkZ) {
+        //? if >=26.1 {
+        return level.getForceLoadedChunks().contains(net.minecraft.world.level.ChunkPos.pack(chunkX, chunkZ));
+        //?} else {
+        /*return level.getForcedChunks().contains(net.minecraft.world.level.ChunkPos.asLong(chunkX, chunkZ));
+        *///?}
+    }
+
+    /**
      * Runs the "this block was removed" hook on a cell's neighbours.
      *
      * <p>Vanilla fires it from inside {@code LevelChunk.setBlockState} when the update flags carry
@@ -450,6 +471,15 @@ public final class Compat {
         return level.getGameRules().get(net.minecraft.world.level.gamerules.GameRules.MOB_GRIEFING);
         //?} else {
         /*return level.getGameRules().getBoolean(net.minecraft.world.level.GameRules.RULE_MOBGRIEFING);
+        *///?}
+    }
+
+    /** The {@code doMobLoot} game rule across the 26.1 typed game-rule API change. */
+    public static boolean mobLoot(ServerLevel level) {
+        //? if >=26.1 {
+        return level.getGameRules().get(net.minecraft.world.level.gamerules.GameRules.MOB_DROPS);
+        //?} else {
+        /*return level.getGameRules().getBoolean(net.minecraft.world.level.GameRules.RULE_DOMOBLOOT);
         *///?}
     }
 

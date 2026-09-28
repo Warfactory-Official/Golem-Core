@@ -248,13 +248,24 @@ public abstract class CompatBlockEntity extends BlockEntity {
     public void load(CompoundTag tag) {
         super.load(tag);
         loadData(new TagDataIn(tag, null));
+        // the item form's carried data (1.20.5+: the custom_data component), arriving through BlockEntityTag
+        if (tag.contains(LEGACY_CARRIED_KEY, 10)) applyCarriedData(tag.getCompound(LEGACY_CARRIED_KEY));
     }
 
     @Override
     protected void saveAdditional(CompoundTag tag) {
         super.saveAdditional(tag);
         saveData(new TagDataOut(tag, null));
+        // Before 1.20.5 there are no implicit item components: a loot table can only copy_nbt from this tag. The
+        // legacy loot conversion (HBM legacy-recipes.gradle.kts) turns copy_components of custom_data into a copy
+        // of this key to BlockEntityTag, which BlockItem merges back into load() above. It describes the state
+        // the rest of the tag already holds, so re-applying it on an ordinary chunk load changes nothing.
+        CompoundTag carried = collectCarriedData();
+        if (carried != null) tag.put(LEGACY_CARRIED_KEY, carried);
     }
+
+    /^* NBT key of {@link #collectCarriedData} below 1.20.5, in the saved tag and in the item's BlockEntityTag. ^/
+    public static final String LEGACY_CARRIED_KEY = "CarriedData";
     *///?}
 
     //? if <26.1 {

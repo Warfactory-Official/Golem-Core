@@ -119,6 +119,56 @@ public final class Drops {
     }
 
     /** The path a block's loot table lives at. */
+    /**
+     * The block itself, but only from the state where {@code property} is {@code value} — the lower
+     * half of a door, which is the half that carries the item. The other half drops nothing.
+     */
+    public static JsonObject selfWhen(String namespace, String block, String property, String value) {
+        JsonObject entry = entry(item(namespace, block));
+        entry.add("conditions", conditions(blockStateProperty(item(namespace, block), property, value)));
+        return table(namespace, block, pool(conditions(survivesExplosion()), entry));
+    }
+
+    /** {@code drop} with probability {@code chance}, if the block survives the explosion that broke it. */
+    public static JsonObject chance(String namespace, String block, String drop, double chance) {
+        if (!(chance > 0 && chance < 1)) {
+            throw new DejsonException(item(namespace, block) + " drop chance " + chance + " is not in (0, 1)");
+        }
+        JsonObject random = new JsonObject();
+        random.addProperty("condition", "minecraft:random_chance");
+        random.addProperty("chance", chance);
+        JsonObject entry = entry(drop);
+        entry.add("conditions", conditions(random));
+        return table(namespace, block, pool(conditions(survivesExplosion()), entry));
+    }
+
+    /**
+     * A fixed haul: one pool per stack, each always dropping exactly that many. For a wreck that breaks
+     * into its materials rather than into itself.
+     */
+    public static JsonObject stacks(String namespace, String block, Object... dropThenCount) {
+        if (dropThenCount.length == 0 || dropThenCount.length % 2 != 0) {
+            throw new DejsonException(item(namespace, block) + " stacks() takes drop/count pairs");
+        }
+        JsonArray pools = new JsonArray();
+        for (int index = 0; index < dropThenCount.length; index += 2) {
+            String drop = (String) dropThenCount[index];
+            int count = (Integer) dropThenCount[index + 1];
+            if (count < 1) {
+                throw new DejsonException(drop + " count " + count + " drops nothing");
+            }
+            JsonObject setCount = new JsonObject();
+            setCount.addProperty("function", "minecraft:set_count");
+            setCount.addProperty("count", count);
+            pools.add(pool(null, entry(drop, functions(setCount))));
+        }
+        JsonObject loot = new JsonObject();
+        loot.addProperty("type", "minecraft:block");
+        loot.add("pools", pools);
+        loot.addProperty("random_sequence", sequence(namespace, block));
+        return Data.declare(path(namespace, block), loot);
+    }
+
     public static String path(String namespace, String block) {
         Models.requireId(item(namespace, block), "block");
         return "data/" + namespace + "/loot_table/blocks/" + block + ".json";

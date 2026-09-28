@@ -175,6 +175,16 @@ public final class GameTests {
         return function;
     }
 
+    /**
+     * {@code -Dgolem.gametest.filter=<regex>} runs only the tests whose id matches. Every era honours it
+     * at test-instance registration; on 26.1 the body stays in the test-function registry either way,
+     * because that registry is declared before the property could matter and an unused body is inert.
+     */
+    private static boolean selected(Function function) {
+        String filter = System.getProperty("golem.gametest.filter");
+        return filter == null || filter.isBlank() || function.id().matches(filter);
+    }
+
     //? if neoforge {
     /**
      * Registers a declared body as a runnable test. Call from NeoForge's {@code RegisterGameTestsEvent}.
@@ -183,6 +193,7 @@ public final class GameTests {
                                  Suite suite) {
         for (Function function : suite.functions) {
             //? if >=26.1 {
+            if (!selected(function)) continue;
             // Per event: one environment per namespace within THIS registry load. See ENVIRONMENTS.
             Holder<TestEnvironmentDefinition<?>> environment = ENVIRONMENTS
                     .computeIfAbsent(event, e -> new HashMap<>())
@@ -257,6 +268,7 @@ public final class GameTests {
 
         Map<String, Holder<TestEnvironmentDefinition<?>>> environments = new HashMap<>();
         for (Function function : FUNCTIONS) {
+            if (!selected(function)) continue;
             Holder<TestEnvironmentDefinition<?>> environment = environments.computeIfAbsent(function.namespace,
                     namespace -> Registry.registerForHolder(environmentRegistry,
                             dev.golem.core.Ids.of(namespace, "test_environment"),
@@ -282,9 +294,8 @@ public final class GameTests {
      * The stock 24-wide template with its 5-block gap already covers a padding of 8.
      ^/
     private static void addLegacy(Function function) {
-        // -Dgolem.gametest.filter=<regex> runs only the tests whose id matches (spacers follow their test).
-        String filter = System.getProperty("golem.gametest.filter");
-        if (filter != null && !filter.isBlank() && !function.id().matches(filter)) return;
+        // Spacers follow their test through the filter.
+        if (!selected(function)) return;
         String structure = function.namespace + ":" + EMPTY_STRUCTURE;
         if (function.padding > 64) structure = function.namespace + ":" + EMPTY_STRUCTURE + "_184";
         else if (function.padding > 28) structure = function.namespace + ":" + EMPTY_STRUCTURE + "_152";

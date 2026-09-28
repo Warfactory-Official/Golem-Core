@@ -131,13 +131,14 @@ public final class KeyMappings {
     /**
      * A mapping that can report its own held state reliably, even when it shares a key with a vanilla bind.
      *
-     * <p>From 1.21 vanilla keeps {@code Map<Key, List<KeyMapping>>} and pushes state to every mapping on a
-     * key, so two binds may share one button happily. <b>1.20.1 keeps {@code Map<Key, KeyMapping>}</b> —
-     * one mapping per key, last registration wins — so a mod bind sharing a button with Pick Block or Use
-     * never receives any state at all and reads as permanently unpressed. That is not a conflict the user
-     * can see in the controls screen; the bind simply does nothing until it is moved to a free key.
+     * <p>26.1 vanilla keeps {@code Map<Key, List<KeyMapping>>} and pushes state to every mapping on a
+     * key, so two binds may share one button happily. <b>1.20.1 and 1.21.1 keep {@code Map<Key, KeyMapping>}</b>
+     * — one mapping per key — so on Fabric (Forge/NeoForge patch in a multi-valued lookup) a mod bind sharing
+     * a key with Sneak, Pick Block or Use never receives any state at all and reads as permanently
+     * unpressed. That is not a conflict the user can see in the controls screen; the bind simply does
+     * nothing until it is moved to a free key.
      *
-     * <p>On those versions {@link #isHeld()} therefore polls the device for this mapping's own bound key
+     * <p>{@link #isHeld()} therefore also reads the mapping that won the shared key and, below 26.1, polls the device for this mapping's own bound key
      * instead of trusting the shared dispatch. Reading {@code key} needs no reflection or access widener:
      * it is {@code protected} on {@link KeyMapping}, and Golem constructs these itself.
      */
@@ -158,20 +159,29 @@ public final class KeyMappings {
         /**
          * Whether this mapping's key is held right now.
          *
-         * <p>From 1.21 this is simply {@code isDown()}: vanilla keeps {@code Map<Key, List<KeyMapping>>}
-         * and pushes state to every mapping sharing a key, so two binds may share a button happily.
+         * <p>On 26.1 vanilla keeps {@code Map<Key, List<KeyMapping>>} and pushes state to every mapping
+         * sharing a key, so two binds may share a button happily.
          *
-         * <p><b>1.20.1 keeps {@code Map<Key, KeyMapping>}</b> — one mapping per key, last registration
-         * wins — so a mod bind sharing a mouse button with Use or Pick Block never receives state at all
-         * and reads as permanently unpressed. There is no conflict shown in the controls screen; the bind
-         * simply does nothing until the user moves it to a free key. There, a mapping declared on a mouse
-         * button also polls that button directly.
+         * <p><b>1.20.1 and 1.21.1 keep {@code Map<Key, KeyMapping>}</b> (checked against the 1.21.1 jar) —
+         * one mapping per key — so on Fabric a mod bind sharing a key with Sneak, Use or Pick Block never
+         * receives state at all and reads as permanently unpressed. (Forge and NeoForge replace that map with
+         * a multi-valued lookup.) There is no conflict shown in the controls screen; the bind simply does
+         * nothing. So this also reads any other mapping bound to the same key, and below 26.1 polls the
+         * device for the bound key or mouse button directly.
          *
          * <p>The fallback resolves {@link #saveString()} back through {@code InputConstants}, which exposes
          * the current controls-screen binding without reflection or an access widener.
          */
         public boolean isHeld() {
             if (isDown()) return true;
+            // Through 1.21.1 vanilla's single-valued dispatch map hands a shared key's state to whichever
+            // mapping won it (on Fabric, e.g. Sneak over a mod bind on left Shift). That mapping's own state
+            // is the key's state, so read it: this also covers input injected through KeyboardHandler or
+            // MouseHandler, which the device poll below cannot see. Forge/NeoForge dispatch to every
+            // mapping on a key, so there the loop never finds anything isDown() did not.
+            for (KeyMapping other : net.minecraft.client.Minecraft.getInstance().options.keyMappings) {
+                if (other != this && !other.isUnbound() && other.same(this) && other.isDown()) return true;
+            }
             //? if <26.1 {
             /*return KeyMappings.isHeld(this);
             *///?}

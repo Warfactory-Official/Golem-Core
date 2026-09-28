@@ -106,6 +106,8 @@ tasks.processResources {
         "mixin_compatibility" to if (javaVersion <= 17) "JAVA_17" else "JAVA_21",
         "legacy_item_owner_mixins" to if (mcVersion.substringBefore('.').toInt() < 26)
             ", \"MixinItemRenderer\"" else "",
+        // NeoForge 1.21.1 still calls getRailMaxSpeed/onMinecartPass; 26.1 declares but no longer calls them.
+        "rail_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinMinecartRails\"" else "",
         "world_effect_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinWorldEffects\"" else "",
         "flywheel_be_mixins" to if (hasVendoredFlywheel) ", \"MixinLevelChunkVisuals\"" else "",
         "pack_format" to prop("pack_format"),

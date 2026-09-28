@@ -283,14 +283,22 @@ public abstract class CompatParticle extends
         float baseZ = (float) (net.minecraft.util.Mth.lerp((double) partialTick, this.zo, this.z) - cameraPos.z());
         int light = this.getLightColor(partialTick);
 
+        // 1.20.1's Camera.rotation() is rotationYXZ(-yaw, pitch, 0), 1.21's rotationYXZ(pi - yaw, -pitch, roll): the
+        // two face opposite ways, and vanilla 1.20.1 SingleQuadParticle mirrors the corners in x to keep the quad's
+        // front toward the camera. With 1.21's corner order a camera-facing quad was back-face culled on 1.20.1.
+        //? if >=1.21 {
+        final float sx = 1F;
+        //?} else {
+        /^final float sx = this.planeOriented ? 1F : -1F;
+        ^///?}
         this.emitQuads((dx, dy, dz, size) -> {
             float x = baseX + dx;
             float y = baseY + dy;
             float z = baseZ + dz;
-            golemQuadVertex(buffer, rotation, x, y, z,  1F, -1F, size, this.getU1(), this.getV1(), light);
-            golemQuadVertex(buffer, rotation, x, y, z,  1F,  1F, size, this.getU1(), this.getV0(), light);
-            golemQuadVertex(buffer, rotation, x, y, z, -1F,  1F, size, this.getU0(), this.getV0(), light);
-            golemQuadVertex(buffer, rotation, x, y, z, -1F, -1F, size, this.getU0(), this.getV1(), light);
+            golemQuadVertex(buffer, rotation, x, y, z,  sx, -1F, size, this.getU1(), this.getV1(), light);
+            golemQuadVertex(buffer, rotation, x, y, z,  sx,  1F, size, this.getU1(), this.getV0(), light);
+            golemQuadVertex(buffer, rotation, x, y, z, -sx,  1F, size, this.getU0(), this.getV0(), light);
+            golemQuadVertex(buffer, rotation, x, y, z, -sx, -1F, size, this.getU0(), this.getV1(), light);
         }, partialTick);
     }
 

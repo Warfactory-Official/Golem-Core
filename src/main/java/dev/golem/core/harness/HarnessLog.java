@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 import dev.golem.core.GolemCore;
 import java.util.ArrayDeque;
 import java.util.regex.Pattern;
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.Logger;
@@ -13,8 +14,8 @@ import org.apache.logging.log4j.core.config.Property;
 import org.apache.logging.log4j.core.layout.PatternLayout;
 
 /**
- * Ring buffer of recent log lines, filled by a Log4j appender on the root logger. Chat also lands here
- * because vanilla logs every chat line as {@code [CHAT] ...}.
+ * Ring buffer of recent log lines at INFO or above, filled by a Log4j appender on the root logger. Chat also
+ * lands here because vanilla logs every chat line as {@code [CHAT] ...} at INFO.
  */
 final class HarnessLog {
 
@@ -41,6 +42,11 @@ final class HarnessLog {
             *///?}
                 @Override
                 public void append(LogEvent event) {
+                    // INFO and above only. Fabric's dev launch runs the root logger at DEBUG, where benign loader
+                    // chatter lands (fabric-command-api logs every server command's failed client-side parse as
+                    // "Syntax exception ... CommandSyntaxException" before forwarding it), which tripped every
+                    // scenario's log check on Fabric nodes and pushed real lines out of the ring buffer.
+                    if (!event.getLevel().isMoreSpecificThan(Level.INFO)) return;
                     add(layout.toSerializable(event));
                 }
             };

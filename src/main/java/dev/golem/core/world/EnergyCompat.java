@@ -14,9 +14,8 @@ import org.jspecify.annotations.Nullable;
  * {@code Capabilities.EnergyStorage.BLOCK} and 1.20.1 Forge answers {@code ForgeCapabilities.ENERGY}
  * through the block entity, both with an {@code IEnergyStorage} that takes a simulate flag instead.
  *
- * <p>Fabric ships no standard energy capability, so {@link #find} is null there and {@link #supported}
- * is false. That is not a gap to fill in later by picking a third-party API on the mod's behalf: a
- * network with no foreign peers is exactly what shipped before this existed.
+ * <p>Fabric ships no standard energy capability; there {@link #find} answers Team Reborn Energy's
+ * {@code EnergyStorage.SIDED} when that optional mod is loaded ({@link RebornEnergy}), and null otherwise.
  */
 public final class EnergyCompat {
 
@@ -27,7 +26,7 @@ public final class EnergyCompat {
         //? if forgelike {
         return true;
         //?} else {
-        /*return false;
+        /*return RebornEnergy.present(); // Fabric: only with the optional Team Reborn Energy
         *///?}
     }
 
@@ -47,7 +46,7 @@ public final class EnergyCompat {
         return be.getCapability(net.minecraftforge.common.capabilities.ForgeCapabilities.ENERGY, side)
                 .map(EnergyCompat::view).orElse(null);
         *///?} else {
-        /*return null;
+        /*return RebornEnergy.present() ? RebornEnergy.find(level, pos, side) : null;
         *///?}
     }
 

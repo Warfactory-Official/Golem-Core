@@ -205,7 +205,15 @@ final class HarnessCommands {
         });
         handlers.put("create_world", (mc, req) -> {
             if (mc.level != null) return Json.error("already in a world; leave_world first");
-            return HarnessWorld.create(mc, Json.str(req, "name", "harness"));
+            return HarnessWorld.create(mc, Json.str(req, "name", "harness"), Json.str(req, "type", "flat"),
+                    req.has("seed") ? req.get("seed").getAsLong() : 0L);
+        });
+        handlers.put("world_info", (mc, req) -> {
+            JsonObject json = Json.ok();
+            json.addProperty("current", HarnessWorld.currentSave(mc));
+            String name = Json.str(req, "name", "");
+            if (!name.isEmpty()) json.addProperty("exists", HarnessWorld.exists(mc, name));
+            return json;
         });
 
         handlers.put("set_option", (mc, req) -> setOption(mc, Json.str(req, "key", ""), Json.str(req, "value", "")));
