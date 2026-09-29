@@ -1,5 +1,9 @@
 # Golem-Core
 
+**In-game test harness:** `harness/` holds the mod-neutral harness CLI and scenario API; the in-game listener is
+`dev.golem.core.harness` and the launch capture is `gradle/harness-spec.gradle.kts`. Setup and usage, including
+first-time setup for new developers: [`harness/README.md`](harness/README.md).
+
 ## Networking
 
 Consumers define a payload and its encoding once. The same `GolemCodec` is used by Fabric's raw

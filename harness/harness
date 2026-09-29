@@ -1,0 +1,22 @@
+#!/usr/bin/env sh
+# Golem harness CLI wrapper (Git Bash / Linux / macOS). See README.md next to this file.
+# Builds build/libs/golem-harness.jar on first use and again whenever a source file is newer than the jar,
+# then runs it on a Java 21+ runtime. Run it from anywhere inside a mod checkout that has a harness.json
+# (the CLI walks up from the working directory to find it), or pass --config <file>.
+HERE="$(cd "$(dirname "$0")" && pwd)"
+JAR="$HERE/build/libs/golem-harness.jar"
+if [ ! -f "$JAR" ] || [ -n "$(find "$HERE/src" "$HERE/build.gradle.kts" -newer "$JAR" -type f 2>/dev/null | head -n 1)" ]; then
+    echo "[harness] building harness jar..." >&2
+    (cd "$HERE" && ./gradlew -q jar) || exit 1
+fi
+# Prefer a Java 21 that Gradle provisioned, then JAVA_HOME, then java on the PATH.
+JAVA_EXE=""
+for d in "$HOME"/.gradle/jdks/*21* "$USERPROFILE"/.gradle/jdks/*21*; do
+    [ -d "$d" ] || continue
+    for c in "$d/bin/java" "$d/bin/java.exe" "$d/Contents/Home/bin/java"; do
+        [ -x "$c" ] && JAVA_EXE="$c"
+    done
+done
+if [ -z "$JAVA_EXE" ] && [ -n "$JAVA_HOME" ] && [ -x "$JAVA_HOME/bin/java" ]; then JAVA_EXE="$JAVA_HOME/bin/java"; fi
+[ -z "$JAVA_EXE" ] && JAVA_EXE=java
+exec "$JAVA_EXE" -jar "$JAR" "$@"

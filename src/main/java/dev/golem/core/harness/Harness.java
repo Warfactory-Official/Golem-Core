@@ -7,7 +7,7 @@ import dev.golem.core.platform.Platform;
 import net.minecraft.client.Minecraft;
 
 /**
- * Development-only in-game listener for the visual test harness ({@code HBM PORT/harness}).
+ * Development-only in-game listener for the visual test harness (CLI: {@code Golem-Core/harness}, see its README).
  *
  * <p>Active only when {@code -Dgolem.harness.port=<n>} (or {@code GOLEM_HARNESS_PORT}) is set on a
  * physical client in a development environment. It then accepts JSON-lines commands on a loopback
