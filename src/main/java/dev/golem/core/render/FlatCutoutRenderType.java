@@ -91,6 +91,36 @@ public final class FlatCutoutRenderType {
         return DECAL_BY_TEXTURE.apply(texture);
     }
 
+    // translucent: the same unlit, lightmapped sheet blended SRC_ALPHA / ONE_MINUS_SRC_ALPHA, back faces culled and
+    // depth written - 1.12's first-person crucible blade (glColor alpha 0.7 through the vertex colour). The stock
+    // translucent entity pipelines all define PER_FACE_LIGHTING or leave culling off.
+    private static final RenderPipeline TRANSLUCENT_CULL_PIPELINE = RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
+            .withLocation("pipeline/golem_flat_translucent_cull")
+            .withVertexShader("core/entity")
+            .withFragmentShader("core/entity")
+            .withShaderDefine("ALPHA_CUTOUT", 0.1F)
+            .withShaderDefine("NO_OVERLAY")
+            .withShaderDefine("NO_CARDINAL_LIGHTING")
+            .withSampler("Sampler0")
+            .withSampler("Sampler2")
+            .withVertexFormat(DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS)
+            .withColorTargetState(new com.mojang.blaze3d.pipeline.ColorTargetState(
+                    com.mojang.blaze3d.pipeline.BlendFunction.TRANSLUCENT))
+            .withDepthStencilState(DepthStencilState.DEFAULT)
+            .withCull(true)
+            .build();
+
+    private static final Function<Identifier, RenderType> TRANSLUCENT_CULL_BY_TEXTURE = Util.memoize(texture ->
+            RenderType.create("golem_flat_translucent_cull", RenderSetup.builder(TRANSLUCENT_CULL_PIPELINE)
+                    .withTexture("Sampler0", texture)
+                    .useLightmap()
+                    .createRenderSetup()));
+
+    /** {@link #of}, blended translucent over what is behind it, back faces culled, depth written. */
+    public static RenderType translucentCull(Identifier texture) {
+        return TRANSLUCENT_CULL_BY_TEXTURE.apply(texture);
+    }
+
     /** 26.1's pipeline ignores the normal already; nothing to rewrite. */
     static boolean isFlat(RenderType type) {
         return false;
@@ -124,6 +154,18 @@ public final class FlatCutoutRenderType {
         return DECAL_BY_TEXTURE.apply(texture);
     }
 
+    private static final java.util.function.Function<ResourceLocation, RenderType> TRANSLUCENT_CULL_BY_TEXTURE =
+            net.minecraft.Util.memoize(texture -> {
+                RenderType type = Factory.translucentCull(texture);
+                FLAT.add(type);
+                return type;
+            });
+
+    /^* {@link #of}, blended translucent over what is behind it, back faces culled, depth written. ^/
+    public static RenderType translucentCull(ResourceLocation texture) {
+        return TRANSLUCENT_CULL_BY_TEXTURE.apply(texture);
+    }
+
     /^* Whether {@code type} is one of these; its buffer must then go through {@link #flatten}. ^/
     static boolean isFlat(RenderType type) {
         return FLAT.contains(type);
@@ -147,6 +189,19 @@ public final class FlatCutoutRenderType {
                             .setLightmapState(LIGHTMAP)
                             .setOverlayState(OVERLAY)
                             .setLayeringState(POLYGON_OFFSET_LAYERING)
+                            .createCompositeState(true));
+        }
+
+        static RenderType translucentCull(ResourceLocation texture) {
+            return RenderType.create("golem_flat_translucent_cull", com.mojang.blaze3d.vertex.DefaultVertexFormat.NEW_ENTITY,
+                    com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, 256, true, false,
+                    CompositeState.builder()
+                            .setShaderState(RENDERTYPE_ENTITY_TRANSLUCENT_CULL_SHADER)
+                            .setTextureState(new TextureStateShard(texture, false, false))
+                            .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                            .setCullState(CULL)
+                            .setLightmapState(LIGHTMAP)
+                            .setOverlayState(OVERLAY)
                             .createCompositeState(true));
         }
 

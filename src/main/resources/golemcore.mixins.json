@@ -6,7 +6,7 @@
   "compatibilityLevel": "${mixin_compatibility}",
   "mixins": ["MixinServerGamePacketListener", "MixinConnection", "MixinPacketListenerConnection",
     "MixinChunkMapPromotion", "MixinCreeperFuse", "MixinFallingBlockState", "MixinBoatControl", "MixinLivingHurtAccess", "MixinTntOwner", "MixinClipContext", "MixinServerPlayerMenu"${rail_mixins}],
-  "client": ["MixinCamera", "MixinLivingEntityRenderer", "MixinHumanoidModel", "MixinAtlasSources", "MixinHeldItemState", "SpriteSourceTypesAccess",
+  "client": ["MixinCamera", "MixinLivingEntityRenderer", "MixinHumanoidModel", "MixinAtlasSources", "MixinHeldItemState", "MixinScreenEffects", "SpriteSourceTypesAccess",
     "MixinHarnessWindow", "MixinHarnessMouseGrab", "HarnessKeyboardHandlerAccessor", "HarnessMouseHandlerAccessor", "HarnessCreateWorldScreenAccessor", "HarnessContainerScreenAccessor"${legacy_item_owner_mixins}${world_effect_mixins}${flywheel_be_mixins}],
   "server": [],
   "injectors": {

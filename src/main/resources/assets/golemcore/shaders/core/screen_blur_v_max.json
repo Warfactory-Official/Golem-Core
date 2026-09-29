@@ -1,0 +1,7 @@
+{
+  "vertex": "golemcore:screen_fullscreen",
+  "fragment": "golemcore:screen_blur_v_max",
+  "attributes": ["Position"],
+  "samplers": [{"name": "Sampler0"}, {"name": "Sampler1"}],
+  "uniforms": []
+}

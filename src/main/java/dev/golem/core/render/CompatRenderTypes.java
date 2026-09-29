@@ -217,6 +217,20 @@ public final class CompatRenderTypes {
         return FlatCutoutRenderType.of(texture);
     }
 
+    /**
+     * {@link #flatCutout} blended {@code SRC_ALPHA / ONE_MINUS_SRC_ALPHA}, back faces culled, depth written: a 1.12
+     * translucent sheet drawn with {@code GL_LIGHTING} off. Fade it with the vertex colour's alpha.
+     */
+    public static RenderType flatTranslucentCull(
+            //? if >=26.1 {
+            Identifier
+            //?} else {
+            /*ResourceLocation
+            *///?}
+            texture) {
+        return FlatCutoutRenderType.translucentCull(texture);
+    }
+
     /** {@link #flatCutout}, depth-biased toward the camera: a decal a hair in front of a surface. */
     public static RenderType flatCutoutDecal(
             //? if >=26.1 {

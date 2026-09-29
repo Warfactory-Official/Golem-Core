@@ -108,6 +108,38 @@ public class CompatBlock extends Block {
         *///?}
     }
 
+    /**
+     * The stack a pick-block (middle click) of this block yields. Override this instead of vanilla's
+     * {@code getCloneItemStack}, whose parameters differ per era (26.1 adds an {@code includeData} flag,
+     * 1.20.1 passes a {@code BlockGetter}); an override of the wrong spelling compiles as a plain overload
+     * and is silently never called. The default is vanilla's own: a plain stack of this block's item.
+     */
+    protected ItemStack onPickBlock(net.minecraft.world.level.BlockGetter level, BlockPos pos, BlockState state) {
+        return new ItemStack(this);
+    }
+
+    /** The pick-block stack for this position, through {@link #onPickBlock}; callable on every era. */
+    public final ItemStack pickBlockStack(net.minecraft.world.level.BlockGetter level, BlockPos pos, BlockState state) {
+        return onPickBlock(level, pos, state);
+    }
+
+    //? if >=26.1 {
+    @Override
+    protected ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state, boolean includeData) {
+        return onPickBlock(level, pos, state);
+    }
+    //?} elif >=1.21.1 {
+    /*@Override
+    public ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state) {
+        return onPickBlock(level, pos, state);
+    }
+    *///?} else {
+    /*@Override
+    public ItemStack getCloneItemStack(net.minecraft.world.level.BlockGetter level, BlockPos pos, BlockState state) {
+        return onPickBlock(level, pos, state);
+    }
+    *///?}
+
     /** Whether vanilla will suppress the normal block drop for this player. */
     protected static boolean playerPreventsBlockDrops(Player player) {
         //? if >=26.1 {
