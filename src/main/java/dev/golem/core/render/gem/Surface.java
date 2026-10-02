@@ -53,7 +53,10 @@ public final class Surface {
         this.blend = Objects.requireNonNull(blend, "blend");
     }
 
-    /** Alpha-tested, culled as the old GL default did. The usual choice for a machine. */
+    /**
+     * Alpha-tested, culled as the old GL default did. The usual choice for a machine. Same pipeline as
+     * {@link #cutoutCull} on every node; see {@link #renderType}.
+     */
     public static Surface cutout(String texture) {
         return new Surface(texture, Blend.CUTOUT);
     }
@@ -113,7 +116,11 @@ public final class Surface {
         if (resolved == null) {
             resolved = switch (blend) {
                 case SOLID -> CompatRenderTypes.entitySolid(Ids.parse(texture));
-                case CUTOUT -> CompatRenderTypes.entityCutout(Ids.parse(texture));
+                // Culled on every node. 26.1's entityCutout is the NO-cull pipeline, while every older
+                // entityCutout and both instanced backends cull, so naming it here made a CUTOUT surface draw
+                // its back faces on 26.1 only (icon audit 2026-10-01: difurnace_ext's floor, the colored duct's
+                // far end, armor interiors). The old GL default the factory documents is culled.
+                case CUTOUT -> CompatRenderTypes.entityCutoutCull(Ids.parse(texture));
                 case CUTOUT_CULL -> CompatRenderTypes.entityCutoutCull(Ids.parse(texture));
                 case CUTOUT_NO_CULL -> CompatRenderTypes.entityCutoutNoCull(Ids.parse(texture));
                 case TRANSLUCENT -> CompatRenderTypes.entityTranslucent(Ids.parse(texture), false);

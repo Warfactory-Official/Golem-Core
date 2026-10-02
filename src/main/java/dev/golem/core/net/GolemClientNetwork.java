@@ -30,8 +30,14 @@ final class GolemClientNetwork {
                 GolemNetwork.dispatchClientOffThread(registration.codec(), payload);
                 return;
             }
-            context.client().execute(() -> GolemNetwork.dispatchClient(registration.codec(), payload,
-                    new GolemNetwork.ClientContext(context.client().level, context.client().player)));
+            // This Fabric API already calls the receiver on the render thread, in order with vanilla's packets.
+            // Handing it to client().execute() again is not a no-op: inside a packet task the client queues the
+            // runnable behind every packet already received, so a payload sent just before a vanilla packet ran after
+            // it (the crucible's cut arrived after the victim's removal, and found no entity to slice).
+            Runnable dispatch = () -> GolemNetwork.dispatchClient(registration.codec(), payload,
+                    new GolemNetwork.ClientContext(context.client().level, context.client().player));
+            if (context.client().isSameThread()) dispatch.run();
+            else context.client().execute(dispatch);
         });
     }
 

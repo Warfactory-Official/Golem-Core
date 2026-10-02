@@ -20,15 +20,29 @@ import net.minecraft.resources.ResourceKey;
  * called, which must be after registration has run. Instances are produced by
  * {@link DeferredRegister#register(String, java.util.function.Function)}.
  */
-public final class RegistryObject<T> implements Supplier<T> {
+public class RegistryObject<T> implements Supplier<T> {
 
-    private final ResourceKey<? extends Registry<?>> registryKey;
-    private final ResourceKey<?> key;
+    // Both keys are created on first use, not at registration: on 1.20.1 creating any ResourceKey runs
+    // BuiltInRegistries' static initialiser, which throws outside a bootstrapped game, while 26.1 creates
+    // keys freely. Deferring them lets a registration class run in a plain JVM on every node (Dejson's
+    // build step), as it already can on 26.1. In game the first read resolves the same interned key the
+    // eager version created, so nothing observable changes.
+    private final Supplier<? extends ResourceKey<? extends Registry<?>>> registryKey;
+    private final Supplier<? extends ResourceKey<?>> key;
     private T value;
 
-    RegistryObject(ResourceKey<? extends Registry<?>> registryKey, ResourceKey<?> key) {
+    RegistryObject(Supplier<? extends ResourceKey<? extends Registry<?>>> registryKey, Supplier<? extends ResourceKey<?>> key) {
         this.registryKey = Objects.requireNonNull(registryKey);
         this.key = Objects.requireNonNull(key);
+    }
+
+    /**
+     * A view of the same registration under a richer type: a consumer's registration handle that adds
+     * declarations to the chain (HBM's {@code Reg.Handle}) extends this so it can stand wherever a
+     * {@code RegistryObject} field or parameter already does. Resolves exactly as {@code source} would.
+     */
+    protected RegistryObject(RegistryObject<T> source) {
+        this(source.registryKey, source.key);
     }
 
     /** The id ({@code namespace:path}) this object is registered under. */
@@ -39,12 +53,12 @@ public final class RegistryObject<T> implements Supplier<T> {
             /*ResourceLocation
             *///?}
             getId() {
-        return dev.golem.core.Ids.keyId(key);
+        return dev.golem.core.Ids.keyId(key.get());
     }
 
     @SuppressWarnings("unchecked")
     public ResourceKey<T> getKey() {
-        return (ResourceKey<T>) key;
+        return (ResourceKey<T>) key.get();
     }
 
     /** Resolve the registered value, caching it after the first lookup. */
@@ -53,11 +67,11 @@ public final class RegistryObject<T> implements Supplier<T> {
     public T get() {
         if (value == null) {
             //? if >=26.1 {
-            Registry<?> registry = (Registry<?>) BuiltInRegistries.REGISTRY.getValueOrThrow((ResourceKey) registryKey);
-            value = (T) registry.getValueOrThrow((ResourceKey) key);
+            Registry<?> registry = (Registry<?>) BuiltInRegistries.REGISTRY.getValueOrThrow((ResourceKey) registryKey.get());
+            value = (T) registry.getValueOrThrow((ResourceKey) key.get());
             //?} else {
-            /*Registry<?> registry = (Registry<?>) BuiltInRegistries.REGISTRY.getOrThrow((ResourceKey) registryKey);
-            value = (T) registry.getOrThrow((ResourceKey) key);
+            /*Registry<?> registry = (Registry<?>) BuiltInRegistries.REGISTRY.getOrThrow((ResourceKey) registryKey.get());
+            value = (T) registry.getOrThrow((ResourceKey) key.get());
             *///?}
         }
         return value;
@@ -65,6 +79,6 @@ public final class RegistryObject<T> implements Supplier<T> {
 
     @Override
     public String toString() {
-        return "RegistryObject[" + dev.golem.core.Ids.keyId(key) + "]";
+        return "RegistryObject[" + dev.golem.core.Ids.keyId(key.get()) + "]";
     }
 }

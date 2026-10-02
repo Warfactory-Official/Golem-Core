@@ -41,15 +41,30 @@ public final class GolemRenderSystem {
     }
 
     public static void onClientTick() {
+        VisualizationLifecycle.teardownIfPending();
         LIMITER.tick();
         VisualizationManager manager = VisualizationLifecycle.current();
         if (manager != null) {
-            manager.runTick(EXECUTOR);
+            dev.golem.core.flywheel.EngineState.guard("client tick", () -> manager.runTick(EXECUTOR));
         }
     }
 
     public static void awaitFrame() {
         previousFramePlan.join();
+    }
+
+    /**
+     * Waits out the frame plan still in flight and forgets it, swallowing whatever it threw — the
+     * teardown that calls this is already the answer to that failure.
+     */
+    static void settle() {
+        try {
+            previousFramePlan.join();
+        } catch (RuntimeException ignored) {
+            // Reported by whichever guard saw it first.
+        }
+        previousFramePlan = CompletableFuture.completedFuture(null);
+        currentRenderOrigin = ORIGIN_ZERO;
     }
 
     public static Vec3i currentRenderOrigin() {
@@ -61,25 +76,34 @@ public final class GolemRenderSystem {
     }
 
     public static void onFrameStart(float partialTick) {
+        VisualizationLifecycle.teardownIfPending();
         DrawStats.rollOver();
+        if (!dev.golem.core.flywheel.EngineState.running()) {
+            // Keep the frame counter moving: a visual that claimed the last frame must not still
+            // appear to own this one if the engine comes back.
+            frameId++;
+            return;
+        }
         diagnose();
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level == null) {
             return;
         }
-        previousFramePlan.join();
-        VisualizationManager manager = VisualizationLifecycle.current();
-        if (manager == null) {
-            currentRenderOrigin = ORIGIN_ZERO;
-            previousFramePlan = CompletableFuture.completedFuture(null);
-            return;
-        }
-        var camera = minecraft.gameRenderer.getMainCamera();
-        Vec3i origin = GolemFrameContext.originFor(camera);
-        currentRenderOrigin = origin;
-        var context = GolemFrameContext.create(camera, partialTick, frameId++, origin, LIMITER);
-        manager.runFrameSynchronous(context);
-        previousFramePlan = manager.runFrameAsync(EXECUTOR, context);
+        dev.golem.core.flywheel.EngineState.guard("frame start", () -> {
+            previousFramePlan.join();
+            VisualizationManager manager = VisualizationLifecycle.current();
+            if (manager == null) {
+                currentRenderOrigin = ORIGIN_ZERO;
+                previousFramePlan = CompletableFuture.completedFuture(null);
+                return;
+            }
+            var camera = minecraft.gameRenderer.getMainCamera();
+            Vec3i origin = GolemFrameContext.originFor(camera);
+            currentRenderOrigin = origin;
+            var context = GolemFrameContext.create(camera, partialTick, frameId++, origin, LIMITER);
+            manager.runFrameSynchronous(context);
+            previousFramePlan = manager.runFrameAsync(EXECUTOR, context);
+        });
     }
 
     /**

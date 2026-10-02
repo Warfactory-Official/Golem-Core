@@ -1,0 +1,31 @@
+package dev.golem.core.world;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.LevelReader;
+
+/**
+ * Legacy light queries: {@code World.getBlockLightValue} and {@code World.getBlockLightOpacity}.
+ *
+ * <p>A block's opacity is a spelling change: {@code getLightBlock(BlockGetter, BlockPos)} through 1.21.1,
+ * the cached {@code getLightDampening()} from 1.21.2 on. The value means the same thing (0 for air and
+ * glass, 15 for a full opaque block).
+ */
+public final class LightLevels {
+
+    private LightLevels() {}
+
+    /** {@code getBlockLightOpacity}: how much light the block at {@code pos} absorbs, 0..15. */
+    public static int opacity(BlockGetter level, BlockPos pos) {
+        //? if >=1.21.2 {
+        return level.getBlockState(pos).getLightDampening();
+        //?} else {
+        /*return level.getBlockState(pos).getLightBlock(level, pos);
+        *///?}
+    }
+
+    /** {@code getBlockLightValue}: the brighter of block light and sky light (darkened by time of day). */
+    public static int combined(LevelReader level, BlockPos pos) {
+        return level.getMaxLocalRawBrightness(pos);
+    }
+}

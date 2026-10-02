@@ -332,6 +332,21 @@ public final class GuiDraw {
         *///?}
     }
 
+    /** Draws an item stack's count and durability bar over it. 26.1 renamed {@code renderItemDecorations}. */
+    public static void itemDecorations(
+            //? if >=26.1 {
+            GuiGraphicsExtractor graphics,
+            //?} else {
+            /*GuiGraphics graphics,
+            *///?}
+            net.minecraft.client.gui.Font font, net.minecraft.world.item.ItemStack stack, int x, int y) {
+        //? if >=26.1 {
+        graphics.itemDecorations(font, stack, x, y);
+        //?} else {
+        /*graphics.renderItemDecorations(font, stack, x, y);
+        *///?}
+    }
+
     /**
      * Saves the GUI transform. 26.1 exposes push/pop directly on the graphics object; older versions
      * reach through to the underlying {@code PoseStack}.

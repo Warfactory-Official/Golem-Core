@@ -124,6 +124,18 @@ public final class Entities {
         *///?}
     }
 
+    /** An entity's save data (without its type id) as a compound tag, across the ValueOutput rename. */
+    public static net.minecraft.nbt.CompoundTag saveToTag(Entity entity) {
+        //? if >=26.1 {
+        net.minecraft.world.level.storage.TagValueOutput output = net.minecraft.world.level.storage.TagValueOutput
+                .createWithContext(net.minecraft.util.ProblemReporter.DISCARDING, entity.level().registryAccess());
+        entity.saveWithoutId(output);
+        return output.buildResult();
+        //?} else {
+        /*return entity.saveWithoutId(new net.minecraft.nbt.CompoundTag());
+        *///?}
+    }
+
     /** Loads entity save data from a compound tag across the ValueInput rename. */
     public static void loadFromTag(Entity entity, net.minecraft.nbt.CompoundTag tag) {
         //? if >=26.1 {

@@ -56,11 +56,11 @@ public final class ClientEngine {
     }
 
     public static void onResourceReload() {
-        MeshPool.releaseGpuResources();
+        EngineState.guard("resource reload", MeshPool::releaseGpuResources);
     }
 
     public static void drawOpaque(Matrix4fc modelView) {
-        drawStage(modelView, Material.Stage.OPAQUE);
+        EngineState.guard("opaque draw", () -> drawStage(modelView, Material.Stage.OPAQUE));
     }
 
     // Normal (Fancy/Fast) transparency path: AfterWeather fires inside the weather framegraph
@@ -72,7 +72,7 @@ public final class ClientEngine {
     // composites on top — acceptable for explosion/fog clusters.
     public static void drawTranslucent(Matrix4fc modelView) {
         if (Minecraft.useShaderTransparency()) return;
-        drawStage(modelView, Material.Stage.TRANSLUCENT);
+        EngineState.guard("translucent draw", () -> drawStage(modelView, Material.Stage.TRANSLUCENT));
     }
 
     // Fabulous transparency path: each translucent layer (translucent blocks, item-entities,
@@ -90,7 +90,7 @@ public final class ClientEngine {
     // particles.
     public static void drawTranslucentFabulous(Matrix4fc modelView) {
         if (!Minecraft.useShaderTransparency()) return;
-        drawStage(modelView, Material.Stage.TRANSLUCENT);
+        EngineState.guard("fabulous translucent draw", () -> drawStage(modelView, Material.Stage.TRANSLUCENT));
     }
 
     private static void drawStage(Matrix4fc modelView, Material.Stage stage) {
@@ -155,7 +155,7 @@ public final class ClientEngine {
 
     /** Common-signature bridge used by {@link Engine}; keeps client state out of its class file. */
     public static void drawCrumbling(Matrix4fc modelView, Object levelState) {
-        drawCrumbling(modelView, (LevelRenderState) levelState);
+        EngineState.guard("crumbling draw", () -> drawCrumbling(modelView, (LevelRenderState) levelState));
     }
 
     // The model-view handed in is camera-rotation only (LevelRenderer.java:582-3 builds it from

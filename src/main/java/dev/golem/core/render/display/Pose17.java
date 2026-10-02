@@ -81,7 +81,22 @@ public final class Pose17 {
          * class's frame by its own preamble recovers the identical eight matrices, and that agreement is
          * what says these are the engine's and not a fit.
          */
-        ITEM_RENDER_WEAPON
+        ITEM_RENDER_WEAPON,
+
+        /**
+         * {@link #ITEM_RENDER_WEAPON} for an item whose {@code isFull3D()} is true: every {@code ItemSword},
+         * {@code ItemTool} and {@code ItemHoe}, and anything that called {@code setFull3D()}.
+         *
+         * <p>1.7's {@code RenderPlayer.renderEquippedItems} chose the hand pose before it asked the item's
+         * renderer anything, and a renderer that did not claim {@code BLOCK_3D} only changed what was drawn, not
+         * that choice. A full-3D item took {@code translate(0, 3/16, 0) scale(0.625, -0.625, 0.625)
+         * rotate(-100, X) rotate(45, Y)} where every other item took {@link #ITEM_RENDER_WEAPON}'s
+         * {@code translate(1/4, 3/16, -3/16) scale(0.375) rotate(60, Z) rotate(-90, X) rotate(20, Z)} (both read
+         * from the 1.7.10 client's bytecode). Only the third-person hands differ; the y flip makes those two
+         * frames mirrors, which a renderer drawing with culling on has to have undone itself (1.7's chainsaw
+         * scales by {@code -0.375} for exactly that reason).
+         */
+        ITEM_RENDER_WEAPON_FULL3D
     }
 
     /** The frame one render class applies in one display slot. */
@@ -91,6 +106,7 @@ public final class Pose17 {
             case ITEM_RENDER_BASE_LEGACY -> itemRenderBaseLegacy(slot);
             case ITEM_RENDER_MISSILE -> itemRenderMissile(slot);
             case ITEM_RENDER_WEAPON -> itemRenderWeapon(slot);
+            case ITEM_RENDER_WEAPON_FULL3D -> itemRenderWeaponFull3D(slot);
         };
     }
 
@@ -265,6 +281,32 @@ public final class Pose17 {
                     .translate(0.5F, 0.25F, 0.5F).scale(0.5F);
             case FIXED -> new Matrix4f()
                     .translate(0.5F, 0.34F, 0.53125F).rotateY(rad(180));
+        };
+    }
+
+    /**
+     * {@link #itemRenderWeapon} with the full-3D hand pose in third person. The chain is the same one the
+     * plain frame spells out: the modern-to-1.7 arm conversion, {@code RenderPlayer}'s
+     * {@code translate(-1/16, 7/16, 1/16)} after {@code bipedRightArm.postRender}, the full-3D branch, then
+     * Forge's else-pose. The left hand is the right hand's mirror, as {@link #itemRenderWeapon}'s is.
+     */
+    private static Matrix4f itemRenderWeaponFull3D(DisplaySlot slot) {
+        return switch (slot) {
+            case THIRD_PERSON_RIGHT_HAND -> new Matrix4f()
+                    .translate(0.4375F, 0.375F, 1.125F).rotateY(rad(180)).rotateX(rad(90))
+                    .translate(-0.0625F, 0.4375F, 0.0625F)
+                    .translate(0F, 0.1875F, 0F).scale(0.625F, -0.625F, 0.625F)
+                    .rotateX(rad(-100)).rotateY(rad(45))
+                    .translate(0F, -0.3F, 0F).scale(1.5F).rotateY(rad(50)).rotateZ(rad(335))
+                    .translate(-0.9375F, -0.0625F, 0F);
+            case THIRD_PERSON_LEFT_HAND -> new Matrix4f()
+                    .translate(0.5625F, 0.375F, 1.125F).rotateY(rad(180)).rotateX(rad(90))
+                    .translate(0.0625F, 0.4375F, 0.0625F)
+                    .translate(0F, 0.1875F, 0F).scale(0.625F, -0.625F, 0.625F)
+                    .rotateX(rad(-100)).rotateY(rad(-45))
+                    .translate(0F, -0.3F, 0F).scale(1.5F).rotateY(rad(-50)).rotateZ(rad(-335))
+                    .translate(0.9375F, -0.0625F, 0F);
+            default -> itemRenderWeapon(slot);
         };
     }
 

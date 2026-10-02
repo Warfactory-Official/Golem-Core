@@ -36,9 +36,12 @@ public class DeferredRegister<T> {
 
     /**
      * Registries flushed first, in this order, before any others. Blocks must come before items so
-     * that {@code BlockItem} factories can resolve their block during flush.
+     * that {@code BlockItem} factories can resolve their block during flush. A method, not a constant:
+     * naming a registry key runs the Registries initialiser, which on 1.20.1 needs a bootstrapped
+     * game, and this class has to load in a plain JVM (see {@link RegistryObject}).
      */
-    private static final List<ResourceKey<? extends Registry<?>>> FLUSH_ORDER = List.of(
+    private static List<ResourceKey<? extends Registry<?>>> flushOrder() {
+        return List.of(
             Registries.BLOCK,
             //? if >=1.20.5 && <26.1 {
             /*// Pre-26.1 armour items take a Holder<ArmorMaterial> at construction, so the materials
@@ -46,19 +49,60 @@ public class DeferredRegister<T> {
             Registries.ARMOR_MATERIAL,
             *///?}
             Registries.ITEM);
+    }
 
-    protected final ResourceKey<? extends Registry<T>> registryKey;
+    // The registry key and every entry key are created on first use rather than here, so that a
+    // registration class can be initialised in a plain JVM on every node (Dejson runs registration
+    // classes at build time to collect the declarations chained onto them). 26.1 creates keys freely
+    // outside a game; 1.20.1 does not. In game the first use is the same as before: the first read of
+    // a key, or the flush.
+    private final Supplier<? extends ResourceKey<? extends Registry<T>>> registryKey;
     protected final String namespace;
-    private final Map<ResourceKey<T>, Function<ResourceKey<T>, ? extends T>> entries = new LinkedHashMap<>();
+    private final Map<String, Function<ResourceKey<T>, ? extends T>> entries = new LinkedHashMap<>();
+    private final Map<String, Supplier<ResourceKey<T>>> keys = new LinkedHashMap<>();
 
     protected DeferredRegister(ResourceKey<? extends Registry<T>> registryKey, String namespace) {
-        this.registryKey = Objects.requireNonNull(registryKey);
+        this(constant(Objects.requireNonNull(registryKey)), namespace);
+    }
+
+    /** As {@link #DeferredRegister(ResourceKey, String)}, naming the registry only when first needed. */
+    protected DeferredRegister(Supplier<? extends ResourceKey<? extends Registry<T>>> registryKey, String namespace) {
+        this.registryKey = lazy(Objects.requireNonNull(registryKey));
         this.namespace = Objects.requireNonNull(namespace);
         ALL.add(this);
     }
 
     public static <T> DeferredRegister<T> create(ResourceKey<? extends Registry<T>> registryKey, String namespace) {
         return new DeferredRegister<>(registryKey, namespace);
+    }
+
+    /**
+     * A register whose registry key is named lazily, e.g. {@code create(() -> Registries.MENU, "hbm")}:
+     * the form a registration class that must initialise in a plain JVM uses (see {@link RegistryObject}).
+     */
+    public static <T> DeferredRegister<T> create(Supplier<? extends ResourceKey<? extends Registry<T>>> registryKey,
+                                                 String namespace) {
+        return new DeferredRegister<>(registryKey, namespace);
+    }
+
+    private static <K> Supplier<K> constant(K value) {
+        return () -> value;
+    }
+
+    /** Memoises {@code source}; registration is single-threaded, and a race would compute equal interned keys. */
+    private static <K> Supplier<K> lazy(Supplier<? extends K> source) {
+        return new Supplier<>() {
+            private volatile K value;
+
+            @Override
+            public K get() {
+                K resolved = value;
+                if (resolved == null) {
+                    value = resolved = Objects.requireNonNull(source.get());
+                }
+                return resolved;
+            }
+        };
     }
 
     public static Items createItems(String namespace) {
@@ -70,15 +114,40 @@ public class DeferredRegister<T> {
     }
 
     /**
+     * A block-entity-type register. Like {@link #createBlocks}/{@link #createItems} its registry is named
+     * lazily, and its kind is known from its class: a registrar choosing among several registers can pick
+     * it without resolving any registry key, so a registration class using one still initialises in a
+     * plain JVM on every node (see {@link RegistryObject}).
+     */
+    public static BlockEntityTypes createBlockEntityTypes(String namespace) {
+        return new BlockEntityTypes(namespace);
+    }
+
+    /** A menu-type register; see {@link #createBlockEntityTypes}. */
+    public static MenuTypes createMenuTypes(String namespace) {
+        return new MenuTypes(namespace);
+    }
+
+    /** A sound-event register; see {@link #createBlockEntityTypes}. */
+    public static Sounds createSounds(String namespace) {
+        return new Sounds(namespace);
+    }
+
+    /** An entity-type register; see {@link #createBlockEntityTypes}. */
+    public static EntityTypes createEntityTypes(String namespace) {
+        return new EntityTypes(namespace);
+    }
+
+    /**
      * Register an entry. The factory receives the entry's {@link ResourceKey} (useful for setting the
      * id on properties) and must return a <em>new</em> instance.
      */
     public <I extends T> RegistryObject<I> register(String name, Function<ResourceKey<T>, ? extends I> factory) {
-        var id = dev.golem.core.Ids.of(namespace, name);
-        ResourceKey<T> key = ResourceKey.create(registryKey, id);
-        if (entries.putIfAbsent(key, factory) != null) {
-            throw new IllegalArgumentException("Duplicate registration: " + id);
+        if (entries.putIfAbsent(name, factory) != null) {
+            throw new IllegalArgumentException("Duplicate registration: " + namespace + ":" + name);
         }
+        Supplier<ResourceKey<T>> key = lazy(() -> ResourceKey.create(getRegistryKey(), dev.golem.core.Ids.of(namespace, name)));
+        keys.put(name, key);
         return new RegistryObject<>(registryKey, key);
     }
 
@@ -87,12 +156,16 @@ public class DeferredRegister<T> {
     }
 
     public ResourceKey<? extends Registry<T>> getRegistryKey() {
-        return registryKey;
+        return registryKey.get();
     }
 
     /** Push every entry of this register into the given sink. */
     public void flushTo(RegistrationSink sink) {
-        entries.forEach((key, factory) -> sink.accept(registryKey, key, () -> factory.apply(key)));
+        ResourceKey<? extends Registry<T>> registry = getRegistryKey();
+        entries.forEach((name, factory) -> {
+            ResourceKey<T> key = keys.get(name).get();
+            sink.accept(registry, key, () -> factory.apply(key));
+        });
     }
 
     // --- static flush helpers used by the loader bootstraps ---
@@ -102,11 +175,9 @@ public class DeferredRegister<T> {
     }
 
     /**
-     * Flush every register, honouring {@link #FLUSH_ORDER} so dependencies (blocks before items) are
-     * registered first. Used by Fabric, which registers everything synchronously at init time.
-     */
-    /**
-     * Flushes every register straight into the vanilla registries.
+     * Flushes every register straight into the vanilla registries, honouring {@link #flushOrder()} so
+     * dependencies (blocks before items) are registered first. Used by Fabric, which registers everything
+     * synchronously at init time.
      *
      * <p>This is what a loader with no deferred-registration phase (Fabric) wants, and writing it out
      * at the call site meant writing the root-registry lookup too — which is exactly the kind of thing
@@ -127,11 +198,12 @@ public class DeferredRegister<T> {
         });
     }
 
+    /** Pushes every register into {@code sink}, in {@link #flushOrder()} first and then declaration order. */
     public static void flushAll(RegistrationSink sink) {
         List<DeferredRegister<?>> remaining = new ArrayList<>(ALL);
-        for (ResourceKey<? extends Registry<?>> order : FLUSH_ORDER) {
+        for (ResourceKey<? extends Registry<?>> order : flushOrder()) {
             remaining.removeIf(dr -> {
-                if (dr.registryKey.equals(order)) {
+                if (dr.getRegistryKey().equals(order)) {
                     dr.flushTo(sink);
                     return true;
                 }
@@ -147,7 +219,7 @@ public class DeferredRegister<T> {
     public static class Items extends DeferredRegister<Item> {
 
         protected Items(String namespace) {
-            super(Registries.ITEM, namespace);
+            super(() -> Registries.ITEM, namespace);
         }
 
         public <I extends Item> RegistryObject<I> registerItem(String name, Function<Item.Properties, ? extends I> factory, UnaryOperator<Item.Properties> properties) {
@@ -192,7 +264,7 @@ public class DeferredRegister<T> {
     public static class Blocks extends DeferredRegister<Block> {
 
         protected Blocks(String namespace) {
-            super(Registries.BLOCK, namespace);
+            super(() -> Registries.BLOCK, namespace);
         }
 
         public <B extends Block> RegistryObject<B> registerBlock(String name, Function<BlockBehaviour.Properties, ? extends B> factory, UnaryOperator<BlockBehaviour.Properties> properties) {
@@ -213,6 +285,38 @@ public class DeferredRegister<T> {
 
         public RegistryObject<Block> registerSimpleBlock(String name) {
             return registerSimpleBlock(name, UnaryOperator.identity());
+        }
+    }
+
+    /** Register for block entity types, identifiable without naming its registry ({@link #createBlockEntityTypes}). */
+    public static class BlockEntityTypes extends DeferredRegister<net.minecraft.world.level.block.entity.BlockEntityType<?>> {
+
+        protected BlockEntityTypes(String namespace) {
+            super(() -> Registries.BLOCK_ENTITY_TYPE, namespace);
+        }
+    }
+
+    /** Register for menu types ({@link #createMenuTypes}). */
+    public static class MenuTypes extends DeferredRegister<net.minecraft.world.inventory.MenuType<?>> {
+
+        protected MenuTypes(String namespace) {
+            super(() -> Registries.MENU, namespace);
+        }
+    }
+
+    /** Register for sound events ({@link #createSounds}). */
+    public static class Sounds extends DeferredRegister<net.minecraft.sounds.SoundEvent> {
+
+        protected Sounds(String namespace) {
+            super(() -> Registries.SOUND_EVENT, namespace);
+        }
+    }
+
+    /** Register for entity types ({@link #createEntityTypes}). */
+    public static class EntityTypes extends DeferredRegister<net.minecraft.world.entity.EntityType<?>> {
+
+        protected EntityTypes(String namespace) {
+            super(() -> Registries.ENTITY_TYPE, namespace);
         }
     }
 }

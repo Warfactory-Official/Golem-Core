@@ -43,11 +43,13 @@ public final class Ids {
      * Whether a vanilla item tag exists on older versions but not in the newest API. Such a tag can hold a mod's
      * items on an old node through vanilla's own nesting, yet no id roster generated against the newest version
      * can name it. {@code minecraft:tools} is 1.19.4–1.20.4's aggregate of the per-tool tags; 26.1 ships only
-     * the per-tool tags ({@code swords}, {@code axes}, ...).
+     * the per-tool tags ({@code swords}, {@code axes}, ...). {@code minecraft:enchantable/sword} is 1.21.0–1.21.1's
+     * Sweeping Edge gate ({@code ["#minecraft:swords"]}); 26.1 split it into {@code enchantable/sweeping} and
+     * friends, so a sword's membership there is correct on 1.21.1 yet unnameable from a 26.1 roster.
      */
     public static boolean isRetiredVanillaItemTag(String id) {
         return switch (id) {
-            case "minecraft:tools" -> true;
+            case "minecraft:tools", "minecraft:enchantable/sword" -> true;
             default -> false;
         };
     }

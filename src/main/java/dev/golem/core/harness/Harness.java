@@ -56,6 +56,16 @@ public final class Harness {
         return tick;
     }
 
+    /**
+     * Whether a harness-driven key is held. The harness presses keys through vanilla's handlers, which a
+     * physical poll ({@code glfwGetKey}) never sees; {@code KeyMappings}' physical polls ask here as well so
+     * code that polls a key reacts to a harness press as it would to a real one. Answers false without touching
+     * {@code HarnessInput} (and its GLFW name table) on a client where the harness never started.
+     */
+    public static boolean keyHeld(int glfwKey) {
+        return initialised && HarnessInput.keyHeld(glfwKey);
+    }
+
     /** Called once from each loader's client initialisation. Safe to call twice. */
     public static void init() {
         if (initialised) return;

@@ -45,7 +45,7 @@ final class HarnessCommands {
             handlers.keySet().forEach(names::add);
             json.add("commands", names);
             JsonArray kinds = new JsonArray();
-            for (String kind : new String[] {"status", "player", "inventory", "block", "block_entity", "entities", "screen", "log"}) kinds.add(kind);
+            for (String kind : new String[] {"status", "player", "inventory", "block", "block_entity", "entities", "screen", "log", "gem"}) kinds.add(kind);
             HarnessQueryRegistry.kinds().forEach(kinds::add);
             json.add("queries", kinds);
             return json;
@@ -270,6 +270,7 @@ final class HarnessCommands {
             case "entities": return HarnessQueries.entities(mc, req);
             case "screen": return HarnessQueries.screen(mc);
             case "log": return HarnessLog.tail(Json.integer(req, "lines", 50), Json.str(req, "filter", ""));
+            case "gem": return HarnessQueries.gem(mc, req);
             default:
                 var custom = HarnessQueryRegistry.get(kind);
                 if (custom == null) return Json.error("unknown query kind " + kind);
@@ -277,35 +278,49 @@ final class HarnessCommands {
         }
     }
 
+    /**
+     * Sets one client option and answers {@code previous}, the value it replaced (in the same string form), so a
+     * scenario can restore exactly what the client had instead of guessing a default.
+     */
     private static Object setOption(Minecraft mc, String key, String value) {
+        String previous;
         switch (key) {
             case "gui_scale":
+                previous = String.valueOf(mc.options.guiScale().get());
                 mc.options.guiScale().set(Integer.parseInt(value));
                 //? if <26.1 {
                 /*mc.resizeDisplay();
                 *///?}
                 break;
             case "render_distance":
+                previous = String.valueOf(mc.options.renderDistance().get());
                 mc.options.renderDistance().set(Integer.parseInt(value));
                 break;
             case "fov":
+                previous = String.valueOf(mc.options.fov().get());
                 mc.options.fov().set(Integer.parseInt(value));
                 break;
             case "pause_on_lost_focus":
+                previous = String.valueOf(mc.options.pauseOnLostFocus);
                 mc.options.pauseOnLostFocus = Boolean.parseBoolean(value);
                 break;
             case "auto_unpause":
+                previous = String.valueOf(HarnessWindow.autoUnpause);
                 HarnessWindow.autoUnpause = Boolean.parseBoolean(value);
                 break;
             case "hide_gui":
+                previous = String.valueOf(mc.options.hideGui);
                 mc.options.hideGui = Boolean.parseBoolean(value);
                 break;
             case "camera":
+                previous = mc.options.getCameraType().name().toLowerCase(java.util.Locale.ROOT);
                 mc.options.setCameraType(net.minecraft.client.CameraType.valueOf(value.toUpperCase(java.util.Locale.ROOT)));
                 break;
             default:
                 return Json.error("unknown option " + key);
         }
-        return null;
+        JsonObject json = Json.ok();
+        json.addProperty("previous", previous);
+        return json;
     }
 }

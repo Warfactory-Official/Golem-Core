@@ -166,12 +166,16 @@ public final class SlabBuffer {
 
     private static GlBuffer gl(GpuBuffer buffer) {
         if (buffer instanceof GlBuffer glBuffer) return glBuffer;
-        throw new IllegalStateException("Golem flywheel requires the OpenGL render device");
+        // A device the capability probe let through but cannot serve: the whole engine stops, not
+        // one visual, because every later allocation would fail the same way.
+        throw new dev.golem.core.flywheel.EngineState.Unsupported("Golem flywheel requires the OpenGL render device");
     }
 
     private static ByteBuffer persistentBuffer(GpuBuffer buffer) {
         var mapped = gl(buffer).persistentBuffer;
-        if (mapped == null) throw new IllegalStateException("Golem flywheel requires a persistently mapped buffer");
+        if (mapped == null) {
+            throw new dev.golem.core.flywheel.EngineState.Unsupported("Golem flywheel requires a persistently mapped buffer");
+        }
         return mapped.duplicate().order(ByteOrder.nativeOrder());
     }
 

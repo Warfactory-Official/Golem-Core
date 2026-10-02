@@ -417,6 +417,12 @@ public final class GemBlockEntityVisual<T extends BlockEntity, S extends CompatR
     private void fail(RuntimeException failure) {
         healthy = false;
         clearInstances();
+        if (failure instanceof dev.golem.core.flywheel.EngineState.Unsupported) {
+            // The device, not this model: stop the engine once instead of retiring every visual with
+            // an error of its own.
+            dev.golem.core.flywheel.EngineState.fail("gem visual allocation", failure);
+            return;
+        }
         if (!reportedFailure) {
             reportedFailure = true;
             GolemCore.LOG.error("Gem visual failed for {} at {}; returning ownership to vanilla",

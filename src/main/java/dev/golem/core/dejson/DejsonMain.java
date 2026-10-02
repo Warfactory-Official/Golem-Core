@@ -33,9 +33,7 @@ public final class DejsonMain {
         Data.authoredRoot(authored);
 
         for (int index = 3; index < args.length; index++) {
-            Method declare = Class.forName(args[index]).getDeclaredMethod("declare");
-            declare.setAccessible(true);
-            declare.invoke(null);
+            declare(args[index]);
         }
 
         int declarations = Dejson.declarations().size() + Dejson.itemDeclarations().size() + Data.size();
@@ -95,5 +93,38 @@ public final class DejsonMain {
         DejsonWriter.Report report = DejsonWriter.write(out, authored);
         System.out.println("dejson: wrote " + report.written() + " file(s); "
                 + report.deferred() + " left to the authored copy");
+    }
+
+    /**
+     * Runs one declaring class: initialises it, then calls its static {@code declare()} if it has one.
+     *
+     * <p>Initialising is itself a way to declare. A registration class whose fields chain declarations
+     * onto each registration ({@code block(...).model(...).loot(...)}) records them while its statics
+     * run, and has no {@code declare()} at all. Its registrations are only recorded, never flushed — there
+     * is no game here — so the one requirement is that its static initialiser reaches no Minecraft class
+     * that needs a bootstrapped game (a {@code SoundEvents} constant, a {@code BuiltInRegistries} lookup):
+     * keep those inside the factory and properties lambdas, where registration already defers them.
+     */
+    private static void declare(String className) throws Exception {
+        Class<?> type;
+        try {
+            type = Class.forName(className, true, DejsonMain.class.getClassLoader());
+        } catch (ExceptionInInitializerError | NoClassDefFoundError failure) {
+            Throwable root = failure;
+            while (root.getCause() != null) {
+                root = root.getCause();
+            }
+            throw new IllegalStateException(className + " cannot be initialised outside the game ("
+                    + root + "). A class listed as declaring runs in a plain JVM: move whatever its static "
+                    + "initialiser touches that needs a running game into a lambda or a holder class.", failure);
+        }
+        Method declare;
+        try {
+            declare = type.getDeclaredMethod("declare");
+        } catch (NoSuchMethodException initialisedOnly) {
+            return;
+        }
+        declare.setAccessible(true);
+        declare.invoke(null);
     }
 }

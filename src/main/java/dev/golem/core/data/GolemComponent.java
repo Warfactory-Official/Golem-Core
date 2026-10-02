@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
@@ -53,28 +54,49 @@ public final class GolemComponent<T> {
     private final java.util.function.Function<T, Object> toStored;
     private final java.util.function.Function<Object, T> fromStored;
     //?} else {
-    /*private final Codec<T> codec;
+    /*private final Supplier<Codec<T>> codec;
     private final LegacyValue<T> legacy;
     *///?}
 
-    private GolemComponent(String namespace, String name, Codec<T> codec) {
-        this(namespace, name, (Codec) codec, value -> value, stored -> (T) stored);
+    private GolemComponent(String namespace, String name, Supplier<Codec<T>> codec) {
+        this(namespace, name, (Supplier) codec, value -> value, stored -> (T) stored);
     }
 
-    /** A component stored as {@code S} on modern platforms while exposing {@code T}; see the field note. */
-    private <S> GolemComponent(String namespace, String name, Codec<S> storedCodec,
+    /**
+     * A component stored as {@code S} on modern platforms while exposing {@code T}; see the field note.
+     * The codec is read only when first needed (the registry flush on modern platforms, the first
+     * read or write on 1.20.1), so declaring a component never initialises its codec's class.
+     */
+    private <S> GolemComponent(String namespace, String name, Supplier<Codec<S>> storedCodec,
                                java.util.function.Function<T, S> toStored, java.util.function.Function<S, T> fromStored) {
         key = declare(namespace, name);
         //? if >=1.21.1 {
+        // The registry is named on first use, as every Golem register's is (see RegistryObject).
         DeferredRegister<DataComponentType<?>> register = REGISTERS.computeIfAbsent(namespace,
-                ns -> DeferredRegister.create(Registries.DATA_COMPONENT_TYPE, ns));
-        component = register.register(name, () -> (DataComponentType) componentType(storedCodec));
+                ns -> DeferredRegister.create(() -> Registries.DATA_COMPONENT_TYPE, ns));
+        component = register.register(name, () -> (DataComponentType) componentType(storedCodec.get()));
         this.toStored = (java.util.function.Function) toStored;
         this.fromStored = (java.util.function.Function) fromStored;
         //?} else {
-        /*this.codec = (Codec) storedCodec;
+        /*this.codec = memoize((Supplier) storedCodec);
         legacy = null;
         *///?}
+    }
+
+    /** Memoises {@code source}; a race computes the same codec twice, which is harmless. */
+    private static <C> Supplier<C> memoize(Supplier<C> source) {
+        return new Supplier<>() {
+            private volatile C value;
+
+            @Override
+            public C get() {
+                C resolved = value;
+                if (resolved == null) {
+                    value = resolved = Objects.requireNonNull(source.get(), "codec");
+                }
+                return resolved;
+            }
+        };
     }
 
     //? if >=1.21.1 {
@@ -112,6 +134,18 @@ public final class GolemComponent<T> {
 
     /** Creates a component backed by the supplied persistent codec. */
     public static <T> GolemComponent<T> of(String namespace, String name, Codec<T> codec) {
+        Objects.requireNonNull(codec);
+        return new GolemComponent<>(namespace, name, () -> codec);
+    }
+
+    /**
+     * As {@link #of(String, String, Codec)}, with a codec that is read only when first needed:
+     * {@code of(ns, "box", () -> ItemContents.CODEC)}. Use it for a codec built on registry-backed codecs
+     * ({@code ItemStack.CODEC}, ...): on 1.20.1 initialising one outside a bootstrapped game fails, and a
+     * registration class that declares the component must still initialise in a plain JVM. The component
+     * is declared and registered at this call, exactly as with the eager form.
+     */
+    public static <T> GolemComponent<T> of(String namespace, String name, Supplier<Codec<T>> codec) {
         return new GolemComponent<>(namespace, name, Objects.requireNonNull(codec));
     }
 
@@ -154,7 +188,7 @@ public final class GolemComponent<T> {
     public static GolemComponent<ItemStack> itemStack(String namespace, String name) {
         //? if >=1.21.1 {
         return new GolemComponent<>(namespace, name,
-                net.minecraft.world.item.component.ItemContainerContents.CODEC,
+                () -> net.minecraft.world.item.component.ItemContainerContents.CODEC,
                 stack -> net.minecraft.world.item.component.ItemContainerContents.fromItems(java.util.List.of(stack)),
                 contents -> contents.copyOne());
         //?} else {
@@ -195,7 +229,7 @@ public final class GolemComponent<T> {
         if (legacy != null) {
             return tag.contains(key, 10) ? Optional.of(legacy.read(tag.getCompound(key))) : Optional.empty();
         }
-        return codec.parse(NbtOps.INSTANCE, tag.get(key))
+        return codec.get().parse(NbtOps.INSTANCE, tag.get(key))
                 .resultOrPartial(error -> GolemCore.LOG.error("Failed to decode item component '{}': {}", key, error));
         *///?}
     }
@@ -216,7 +250,7 @@ public final class GolemComponent<T> {
             stack.getOrCreateTag().put(key, legacy.write(value));
             return;
         }
-        codec.encodeStart(NbtOps.INSTANCE, value)
+        codec.get().encodeStart(NbtOps.INSTANCE, value)
                 .resultOrPartial(error -> GolemCore.LOG.error("Failed to encode item component '{}': {}", key, error))
                 .ifPresent(encoded -> stack.getOrCreateTag().put(key, encoded));
         *///?}

@@ -121,6 +121,34 @@ public final class FlatCutoutRenderType {
         return TRANSLUCENT_CULL_BY_TEXTURE.apply(texture);
     }
 
+    // translucent: unlit, lightmapped, blended SRC_ALPHA / ONE_MINUS_SRC_ALPHA, unculled, depth tested but not written -
+    // a 1.12 particle or decal drawn with lighting off and depthMask(false) (old-hbm ParticleBlood, ParticleDecal).
+    private static final RenderPipeline TRANSLUCENT_PIPELINE = RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
+            .withLocation("pipeline/golem_flat_translucent")
+            .withVertexShader("core/entity")
+            .withFragmentShader("core/entity")
+            .withShaderDefine("NO_OVERLAY")
+            .withShaderDefine("NO_CARDINAL_LIGHTING")
+            .withSampler("Sampler0")
+            .withSampler("Sampler2")
+            .withVertexFormat(DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS)
+            .withColorTargetState(new com.mojang.blaze3d.pipeline.ColorTargetState(
+                    com.mojang.blaze3d.pipeline.BlendFunction.TRANSLUCENT))
+            .withDepthStencilState(new DepthStencilState(DepthStencilState.DEFAULT.depthTest(), false))
+            .withCull(false)
+            .build();
+
+    private static final Function<Identifier, RenderType> TRANSLUCENT_BY_TEXTURE = Util.memoize(texture ->
+            RenderType.create("golem_flat_translucent", RenderSetup.builder(TRANSLUCENT_PIPELINE)
+                    .withTexture("Sampler0", texture)
+                    .useLightmap()
+                    .createRenderSetup()));
+
+    /** {@link #of}, blended translucent, unculled, without writing depth. */
+    public static RenderType translucent(Identifier texture) {
+        return TRANSLUCENT_BY_TEXTURE.apply(texture);
+    }
+
     /** 26.1's pipeline ignores the normal already; nothing to rewrite. */
     static boolean isFlat(RenderType type) {
         return false;
@@ -166,6 +194,18 @@ public final class FlatCutoutRenderType {
         return TRANSLUCENT_CULL_BY_TEXTURE.apply(texture);
     }
 
+    private static final java.util.function.Function<ResourceLocation, RenderType> TRANSLUCENT_BY_TEXTURE =
+            net.minecraft.Util.memoize(texture -> {
+                RenderType type = Factory.translucent(texture);
+                FLAT.add(type);
+                return type;
+            });
+
+    /^* {@link #of}, blended translucent, unculled, without writing depth. ^/
+    public static RenderType translucent(ResourceLocation texture) {
+        return TRANSLUCENT_BY_TEXTURE.apply(texture);
+    }
+
     /^* Whether {@code type} is one of these; its buffer must then go through {@link #flatten}. ^/
     static boolean isFlat(RenderType type) {
         return FLAT.contains(type);
@@ -202,6 +242,20 @@ public final class FlatCutoutRenderType {
                             .setCullState(CULL)
                             .setLightmapState(LIGHTMAP)
                             .setOverlayState(OVERLAY)
+                            .createCompositeState(true));
+        }
+
+        static RenderType translucent(ResourceLocation texture) {
+            return RenderType.create("golem_flat_translucent", com.mojang.blaze3d.vertex.DefaultVertexFormat.NEW_ENTITY,
+                    com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, 256, true, true,
+                    CompositeState.builder()
+                            .setShaderState(RENDERTYPE_ENTITY_TRANSLUCENT_SHADER)
+                            .setTextureState(new TextureStateShard(texture, false, false))
+                            .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                            .setCullState(NO_CULL)
+                            .setLightmapState(LIGHTMAP)
+                            .setOverlayState(OVERLAY)
+                            .setWriteMaskState(COLOR_WRITE)
                             .createCompositeState(true));
         }
 

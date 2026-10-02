@@ -53,9 +53,30 @@ public final class ItemModelProperties {
                 .filter(entry -> entry.getKey().location().getNamespace().equals(namespace))
                 .map(java.util.Map.Entry::getValue)
                 .toList();
-        items.forEach(item -> net.minecraft.client.renderer.item.ItemProperties.register(
-                item, id, (stack, level, entity, seed) -> value.get(stack)));
+        items.forEach(item -> net.minecraft.client.renderer.item.ItemProperties.register(item, id, new Unclamped(value)));
         dev.golem.core.GolemCore.LOG.info("Legacy item model property {} installed for {} item(s)", id, items.size());
+    }
+
+    /^*
+     * Vanilla's public {@code ItemProperties.register} takes a {@code ClampedItemPropertyFunction}, whose default
+     * {@code call} clamps to 0..1. Forge and NeoForge add an unclamped overload a lambda binds to; Fabric has only
+     * vanilla's, so every variant above 1 resolved to variant 1's override there (icon audit 2026-10-01:
+     * satellite, weapon_mod_special, weapon_mod_caliber, part_barrel_heavy on 1.20.1-fabric). Overriding {@code call}
+     * returns the raw integer on every loader, which is what the {@code >=} override thresholds need.
+     ^/
+    private record Unclamped(Value value)
+            implements net.minecraft.client.renderer.item.ClampedItemPropertyFunction {
+        @Override
+        public float call(ItemStack stack, net.minecraft.client.multiplayer.ClientLevel level,
+                          net.minecraft.world.entity.LivingEntity entity, int seed) {
+            return value.get(stack);
+        }
+
+        @Override
+        public float unclampedCall(ItemStack stack, net.minecraft.client.multiplayer.ClientLevel level,
+                                   net.minecraft.world.entity.LivingEntity entity, int seed) {
+            return value.get(stack);
+        }
     }
     *///?}
 

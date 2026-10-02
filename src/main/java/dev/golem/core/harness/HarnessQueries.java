@@ -206,6 +206,56 @@ final class HarnessQueries {
         return json;
     }
 
+    /**
+     * What drew each declared machine: the instancing engine's report, and per position whether an
+     * instanced visual owns it and how many vanilla submits replayed or skipped its declared model.
+     *
+     * <p>{@code trace:true} (re)starts the per-position counts; {@code positions} is an array of
+     * {@code [x,y,z]}. This is the positive signal a fallback test needs — pixels cannot tell an
+     * instanced draw from a vanilla one, but a replay count that rises while {@code owned} is false
+     * says the vanilla renderer is the one drawing.
+     */
+    static JsonObject gem(Minecraft minecraft, JsonObject req) {
+        if (req.has("trace")) dev.golem.core.render.gem.GemBER.trace(Json.bool(req, "trace", true));
+        var report = dev.golem.core.render.Instancing.report();
+        JsonObject json = Json.ok();
+        json.addProperty("available", dev.golem.core.render.Instancing.isAvailable());
+        json.addProperty("visualizing", minecraft.level != null
+                && dev.golem.core.render.Instancing.isVisualizing(minecraft.level));
+        json.addProperty("backend", report.backend());
+        json.addProperty("visuals", report.visuals());
+        json.addProperty("healthy", report.healthy());
+        json.addProperty("instances", report.instances());
+        json.addProperty("owning", report.owning());
+        json.addProperty("draws", report.draws());
+        com.google.gson.JsonArray out = new com.google.gson.JsonArray();
+        java.util.List<BlockPos> wanted = new java.util.ArrayList<>();
+        if (req.has("positions") && req.get("positions").isJsonArray()) {
+            for (var element : req.getAsJsonArray("positions")) {
+                var xyz = element.getAsJsonArray();
+                wanted.add(new BlockPos(xyz.get(0).getAsInt(), xyz.get(1).getAsInt(), xyz.get(2).getAsInt()));
+            }
+        } else if (Json.bool(req, "all", false)) {
+            wanted.addAll(dev.golem.core.render.gem.GemBER.tracedPositions());
+        }
+        for (BlockPos pos : wanted) {
+            int[] counts = dev.golem.core.render.gem.GemBER.traced(pos);
+            JsonObject entry = new JsonObject();
+            entry.addProperty("x", pos.getX());
+            entry.addProperty("y", pos.getY());
+            entry.addProperty("z", pos.getZ());
+            entry.addProperty("owned", dev.golem.core.render.Visuals.owns(pos));
+            BlockEntity be = minecraft.level == null ? null : minecraft.level.getBlockEntity(pos);
+            entry.addProperty("block_entity", be == null ? null
+                    : String.valueOf(BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(be.getType())));
+            entry.addProperty("replayed", counts[0]);
+            entry.addProperty("skipped", counts[1]);
+            out.add(entry);
+        }
+        json.add("positions", out);
+        return json;
+    }
+
     static BlockPos pos(JsonObject req) {
         return new BlockPos(Json.integer(req, "x", 0), Json.integer(req, "y", 0), Json.integer(req, "z", 0));
     }

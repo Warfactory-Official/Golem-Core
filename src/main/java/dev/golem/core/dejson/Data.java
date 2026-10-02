@@ -114,6 +114,9 @@ public final class Data {
                     if (FILES.putIfAbsent(path, json) != null) throw new DejsonException(path + " is declared twice");
                 });
             }
+            // Tag members stated one per declaration (Tags.member) join their tag file last, so they can
+            // extend a whole-file declaration made anywhere in the run.
+            Tags.mergeMembers(FILES);
         }
         return Collections.unmodifiableMap(FILES);
     }
@@ -130,5 +133,6 @@ public final class Data {
     public static void reset() {
         FILES.clear();
         LATER.clear();
+        Tags.resetMembers();
     }
 }

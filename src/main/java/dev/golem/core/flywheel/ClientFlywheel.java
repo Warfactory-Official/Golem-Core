@@ -36,27 +36,24 @@ public final class ClientFlywheel {
     private static boolean initialized;
 
     /**
-     * Whether {@code -Dgolem.flywheel.backend} asked for no engine at all.
+     * Whether the backend setting asked for no engine at all when the game started.
      *
      * <p>The published Flywheel is a mod with a backend the player can switch off, and every consumer
-     * is written to survive that. The vendored engine had no equivalent, which left no way to put a
-     * scene side by side with itself — and an instanced draw that is subtly wrong looks like a correct
-     * one until you have that comparison.
+     * is written to survive that. The vendored engine now has the same switch —
+     * {@code config/golemcore-flywheel.json} or {@code /flywheel backend off} (see
+     * {@link FlywheelConfig}) — which also puts a scene side by side with itself: an instanced draw that
+     * is subtly wrong looks like a correct one until you have that comparison.
      */
-    private static final boolean DISABLED =
-            java.util.List.of("off", "none", "disabled").contains(backendSetting());
+    private static final boolean DISABLED = Flywheel.disabled();
 
     /**
-     * The requested backend, lowercased, or an empty string.
-     *
-     * <p>Read from the environment as well as the system properties because a dev client is launched
-     * through Loom, whose JVM arguments come from the buildscript and cannot be added on the command
-     * line — so the property alone would be unreachable from the one place it is most wanted.
+     * The requested backend, normalised, or an empty string. Delegates to {@link Flywheel}, which reads
+     * the JVM switch, then the environment — a dev client launched through Loom takes its JVM arguments
+     * from the buildscript, so the property alone would be unreachable from the one place it is most
+     * wanted — then the player's config file.
      */
     public static String backendSetting() {
-        String forced = System.getProperty("golem.flywheel.backend");
-        if (forced == null || forced.isEmpty()) forced = System.getenv("GOLEM_FLYWHEEL_BACKEND");
-        return forced == null ? "" : forced.toLowerCase(java.util.Locale.ROOT);
+        return Flywheel.backendSetting();
     }
 
     private ClientFlywheel() {}
@@ -77,9 +74,8 @@ public final class ClientFlywheel {
      * <p>Narrower than {@link #isAvailable} and the one to ask before choosing an instanced path over a
      * vanilla renderer. It is false for a server level and false before a client level has loaded.
      *
-     * <p>{@code BackendManager} picks the best supported backend or fails, so the only "installed but
-     * turned off" state here is {@code -Dgolem.flywheel.backend=off}, which {@link #isAvailable}
-     * already reports.
+     * <p>False as well whenever {@link EngineState} has the engine off — switched off by the player at
+     * runtime, or stopped by a failure — because no manager exists for any level then.
      */
     public static boolean isVisualizing(@Nullable LevelAccessor level) {
         //? if >=26.1 {
@@ -100,16 +96,22 @@ public final class ClientFlywheel {
      */
     public static void init() {
         //? if neoforge && >=26.1 {
+        FlywheelConfig.writeDefaultIfMissing();
+        FlywheelCommands.register();
         if (initialized || DISABLED) return;
         initialized = true;
         dev.golem.core.flywheel.backend.Backends.init();
         dev.golem.core.client.ClientTicks.onEndTick(
                 dev.golem.core.flywheel.visual.GolemRenderSystem::onClientTick);
 
-        // Pipelines are a registry event on the mod bus; everything else is a game-bus event.
+        // Pipelines are a registry event on the mod bus; everything else is a game-bus event. A
+        // pipeline that fails to declare stops the engine, never the game.
         net.neoforged.bus.api.IEventBus modBus = dev.golem.core.platform.NeoForgeEntrypoint.modBus();
-        modBus.addListener(Pipelines::register);
-        modBus.addListener(dev.golem.core.flywheel.indirect.IndirectPipelines::register);
+        modBus.addListener((net.neoforged.neoforge.client.event.RegisterRenderPipelinesEvent event) ->
+                EngineState.guard("pipeline registration", () -> Pipelines.register(event)));
+        modBus.addListener((net.neoforged.neoforge.client.event.RegisterRenderPipelinesEvent event) ->
+                EngineState.guard("indirect pipeline registration",
+                        () -> dev.golem.core.flywheel.indirect.IndirectPipelines.register(event)));
 
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 (net.neoforged.neoforge.client.event.RenderFrameEvent.Pre event) ->
@@ -144,7 +146,9 @@ public final class ClientFlywheel {
                         dev.golem.core.flywheel.visual.VisualizationLifecycle.onEntityLeave(
                                 event.getLevel(), event.getEntity()));
         //?} elif fabric && >=26.1 {
-        /*if (initialized || DISABLED) return;
+        /*FlywheelConfig.writeDefaultIfMissing();
+        FlywheelCommands.register();
+        if (initialized || DISABLED) return;
         initialized = true;
         dev.golem.core.flywheel.backend.Backends.init();
         dev.golem.core.client.ClientTicks.onEndTick(
@@ -195,6 +199,11 @@ public final class ClientFlywheel {
                         dev.golem.core.flywheel.visual.VisualizationLifecycle.onBlockEntityRemoved(
                                 level, blockEntity.getBlockPos()));
         *///?}
+    }
+
+    /** Whether the engine subscribed its listeners at startup, which a runtime switch-on needs. */
+    public static boolean initialized() {
+        return initialized;
     }
 
     /**

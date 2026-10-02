@@ -27,6 +27,14 @@ public class CompatItem extends Item {
     }
     *///?}
 
+    // Per-stack stack size (ItemStacks.setMaxStackSize) below 1.20.5: Forge asks the item with the stack.
+    //? if forge {
+    /*@Override
+    public int getMaxStackSize(ItemStack stack) {
+        return ItemStacks.legacyMaxStackSize(stack, super.getMaxStackSize(stack));
+    }
+    *///?}
+
     // SwingReceiver dispatch through the loader's own item hook (Fabric: MixinLivingEntitySwing).
     //? if neoforge {
     @Override

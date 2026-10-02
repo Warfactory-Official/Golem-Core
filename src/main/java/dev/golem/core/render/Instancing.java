@@ -24,7 +24,8 @@ public final class Instancing {
      * is the number that settles it — and {@code owning} is the narrower claim that those visuals drew
      * the current frame, which is exactly the question {@link Visuals#owns} asks per block.
      *
-     * @param backend the chosen backend's name, or {@code off} / {@code absent} / {@code starting}
+     * @param backend the chosen backend's name, or {@code off} / {@code failed} / {@code absent} /
+     *                {@code starting}
      * @param visuals declared block entities the engine holds
      * @param healthy of those, the ones that have not failed back to their vanilla renderer
      * @param instances GPU rows written across them
@@ -89,6 +90,11 @@ public final class Instancing {
         private Client() {}
 
         private static Report report() {
+            String off = dev.golem.core.flywheel.EngineState.offReason();
+            if (off != null) {
+                return new Report(dev.golem.core.flywheel.EngineState.failed() ? "failed" : "off",
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+            }
             var backend = dev.golem.core.flywheel.backend.BackendManager.selected();
             int[] census = dev.golem.core.flywheel.visual.GemBlockEntityVisual.census();
             return new Report(backend == null ? "starting" : backend.name(),

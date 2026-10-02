@@ -162,6 +162,41 @@ class ItemDisplayFrameTest {
         assertTrue(refused.getMessage().contains("inherit the other hand's"), refused.getMessage());
     }
 
+    /**
+     * 1.7's full-3D hand pose scales y by -0.625: a sword in hand was the mirror of its model, and the frame
+     * has to ship that mirror (signed scale) rather than quietly drop it. The plain pose is not mirrored, and
+     * the two frames differ only in the third-person hands.
+     */
+    @Test
+    void theFullThreeDHandPoseIsTheMirroredOne() {
+        for (DisplaySlot slot : DisplaySlot.values()) {
+            Matrix4f full = Pose17.frame(Pose17.Klass.ITEM_RENDER_WEAPON_FULL3D, slot);
+            Matrix4f plain = Pose17.frame(Pose17.Klass.ITEM_RENDER_WEAPON, slot);
+            boolean thirdPerson = slot == DisplaySlot.THIRD_PERSON_RIGHT_HAND || slot == DisplaySlot.THIRD_PERSON_LEFT_HAND;
+            if (thirdPerson) {
+                assertTrue(full.determinant3x3() < 0F, slot + " full-3D frame should mirror");
+                assertTrue(plain.determinant3x3() > 0F, slot + " plain frame should not mirror");
+                assertTrue(DisplayFrame.of("full3d", slot, full).scale().x < 0D, slot + " ships a signed scale");
+            } else {
+                assertEquals(plain, full, slot + " only the third-person hands differ");
+            }
+        }
+        // 1.7: RenderPlayer translate(-1/16, 7/16, 1/16) then translate(0, 3/16, 0); the model origin then sits
+        // at Forge's else-pose start in arm space: (-1/16, 7/16 + 3/16, 1/16) + scale(.625,-.625,.625)(0, -0.3, 0)
+        Matrix4f toArm = new Matrix4f().rotateX((float) Math.toRadians(-90)).rotateY((float) Math.PI)
+                .translate(-0.4375F, -0.375F, -1.125F);
+        Vector3f forgeStart = toArm.mul(Pose17.frame(Pose17.Klass.ITEM_RENDER_WEAPON_FULL3D,
+                DisplaySlot.THIRD_PERSON_RIGHT_HAND)).transformPosition(new Vector3f());
+        Vector3f expected = new Matrix4f().translate(-0.0625F, 0.625F, 0.0625F).scale(0.625F, -0.625F, 0.625F)
+                .rotateX((float) Math.toRadians(-100)).rotateY((float) Math.toRadians(45))
+                .translate(0F, -0.3F, 0F).scale(1.5F).rotateY((float) Math.toRadians(50))
+                .rotateZ((float) Math.toRadians(335)).translate(-0.9375F, -0.0625F, 0F)
+                .transformPosition(new Vector3f());
+        assertEquals(expected.x, forgeStart.x, 1.0E-5F);
+        assertEquals(expected.y, forgeStart.y, 1.0E-5F);
+        assertEquals(expected.z, forgeStart.z, 1.0E-5F);
+    }
+
     @Test
     void posingNothingIsRefused() {
         assertThrows(IllegalStateException.class, () -> DisplayFrame.of("empty", Map.of()));

@@ -176,6 +176,25 @@ public final class GameTests {
     }
 
     /**
+     * The middle of the free space a test declared with {@code padding} owns, in the helper's relative
+     * coordinates, at relative height {@code y}. A test that needs room on every side (a random jump, a blast
+     * radius) centres itself here and stays within {@code padding} blocks of it.
+     *
+     * <p>26.1 reserves {@code padding} blocks on every side of its 1×1×1 template, so the centre is the origin.
+     * Below 26.1 the room is the padded empty template itself (24, 80, 152 or 184 wide; see {@code addLegacy}),
+     * which starts at the origin and grows in +x/+z, so the centre is half its width. Using one era's centre on
+     * the other puts the test in a neighbour's plot (26.1's free space ends {@code padding} blocks out).
+     */
+    public static net.minecraft.core.BlockPos paddedCentre(int padding, int y) {
+        //? if >=26.1 {
+        return new net.minecraft.core.BlockPos(0, y, 0);
+        //?} else {
+        /*int width = padding > 64 ? 184 : padding > 28 ? 152 : padding > 8 ? 80 : 24;
+        return new net.minecraft.core.BlockPos(width / 2, y, width / 2);
+        *///?}
+    }
+
+    /**
      * {@code -Dgolem.gametest.filter=<regex>} runs only the tests whose id matches. Every era honours it
      * at test-instance registration; on 26.1 the body stays in the test-function registry either way,
      * because that registry is declared before the property could matter and an unused body is inert.

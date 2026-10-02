@@ -154,6 +154,10 @@ final class BillboardLayers {
         } catch (RuntimeException failure) {
             healthy = false;
             clear();
+            if (failure instanceof dev.golem.core.flywheel.EngineState.Unsupported) {
+                dev.golem.core.flywheel.EngineState.fail("billboard allocation", failure);
+                return;
+            }
             if (!reportedFailure) {
                 reportedFailure = true;
                 GolemCore.LOG.error("Billboard visual failed for {}; returning ownership to vanilla",

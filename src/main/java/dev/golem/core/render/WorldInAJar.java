@@ -107,6 +107,18 @@ public final class WorldInAJar implements BlockAndTintGetter {
         return jar;
     }
 
+    /**
+     * Sets the jar's grass, foliage and water colours outright, for a jar that was not cut from a level —
+     * a scripted scene set in a fixed biome.
+     */
+    public void tint(int grass, int foliage, int water) {
+        // Opaque whatever the caller passed: 26.1 multiplies faces by the ARGB tint, and an RGB colour's
+        // alpha of 0 makes every tinted face vanish under the cutout test. Older targets read only RGB.
+        this.grassTint = 0xFF000000 | grass;
+        this.foliageTint = 0xFF000000 | foliage;
+        this.waterTint = 0xFF000000 | water;
+    }
+
     /** Freezes the light and biome tint of {@code pos} into the jar. */
     public void sampleFrom(ClientLevel level, BlockPos pos) {
         this.blockLight = level.getBrightness(LightLayer.BLOCK, pos);

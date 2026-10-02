@@ -428,11 +428,11 @@ and are now one line per material naming the shapes it comes in.
 claims to replace. `DejsonMain` is the build entry point:
 
 ```
-java dev.golem.core.dejson.DejsonMain verify <out> <authored> com.hbm.blocks.ModBlockModels …
-java dev.golem.core.dejson.DejsonMain write  <out> <authored> com.hbm.blocks.ModBlockModels …
+java dev.golem.core.dejson.DejsonMain verify <out> <authored> com.hbm.blocks.ModPowerGenBlocks com.hbm.items.ModPowerGenItems …
+java dev.golem.core.dejson.DejsonMain write  <out> <authored> com.hbm.blocks.ModPowerGenBlocks com.hbm.items.ModPowerGenItems …
 ```
 
-It runs in a plain JVM — nothing in the declaration vocabulary touches Minecraft — which is what
+Each listed class is *initialised* (a registration chain declares as it runs) and `declare()` is called afterwards only if the class has one. It runs in a plain JVM — nothing in the declaration vocabulary touches Minecraft — which is what
 makes this a build step rather than a game one, and what makes the check cheap enough to be part of
 `check`. The order matters: declare, verify against the authored file, *then* delete it. After the
 deletion there is nothing left to compare against.

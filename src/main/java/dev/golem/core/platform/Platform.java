@@ -59,6 +59,20 @@ public final class Platform {
         *///?}
     }
 
+    /**
+     * Whether this Minecraft has the item-definition layer ({@code assets/<ns>/items/*.json}, 1.21.4+). Below it
+     * an item's look is its {@code models/item} file alone, and a self-drawn item is one whose model chain ends at
+     * {@code builtin/entity}. A data-shape fact for checks that only mean something on one side of that line;
+     * asking for a marker file instead breaks as soon as that file ships on every node.
+     */
+    public static boolean hasItemDefinitions() {
+        //? if >=1.21.4 {
+        return true;
+        //?} else {
+        /*return false;
+        *///?}
+    }
+
     public static String environmentName() {
         return isDevelopment() ? "development" : "production";
     }

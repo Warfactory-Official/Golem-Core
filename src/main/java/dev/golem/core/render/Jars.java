@@ -46,6 +46,15 @@ public final class Jars {
         WorldEffects.submit(pose, layer(), order, (last, buffer) -> draw(jar, last, buffer));
     }
 
+    /**
+     * Submits every filled cell into {@code sink}, with the jar's own corner at the pose's origin. For a
+     * jar drawn somewhere other than the world pass: a scene inside a screen, say.
+     */
+    public static void submit(WorldInAJar jar, PoseStack pose, SubmitSink sink) {
+        if (jar.isEmpty()) return;
+        sink.submitCustomGeometry(pose, layer(), (last, buffer) -> draw(jar, last, buffer));
+    }
+
     private static RenderType layer() {
         //? if >=26.1 {
         return RenderTypes.cutoutMovingBlock();
@@ -76,6 +85,9 @@ public final class Jars {
         pose.last().normal().set(last.normal());
 
         BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+        // The fluid tesselator writes section-local positions (pos & 15), which are the jar's own only while
+        // the jar fits in one section.
+        boolean fluids = jar.sizeX <= 16 && jar.sizeY <= 16 && jar.sizeZ <= 16;
         //? if >=26.1 {
         var models = Minecraft.getInstance().getModelManager().getBlockStateModelSet();
         var renderer = blocks();
@@ -93,8 +105,10 @@ public final class Jars {
             for (int y = 0; y < jar.sizeY; y++) {
                 for (int z = 0; z < jar.sizeZ; z++) {
                     BlockState state = jar.getBlockState(x, y, z);
-                    if (state.isAir() || state.getRenderShape() != RenderShape.MODEL) continue;
+                    if (state.isAir()) continue;
                     cursor.set(x, y, z);
+                    if (fluids && !state.getFluidState().isEmpty()) liquid(jar, cursor, state, last, buffer);
+                    if (state.getRenderShape() != RenderShape.MODEL) continue;
                     //? if >=26.1 {
                     pose.pushPose();
                     pose.translate(x, y, z);
@@ -111,5 +125,151 @@ public final class Jars {
                 }
             }
         }
+    }
+
+    //? if >=26.1 {
+    private static net.minecraft.client.renderer.block.@org.jspecify.annotations.Nullable FluidRenderer fluidRenderer;
+    private static net.minecraft.client.renderer.block.@org.jspecify.annotations.Nullable FluidStateModelSet fluidModels;
+    //?}
+
+    /**
+     * A still or flowing fluid in a cell, drawn by the game's own fluid tesselator with the jar as its level
+     * so its surface height and hidden faces come out as in the world. The tesselator writes positions
+     * relative to its section rather than through a pose, so they are posed here on the way out.
+     */
+    private static void liquid(WorldInAJar jar, BlockPos pos, BlockState state, PoseStack.Pose pose, VertexConsumer buffer) {
+        VertexConsumer posed = new PosedConsumer(buffer, pose);
+        //? if >=26.1 {
+        var models = Minecraft.getInstance().getModelManager().getFluidStateModelSet();
+        if (fluidRenderer == null || fluidModels != models) {
+            fluidRenderer = new net.minecraft.client.renderer.block.FluidRenderer(models);
+            fluidModels = models;
+        }
+        fluidRenderer.tesselate(jar, pos, layer -> posed, state, state.getFluidState());
+        //?} else {
+        /*Minecraft.getInstance().getBlockRenderer().renderLiquid(pos, jar, posed, state, state.getFluidState());
+        *///?}
+    }
+
+    /** Passes vertices through, moving positions and normals by a pose. */
+    private static final class PosedConsumer implements VertexConsumer {
+
+        private final VertexConsumer out;
+        private final org.joml.Matrix4f pose;
+        private final org.joml.Matrix3f normal;
+        private final org.joml.Vector3f scratch = new org.joml.Vector3f();
+
+        PosedConsumer(VertexConsumer out, PoseStack.Pose pose) {
+            this.out = out;
+            this.pose = new org.joml.Matrix4f(pose.pose());
+            this.normal = new org.joml.Matrix3f(pose.normal());
+        }
+
+        //? if >=1.21 {
+        @Override
+        public VertexConsumer addVertex(float x, float y, float z) {
+            pose.transformPosition(x, y, z, scratch);
+            out.addVertex(scratch.x, scratch.y, scratch.z);
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setColor(int r, int g, int b, int a) {
+            out.setColor(r, g, b, a);
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setUv(float u, float v) {
+            out.setUv(u, v);
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setUv1(int u, int v) {
+            out.setUv1(u, v);
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setUv2(int u, int v) {
+            out.setUv2(u, v);
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setNormal(float x, float y, float z) {
+            normal.transform(x, y, z, scratch).normalize();
+            out.setNormal(scratch.x, scratch.y, scratch.z);
+            return this;
+        }
+        //?} else {
+        /*@Override
+        public VertexConsumer vertex(double x, double y, double z) {
+            pose.transformPosition((float) x, (float) y, (float) z, scratch);
+            out.vertex(scratch.x, scratch.y, scratch.z);
+            return this;
+        }
+
+        @Override
+        public VertexConsumer color(int r, int g, int b, int a) {
+            out.color(r, g, b, a);
+            return this;
+        }
+
+        @Override
+        public VertexConsumer uv(float u, float v) {
+            out.uv(u, v);
+            return this;
+        }
+
+        @Override
+        public VertexConsumer overlayCoords(int u, int v) {
+            out.overlayCoords(u, v);
+            return this;
+        }
+
+        @Override
+        public VertexConsumer uv2(int u, int v) {
+            out.uv2(u, v);
+            return this;
+        }
+
+        @Override
+        public VertexConsumer normal(float x, float y, float z) {
+            normal.transform(x, y, z, scratch).normalize();
+            out.normal(scratch.x, scratch.y, scratch.z);
+            return this;
+        }
+
+        @Override
+        public void endVertex() {
+            out.endVertex();
+        }
+
+        @Override
+        public void defaultColor(int r, int g, int b, int a) {
+            out.defaultColor(r, g, b, a);
+        }
+
+        @Override
+        public void unsetDefaultColor() {
+            out.unsetDefaultColor();
+        }
+        *///?}
+
+        //? if >=26.1 {
+        @Override
+        public VertexConsumer setColor(int color) {
+            out.setColor(color);
+            return this;
+        }
+
+        @Override
+        public VertexConsumer setLineWidth(float width) {
+            out.setLineWidth(width);
+            return this;
+        }
+        //?}
     }
 }

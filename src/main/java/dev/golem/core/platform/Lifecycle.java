@@ -110,15 +110,31 @@ public final class Lifecycle {
                 });
         *///?}
     }
+    //? if fabric {
+    /*/^* The Fabric COPY_FROM phase edge is added once, however many handlers register. ^/
+    private static boolean playerCopyPhaseOrdered;
+    *///?}
+
     /**
      * Runs when a server player is replaced by a fresh copy - respawn after death ({@code alive} false) or the
      * return from the End ({@code alive} true) - with the old and the new player. Forge/NeoForge
      * {@code PlayerEvent.Clone}, Fabric {@code ServerPlayerEvents.COPY_FROM}: state a mod keeps on the player
      * object itself is lost unless it is copied here.
+     *
+     * <p>Handlers run after the loader's own copying is finished, so {@link dev.golem.core.data.EntityData}
+     * on the new player is always fresh here: it is never carried over by the loader, only by a handler.
      */
     public static void onPlayerCopy(PlayerCopy handler) {
         //? if fabric {
-        /*net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents.COPY_FROM.register(handler::copy);
+        /*var event = net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents.COPY_FROM;
+        // A phase after the default one, where fabric-api transfers data attachments; EntityData orders its
+        // reset of those transferred values between the two.
+        if (!playerCopyPhaseOrdered) {
+            playerCopyPhaseOrdered = true;
+            event.addPhaseOrdering(net.fabricmc.fabric.api.event.Event.DEFAULT_PHASE,
+                    dev.golem.core.Ids.of(dev.golem.core.GolemCore.MOD_ID, "player_copy"));
+        }
+        event.register(dev.golem.core.Ids.of(dev.golem.core.GolemCore.MOD_ID, "player_copy"), handler::copy);
         *///?} elif neoforge {
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 (net.neoforged.neoforge.event.entity.player.PlayerEvent.Clone event) -> {

@@ -188,6 +188,27 @@ public final class ItemStacks {
         *///?}
     }
 
+    /**
+     * Gives this one stack its own main-hand weapon modifiers - a legacy per-stack {@code getAttributeModifiers(slot,
+     * stack)} override that returned other numbers in some states (the 1.12 crucible: 500 damage charged, 5 empty).
+     * {@code attackDamage} and {@code attackSpeed} are absolute additions, {@code movement} a base multiplier (0: none).
+     * {@link #suppressAttributeModifiers} with {@code false} gives the item's own modifiers back.
+     */
+    public static void overrideMainHandAttributes(ItemStack stack, float attackDamage, float attackSpeed, double movement) {
+        if (stack.isEmpty()) return;
+        // >=1.21.1, not the >=1.20.5 of the component's other users: it follows Tools.attributes, whose
+        // id-keyed AttributeModifier is 1.21; 1.20.5-1.21.0 would need a third (UUID + component) branch.
+        //? if >=1.21.1 {
+        stack.set(net.minecraft.core.component.DataComponents.ATTRIBUTE_MODIFIERS,
+                Tools.attributes(attackDamage, attackSpeed, movement));
+        //?} else {
+        /*if (stack.getTag() != null) stack.getTag().remove("AttributeModifiers");
+        Tools.legacyAttributes(java.util.UUID.fromString("CB3F55D3-645C-4F38-A497-9C13A33DB5CF"),
+                java.util.UUID.fromString("FA233E1C-4180-4865-B01B-BCCE9785ACA3"), attackDamage, attackSpeed, movement)
+                .forEach((attribute, modifier) -> stack.addAttributeModifier(attribute, modifier, EquipmentSlot.MAINHAND));
+        *///?}
+    }
+
     /** Damages a held item and broadcasts its break animation across the callback signature change. */
     public static void hurtAndBreak(ItemStack stack, int amount, Player player, InteractionHand hand) {
         //? if >=1.21.1 {
@@ -589,6 +610,41 @@ public final class ItemStacks {
         return stack.get(net.minecraft.core.component.DataComponents.CUSTOM_NAME);
         //?} else {
         /*return stack.hasCustomHoverName() ? stack.getHoverName() : null;
+        *///?}
+    }
+
+    /**
+     * Gives this one stack its own maximum stack size — 1.20.5's {@code minecraft:max_stack_size} component,
+     * the modern spelling of a 1.7 {@code getItemStackLimit(ItemStack)} that answered per stack.
+     *
+     * <p>Below 1.20.5 there are no components and the vanilla limit is per item, so the size rides on the
+     * stack's tag under {@link #LEGACY_MAX_STACK_SIZE} and is read back by the loader's per-stack hook:
+     * Forge's {@code IForgeItem.getMaxStackSize(ItemStack)} in {@link CompatItem}, and on Fabric (whose API
+     * has no such hook before components) {@code MixinLegacyStackLimit}.
+     */
+    public static void setMaxStackSize(ItemStack stack, int size) {
+        //? if >=1.20.5 {
+        stack.set(net.minecraft.core.component.DataComponents.MAX_STACK_SIZE, size);
+        //?} else {
+        /*stack.getOrCreateTag().putInt(LEGACY_MAX_STACK_SIZE, size);
+        *///?}
+    }
+
+    /** The tag key {@link #setMaxStackSize} writes below 1.20.5; unused (and never written) from 1.20.5 on. */
+    public static final String LEGACY_MAX_STACK_SIZE = "golem:max_stack_size";
+
+    /**
+     * The per-stack size {@link #setMaxStackSize} gave a pre-1.20.5 stack, or {@code fallback} (the item's own
+     * limit) when it was given none. From 1.20.5 vanilla reads the component itself and this answers
+     * {@link ItemStack#getMaxStackSize()}.
+     */
+    public static int legacyMaxStackSize(ItemStack stack, int fallback) {
+        //? if >=1.20.5 {
+        return stack.getMaxStackSize();
+        //?} else {
+        /*net.minecraft.nbt.CompoundTag tag = stack.getTag();
+        return tag != null && tag.contains(LEGACY_MAX_STACK_SIZE, net.minecraft.nbt.Tag.TAG_INT)
+                ? tag.getInt(LEGACY_MAX_STACK_SIZE) : fallback;
         *///?}
     }
 

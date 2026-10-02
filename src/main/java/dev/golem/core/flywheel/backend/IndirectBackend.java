@@ -9,10 +9,8 @@ import org.lwjgl.opengl.GL;
 import org.lwjgl.opengl.GLCapabilities;
 
 // Higher-priority backend (1000) that uses SSBO storage + glMultiDrawElementsIndirect + a
-// compute culling pass. supported() is force-false until the draw-manager half (slices 2c-2
-// through 2c-4) lands end-to-end; capabilitiesPresent() is the real GL feature check that
-// supported() will delegate to once the implementation works. Until then INSTANCING (priority
-// 500) remains the active backend.
+// compute culling pass. supported() is the real GL feature check plus the slab requirement shared
+// with INSTANCING (priority 500), which is the fallback when either half is missing.
 public final class IndirectBackend implements Backend {
 
     public static final IndirectBackend INSTANCE = new IndirectBackend();
@@ -32,9 +30,11 @@ public final class IndirectBackend implements Backend {
         return 1000;
     }
 
+    // Both halves: its own GL features, and the persistently mapped slab every backend here allocates
+    // instance rows in (Backends.slabsSupported).
     @Override
     public boolean supported() {
-        return capabilitiesPresent();
+        return capabilitiesPresent() && Backends.slabsSupported();
     }
 
     // GL feature check matching upstream Flywheel's GlCompat.SUPPORTS_INDIRECT (cull shader,

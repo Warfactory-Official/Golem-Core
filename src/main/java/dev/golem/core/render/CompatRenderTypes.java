@@ -36,6 +36,16 @@ public final class CompatRenderTypes {
         *///?}
     }
 
+    /**
+     * Alpha-tested entity geometry, <b>culled on every node</b> — the old GL default state a 1.7 renderer drew
+     * in unless it disabled {@code GL_CULL_FACE} itself. Identical to {@link #entityCutoutCull}.
+     *
+     * <p>Note the deliberate difference from vanilla 26.1, whose {@code RenderTypes.entityCutout} is the
+     * <i>no-cull</i> pipeline while every older {@code RenderType.entityCutout} culls. Mapping the name
+     * straight through made the same caller draw back faces on 26.1 only. A caller whose 1.7 renderer drew
+     * double-sided (every {@code RenderLiving}, or one that disabled culling) names
+     * {@link #entityCutoutNoCull} explicitly.
+     */
     public static RenderType entityCutout(
             //? if >=26.1 {
             Identifier
@@ -44,7 +54,7 @@ public final class CompatRenderTypes {
             *///?}
             texture) {
         //? if >=26.1 {
-        return RenderTypes.entityCutout(texture);
+        return RenderTypes.entityCutoutCull(texture);
         //?} else {
         /*return RenderType.entityCutout(texture);
         *///?}
@@ -94,6 +104,39 @@ public final class CompatRenderTypes {
         /*return RenderType.entityTranslucent(texture);
         *///?}
     }
+
+    /**
+     * {@link #entityTranslucent} with back faces culled: a 1.7 translucent renderer that left {@code GL_CULL_FACE}
+     * on. Pre-26.1 this is vanilla's {@code entityTranslucentCull}; 26.1 only keeps the item-target variant, so the
+     * same {@code ENTITY_TRANSLUCENT_CULL} pipeline is set up here drawing into the main target.
+     */
+    public static RenderType entityTranslucentCull(
+            //? if >=26.1 {
+            Identifier
+            //?} else {
+            /*ResourceLocation
+            *///?}
+            texture) {
+        //? if >=26.1 {
+        return ENTITY_TRANSLUCENT_CULL.apply(texture);
+        //?} else {
+        /*return RenderType.entityTranslucentCull(texture);
+        *///?}
+    }
+
+    //? if >=26.1 {
+    private static final java.util.function.Function<Identifier, RenderType> ENTITY_TRANSLUCENT_CULL =
+            net.minecraft.util.Util.memoize(texture -> RenderType.create("golem_entity_translucent_cull",
+                    net.minecraft.client.renderer.rendertype.RenderSetup
+                            .builder(net.minecraft.client.renderer.RenderPipelines.ENTITY_TRANSLUCENT_CULL)
+                            .withTexture("Sampler0", texture)
+                            .useLightmap()
+                            .useOverlay()
+                            .affectsCrumbling()
+                            .sortOnUpload()
+                            .setOutline(net.minecraft.client.renderer.rendertype.RenderSetup.OutlineProperty.AFFECTS_OUTLINE)
+                            .createRenderSetup()));
+    //?}
 
     /** The vanilla line pipeline, moved alongside the other render-type factories in 26.1. */
     public static RenderType lines() {
@@ -229,6 +272,20 @@ public final class CompatRenderTypes {
             *///?}
             texture) {
         return FlatCutoutRenderType.translucentCull(texture);
+    }
+
+    /**
+     * {@link #flatCutout} blended {@code SRC_ALPHA / ONE_MINUS_SRC_ALPHA}, unculled, depth tested without writing it: a
+     * 1.12 particle or decal drawn with {@code GL_LIGHTING} off and {@code depthMask(false)}. Emit an upward normal.
+     */
+    public static RenderType flatTranslucent(
+            //? if >=26.1 {
+            Identifier
+            //?} else {
+            /*ResourceLocation
+            *///?}
+            texture) {
+        return FlatCutoutRenderType.translucent(texture);
     }
 
     /** {@link #flatCutout}, depth-biased toward the camera: a decal a hair in front of a surface. */

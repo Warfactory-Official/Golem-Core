@@ -22,8 +22,10 @@ import org.jspecify.annotations.Nullable;
  * same one to both.
  *
  * <p>Instancing is an addition, never a replacement: a machine registered here must still draw
- * correctly through its vanilla renderer, because five of six nodes have no engine at all and the
- * player can switch the backend off on the sixth. {@link #owns} is how the two stay out of each
+ * correctly through its vanilla renderer, because four of six nodes have no engine of Core's own (the
+ * published one on 1.20.1/1.21.1 is an optional mod), and the player can switch the backend off on the
+ * two 26.1 nodes ({@code config/golemcore-flywheel.json}, {@code /flywheel backend off}) — or the
+ * engine switches itself off on any failure. {@link #owns} is how the two stay out of each
  * other's way — the vanilla path asks whether a healthy visual already claimed this frame, and returns
  * without drawing when it has.
  */

@@ -109,6 +109,22 @@ public final class KeyMappings {
         *///?}
     }
 
+    /**
+     * Whether the keyboard key {@code glfwKey} is physically held, for code that names a key rather than a
+     * mapping (1.7's {@code Keyboard.isKeyDown}). Only the window handle's spelling differs by version.
+     */
+    public static boolean isKeyDown(int glfwKey) {
+        //? if >=26.1 {
+        return com.mojang.blaze3d.platform.InputConstants.isKeyDown(
+                net.minecraft.client.Minecraft.getInstance().getWindow(), glfwKey)
+                || dev.golem.core.harness.Harness.keyHeld(glfwKey);
+        //?} else {
+        /*return com.mojang.blaze3d.platform.InputConstants.isKeyDown(
+                net.minecraft.client.Minecraft.getInstance().getWindow().getWindow(), glfwKey)
+                || dev.golem.core.harness.Harness.keyHeld(glfwKey);
+        *///?}
+    }
+
     /** Physical held state for a mapping's current binding, independent of vanilla's dispatch map. */
     public static boolean isHeld(KeyMapping mapping) {
         com.mojang.blaze3d.platform.InputConstants.Key key =
@@ -117,6 +133,7 @@ public final class KeyMappings {
             return MouseInput.isDown(key.getValue());
         }
         if (key.getType() == com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM) {
+            if (dev.golem.core.harness.Harness.keyHeld(key.getValue())) return true;
             //? if >=26.1 {
             return com.mojang.blaze3d.platform.InputConstants.isKeyDown(
                     net.minecraft.client.Minecraft.getInstance().getWindow(), key.getValue());

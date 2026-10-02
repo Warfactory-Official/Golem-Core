@@ -206,8 +206,9 @@ public final class GolemNetwork {
     /^*
      * Whether {@code player}'s connection has negotiated the channel for {@code codec}, so a send will
      * reach it rather than fail. A player without the mod (or a test's bare in-level mock player, whose
-     * connection never ran a handshake) answers false; a broadcast that sweeps {@code level.players()}
-     * must skip those, because the loader refuses the send with an exception instead of dropping it.
+     * connection never ran a handshake) answers false. This loader writes such a send anyway and the
+     * client ignores it; only NeoForge throws, and its sendToPlayer skips them, so no caller needs this
+     * check before a send.
      ^/
     public static boolean canSendToPlayer(ServerPlayer player, GolemCodec<?> codec) {
         return ServerPlayNetworking.canSend(player, codec.type());
@@ -258,8 +259,9 @@ public final class GolemNetwork {
     /^*
      * Whether {@code player}'s connection has negotiated the channel for {@code codec}, so a send will
      * reach it rather than fail. A player without the mod (or a test's bare in-level mock player, whose
-     * connection never ran a handshake) answers false; a broadcast that sweeps {@code level.players()}
-     * must skip those, because the loader refuses the send with an exception instead of dropping it.
+     * connection never ran a handshake) answers false. This loader writes such a send anyway and the
+     * client ignores it; only NeoForge throws, and its sendToPlayer skips them, so no caller needs this
+     * check before a send.
      ^/
     public static boolean canSendToPlayer(ServerPlayer player, GolemCodec<?> codec) {
         return ServerPlayNetworking.canSend(player, codec.id());
@@ -341,10 +343,13 @@ public final class GolemNetwork {
     /^*
      * Whether {@code player}'s connection has negotiated the channel for {@code codec}, so a send will
      * reach it rather than fail. A player without the mod (or a test's bare in-level mock player, whose
-     * connection never ran a handshake) answers false; a broadcast that sweeps {@code level.players()}
-     * must skip those, because the loader refuses the send with an exception instead of dropping it.
+     * connection never ran a handshake) answers false. This loader writes such a send anyway and the
+     * client ignores it; only NeoForge throws, and its sendToPlayer skips them, so no caller needs this
+     * check before a send.
      ^/
     public static boolean canSendToPlayer(ServerPlayer player, GolemCodec<?> codec) {
+        // isRemotePresent reads attributes off connection.channel(), which a channel-less mock connection lacks.
+        if (player.connection == null || player.connection.connection.channel() == null) return false;
         return CHANNEL.isRemotePresent(player.connection.connection);
     }
 
@@ -402,23 +407,35 @@ public final class GolemNetwork {
                 });
     }
 
+    /**
+     * Sends to one player. A connection that never negotiated this channel (a client without the mod,
+     * or a GameTest's bare in-level mock player, which {@code level.players()} sweeps include) is
+     * skipped: NeoForge alone refuses such a send with an exception ("Payload … may not be sent to the
+     * client"), where Fabric and Forge write it and the client ignores it. Skipping here gives every
+     * loader the same never-throws contract, so callers need no {@link #canSendToPlayer} check.
+     */
     public static <P extends GolemPayload> void sendToPlayer(ServerPlayer player, GolemCodec<P> codec, P payload) {
+        if (!canSendToPlayer(player, codec)) return;
         PacketDistributor.sendToPlayer(player, payload);
     }
 
     /**
      * Whether {@code player}'s connection has negotiated the channel for {@code codec}, so a send will
      * reach it rather than fail. A player without the mod (or a test's bare in-level mock player, whose
-     * connection never ran a handshake) answers false; a broadcast that sweeps {@code level.players()}
-     * must skip those, because the loader refuses the send with an exception instead of dropping it.
+     * connection never ran a handshake) answers false. {@link #sendToPlayer} and {@link #sendToTracking}
+     * already skip those; this is for callers that want to know before building a payload.
      */
     public static boolean canSendToPlayer(ServerPlayer player, GolemCodec<?> codec) {
         return player.connection.hasChannel(codec.type());
     }
 
+    // The same per-recipient loop PacketDistributor.sendToPlayersTrackingChunk runs, through sendToPlayer so a
+    // tracking mock player without the channel is skipped rather than throwing.
     public static <P extends GolemPayload> void sendToTracking(ServerLevel level, BlockPos pos, GolemCodec<P> codec, P payload) {
-        PacketDistributor.sendToPlayersTrackingChunk(level,
-                new net.minecraft.world.level.ChunkPos(pos.getX() >> 4, pos.getZ() >> 4), payload);
+        for (ServerPlayer player : level.getChunkSource().chunkMap.getPlayers(
+                new net.minecraft.world.level.ChunkPos(pos.getX() >> 4, pos.getZ() >> 4), false)) {
+            sendToPlayer(player, codec, payload);
+        }
     }
 
     // Delegated rather than inlined: this class is loaded on dedicated servers, and Minecraft.getInstance()

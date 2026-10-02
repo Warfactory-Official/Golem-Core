@@ -36,7 +36,11 @@ public final class VisualizationManager {
 
     public VisualizationManager(Level level) {
         this.level = level;
-        this.drawManager = BackendManager.current().createDrawManager();
+        var backend = BackendManager.current();
+        // Callers ask BackendManager first and create no manager when it answers null; this is the
+        // backstop, and it throws the engine-wide kind so the lifecycle's guard switches the engine off.
+        if (backend == null) throw new dev.golem.core.flywheel.EngineState.Unsupported("no supported backend");
+        this.drawManager = backend.createDrawManager();
         this.context = new Context();
     }
 

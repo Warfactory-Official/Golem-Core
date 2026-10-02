@@ -51,10 +51,54 @@ public abstract class GemBER<T extends BlockEntity, S extends CompatRenderState>
 
     @Override
     public final void submit(S state, PoseStack poseStack, SubmitSink sink, CameraInfo camera) {
-        if (!Visuals.owns(state.blockPos)) {
+        boolean owned = Visuals.owns(state.blockPos);
+        if (!owned) {
             Gem.replay(gem(), state, poseStack, sink, state.lightCoords);
         }
+        if (tracing) trace(state.blockPos, owned);
         submitUndeclared(state, poseStack, sink, camera);
+    }
+
+    /**
+     * Per-position count of submits that replayed the declaration and submits that left it to an
+     * instanced visual, while {@link #trace(boolean)} is on.
+     *
+     * <p>A correct instanced frame and a correct vanilla frame are the same pixels, so a screenshot
+     * cannot say which path drew a machine — and "the engine is off, so the vanilla renderer draws"
+     * is precisely the claim a fallback test has to prove rather than infer. Off by default: it costs a
+     * map write per machine per frame, and only a test harness ever asks.
+     */
+    private static volatile boolean tracing;
+    private static final java.util.Map<Long, int[]> TRACE = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Turns replay tracing on or off; turning it on starts every count from zero. */
+    public static void trace(boolean on) {
+        TRACE.clear();
+        tracing = on;
+    }
+
+    /** {@code {replayed, skipped}} submits at {@code pos} since tracing was switched on. */
+    public static int[] traced(net.minecraft.core.BlockPos pos) {
+        int[] counts = TRACE.get(pos.asLong());
+        if (counts == null) return new int[2];
+        synchronized (counts) {
+            return counts.clone();
+        }
+    }
+
+    /** Every position traced since tracing was switched on. */
+    public static java.util.List<net.minecraft.core.BlockPos> tracedPositions() {
+        java.util.List<net.minecraft.core.BlockPos> out = new java.util.ArrayList<>();
+        for (Long packed : TRACE.keySet()) out.add(net.minecraft.core.BlockPos.of(packed));
+        return out;
+    }
+
+    private static void trace(net.minecraft.core.@Nullable BlockPos pos, boolean owned) {
+        if (pos == null) return;
+        int[] counts = TRACE.computeIfAbsent(pos.asLong(), key -> new int[2]);
+        synchronized (counts) {
+            counts[owned ? 1 : 0]++;
+        }
     }
 
     /**

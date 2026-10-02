@@ -13,3 +13,5 @@ accessible field net/minecraft/world/entity/Mob goalSelector Lnet/minecraft/worl
 accessible field net/minecraft/client/renderer/ItemInHandRenderer mainHandHeight F
 accessible field net/minecraft/client/renderer/ItemInHandRenderer oMainHandHeight F
 accessible field net/minecraft/client/renderer/ItemInHandRenderer mainHandItem Lnet/minecraft/world/item/ItemStack;
+# GuiScenes: vanilla keeps the GUI render state private and Fabric API does not widen it; NeoForge adds a submit method.
+accessible field net/minecraft/client/gui/GuiGraphicsExtractor guiRenderState Lnet/minecraft/client/renderer/state/gui/GuiRenderState;

@@ -56,7 +56,9 @@ public final class ComponentSmeltingRecipe extends SmeltingRecipe {
     //?} else {
     /*@Override
     public boolean matches(net.minecraft.world.Container input, Level level) {
-        return input.getContainerSize() == 1 && componentIngredient.test(input.getItem(0));
+        // A furnace passes its own three-slot container, so the size cannot be required to be 1; like vanilla's
+        // SmeltingRecipe, only slot 0 is the input. (Requiring 1 made the recipe match nothing in a real furnace.)
+        return input.getContainerSize() >= 1 && componentIngredient.test(input.getItem(0));
     }
     *///?}
 

@@ -3,6 +3,11 @@ package dev.golem.core.dejson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
 /**
  * Tag files declared in code.
  *
@@ -115,6 +120,81 @@ public final class Tags {
                 throw new DejsonException("tag " + namespace + ":" + path + " has an empty member");
             }
             Models.requireId(value.startsWith("#") ? value.substring(1) : value, "tag member");
+        }
+    }
+
+    /** Members contributed one at a time, by tag file path; written out sorted (see {@link #member}). */
+    private static final Map<String, List<String>> MEMBERS = new LinkedHashMap<>();
+
+    /**
+     * Adds one required member to a tag that many declarations contribute to, such as
+     * {@code minecraft:mineable/pickaxe}: each block's registration states its own membership instead of
+     * one list naming every block.
+     *
+     * <p>Contributions accumulate and are merged when the files are written: appended in sorted order (class
+     * initialisation order differs between the build and a running game, so contribution order would not be
+     * reproducible), after whatever a whole-file declaration of the same tag ({@link #block}, {@link #of}) lists,
+     * or emitted as a tag of their own when there is none. A member stated twice — by two contributions,
+     * or by a contribution and the whole-file list — fails, because one of the two statements is dead.
+     *
+     * @param registry the registry folder: {@code block}, {@code item}, {@code entity_type}, ...
+     */
+    public static void member(String registry, String namespace, String path, String value) {
+        if (registry == null || registry.isEmpty() || namespace == null || namespace.isEmpty()
+                || path == null || path.isEmpty()) {
+            throw new DejsonException("a tag member needs a registry, a namespace and a path");
+        }
+        if (value == null || value.isEmpty()) {
+            throw new DejsonException("tag " + namespace + ":" + path + " has an empty member");
+        }
+        Models.requireId(value.startsWith("#") ? value.substring(1) : value, "tag member");
+        String file = "data/" + namespace + "/tags/" + registry + "/" + path + ".json";
+        synchronized (MEMBERS) {
+            List<String> members = MEMBERS.computeIfAbsent(file, ignored -> new ArrayList<>());
+            if (members.contains(value)) {
+                throw new DejsonException(value + " is stated twice as a member of " + file);
+            }
+            members.add(value);
+        }
+    }
+
+    /**
+     * Folds the accumulated {@link #member} contributions into {@code files} and forgets them, so a
+     * later call folds only what was contributed since. Called by {@link Data#files()}.
+     */
+    static void mergeMembers(Map<String, JsonObject> files) {
+        synchronized (MEMBERS) {
+            for (Map.Entry<String, List<String>> entry : MEMBERS.entrySet()) {
+                JsonObject tag = files.get(entry.getKey());
+                if (tag == null) {
+                    tag = new JsonObject();
+                    tag.addProperty("replace", false);
+                    tag.add("values", new JsonArray());
+                    files.put(entry.getKey(), tag);
+                }
+                JsonArray values = tag.getAsJsonArray("values");
+                // Sorted: members arrive in class-initialisation order, which differs between the build-time
+                // generator and a running game, so insertion order would make the shipped file unreproducible.
+                for (String value : entry.getValue().stream().sorted().toList()) {
+                    for (var existing : values) {
+                        String id = existing.isJsonObject() ? existing.getAsJsonObject().get("id").getAsString()
+                                : existing.getAsString();
+                        if (id.equals(value)) {
+                            throw new DejsonException(value + " is a member of " + entry.getKey()
+                                    + " both by its own declaration and by the tag's member list");
+                        }
+                    }
+                    values.add(value);
+                }
+            }
+            MEMBERS.clear();
+        }
+    }
+
+    /** Drops every accumulated contribution. Tests only. */
+    static void resetMembers() {
+        synchronized (MEMBERS) {
+            MEMBERS.clear();
         }
     }
 

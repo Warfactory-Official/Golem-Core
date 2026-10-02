@@ -360,8 +360,13 @@ public final class Client implements AutoCloseable {
         send("wait_in_world", null, timeoutMs);
     }
 
-    public void setOption(String key, String value) {
-        send("set_option", obj("key", key, "value", value));
+    /**
+     * Sets a client option and returns the value it replaced (null from a client that predates the answer), so a
+     * scenario can put it back in a {@code finally}.
+     */
+    public String setOption(String key, String value) {
+        JsonObject reply = send("set_option", obj("key", key, "value", value));
+        return reply.has("previous") ? reply.get("previous").getAsString() : null;
     }
 
     public void leaveWorld(long timeoutMs) {
