@@ -27,6 +27,7 @@ import java.util.List;
  *   "world": "harness",
  *   "defaultNodes": ["1.21.1-neoforge", "1.21.1-fabric"],
  *   "maxClients": 2,
+ *   "retentionHours": 10,                  // older runs/screenshots/logs under "out" are deleted; 0 = keep all
  *   "nodes": [
  *     {"name": "26.1-neoforge", "minecraft": "26.1", "loader": "neoforge", "port": 47601, "packFormat": 84, "java": 21}
  *   ]
@@ -49,6 +50,8 @@ public final class Config {
     public final String world;
     public final List<String> defaultNodes;
     public final int maxClients;
+    /** Run folders, ad-hoc screenshots and logs older than this are deleted at the next run; 0 keeps everything. */
+    public final double retentionHours;
     public final List<Nodes.Node> nodes;
 
     private static Config current;
@@ -65,6 +68,7 @@ public final class Config {
         optionsTemplate = template == null ? null : dir.resolve(template).normalize();
         world = str(json, "world", "harness");
         maxClients = json.has("maxClients") ? json.get("maxClients").getAsInt() : 2;
+        retentionHours = json.has("retentionHours") ? json.get("retentionHours").getAsDouble() : 10;
         List<Nodes.Node> list = new ArrayList<>();
         JsonArray array = json.has("nodes") ? json.getAsJsonArray("nodes") : new JsonArray();
         int i = 0;

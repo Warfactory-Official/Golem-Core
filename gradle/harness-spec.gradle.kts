@@ -47,8 +47,11 @@ if (harnessSpec != null) {
         options.release.set(17)
         javaCompiler.set(toolchains.compilerFor { languageVersion.set(JavaLanguageVersion.of(javaVersion)) })
     }
-    val specFile = if (java.io.File(harnessSpec).isAbsolute) java.io.File(harnessSpec)
-        else rootProject.file(harnessSpec)
+    // `{node}` is replaced by this project's name, so one invocation can capture several nodes:
+    // `gradlew :a:runClient :b:runClient -Pharness.spec=.../versions/{node}/build/harness/spec.json`.
+    val specPath = harnessSpec.replace("{node}", project.name)
+    val specFile = if (java.io.File(specPath).isAbsolute) java.io.File(specPath)
+        else rootProject.file(specPath)
     tasks.matching { it.name == "runClient" }.configureEach {
         val run = this as JavaExec
         dependsOn(compileCapture)
@@ -69,9 +72,11 @@ package dev.golem.harness.capture;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -121,9 +126,18 @@ public final class CaptureMain {
         }
         json.append("\n  }\n}\n");
 
-        Path path = Paths.get(out);
-        if (path.getParent() != null) Files.createDirectories(path.getParent());
-        Files.writeString(path, json.toString(), StandardCharsets.UTF_8);
+        // Written beside the target and moved into place: the harness CLI launches a node as soon as its
+        // spec appears while the same Gradle run is still capturing the next node, so it must never
+        // observe a half-written file.
+        Path path = Paths.get(out).toAbsolutePath();
+        Files.createDirectories(path.getParent());
+        Path tmp = path.resolveSibling(path.getFileName() + ".tmp");
+        Files.writeString(tmp, json.toString(), StandardCharsets.UTF_8);
+        try {
+            Files.move(tmp, path, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+        } catch (AtomicMoveNotSupportedException e) {
+            Files.move(tmp, path, StandardCopyOption.REPLACE_EXISTING);
+        }
         System.out.println("[harness] launch spec written to " + path.toAbsolutePath());
         System.exit(0);
     }

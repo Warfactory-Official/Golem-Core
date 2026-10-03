@@ -21,8 +21,10 @@ public final class Main {
             Reads harness.json from the working directory or its parents (or --config <file> / HARNESS_CONFIG).
 
             Lifecycle
-              up      [--nodes a,b] [--no-build] [--no-sodium] [--show] [--heap 2G] [--world harness] [--max-clients 2]
+              up      [--nodes a,b] [--rebuild | --no-build] [--no-sodium] [--show] [--heap 2G] [--world harness] [--max-clients 2]
                       [--world-type flat|seeded]   seeded = default world preset, fixed seed, world 'harness_seeded'
+                      Gradle runs once for all nodes and is skipped for a node whose build inputs are older than its
+                      captured launch (--rebuild forces it); each client boots as soon as its launch is captured.
               down    [--nodes a,b | --all]
               restart [--nodes a,b] (down + up, same options as up)
               status
@@ -48,6 +50,9 @@ public final class Main {
               run   <Scenario.java> [--nodes a,b] [--label name] [--echo]
               world snapshot | reset | create --node N [--world harness] [--world-type flat|seeded]
 
+              clean [--older-than <hours>]                delete runs/screenshots/logs under "out" older than that
+                                                          (default retentionHours from harness.json, 10; 0 = everything).
+                                                          up, restart and run do this automatically first.
               config                                      print the resolved harness.json
 
             Nodes come from harness.json.
@@ -85,10 +90,18 @@ public final class Main {
             System.out.println("nodes: " + Nodes.names());
             System.out.println("defaultNodes: " + config.defaultNodes);
             System.out.println("maxClients: " + config.maxClients);
+            System.out.println("retentionHours: " + config.retentionHours);
             return 0;
         }
         State state = State.load();
         state.prune();
+        if (args.command.equals("clean")) {
+            Cleanup.run(Double.parseDouble(args.get("older-than", Double.toString(config.retentionHours))), state);
+            return 0;
+        }
+        if (config.retentionHours > 0 && List.of("up", "restart", "run").contains(args.command)) {
+            Cleanup.run(config.retentionHours, state);
+        }
         switch (args.command) {
             case "up": return up(args, state);
             case "down": return down(args, state);
@@ -120,7 +133,7 @@ public final class Main {
 
     private static Launcher.Options options(Args args) {
         Launcher.Options o = new Launcher.Options();
-        o.build = !args.flag("no-build");
+        o.build = args.flag("no-build") ? "never" : args.flag("rebuild") ? "always" : "auto";
         o.sodium = !args.flag("no-sodium");
         o.show = args.flag("show");
         o.heap = args.get("heap", o.heap);
@@ -132,56 +145,146 @@ public final class Main {
         return o;
     }
 
+    /**
+     * Starts the requested clients. One Gradle run captures every launch that needs rebuilding (none
+     * when the inputs are unchanged); it runs in the background and each client is launched the moment
+     * its own spec lands, so a client boots while Gradle still builds the next node. All clients then
+     * reach their world in parallel.
+     */
     private static int up(Args args, State state) throws IOException {
-        List<Nodes.Node> nodes = args.has("nodes") ? Nodes.parse(args.get("nodes", "")) : Nodes.parse(String.join(",", Nodes.defaultUp()));
+        List<Nodes.Node> requested = args.has("nodes") ? Nodes.parse(args.get("nodes", "")) : Nodes.parse(String.join(",", Nodes.defaultUp()));
         int max = Integer.parseInt(args.get("max-clients", Integer.toString(Config.get().maxClients)));
         Launcher.Options options = options(args);
-        int failures = 0;
-        for (Nodes.Node node : nodes) {
+        List<Nodes.Node> nodes = new ArrayList<>();
+        for (Nodes.Node node : requested) {
             if (state.get(node.name()).map(State.Live::alive).orElse(false)) {
                 System.out.println("[harness] " + node.name() + ": already up on port " + node.port());
-                continue;
-            }
-            long live = state.all().values().stream().filter(State.Live::alive).count();
-            if (live >= max) {
-                throw new HarnessException("refusing to start " + node.name() + ": " + live + " clients already up (--max-clients " + max + "). Run `harness down` first.");
-            }
-            Path log = Paths.out().resolve("gradle").resolve(node.name() + "-" + Launcher.stamp() + ".log");
-            try {
-                LaunchSpec spec = Launcher.spec(node, options.build, log);
-                Launcher.prepareRunDir(node, options);
-                boolean worldExists = World.exists(node, options.world);
-                Path clientLog = Paths.out().resolve("clients").resolve(node.name() + "-" + Launcher.stamp() + ".log");
-                Files.createDirectories(clientLog.getParent());
-                System.out.println("[harness] " + node.name() + ": launching (heap " + options.heap + ", port " + node.port()
-                        + (worldExists ? ", quick play '" + options.world + "'" : ", no world yet") + ")");
-                Process process = Launcher.launch(node, spec, options, clientLog, worldExists);
-                state.put(new State.Live(node.name(), process.pid(), node.port(), Paths.runDir(node).toString(),
-                        clientLog.toString(), options.world, System.currentTimeMillis()));
-                try {
-                    Launcher.waitReady(node, process, options, worldExists);
-                } catch (HarnessException e) {
-                    System.err.println("[harness] " + node.name() + ": " + e.getMessage());
-                    System.err.println(Gradle.tail(clientLog, 40));
-                    if (process.isAlive()) process.destroyForcibly();
-                    state.remove(node.name());
-                    failures++;
-                    continue;
-                }
-                if (!worldExists) {
-                    // First boot created the world; the client must leave it for a clean copy of the save.
-                    try (Client client = Client.connect(node.name(), node.port())) {
-                        client.leaveWorld(60_000L);
-                        World.snapshot(node, options.world);
-                        client.joinWorld(options.world, 180_000L);
-                    }
-                }
-            } catch (HarnessException e) {
-                System.err.println("[harness] " + node.name() + ": " + e.getMessage());
-                failures++;
+            } else if (!nodes.contains(node)) {
+                nodes.add(node);
             }
         }
+        if (nodes.isEmpty()) return 0;
+        long live = state.all().values().stream().filter(State.Live::alive).count();
+        if (live + nodes.size() > max) {
+            throw new HarnessException("refusing to start " + Nodes.namesOf(nodes) + ": " + live + " client(s) already up and --max-clients is "
+                    + max + ". Run `harness down` first.");
+        }
+
+        List<Nodes.Node> build = new ArrayList<>();
+        for (Nodes.Node node : nodes) {
+            boolean needed = switch (options.build) {
+                case "always" -> true;
+                case "never" -> !Files.exists(Paths.specFile(node));
+                default -> !Launcher.specCurrent(node);
+            };
+            if (needed) build.add(node);
+            else System.out.println("[harness] " + node.name() + ": build inputs unchanged since the last capture, skipping Gradle"
+                    + (options.build.equals("never") ? "" : " (--rebuild forces it)"));
+        }
+        Path gradleLog = Paths.out().resolve("gradle").resolve(String.join("+", Nodes.namesOf(build)) + "-" + Launcher.stamp() + ".log");
+        Launcher.Capture capture = null;
+        if (!build.isEmpty()) {
+            try {
+                capture = Launcher.Capture.start(build, gradleLog);
+            } catch (HarnessException e) {
+                System.err.println("[harness] " + e.getMessage());
+                return 1;
+            }
+        }
+
+        int failures = 0;
+        List<Thread> waiters = new ArrayList<>();
+        int[] waitFailures = {0};
+        // Launch in whichever order Gradle finishes the captures, not the order the nodes were named.
+        List<Nodes.Node> pending = new ArrayList<>(nodes);
+        while (!pending.isEmpty()) {
+            Nodes.Node node = null;
+            for (Nodes.Node candidate : pending) {
+                try {
+                    if (capture == null || !build.contains(candidate) || capture.ready(candidate)) {
+                        node = candidate;
+                        break;
+                    }
+                } catch (HarnessException e) {
+                    System.err.println("[harness] " + candidate.name() + ": " + e.getMessage());
+                    pending.remove(candidate);
+                    failures++;
+                    break;
+                }
+            }
+            if (node == null) {
+                if (!pending.isEmpty()) Launcher.sleep(250);
+                continue;
+            }
+            pending.remove(node);
+            launchOne(node, options, state, waiters, waitFailures);
+        }
+        for (Thread waiter : waiters) {
+            try {
+                waiter.join();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+        if (capture != null) capture.join();
+        synchronized (waitFailures) {
+            failures += waitFailures[0];
+        }
         return failures == 0 ? 0 : 1;
+    }
+
+    /** Launches one client from its captured spec and starts a thread that waits for it to reach its world. */
+    private static void launchOne(Nodes.Node node, Launcher.Options options, State state, List<Thread> waiters, int[] waitFailures) {
+        try {
+            LaunchSpec spec = LaunchSpec.read(Paths.specFile(node));
+            Launcher.prepareRunDir(node, options);
+            boolean worldExists = World.exists(node, options.world);
+            Path clientLog = Paths.out().resolve("clients").resolve(node.name() + "-" + Launcher.stamp() + ".log");
+            Files.createDirectories(clientLog.getParent());
+            System.out.println("[harness] " + node.name() + ": launching (heap " + options.heap + ", port " + node.port()
+                    + (worldExists ? ", quick play '" + options.world + "'" : ", no world yet") + ")");
+            Process process = Launcher.launch(node, spec, options, clientLog, worldExists);
+            state.put(new State.Live(node.name(), process.pid(), node.port(), Paths.runDir(node).toString(),
+                    clientLog.toString(), options.world, System.currentTimeMillis()));
+            Thread waiter = new Thread(() -> {
+                if (!awaitClient(node, process, options, worldExists, clientLog, state)) {
+                    synchronized (waitFailures) {
+                        waitFailures[0]++;
+                    }
+                }
+            }, "harness-up-" + node.name());
+            waiter.start();
+            waiters.add(waiter);
+        } catch (HarnessException | IOException e) {
+            System.err.println("[harness] " + node.name() + ": " + e.getMessage());
+            synchronized (waitFailures) {
+                waitFailures[0]++;
+            }
+        }
+    }
+
+    /** Waits for one launched client to reach its world (taking the first snapshot if it made the world). */
+    private static boolean awaitClient(Nodes.Node node, Process process, Launcher.Options options, boolean worldExists, Path clientLog, State state) {
+        try {
+            Launcher.waitReady(node, process, options, worldExists);
+        } catch (HarnessException e) {
+            System.err.println("[harness] " + node.name() + ": " + e.getMessage() + "\n" + Gradle.tail(clientLog, 40));
+            if (process.isAlive()) process.destroyForcibly();
+            state.remove(node.name());
+            return false;
+        }
+        if (!worldExists) {
+            // First boot created the world; the client must leave it for a clean copy of the save.
+            try (Client client = Client.connect(node.name(), node.port())) {
+                client.leaveWorld(60_000L);
+                World.snapshot(node, options.world);
+                client.joinWorld(options.world, 180_000L);
+            } catch (HarnessException | IOException e) {
+                System.err.println("[harness] " + node.name() + ": first world snapshot failed: " + e.getMessage());
+                return false;
+            }
+        }
+        return true;
     }
 
     private static int down(Args args, State state) {
@@ -391,7 +494,7 @@ public final class Main {
         final String command;
         final Map<String, String> options = new LinkedHashMap<>();
         final List<String> positional = new ArrayList<>();
-        private static final List<String> FLAGS = List.of("no-build", "no-sodium", "show", "all", "echo", "verbose");
+        private static final List<String> FLAGS = List.of("no-build", "rebuild", "no-sodium", "show", "all", "echo", "verbose");
 
         private Args(String command) {
             this.command = command;

@@ -9,9 +9,15 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.nio.file.FileVisitResult;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Stream;
 
 /** Builds the launch spec, prepares the run directory, starts the JVM and waits for the listener. */
@@ -19,7 +25,8 @@ public final class Launcher {
 
     /** Options for one {@code up}. */
     public static final class Options {
-        public boolean build = true;
+        /** "auto" (rebuild only when an input is newer than the spec), "always" or "never". */
+        public String build = "auto";
         public boolean sodium = true;
         public boolean show = false;
         public String heap = "2G";
@@ -40,25 +47,158 @@ public final class Launcher {
         return LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
     }
 
-    /** Captures (or reuses) the launch spec for a node. */
+    /** Captures (or reuses) the launch spec for one node. */
     public static LaunchSpec spec(Nodes.Node node, boolean build, Path log) throws IOException {
-        Path file = Paths.specFile(node);
-        if (build || !Files.exists(file)) {
-            if (node.fabric()) {
+        if (build || !Files.exists(Paths.specFile(node))) {
+            Capture capture = Capture.start(List.of(node), log);
+            capture.await(node);
+            capture.join();
+        }
+        return LaunchSpec.read(Paths.specFile(node));
+    }
+
+    /**
+     * One Gradle run that captures the launch spec of several nodes. Gradle pays its JVM start and
+     * configuration once instead of once per node, and runs in the background so the caller can
+     * launch each client the moment its spec lands ({@link #await}) while the next node still builds.
+     * Fabric nodes first build Golem Core (synchronously, one invocation for all of them).
+     */
+    public static final class Capture {
+        private final Map<String, Long> before = new HashMap<>();
+        private final Path log;
+        private final Thread thread;
+        private volatile Integer exitCode;
+
+        private Capture(List<Nodes.Node> nodes, Path log) {
+            this.log = log;
+            for (Nodes.Node node : nodes) before.put(node.name(), modified(Paths.specFile(node)));
+            List<String> args = new ArrayList<>();
+            for (Nodes.Node node : nodes) args.add(":" + node.name() + ":runClient");
+            String pattern = Paths.mod().resolve("versions").resolve("{node}").resolve("build").resolve("harness")
+                    .resolve("spec.json").toAbsolutePath().toString();
+            args.add("-Pharness.spec=" + pattern);
+            args.add("-q");
+            thread = new Thread(() -> {
+                try {
+                    exitCode = Gradle.run(Paths.mod(), log, args.toArray(String[]::new));
+                } catch (RuntimeException e) {
+                    System.err.println("[harness] " + e.getMessage());
+                    exitCode = -1;
+                }
+            }, "harness-capture");
+            thread.setDaemon(true);
+        }
+
+        public static Capture start(List<Nodes.Node> nodes, Path log) {
+            List<Nodes.Node> fabric = nodes.stream().filter(Nodes.Node::fabric).toList();
+            if (!fabric.isEmpty()) {
                 // Loom refuses to remap a Golem Core jar older than its sources; build it first. `build`,
                 // not `jar`: Loom's `jar` writes a dev jar under devlibs, and the guard (and the composite
                 // build) look at the remapped jar under libs.
-                System.out.println("[harness] " + node.name() + ": building Golem Core");
-                int code = Gradle.run(Paths.golemCore(), log, ":" + node.name() + ":build", "-x", "test", "-q");
-                if (code != 0) throw new HarnessException("Golem Core build failed for " + node.name() + "; see " + log);
+                System.out.println("[harness] building Golem Core for " + Nodes.namesOf(fabric));
+                List<String> args = new ArrayList<>();
+                for (Nodes.Node node : fabric) args.add(":" + node.name() + ":build");
+                args.addAll(List.of("-x", "test", "-q"));
+                int code = Gradle.run(Paths.golemCore(), log, args.toArray(String[]::new));
+                if (code != 0) throw new HarnessException("Golem Core build failed for " + Nodes.namesOf(fabric) + "; see " + log);
             }
-            System.out.println("[harness] " + node.name() + ": building and capturing the client launch");
-            int code = Gradle.run(Paths.mod(), log, ":" + node.name() + ":runClient",
-                    "-Pharness.spec=" + file.toAbsolutePath(), "-q");
-            if (code != 0) throw new HarnessException("launch capture failed for " + node.name() + "; see " + log);
-            if (!Files.exists(file)) throw new HarnessException("gradle finished but wrote no spec at " + file);
+            System.out.println("[harness] building and capturing the client launch of " + Nodes.namesOf(nodes) + " (one Gradle run)");
+            Capture capture = new Capture(nodes, log);
+            capture.thread.start();
+            return capture;
         }
-        return LaunchSpec.read(file);
+
+        /** Blocks until this node's spec has been rewritten by this run; throws if the run ended without it. */
+        public void await(Nodes.Node node) {
+            while (!ready(node)) sleep(250);
+        }
+
+        /** True once this run has rewritten the node's spec; throws if the run ended without it. */
+        public boolean ready(Nodes.Node node) {
+            // Read the exit code before the file: a spec written just before Gradle exits is still seen.
+            Integer code = exitCode;
+            Path file = Paths.specFile(node);
+            if (modified(file) != before.getOrDefault(node.name(), -1L)) return true;
+            if (code != null) {
+                throw new HarnessException(code != 0 ? "launch capture failed for " + node.name() + "; see " + log
+                        : "gradle finished but wrote no spec at " + file);
+            }
+            return false;
+        }
+
+        /** Waits for the Gradle run itself to end. */
+        public void join() {
+            try {
+                thread.join();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        private static long modified(Path file) {
+            try {
+                return Files.exists(file) ? Files.getLastModifiedTime(file).toMillis() : -1L;
+            } catch (IOException e) {
+                return -1L;
+            }
+        }
+    }
+
+    /**
+     * True when no build input of the node is newer than its captured spec, so Gradle would only
+     * confirm that everything is up to date (half a minute or more of JVM start and configuration).
+     * Inputs are both projects' {@code src}, {@code gradle} and top-level build files plus the node's
+     * own {@code versions/<node>} folder (outputs, run directories and logs excluded). Stonecutter 0.9
+     * generates each node into its own build directory, so building another node does not touch
+     * {@code src} and does not defeat this check.
+     */
+    public static boolean specCurrent(Nodes.Node node) {
+        Path spec = Paths.specFile(node);
+        if (!Files.exists(spec)) return false;
+        try {
+            long specTime = Files.getLastModifiedTime(spec).toMillis();
+            for (Path project : List.of(Paths.mod(), Paths.golemCore())) {
+                if (newerThan(project.resolve("src"), specTime) || newerThan(project.resolve("gradle"), specTime)
+                        || newerThan(project.resolve("versions").resolve(node.name()), specTime)) {
+                    return false;
+                }
+                try (Stream<Path> top = Files.list(project)) {
+                    for (Path file : top.toList()) {
+                        String name = file.getFileName().toString();
+                        if ((name.endsWith(".kts") || name.endsWith(".properties")) && Files.getLastModifiedTime(file).toMillis() > specTime) {
+                            return false;
+                        }
+                    }
+                }
+            }
+            return true;
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
+    private static final Set<String> SKIPPED_DIRS = Set.of("build", "runs", "logs", ".gradle", "run");
+
+    private static boolean newerThan(Path root, long time) throws IOException {
+        if (!Files.exists(root)) return false;
+        boolean[] found = {false};
+        Files.walkFileTree(root, new SimpleFileVisitor<>() {
+            @Override
+            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
+                if (!dir.equals(root) && SKIPPED_DIRS.contains(dir.getFileName().toString())) return FileVisitResult.SKIP_SUBTREE;
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+                if (attrs.lastModifiedTime().toMillis() > time) {
+                    found[0] = true;
+                    return FileVisitResult.TERMINATE;
+                }
+                return FileVisitResult.CONTINUE;
+            }
+        });
+        return found[0];
     }
 
     /** Mirrors the dev client run directory into {@code runs/harness} and writes the harness options. */
@@ -199,7 +339,7 @@ public final class Launcher {
                 client.ping();
             } catch (RuntimeException e) {
                 client = null;
-                sleep(2000);
+                sleep(500);
             }
         }
         try (Client ready = client) {
@@ -216,7 +356,7 @@ public final class Launcher {
                     // Starting the integrated server can occupy the render thread longer than one
                     // status request's deadline. The launch still has its own bounded readiness budget.
                     if (!e.getMessage().contains("client thread did not answer in time")) throw e;
-                    sleep(1000);
+                    sleep(500);
                     continue;
                 }
                 boolean overlay = !status.get("overlay").isJsonNull();
@@ -224,7 +364,7 @@ public final class Launcher {
                 if (!overlay && (screen || status.get("in_world").getAsBoolean())) break;
                 if (!process.isAlive()) throw new HarnessException(node.name() + " exited during startup");
                 if (System.currentTimeMillis() > deadline) throw new HarnessException(node.name() + " never left the loading overlay");
-                sleep(1000);
+                sleep(500);
             }
             if (!worldExists) {
                 boolean seeded = "seeded".equals(options.worldType);

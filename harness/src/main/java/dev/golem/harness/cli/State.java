@@ -42,7 +42,7 @@ public final class State {
         return state;
     }
 
-    public void save() {
+    public synchronized void save() {
         JsonObject json = new JsonObject();
         for (Live l : live.values()) {
             JsonObject o = new JsonObject();
@@ -63,26 +63,27 @@ public final class State {
     }
 
     /** Drops entries whose process has died. Returns true when anything was removed. */
-    public boolean prune() {
+    public synchronized boolean prune() {
         boolean changed = live.entrySet().removeIf(e -> !e.getValue().alive());
         if (changed) save();
         return changed;
     }
 
-    public Map<String, Live> all() {
-        return live;
+    /** A snapshot: {@code up} adds and removes entries from several threads while it waits for clients. */
+    public synchronized Map<String, Live> all() {
+        return new LinkedHashMap<>(live);
     }
 
-    public Optional<Live> get(String node) {
+    public synchronized Optional<Live> get(String node) {
         return Optional.ofNullable(live.get(node));
     }
 
-    public void put(Live l) {
+    public synchronized void put(Live l) {
         live.put(l.node(), l);
         save();
     }
 
-    public void remove(String node) {
+    public synchronized void remove(String node) {
         live.remove(node);
         save();
     }

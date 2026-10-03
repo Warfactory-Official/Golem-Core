@@ -98,6 +98,7 @@ The CLI finds `harness.json` by walking up from the working directory, so run it
      "world": "harness",
      "defaultNodes": ["1.21.1-neoforge", "1.21.1-fabric"],
      "maxClients": 2,
+     "retentionHours": 10,
      "nodes": [
        {"name": "26.1-neoforge", "minecraft": "26.1", "loader": "neoforge", "port": 47601, "packFormat": 84, "java": 25}
      ]
@@ -105,6 +106,8 @@ The CLI finds `harness.json` by walking up from the working directory, so run it
    ```
 
    Give every node a distinct `port`. `optionsTemplate` (optional) replaces the bundled `options.txt`.
+   `retentionHours` (default 10, `0` keeps everything) is how long run folders, ad-hoc screenshots and logs
+   under `out` are kept (see Disk use).
 
 3. Ignore `harness/out/` and `.harness/` in the mod's `.gitignore`.
 
@@ -121,13 +124,14 @@ The CLI finds `harness.json` by walking up from the working directory, so run it
 ## Commands
 
 ```bash
-harness up [--nodes a,b] [--no-build] [--no-sodium] [--show] [--heap 2G] [--world harness] [--world-type seeded]
+harness up [--nodes a,b] [--rebuild | --no-build] [--no-sodium] [--show] [--heap 2G] [--world harness] [--world-type seeded]
 harness down [--nodes a,b | --all]
 harness restart [--nodes a,b]            # down + up, same options as up
 harness status                           # live clients: in world, screen, fps, heap
 harness logs --node N                    # tail of the client log
 harness run <Scenario.java> [--nodes a,b] [--label name] [--echo]
 harness world snapshot|reset|create --node N [--world name] [--world-type seeded]
+harness clean [--older-than <hours>]     # delete old runs/screenshots/logs now (0 = everything)
 harness config                           # print the resolved harness.json
 harness help                             # everything
 ```
@@ -135,11 +139,29 @@ harness help                             # everything
 | `up` option | Effect |
 |---|---|
 | `--nodes a,b` | Any two nodes declared in `harness.json` (default: `defaultNodes`) |
-| `--no-build` | Skip Gradle and reuse the captured launch (only when nothing changed) |
+| (default) | Run Gradle only for nodes whose build inputs changed since their last captured launch |
+| `--rebuild` | Always run Gradle, even when no input looks newer than the captured launch |
+| `--no-build` | Never run Gradle; reuse the captured launch even if sources changed |
 | `--no-sodium` | Leave out Sodium/Embeddium (and Indium) |
 | `--show` | Keep the windows visible (still unfocused) |
 | `--heap 1500M` | Change the heap per client |
 | `--world-type seeded` | Use the seeded normal world (see Worlds) |
+
+How `up` saves time:
+
+- **Gradle is skipped when nothing changed.** A node's launch spec (`versions/<node>/build/harness/spec.json`)
+  is reused when no file in either project's `src/`, `gradle/`, top-level `*.kts`/`*.properties` or the
+  node's `versions/<node>/` folder (minus `build`, `runs`, `logs`) is newer than it. This is a timestamp
+  check, so a touched-but-unchanged file still rebuilds; something it cannot see (a changed dependency in
+  the Gradle cache, a file outside those folders) needs `--rebuild`.
+- **One Gradle run for all nodes.** When nodes do need building, one invocation captures every one of them
+  (`-Pharness.spec=.../{node}/...`), so Gradle starts and configures once rather than once per node. Fabric
+  nodes build Golem Core first, also in one invocation.
+- **Clients boot while Gradle is still working.** Each client launches the moment its own spec is written
+  (in whatever order Gradle finishes them), and all clients wait for their world in parallel.
+
+Measured on the 1.21.1 pair (2026-10-03): nothing changed **47 s** to both in world; one touched source
+file **1 min 48 s** (both nodes recompiled).
 
 Driving one client from the shell (`--node` may be left out when only one client is up):
 
@@ -226,6 +248,7 @@ every assertion and were visible only in the PNG.
 |---|---|
 | `no harness.json found` | Run the CLI from inside the mod folder, or pass `--config <file>` / set `HARNESS_CONFIG`. |
 | JSON arguments break on Windows | Use `./harness` from Git Bash, not `harness.cmd`. |
+| `up` reused a launch although something changed | The freshness check only looks at timestamps in `src/`, `gradle/`, build files and `versions/<node>/`. Run `up --rebuild`. |
 | `up` hangs at "building and capturing the client launch" | The capture fell through to a real client. Build the node by hand, then `up --no-build` to reuse `versions/<node>/build/harness/spec.json`. |
 | A Fabric node fails with a stale Golem Core jar | Golem Core sources are newer than its remapped jar. `up` builds Golem Core first; if you build by hand run `../Golem-Core/gradlew chiseledBuild`. Uncommitted broken Golem Core sources stop every Fabric node. |
 | A Gradle build fails while clients are up | Configuring a Fabric node re-remaps the Golem Core jar a running client holds open. Use `--configure-on-demand` (the CLI does) or `harness down` first. |
@@ -240,3 +263,18 @@ every assertion and were visible only in the PNG.
 - Minimized windows still render. On 26.1 the idle FPS limit is `afk` (30 fps after a minute without
   physical input); screenshots are unaffected.
 - Two clients use about 2 GB of working set each.
+
+## Disk use
+
+Screenshots are full-size PNGs and add up quickly (a busy day of runs is several gigabytes). `up`, `restart`
+and `run` therefore first delete harness output older than `retentionHours` (`harness.json`, default 10):
+
+- run folders under `out/runs/`, aged by the `yyyyMMdd-HHmmss` stamp in their name;
+- files under `out/adhoc/`, `out/clients/` and `out/gradle/`, aged by modification time (the log of a client
+  that is still up is kept).
+
+Nothing else in `out` is touched, so a tool's own folder there (HBM's `icon-audit`) stays. A line such as
+`[harness] cleanup: removed 267 run folder(s) and 505 other file(s) older than 10 h, freed 2971.8 MB` says
+what went. Keep a run you need by copying its folder out of `out/runs` first. `harness clean` does the same
+on demand, `--older-than 2` with another age, `--older-than 0` empties it; `"retentionHours": 0` turns the
+automatic cleanup off.
