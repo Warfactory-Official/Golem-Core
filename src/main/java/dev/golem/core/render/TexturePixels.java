@@ -14,8 +14,9 @@ import net.minecraft.resources.Identifier;
 
 /**
  * A texture's pixels on the CPU, for code that sampled a texture in an old vertex shader and now does that arithmetic
- * itself ({@code texture2DLod(noise, uv, 0)} on a {@code GL_NEAREST}, {@code GL_REPEAT} texture is exactly
- * {@link #sampleNearestRepeat}).
+ * itself ({@code texture2DLod(noise, uv, 0)} on a {@code GL_REPEAT} texture is exactly {@link #sampleNearestRepeat}
+ * when its magnification filter is {@code GL_NEAREST} and {@link #sampleLinearRepeat} when it is {@code GL_LINEAR}: an
+ * explicit level of detail 0 selects the magnification filter).
  *
  * <p>{@code NativeImage} keeps ABGR in memory below 26.1 and hands out ARGB from 26.1; this class always answers ARGB.
  * Client-only.
@@ -72,5 +73,30 @@ public final class TexturePixels {
         int x = Math.floorMod((int) Math.floor(u * width), width);
         int y = Math.floorMod((int) Math.floor(v * height), height);
         return argb[y * width + x];
+    }
+
+    /**
+     * The colour at {@code (u, v)} with bilinear filtering and repeat wrapping (OpenGL's {@code GL_LINEAR} on level 0:
+     * texel centres at half-integers), each channel in {@code 0..1}, as {@code {a, r, g, b}}.
+     */
+    public float[] sampleLinearRepeat(float u, float v) {
+        float x = u * width - 0.5F;
+        float y = v * height - 0.5F;
+        int x0 = (int) Math.floor(x);
+        int y0 = (int) Math.floor(y);
+        float fx = x - x0;
+        float fy = y - y0;
+        float[] out = new float[4];
+        for (int j = 0; j < 2; j++) {
+            for (int i = 0; i < 2; i++) {
+                float w = (i == 0 ? 1 - fx : fx) * (j == 0 ? 1 - fy : fy);
+                int c = argb[Math.floorMod(y0 + j, height) * width + Math.floorMod(x0 + i, width)];
+                out[0] += w * ((c >>> 24) & 0xFF) / 255F;
+                out[1] += w * ((c >> 16) & 0xFF) / 255F;
+                out[2] += w * ((c >> 8) & 0xFF) / 255F;
+                out[3] += w * (c & 0xFF) / 255F;
+            }
+        }
+        return out;
     }
 }

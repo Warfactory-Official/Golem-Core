@@ -197,8 +197,7 @@ public final class HeatDistortionRenderType {
                             () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR))
                     .withTexture("Sampler1", mask,
                             () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR))
-                    .withTexture("Sampler2", noise,
-                            () -> RenderSystem.getSamplerCache().getRepeat(FilterMode.LINEAR))
+                    .withTexture("Sampler2", noise, NoiseTextures::sampler)
                     .createRenderSetup());
         }
     }
@@ -385,6 +384,8 @@ public final class HeatDistortionRenderType {
                 Minecraft minecraft = Minecraft.getInstance();
                 RenderSystem.setShaderTexture(0, SceneCopy.textureId());
                 RenderSystem.setShaderTexture(1, minecraft.getTextureManager().getTexture(mask).getId());
+                // the noise as 1.12 sampled it: repeat, nearest minification, linear magnification
+                NoiseTextures.apply(minecraft.getTextureManager().getTexture(noise));
                 RenderSystem.setShaderTexture(2, minecraft.getTextureManager().getTexture(noise).getId());
                 shader().safeGetUniform("windowSize").set((float) minecraft.getWindow().getWidth(),
                         (float) minecraft.getWindow().getHeight());

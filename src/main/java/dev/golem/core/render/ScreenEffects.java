@@ -32,6 +32,7 @@ public final class ScreenEffects {
     public static void init() {
         if (initialized) return;
         initialized = true;
+        dev.golem.core.harness.HarnessQueryRegistry.register("golem_screen_effects", (mc, params) -> query());
         dev.golem.core.client.ClientResourceReloads.register("golemcore", "screen_effects", () -> {
             //? if <26.1 {
             /*Programs.reset();
@@ -51,13 +52,44 @@ public final class ScreenEffects {
     }
 
     private static final java.util.Set<String> REPORTED = new java.util.HashSet<>();
+    /** Composites per effect since client start, and the layer size of the last one (the harness query's state). */
+    private static final java.util.Map<String, long[]> COMPOSITES = new java.util.TreeMap<>();
 
-    /** Logs the first composite of each effect: the positive signal that the layer was drawn and applied. */
+    /**
+     * Counts every composite and logs the first of each effect: the positive signal that the layer was drawn and
+     * applied. The log line is once per session; the count, read through the {@code golem_screen_effects} harness
+     * query, is valid at any time.
+     */
     static void report(String effect, RenderTarget layer) {
+        long[] state = COMPOSITES.computeIfAbsent(effect, key -> new long[3]);
+        state[0]++;
+        state[1] = layer.width;
+        state[2] = layer.height;
         if (REPORTED.add(effect)) {
             dev.golem.core.GolemCore.LOG.info("Screen effect composited after the hand: {} ({}x{})", effect,
                     layer.width, layer.height);
         }
+    }
+
+    /**
+     * Harness query {@code golem_screen_effects}: per effect, the composites so far and the last layer size, and the
+     * bloom chain's screen and level sizes. Read-only.
+     */
+    private static com.google.gson.JsonObject query() {
+        com.google.gson.JsonObject json = new com.google.gson.JsonObject();
+        json.addProperty("ok", true);
+        for (var entry : COMPOSITES.entrySet()) {
+            com.google.gson.JsonObject effect = new com.google.gson.JsonObject();
+            effect.addProperty("composites", entry.getValue()[0]);
+            effect.addProperty("width", entry.getValue()[1]);
+            effect.addProperty("height", entry.getValue()[2]);
+            json.add(entry.getKey(), effect);
+        }
+        int[] chain = Bloom.chain();
+        com.google.gson.JsonArray levels = new com.google.gson.JsonArray();
+        for (int i = 0; i < chain.length; i++) levels.add(chain[i]);
+        json.add("bloom_chain", levels);
+        return json;
     }
 
     static float wallClockSeconds() {
@@ -211,6 +243,39 @@ public final class ScreenEffects {
         clearColor(target);
         return target;
     }
+
+    /^*
+     * {@code type} as a layer render type. 1.20.1's {@code RenderType.end} sets the state up (which binds the layer
+     * and marks it used) for any batch that was begun, even one with no vertices; 1.21 discards an empty batch first,
+     * and 26.1 never draws one. A fully clipped blade (the spent crucible) submits exactly such a batch, so on 1.20.1
+     * the whole bloom chain ran every frame over an empty layer. The empty batch is discarded here as 1.21 does.
+     ^/
+    static net.minecraft.client.renderer.RenderType skipEmpty(net.minecraft.client.renderer.RenderType type,
+                                                            boolean sortOnUpload) {
+        //? if >=1.21 {
+        return type;
+        //?} else {
+        /^return new SkipEmpty(type, sortOnUpload);
+        ^///?}
+    }
+
+    //? if <1.21 {
+    /^private static final class SkipEmpty extends net.minecraft.client.renderer.RenderType {
+        SkipEmpty(net.minecraft.client.renderer.RenderType type, boolean sortOnUpload) {
+            super(type.toString(), type.format(), type.mode(), type.bufferSize(), type.affectsCrumbling(), sortOnUpload,
+                    type::setupRenderState, type::clearRenderState);
+        }
+
+        @Override
+        public void end(com.mojang.blaze3d.vertex.BufferBuilder buffer, com.mojang.blaze3d.vertex.VertexSorting sorting) {
+            if (buffer.building() && buffer.isCurrentBatchEmpty()) {
+                buffer.endOrDiscardIfEmpty();
+                return;
+            }
+            super.end(buffer, sorting);
+        }
+    }
+    ^///?}
 
     /^* Clears a target's colour to transparent black, leaving the bound framebuffer and clear colour as they were. ^/
     static void clearColor(RenderTarget target) {

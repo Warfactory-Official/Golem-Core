@@ -31,13 +31,21 @@ import java.util.function.Function;
  * HBM 1.12's bloom: geometry drawn into a full-size layer during the hand pass, then blurred through a four-level
  * chain and added over the frame by {@link ScreenEffects#afterHand()}.
  *
- * <p>The chain is {@code HbmShaderManager2.bloom()} pass for pass. Level sizes are {@code W}, {@code W/4},
- * {@code W/16}, {@code W/32} (1.12 multiplied by 0.25 twice, then 0.5). The layer is box-downsampled into level 0
- * and each level from the previous one; then from the smallest level up, each level is blurred horizontally and
- * vertically, the vertical result combined into the next-larger level by maximum, and level 0's vertical result
- * added (ONE / ONE, alpha untouched) over the frame. The only restatement is the maximum: 1.12 blended it with
- * {@code GL_MAX} into the destination level; 26.1 has no blend-equation control, so every era reads the
- * destination in the shader and writes the maximum into that level's spare target, swapping the two.
+ * <p>The chain is {@code HbmShaderManager2.bloom()} pass for pass, with one deliberate change: level 0 is half the
+ * screen size (user decision 2026-10-03, for the GPU cost; 1.12 ran it at full size). Level sizes are {@code W/2},
+ * {@code W/4}, {@code W/16}, {@code W/32} (levels 1..3 are 1.12's: it multiplied by 0.25 twice, then 0.5). The layer
+ * is box-downsampled into level 0 and each level from the previous one; then from the smallest level up, each level
+ * is blurred horizontally and vertically, the vertical result combined into the next-larger level by maximum, and
+ * level 0's result added (ONE / ONE, alpha untouched) over the frame.
+ *
+ * <p>The half-size level 0 keeps 1.12's on-screen kernel: its blurs step half a texel (one screen pixel, as at full
+ * size), and level 1 is taken from it with a 2x2 average, so level 1 keeps its 4x4 screen-pixel footprint. Level 0 is
+ * blurred both ways at half size and the composite samples it once, bilinearly, per screen pixel. What is lost is
+ * detail finer than two screen pixels in the innermost glow; brightness is conserved (every kernel sums to 1).
+ *
+ * <p>The other restatement is the maximum: 1.12 blended it with {@code GL_MAX} into the destination level; 26.1 has
+ * no blend-equation control, so every era reads the destination in the shader and writes the maximum into that
+ * level's spare target, swapping the two.
  */
 public final class Bloom {
 
@@ -76,9 +84,12 @@ public final class Bloom {
                     .createRenderSetup()));
 
     private static final RenderPipeline DOWNSAMPLE = ScreenEffects.fullscreenPipeline("screen_downsample", 1, Optional.empty());
+    private static final RenderPipeline DOWNSAMPLE_FINE = ScreenEffects.fullscreenPipeline("screen_downsample_fine", 1, Optional.empty());
     private static final RenderPipeline BLUR_H = ScreenEffects.fullscreenPipeline("screen_blur_h", 1, Optional.empty());
+    private static final RenderPipeline BLUR_H_FINE = ScreenEffects.fullscreenPipeline("screen_blur_h_fine", 1, Optional.empty());
+    private static final RenderPipeline BLUR_V_FINE = ScreenEffects.fullscreenPipeline("screen_blur_v_fine", 1, Optional.empty());
     private static final RenderPipeline BLUR_V_MAX = ScreenEffects.fullscreenPipeline("screen_blur_v_max", 2, Optional.empty());
-    private static final RenderPipeline BLUR_V_ADD = ScreenEffects.fullscreenPipeline("screen_blur_v", 1,
+    private static final RenderPipeline UPSAMPLE_ADD = ScreenEffects.fullscreenPipeline("screen_upsample", 1,
             Optional.of(BlendFunction.ADDITIVE));
 
     private static final com.mojang.blaze3d.pipeline.TextureTarget[] DATA = new com.mojang.blaze3d.pipeline.TextureTarget[LEVELS];
@@ -86,6 +97,7 @@ public final class Bloom {
     private static int chainWidth = -1;
     private static int chainHeight = -1;
 
+    /** (Re)builds the level targets when the screen size changed (a window resize; the GUI scale does not resize them). */
     private static void ensureChain(RenderTarget main) {
         if (chainWidth == main.width && chainHeight == main.height && DATA[0] != null) return;
         for (int level = 0; level < LEVELS; level++) {
@@ -99,6 +111,13 @@ public final class Bloom {
         }
         chainWidth = main.width;
         chainHeight = main.height;
+        logChain(main.width, main.height, sizes);
+    }
+
+    private static void pass(String label, RenderPipeline pipeline, RenderTarget output, RenderTarget source, float time) {
+        var sampler = ScreenEffects.linearClamp();
+        ScreenEffects.fullscreen(label, pipeline, output.getColorTextureView(), time,
+                renderPass -> renderPass.bindTexture("Sampler0", source.getColorTextureView(), sampler));
     }
 
     static void apply() {
@@ -108,32 +127,25 @@ public final class Bloom {
         var sampler = ScreenEffects.linearClamp();
         float time = ScreenEffects.wallClockSeconds();
 
-        RenderTarget layer = LAYER.target();
-        ScreenEffects.fullscreen("Bloom downsample", DOWNSAMPLE, DATA[0].getColorTextureView(), time,
-                pass -> pass.bindTexture("Sampler0", layer.getColorTextureView(), sampler));
-        for (int level = 1; level < LEVELS; level++) {
-            RenderTarget source = DATA[level - 1];
-            ScreenEffects.fullscreen("Bloom downsample", DOWNSAMPLE, DATA[level].getColorTextureView(), time,
-                    pass -> pass.bindTexture("Sampler0", source.getColorTextureView(), sampler));
+        pass("Bloom downsample", DOWNSAMPLE, DATA[0], LAYER.target(), time);
+        pass("Bloom downsample", DOWNSAMPLE_FINE, DATA[1], DATA[0], time);
+        for (int level = 2; level < LEVELS; level++) {
+            pass("Bloom downsample", DOWNSAMPLE, DATA[level], DATA[level - 1], time);
         }
-        for (int level = LEVELS - 1; level >= 0; level--) {
-            RenderTarget data = DATA[level];
+        for (int level = LEVELS - 1; level >= 1; level--) {
             RenderTarget blurred = SPARE[level];
-            ScreenEffects.fullscreen("Bloom blur", BLUR_H, blurred.getColorTextureView(), time,
-                    pass -> pass.bindTexture("Sampler0", data.getColorTextureView(), sampler));
-            if (level == 0) {
-                ScreenEffects.fullscreen("Bloom composite", BLUR_V_ADD, main.getColorTextureView(), time,
-                        pass -> pass.bindTexture("Sampler0", blurred.getColorTextureView(), sampler));
-            } else {
-                RenderTarget destination = DATA[level - 1];
-                RenderTarget combined = SPARE[level - 1];
-                ScreenEffects.fullscreen("Bloom blur", BLUR_V_MAX, combined.getColorTextureView(), time, pass -> {
-                    pass.bindTexture("Sampler0", blurred.getColorTextureView(), sampler);
-                    pass.bindTexture("Sampler1", destination.getColorTextureView(), sampler);
-                });
-                swap(level - 1);
-            }
+            pass("Bloom blur", BLUR_H, blurred, DATA[level], time);
+            RenderTarget destination = DATA[level - 1];
+            RenderTarget combined = SPARE[level - 1];
+            ScreenEffects.fullscreen("Bloom blur", BLUR_V_MAX, combined.getColorTextureView(), time, renderPass -> {
+                renderPass.bindTexture("Sampler0", blurred.getColorTextureView(), sampler);
+                renderPass.bindTexture("Sampler1", destination.getColorTextureView(), sampler);
+            });
+            swap(level - 1);
         }
+        pass("Bloom blur", BLUR_H_FINE, SPARE[0], DATA[0], time);
+        pass("Bloom blur", BLUR_V_FINE, DATA[0], SPARE[0], time);
+        pass("Bloom composite", UPSAMPLE_ADD, main, DATA[0], time);
         ScreenEffects.report("bloom", LAYER.target());
         LAYER.clear();
     }
@@ -176,7 +188,7 @@ public final class Bloom {
                 LAYER::bindForDraw, () -> Minecraft.getInstance().getMainRenderTarget().bindWrite(false));
 
         static RenderType bloom(ResourceLocation texture) {
-            return create("golem_bloom_layer", DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS, 256, false, false,
+            return ScreenEffects.skipEmpty(create("golem_bloom_layer", DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS, 256, false, false,
                     CompositeState.builder()
                             .setShaderState(new ShaderStateShard(Bloom::shader))
                             .setTextureState(new TextureStateShard(texture, false, false))
@@ -185,7 +197,7 @@ public final class Bloom {
                             .setCullState(CULL)
                             .setWriteMaskState(COLOR_WRITE)
                             .setOutputState(OUTPUT)
-                            .createCompositeState(false));
+                            .createCompositeState(false)), false);
         }
     }
 
@@ -194,6 +206,7 @@ public final class Bloom {
     private static int chainWidth = -1;
     private static int chainHeight = -1;
 
+    /^* (Re)builds the level targets when the screen size changed (a window resize; the GUI scale does not resize them). ^/
     private static void ensureChain(RenderTarget main) {
         if (chainWidth == main.width && chainHeight == main.height && DATA[0] != null) return;
         for (int level = 0; level < LEVELS; level++) {
@@ -207,6 +220,7 @@ public final class Bloom {
         }
         chainWidth = main.width;
         chainHeight = main.height;
+        logChain(main.width, main.height, sizes);
     }
 
     static void apply() {
@@ -216,19 +230,19 @@ public final class Bloom {
             ensureChain(main);
             float time = ScreenEffects.wallClockSeconds();
             ScreenEffects.fullscreen("screen_downsample", DATA[0], false, time, LAYER.target().getColorTextureId());
-            for (int level = 1; level < LEVELS; level++) {
+            ScreenEffects.fullscreen("screen_downsample_fine", DATA[1], false, time, DATA[0].getColorTextureId());
+            for (int level = 2; level < LEVELS; level++) {
                 ScreenEffects.fullscreen("screen_downsample", DATA[level], false, time, DATA[level - 1].getColorTextureId());
             }
-            for (int level = LEVELS - 1; level >= 0; level--) {
+            for (int level = LEVELS - 1; level >= 1; level--) {
                 ScreenEffects.fullscreen("screen_blur_h", SPARE[level], false, time, DATA[level].getColorTextureId());
-                if (level == 0) {
-                    ScreenEffects.fullscreen("screen_blur_v", main, true, time, SPARE[0].getColorTextureId());
-                } else {
-                    ScreenEffects.fullscreen("screen_blur_v_max", SPARE[level - 1], false, time,
-                            SPARE[level].getColorTextureId(), DATA[level - 1].getColorTextureId());
-                    swap(level - 1);
-                }
+                ScreenEffects.fullscreen("screen_blur_v_max", SPARE[level - 1], false, time,
+                        SPARE[level].getColorTextureId(), DATA[level - 1].getColorTextureId());
+                swap(level - 1);
             }
+            ScreenEffects.fullscreen("screen_blur_h_fine", SPARE[0], false, time, DATA[0].getColorTextureId());
+            ScreenEffects.fullscreen("screen_blur_v_fine", DATA[0], false, time, SPARE[0].getColorTextureId());
+            ScreenEffects.fullscreen("screen_upsample", main, true, time, DATA[0].getColorTextureId());
             ScreenEffects.report("bloom", LAYER.target());
             LAYER.clear();
         }
@@ -242,7 +256,32 @@ public final class Bloom {
         SPARE[level] = data;
     }
 
-    /** 1.12: {@code bloomW = width}; per level {@code (int) bloomW}, then {@code *= 0.25} for the first two, {@code 0.5} after. */
+    /** The screen size the chain was last built for, then each level's size; empty before the first composite. */
+    static int[] chain() {
+        if (chainWidth < 0) return new int[0];
+        int[][] sizes = levelSizes(chainWidth, chainHeight);
+        int[] out = new int[2 + 2 * LEVELS];
+        out[0] = chainWidth;
+        out[1] = chainHeight;
+        for (int level = 0; level < LEVELS; level++) {
+            out[2 + 2 * level] = sizes[level][0];
+            out[3 + 2 * level] = sizes[level][1];
+        }
+        return out;
+    }
+
+    /** Logs each (re)build of the chain: the positive signal that level 0 is half the screen and follows resizes. */
+    private static void logChain(int width, int height, int[][] sizes) {
+        dev.golem.core.GolemCore.LOG.info("Bloom chain for {}x{}: levels {}x{}, {}x{}, {}x{}, {}x{}", width, height,
+                sizes[0][0], sizes[0][1], sizes[1][0], sizes[1][1], sizes[2][0], sizes[2][1], sizes[3][0], sizes[3][1]);
+    }
+
+    /**
+     * Level 0 is half the screen, rounded up so an odd size loses no column or row (the passes address texels by
+     * normalised coordinates, so the sub-texel stretch this leaves is spread evenly over the screen); levels 1..3 are
+     * 1.12's ({@code bloomW = width}; per level {@code (int) bloomW}, then {@code *= 0.25} for the first two,
+     * {@code 0.5} after).
+     */
     static int[][] levelSizes(int width, int height) {
         int[][] sizes = new int[LEVELS][2];
         float w = width;
@@ -254,6 +293,8 @@ public final class Bloom {
             w *= scale;
             h *= scale;
         }
+        sizes[0][0] = Math.max(1, (width + 1) / 2);
+        sizes[0][1] = Math.max(1, (height + 1) / 2);
         return sizes;
     }
 }

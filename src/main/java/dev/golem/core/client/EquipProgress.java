@@ -38,7 +38,13 @@ public final class EquipProgress {
         return hands().oMainHandHeight;
     }
 
-    /** Sets both ends of the main hand's interpolation, legacy {@code equippedProgress}/{@code prevEquippedProgress}. */
+    /**
+     * Sets both ends of the main hand's interpolation, legacy {@code equippedProgress}/{@code prevEquippedProgress}.
+     *
+     * <p>Written from an item renderer this lands after the frame has read the raise, and the next tick moves it
+     * again, so it cannot hold the hand still against a cooldown: the first frame of every tick still dips. An item
+     * that wants 1.7's undipped raise answers {@link dev.golem.core.world.HeldItemState#compatHoldsRaised} instead.
+     */
     public static void pinMainHand(float current, float previous) {
         ItemInHandRenderer hands = hands();
         hands.mainHandHeight = current;

@@ -103,9 +103,9 @@ public final class ScreenDistortion {
         ScreenEffects.fullscreen("Screen distortion", COMPOSITE, main.getColorTextureView(), ScreenEffects.wallClockSeconds(),
                 pass -> {
                     pass.bindTexture("Sampler0", layer.getColorTextureView(), ScreenEffects.linearClamp());
-                    // noise_2: 1.12 set GL_LINEAR magnification on it; the texture manager's wrap is repeat
-                    pass.bindTexture("Sampler1", noiseTexture.getTextureView(),
-                            RenderSystem.getSamplerCache().getRepeat(FilterMode.LINEAR));
+                    // noise_2 as 1.12 sampled it: repeat, nearest minification (the *3 lookup minifies along a
+                    // 720-pixel axis), linear magnification
+                    pass.bindTexture("Sampler1", noiseTexture.getTextureView(), NoiseTextures.sampler());
                     // the main framebuffer texture is GL_NEAREST in 1.12
                     pass.bindTexture("Sampler2", scene.getColorTextureView(),
                             RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
@@ -153,7 +153,7 @@ public final class ScreenDistortion {
                 LAYER::bindForDraw, () -> Minecraft.getInstance().getMainRenderTarget().bindWrite(false));
 
         static RenderType distortion(ResourceLocation mask) {
-            return create("golem_distortion_layer", DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS, 256, false, false,
+            return ScreenEffects.skipEmpty(create("golem_distortion_layer", DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS, 256, false, false,
                     CompositeState.builder()
                             .setShaderState(new ShaderStateShard(ScreenDistortion::shader))
                             .setTextureState(new TextureStateShard(mask, false, false))
@@ -162,7 +162,7 @@ public final class ScreenDistortion {
                             .setCullState(CULL)
                             .setWriteMaskState(COLOR_WRITE)
                             .setOutputState(OUTPUT)
-                            .createCompositeState(false));
+                            .createCompositeState(false)), false);
         }
     }
 
@@ -182,8 +182,8 @@ public final class ScreenDistortion {
             com.mojang.blaze3d.platform.GlStateManager._glCopyTexSubImage2D(org.lwjgl.opengl.GL11.GL_TEXTURE_2D, 0, 0, 0, 0, 0,
                     main.width, main.height);
             var noiseTexture = Minecraft.getInstance().getTextureManager().getTexture(noise);
-            // noise_2: 1.12 set GL_LINEAR magnification on it; the texture manager's wrap is repeat
-            noiseTexture.setFilter(true, false);
+            // noise_2 as 1.12 sampled it: repeat, nearest minification, linear magnification
+            NoiseTextures.apply(noiseTexture);
             ScreenEffects.fullscreen("screen_distortion", main, false, ScreenEffects.wallClockSeconds(),
                     LAYER.target().getColorTextureId(), noiseTexture.getId(), scene.getColorTextureId());
             ScreenEffects.report("distortion", LAYER.target());

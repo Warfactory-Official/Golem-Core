@@ -34,4 +34,24 @@ public final class ClientTicks {
                 });
         *///?}
     }
+
+    /**
+     * Runs {@code callback} before every client tick: after the input that arrived since the last tick has been
+     * buffered (key clicks counted) and before {@code Minecraft.handleKeybinds} consumes it, so a consumer can take a
+     * click away from vanilla (see {@link AttackInput}).
+     */
+    public static void onStartTick(Runnable callback) {
+        //? if fabric {
+        /*net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.START_CLIENT_TICK.register(
+                client -> callback.run());
+        *///?} elif neoforge {
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.client.event.ClientTickEvent.Pre event) -> callback.run());
+        //?} elif forge {
+        /*net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(
+                (net.minecraftforge.event.TickEvent.ClientTickEvent event) -> {
+                    if (event.phase == net.minecraftforge.event.TickEvent.Phase.START) callback.run();
+                });
+        *///?}
+    }
 }

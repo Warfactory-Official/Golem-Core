@@ -311,7 +311,15 @@ final class HarnessQueries {
                     effects.add(fx);
                 }
                 e.add("effects", effects);
+                // a hit leaves health, hurt time and knockback motion behind (read with server:true)
+                e.addProperty("health", living.getHealth());
+                e.addProperty("max_health", living.getMaxHealth());
+                e.addProperty("hurt_time", living.hurtTime);
             }
+            net.minecraft.world.phys.Vec3 motion = entity.getDeltaMovement();
+            e.addProperty("vx", motion.x);
+            e.addProperty("vy", motion.y);
+            e.addProperty("vz", motion.z);
             list.add(e);
         }
         JsonObject json = Json.ok();

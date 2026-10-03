@@ -259,6 +259,7 @@ public final class Gem {
         private final List<Part<S>> roots = new ArrayList<>();
         private int viewDistance = 64;
         private boolean offScreen;
+        private boolean resident;
         private @Nullable IntOf<S> light;
         private @Nullable IntOf<S> overlay;
         private boolean sealed;
@@ -299,6 +300,21 @@ public final class Gem {
             requireOpen();
             this.offScreen = true;
             return this;
+        }
+
+        /**
+         * Keeps this model's meshes on the GPU for {@link Gem#replay}: each part is uploaded once and drawn with
+         * the frame's pose instead of being written vertex by vertex every frame. The picture is the immediate
+         * draw's; see {@link dev.golem.core.render.StaticMeshes} for what that means and when it falls back.
+         */
+        public Model<S> resident() {
+            requireOpen();
+            this.resident = true;
+            return this;
+        }
+
+        public boolean isResident() {
+            return resident;
         }
 
         /** The light every part uses unless it overrides it. Defaults to the light the engine sampled. */
@@ -787,8 +803,13 @@ public final class Gem {
             int overlay = model.overlayOf(state);
             int tint = part.tintOf(state);
             SubmitSink target = part.order() == 0 ? sink : sink.order(part.order());
-            target.submitCustomGeometry(poseStack, part.surfaceOf(state).renderType(),
-                    (pose, buffer) -> geometry.draw(pose, buffer, light, overlay, tint));
+            if (model.resident) {
+                dev.golem.core.render.StaticMeshes.submit(target, poseStack, part.surfaceOf(state), geometry, light,
+                        overlay, tint);
+            } else {
+                target.submitCustomGeometry(poseStack, part.surfaceOf(state).renderType(),
+                        (pose, buffer) -> geometry.draw(pose, buffer, light, overlay, tint));
+            }
         }
         for (Part<S> child : part.children) draw(child, state, poseStack, sink, model, defaultLight);
         poseStack.popPose();
