@@ -26,7 +26,8 @@ import java.util.List;
  *   "optionsTemplate": null,               // optional options.txt override (${guiScale} placeholder)
  *   "world": "harness",
  *   "defaultNodes": ["1.21.1-neoforge", "1.21.1-fabric"],
- *   "maxClients": 2,
+ *   "maxClients": 2,                       // cap for an ordinary `up` (keep it 2)
+ *   "allNodesMaxClients": 6,               // cap for `up --all` (default: every declared node)
  *   "retentionHours": 10,                  // older runs/screenshots/logs under "out" are deleted; 0 = keep all
  *   "nodes": [
  *     {"name": "26.1-neoforge", "minecraft": "26.1", "loader": "neoforge", "port": 47601, "packFormat": 84, "java": 21}
@@ -52,6 +53,8 @@ public final class Config {
     public final int maxClients;
     /** Run folders, ad-hoc screenshots and logs older than this are deleted at the next run; 0 keeps everything. */
     public final double retentionHours;
+    /** Cap for {@code up --all}, the explicit opt-in to run every declared node at once. */
+    public final int allNodesMaxClients;
     public final List<Nodes.Node> nodes;
 
     private static Config current;
@@ -85,6 +88,7 @@ public final class Config {
         }
         if (list.isEmpty()) throw new HarnessException(file + " declares no nodes");
         nodes = List.copyOf(list);
+        allNodesMaxClients = json.has("allNodesMaxClients") ? json.get("allNodesMaxClients").getAsInt() : nodes.size();
         List<String> defaults = new ArrayList<>();
         if (json.has("defaultNodes")) json.getAsJsonArray("defaultNodes").forEach(el -> defaults.add(el.getAsString()));
         if (defaults.isEmpty()) defaults.add(nodes.get(0).name());

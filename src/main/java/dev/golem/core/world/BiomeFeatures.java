@@ -49,6 +49,34 @@ public final class BiomeFeatures {
                         for (var key : keys) context.getGenerationSettings().addFeature(step, key);
                     });
         }
+        for (BiomeModifiers.SpawnDeclaration spawn : BiomeModifiers.declaredSpawns()) {
+            java.util.function.Predicate<net.fabricmc.fabric.api.biome.v1.BiomeSelectionContext> selector;
+            String biomes = spawn.biomes();
+            if (BiomeModifiers.ALL_BIOMES.equals(biomes)) {
+                selector = spawn.excluded() == null ? net.fabricmc.fabric.api.biome.v1.BiomeSelectors.all()
+                        : net.fabricmc.fabric.api.biome.v1.BiomeSelectors.excludeByKey(net.minecraft.resources.ResourceKey.create(
+                                net.minecraft.core.registries.Registries.BIOME, dev.golem.core.Ids.parse(spawn.excluded())));
+            } else if (biomes.startsWith("#")) {
+                selector = net.fabricmc.fabric.api.biome.v1.BiomeSelectors.tag(net.minecraft.tags.TagKey.create(
+                        net.minecraft.core.registries.Registries.BIOME, dev.golem.core.Ids.parse(biomes.substring(1))));
+            } else {
+                selector = net.fabricmc.fabric.api.biome.v1.BiomeSelectors.includeByKey(net.minecraft.resources.ResourceKey.create(
+                        net.minecraft.core.registries.Registries.BIOME, dev.golem.core.Ids.parse(biomes)));
+            }
+            // The entity type is resolved when the modification runs (world load), after registration.
+            net.fabricmc.fabric.api.biome.v1.BiomeModifications.create(dev.golem.core.Ids.of(spawn.namespace(), spawn.name()))
+                    .add(net.fabricmc.fabric.api.biome.v1.ModificationPhase.ADDITIONS, selector, context -> {
+                        net.minecraft.world.entity.EntityType<?> type = dev.golem.core.registry.Entities.byId(spawn.entity());
+                        //? if >=26.1 {
+                        context.getMobSpawnSettings().addSpawn(type.getCategory(),
+                                new net.minecraft.world.level.biome.MobSpawnSettings.SpawnerData(type, spawn.minCount(), spawn.maxCount()),
+                                spawn.weight());
+                        //?} else {
+                        /^context.getSpawnSettings().addSpawn(type.getCategory(),
+                                new net.minecraft.world.level.biome.MobSpawnSettings.SpawnerData(type, spawn.weight(), spawn.minCount(), spawn.maxCount()));
+                        ^///?}
+                    });
+        }
         *///?}
     }
 }

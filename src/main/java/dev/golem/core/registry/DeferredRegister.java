@@ -48,6 +48,9 @@ public class DeferredRegister<T> {
             // must already be registered by the time item factories run.
             Registries.ARMOR_MATERIAL,
             *///?}
+            // Entity types before items, as vanilla bootstraps them: a spawn egg resolves its entity type when the
+            // item is constructed (see dev.golem.core.world.SpawnEggs).
+            Registries.ENTITY_TYPE,
             Registries.ITEM);
     }
 

@@ -22,6 +22,18 @@ class DejsonVocabularyTest {
     }
 
     @Test
+    void resultComponentsMayBeStrings() {
+        Crafting.componentShaped("hbm", "cart_test", Crafting.stack("hbm:cart_empty").with("hbm:cart_base", "steel")
+                        .with("hbm:item_variant", 2),
+                Crafting.rows("P"), Crafting.key("P", Crafting.item("hbm:plate_steel")));
+        JsonObject recipe = DejsonWriter.files().get("data/hbm/recipe/cart_test.json");
+        JsonObject components = recipe.getAsJsonObject("result").getAsJsonObject("components");
+        assertEquals("steel", components.get("hbm:cart_base").getAsString());
+        assertEquals(2, components.get("hbm:item_variant").getAsInt());
+        assertThrows(DejsonException.class, () -> Crafting.stack("hbm:x").with("hbm:cart_base", ""));
+    }
+
+    @Test
     void elementGeometryKeepsIntegersAndFaceDetail() {
         Dejson.model("hbm:block/pipe_anchor_down", Model.parent("minecraft:block/block")
                 .ambientOcclusion(false)

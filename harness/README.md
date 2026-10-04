@@ -8,7 +8,8 @@ every screenshot.
 It works with any mod built on Golem Core. Nothing in this folder knows about a specific mod: each mod
 supplies one `harness.json` plus its own scenarios.
 
-- Up to **two clients** run at the same time, each with a 2 GB heap.
+- **Two clients** run at the same time by default, each with a 2 GB heap. `up --all` runs every declared
+  node at once (all six for HBM, about 12 GB of working set) — see "Running all nodes at once".
 - Client windows are **minimized, never focused and never grab the mouse**, so you can keep working.
 - Clients start from `java` directly (a launch captured once from Gradle). No Gradle daemon stays alive.
 - All six nodes are supported: 26.1 NeoForge/Fabric, 1.21.1 NeoForge/Fabric, 1.20.1 Forge/Fabric.
@@ -98,6 +99,7 @@ The CLI finds `harness.json` by walking up from the working directory, so run it
      "world": "harness",
      "defaultNodes": ["1.21.1-neoforge", "1.21.1-fabric"],
      "maxClients": 2,
+     "allNodesMaxClients": 6,
      "retentionHours": 10,
      "nodes": [
        {"name": "26.1-neoforge", "minecraft": "26.1", "loader": "neoforge", "port": 47601, "packFormat": 84, "java": 25}
@@ -105,7 +107,8 @@ The CLI finds `harness.json` by walking up from the working directory, so run it
    }
    ```
 
-   Give every node a distinct `port`. `optionsTemplate` (optional) replaces the bundled `options.txt`.
+   Give every node a distinct `port`. `maxClients` caps an ordinary `up` (keep it 2); `allNodesMaxClients`
+   (default: the number of nodes) caps `up --all`. `optionsTemplate` (optional) replaces the bundled `options.txt`.
    `retentionHours` (default 10, `0` keeps everything) is how long run folders, ad-hoc screenshots and logs
    under `out` are kept (see Disk use).
 
@@ -124,9 +127,9 @@ The CLI finds `harness.json` by walking up from the working directory, so run it
 ## Commands
 
 ```bash
-harness up [--nodes a,b] [--rebuild | --no-build] [--no-sodium] [--show] [--heap 2G] [--world harness] [--world-type seeded]
+harness up [--nodes a,b | --all] [--rebuild | --no-build] [--no-sodium] [--show] [--heap 2G] [--world harness] [--world-type seeded]
 harness down [--nodes a,b | --all]
-harness restart [--nodes a,b]            # down + up, same options as up
+harness restart [--nodes a,b | --all]    # down + up, same options as up
 harness status                           # live clients: in world, screen, fps, heap
 harness logs --node N                    # tail of the client log
 harness run <Scenario.java> [--nodes a,b] [--label name] [--echo]
@@ -139,6 +142,7 @@ harness help                             # everything
 | `up` option | Effect |
 |---|---|
 | `--nodes a,b` | Any two nodes declared in `harness.json` (default: `defaultNodes`) |
+| `--all` | Every declared node at once, capped by `allNodesMaxClients` (opt-in; see below) |
 | (default) | Run Gradle only for nodes whose build inputs changed since their last captured launch |
 | `--rebuild` | Always run Gradle, even when no input looks newer than the captured launch |
 | `--no-build` | Never run Gradle; reuse the captured launch even if sources changed |
@@ -256,13 +260,30 @@ every assertion and were visible only in the PNG.
 | Log checks fail on boot warnings | Scope them with `c.markLog()` and `Expect.logCleanSinceMark`. |
 | 1.21.1 on the wrong Java dies with `ClassNotFoundException: java.lang.Boolean` | Each node must run on its own Java (26.1 → 25, 1.21.1 → 21, 1.20.1 → 17); the captured spec does this. |
 
+## Running all nodes at once
+
+```bash
+harness up --all                       # every node in harness.json, launched one after another, all left running
+harness run WiajCanneries.java         # runs on every live client in parallel, one report
+harness down
+```
+
+- Without `--all` the cap stays `maxClients` (2): `--nodes all` alone refuses at the third client.
+  `--max-clients N` overrides either cap.
+- Nodes still launch one at a time (each `up` builds its Stonecutter node), so six take several minutes
+  the first time. Plan for about 2 GB of working set per client — about 12 GB for six; lower `--heap` if needed.
+- **Agents: run two nodes unless the user has explicitly asked for more.** Do not use `--all`, `--nodes all`
+  or `--max-clients` above 2 on your own initiative — six clients can exhaust the machine's memory and stall
+  the user's own work. When more than two nodes are needed and the user did not ask for `--all`, cover them two
+  at a time (`down`, then `up --nodes` the next pair).
+
 ## Limits
 
 - Singleplayer only (integrated server). Server-side queries run on the integrated server thread.
 - `look`/`lookAt` set the rotation directly; there is no mouse-delta camera path while the cursor is free.
 - Minimized windows still render. On 26.1 the idle FPS limit is `afk` (30 fps after a minute without
   physical input); screenshots are unaffected.
-- Two clients use about 2 GB of working set each.
+- Each client uses about 2 GB of working set (two by default; six with `up --all`).
 
 ## Disk use
 

@@ -329,4 +329,24 @@ public class CompatBlock extends Block {
         return onAnalogOutputSignal(state, level, pos);
     }
     *///?}
+
+    //? if forgelike {
+    /**
+     * Forge-like loaders read fire odds from the block (vanilla's table is private there), so the values
+     * stated through {@link Fires#setFlammable} are answered here. Fabric reads its registry instead.
+     */
+    @Override
+    public int getFlammability(BlockState state, net.minecraft.world.level.BlockGetter level, BlockPos pos,
+                               net.minecraft.core.Direction direction) {
+        int value = Fires.statedFlammability(this);
+        return value >= 0 ? value : super.getFlammability(state, level, pos, direction);
+    }
+
+    @Override
+    public int getFireSpreadSpeed(BlockState state, net.minecraft.world.level.BlockGetter level, BlockPos pos,
+                                  net.minecraft.core.Direction direction) {
+        int value = Fires.statedEncouragement(this);
+        return value >= 0 ? value : super.getFireSpreadSpeed(state, level, pos, direction);
+    }
+    //?}
 }

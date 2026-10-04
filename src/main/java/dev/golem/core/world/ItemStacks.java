@@ -36,6 +36,41 @@ public final class ItemStacks {
         *///?}
     }
 
+    /**
+     * A copy of {@code template} carrying the data components named in {@code components}, written in
+     * the 1.20.5+ item-stack JSON spelling ({@code {"hbm:item_variant": 3, "minecraft:damage": 60}}), or
+     * empty when they do not decode.
+     *
+     * <p>Below 1.20.5 there are no components: each non-vanilla key becomes the root NBT key that
+     * {@link GolemComponent} stores it under, {@code minecraft:damage} becomes the damage value, and any
+     * other {@code minecraft:} component (which has no NBT counterpart there) is skipped. Parsing the
+     * modern spelling with the old {@code ItemStack.CODEC} instead fails on the missing {@code Count}
+     * field, so every component silently fell away on 1.20.1.
+     */
+    public static java.util.Optional<ItemStack> withComponents(ItemStack template, com.google.gson.JsonObject components,
+            com.mojang.serialization.DynamicOps<com.google.gson.JsonElement> ops) {
+        //? if >=1.20.5 {
+        com.google.gson.JsonObject stack = new com.google.gson.JsonObject();
+        stack.addProperty("id", net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(template.getItem()).toString());
+        stack.addProperty("count", template.getCount());
+        stack.add("components", components);
+        return ItemStack.OPTIONAL_CODEC.parse(ops, stack).result();
+        //?} else {
+        /*ItemStack copy = template.copy();
+        for (java.util.Map.Entry<String, com.google.gson.JsonElement> component : components.entrySet()) {
+            String key = component.getKey();
+            if (key.equals("minecraft:damage")) {
+                if (!component.getValue().isJsonPrimitive()) return java.util.Optional.empty();
+                copy.setDamageValue(component.getValue().getAsInt());
+            } else if (!key.startsWith("minecraft:")) {
+                copy.getOrCreateTag().put(key, com.mojang.serialization.JsonOps.INSTANCE.convertTo(
+                        net.minecraft.nbt.NbtOps.INSTANCE, component.getValue()));
+            }
+        }
+        return java.util.Optional.of(copy);
+        *///?}
+    }
+
     /** Returns whether both stacks have the same item and item data, ignoring their counts. */
     public static boolean sameItemAndData(ItemStack first, ItemStack second) {
         //? if >=1.20.5 {
@@ -108,6 +143,27 @@ public final class ItemStacks {
         return type != null && stack.has(type) && Integer.valueOf(value).equals(stack.get(type));
         //?} else {
         /*return stack.hasTag() && stack.getTag().contains(key, 3) && stack.getTag().getInt(key) == value;
+        *///?}
+    }
+
+    /**
+     * Tests one string-valued component - one whose codec writes a string, such as a registry name - against the
+     * string a recipe names, or its namespaced legacy NBT string on 1.20.1. The component's own codec does the
+     * comparison, so a typed value ({@code FluidType}) matches the name it is saved as.
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public static boolean matchesStringComponent(ItemStack stack, String key, String value) {
+        //? if >=1.21.1 {
+        net.minecraft.core.component.DataComponentType type =
+                net.minecraft.core.registries.BuiltInRegistries.DATA_COMPONENT_TYPE.getValue(Ids.parse(key));
+        if (type == null || !stack.has(type) || type.codec() == null) return false;
+        Object held = stack.get(type);
+        java.util.Optional<com.google.gson.JsonElement> json = ((com.mojang.serialization.Codec<Object>) type.codec())
+                .encodeStart(com.mojang.serialization.JsonOps.INSTANCE, held).result();
+        return json.isPresent() && json.get() instanceof com.google.gson.JsonPrimitive primitive && primitive.isString()
+                && value.equals(primitive.getAsString());
+        //?} else {
+        /*return stack.hasTag() && stack.getTag().contains(key, 8) && stack.getTag().getString(key).equals(value);
         *///?}
     }
 
@@ -314,6 +370,17 @@ public final class ItemStacks {
         return data == null ? 0 : dev.golem.core.data.Tags.getIntOr(data.copyTag(), key, 0);
         //?} else {
         /*return legacyCarriedData(carrier).getInt(key);
+        *///?}
+    }
+
+    /** Reads a string from an item's carried block custom data; empty when absent or not a string. */
+    public static String carriedString(ItemStack carrier, String key) {
+        //? if >=1.20.5 {
+        net.minecraft.world.item.component.CustomData data =
+                carrier.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+        return data == null ? "" : dev.golem.core.data.Tags.getStringOr(data.copyTag(), key, "");
+        //?} else {
+        /*return dev.golem.core.data.Tags.getStringOr(legacyCarriedData(carrier), key, "");
         *///?}
     }
 

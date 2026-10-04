@@ -13,3 +13,8 @@ accessible field net/minecraft/client/renderer/ItemInHandRenderer oMainHandHeigh
 accessible field net/minecraft/client/renderer/ItemInHandRenderer mainHandItem Lnet/minecraft/world/item/ItemStack;
 # FlatCutoutRenderType: reads the two shader light directions to write a flat-lit normal
 accessible field com/mojang/blaze3d/systems/RenderSystem shaderLightDirections [Lorg/joml/Vector3f;
+# Spawns.flushFabricPlacements: SpawnPlacements.register is private on Fabric (NeoForge/Forge deliver it through their spawn placement event).
+accessible method net/minecraft/world/entity/SpawnPlacements register (Lnet/minecraft/world/entity/EntityType;Lnet/minecraft/world/entity/SpawnPlacementType;Lnet/minecraft/world/level/levelgen/Heightmap$Types;Lnet/minecraft/world/entity/SpawnPlacements$SpawnPredicate;)V
+# Attributes.raiseMax: RangedAttribute.maxValue is private final; raising a vanilla cap (1.7 content had no upper bound) needs it writable.
+accessible field net/minecraft/world/entity/ai/attributes/RangedAttribute maxValue D
+mutable field net/minecraft/world/entity/ai/attributes/RangedAttribute maxValue D

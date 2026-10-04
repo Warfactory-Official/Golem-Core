@@ -17,8 +17,10 @@ import net.minecraft.world.item.crafting.Ingredient;
  *
  * <ul>
  *   <li>{@code items} — item ids, and item tags written {@code #namespace:path}; any one matches.</li>
- *   <li>{@code components} / {@code absent_components} — exact integer components the stack must carry,
- *       or must not (1.7 metadata and NBT flattened into components).</li>
+ *   <li>{@code components} / {@code absent_components} — exact components the stack must carry, or must not
+ *       (1.7 metadata and NBT flattened into components). A number matches an integer component; a string
+ *       matches a component whose codec writes that string (a registry name such as {@code hbm:water} -
+ *       never a numeric registry id, which is not stable across saves).</li>
  *   <li>{@code fluid} + {@code fluid_amount} — a full fluid container of that fluid and amount, whatever
  *       the container, per the mod's {@link FilledContainers} dictionary (1.7 {@code getDict}). The grid
  *       keeps the emptied container.</li>
@@ -33,10 +35,13 @@ public final class ComponentIngredient {
     public static final ComponentIngredient EMPTY =
             new ComponentIngredient(List.of(), Map.of(), List.of(), "", "", 0, "", false);
 
+    /** A component value as recipe data writes it: a number or a string. */
+    private static final Codec<com.mojang.datafixers.util.Either<Integer, String>> VALUE = Codec.either(Codec.INT, Codec.STRING);
+
     public static final Codec<ComponentIngredient> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Codec.STRING.listOf().optionalFieldOf("items", List.of()).forGetter(value -> value.items),
-            Codec.unboundedMap(Codec.STRING, Codec.INT).optionalFieldOf("components", Map.of())
-                    .forGetter(value -> value.components),
+            Codec.unboundedMap(Codec.STRING, VALUE).optionalFieldOf("components", Map.of())
+                    .forGetter(ComponentIngredient::componentValues),
             Codec.STRING.listOf().optionalFieldOf("absent_components", List.of())
                     .forGetter(value -> value.absentComponents),
             Codec.STRING.optionalFieldOf("remainder", "").forGetter(value -> value.remainder),
@@ -44,7 +49,8 @@ public final class ComponentIngredient {
             Codec.INT.optionalFieldOf("fluid_amount", 0).forGetter(value -> value.fluidAmount),
             Codec.STRING.optionalFieldOf("potion", "").forGetter(value -> value.potion),
             Codec.BOOL.optionalFieldOf("degrade", false).forGetter(value -> value.degrade)
-    ).apply(instance, ComponentIngredient::new));
+    ).apply(instance, (items, values, absent, remainder, fluid, amount, potion, degrade) -> new ComponentIngredient(
+            items, ints(values), absent, remainder, fluid, amount, potion, degrade, strings(values))));
 
     //? if >=1.21.1 {
     public static final net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, ComponentIngredient>
@@ -54,6 +60,7 @@ public final class ComponentIngredient {
 
     private final List<String> items;
     private final Map<String, Integer> components;
+    private final Map<String, String> stringComponents;
     private final List<String> absentComponents;
     private final String remainder;
     private final String fluid;
@@ -64,8 +71,15 @@ public final class ComponentIngredient {
     private ComponentIngredient(List<String> items, Map<String, Integer> components,
                                 List<String> absentComponents, String remainder, String fluid, int fluidAmount,
                                 String potion, boolean degrade) {
+        this(items, components, absentComponents, remainder, fluid, fluidAmount, potion, degrade, Map.of());
+    }
+
+    private ComponentIngredient(List<String> items, Map<String, Integer> components,
+                                List<String> absentComponents, String remainder, String fluid, int fluidAmount,
+                                String potion, boolean degrade, Map<String, String> stringComponents) {
         this.items = List.copyOf(items);
         this.components = Map.copyOf(components);
+        this.stringComponents = Map.copyOf(stringComponents);
         this.absentComponents = List.copyOf(absentComponents);
         this.remainder = remainder == null ? "" : remainder;
         this.fluid = fluid == null ? "" : fluid;
@@ -73,12 +87,32 @@ public final class ComponentIngredient {
         this.potion = potion == null ? "" : potion;
         this.degrade = degrade;
         if (this.items.isEmpty() && this.fluid.isEmpty()
-                && (!this.components.isEmpty() || !this.absentComponents.isEmpty() || !this.potion.isEmpty())) {
+                && (!this.components.isEmpty() || !this.stringComponents.isEmpty() || !this.absentComponents.isEmpty()
+                || !this.potion.isEmpty())) {
             throw new IllegalArgumentException("component ingredient constrains no item");
         }
         if (!this.fluid.isEmpty() && this.fluidAmount <= 0) {
             throw new IllegalArgumentException("fluid ingredient " + this.fluid + " needs a positive fluid_amount");
         }
+    }
+
+    private static Map<String, Integer> ints(Map<String, com.mojang.datafixers.util.Either<Integer, String>> values) {
+        Map<String, Integer> ints = new java.util.HashMap<>();
+        values.forEach((key, value) -> value.ifLeft(number -> ints.put(key, number)));
+        return ints;
+    }
+
+    private static Map<String, String> strings(Map<String, com.mojang.datafixers.util.Either<Integer, String>> values) {
+        Map<String, String> strings = new java.util.HashMap<>();
+        values.forEach((key, value) -> value.ifRight(text -> strings.put(key, text)));
+        return strings;
+    }
+
+    private Map<String, com.mojang.datafixers.util.Either<Integer, String>> componentValues() {
+        Map<String, com.mojang.datafixers.util.Either<Integer, String>> values = new java.util.LinkedHashMap<>();
+        components.forEach((key, value) -> values.put(key, com.mojang.datafixers.util.Either.left(value)));
+        stringComponents.forEach((key, value) -> values.put(key, com.mojang.datafixers.util.Either.right(value)));
+        return values;
     }
 
     public static ComponentIngredient of(String item) {
@@ -105,10 +139,16 @@ public final class ComponentIngredient {
             items.add("#" + object.get("tag").getAsString());
         }
         Map<String, Integer> components = new java.util.HashMap<>();
+        Map<String, String> stringComponents = new java.util.HashMap<>();
         com.google.gson.JsonObject componentValues = object.getAsJsonObject("components");
         if (componentValues != null) {
             for (Map.Entry<String, com.google.gson.JsonElement> entry : componentValues.entrySet()) {
-                components.put(entry.getKey(), entry.getValue().getAsInt());
+                com.google.gson.JsonElement value = entry.getValue();
+                if (value.isJsonPrimitive() && value.getAsJsonPrimitive().isString()) {
+                    stringComponents.put(entry.getKey(), value.getAsString());
+                } else {
+                    components.put(entry.getKey(), value.getAsInt());
+                }
             }
         }
         List<String> absentComponents = new ArrayList<>();
@@ -119,7 +159,8 @@ public final class ComponentIngredient {
         return new ComponentIngredient(items, components, absentComponents,
                 string(object, "remainder"), string(object, "fluid"),
                 object.has("fluid_amount") ? object.get("fluid_amount").getAsInt() : 0,
-                string(object, "potion"), object.has("degrade") && object.get("degrade").getAsBoolean());
+                string(object, "potion"), object.has("degrade") && object.get("degrade").getAsBoolean(),
+                stringComponents);
     }
 
     private static String string(com.google.gson.JsonObject object, String key) {
@@ -133,6 +174,9 @@ public final class ComponentIngredient {
         int componentCount = buffer.readVarInt();
         Map<String, Integer> components = new java.util.HashMap<>();
         for (int i = 0; i < componentCount; i++) components.put(buffer.readUtf(), buffer.readVarInt());
+        int stringCount = buffer.readVarInt();
+        Map<String, String> stringComponents = new java.util.HashMap<>();
+        for (int i = 0; i < stringCount; i++) stringComponents.put(buffer.readUtf(), buffer.readUtf());
         int absentCount = buffer.readVarInt();
         List<String> absentComponents = new ArrayList<>(absentCount);
         for (int i = 0; i < absentCount; i++) absentComponents.add(buffer.readUtf());
@@ -142,7 +186,7 @@ public final class ComponentIngredient {
         String potion = buffer.readUtf();
         boolean degrade = buffer.readBoolean();
         return new ComponentIngredient(items, components, absentComponents, remainder, fluid, fluidAmount,
-                potion, degrade);
+                potion, degrade, stringComponents);
     }
 
     public void toNetwork(FriendlyByteBuf buffer) {
@@ -152,6 +196,11 @@ public final class ComponentIngredient {
         for (Map.Entry<String, Integer> entry : components.entrySet()) {
             buffer.writeUtf(entry.getKey());
             buffer.writeVarInt(entry.getValue());
+        }
+        buffer.writeVarInt(stringComponents.size());
+        for (Map.Entry<String, String> entry : stringComponents.entrySet()) {
+            buffer.writeUtf(entry.getKey());
+            buffer.writeUtf(entry.getValue());
         }
         buffer.writeVarInt(absentComponents.size());
         for (String key : absentComponents) buffer.writeUtf(key);
@@ -168,6 +217,11 @@ public final class ComponentIngredient {
 
     public Map<String, Integer> components() {
         return components;
+    }
+
+    /** The string-valued components the stack must carry (registry names), keyed by component id. */
+    public Map<String, String> stringComponents() {
+        return stringComponents;
     }
 
     public List<String> absentComponents() {
@@ -205,6 +259,8 @@ public final class ComponentIngredient {
         if (!potion.isEmpty() && !potion.equals(Ingredients.potionId(stack))) return false;
         return components.entrySet().stream()
                 .allMatch(entry -> ItemStacks.matchesIntComponent(stack, entry.getKey(), entry.getValue()))
+                && stringComponents.entrySet().stream()
+                .allMatch(entry -> ItemStacks.matchesStringComponent(stack, entry.getKey(), entry.getValue()))
                 && absentComponents.stream()
                 .allMatch(key -> ItemStacks.matchesAbsentComponent(stack, key));
     }

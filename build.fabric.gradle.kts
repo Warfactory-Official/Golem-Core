@@ -100,6 +100,11 @@ tasks.processResources {
         // Fabric API has no minecart events, so every Fabric node calls the rail hooks through a mixin.
         "rail_mixins" to ", \"MixinMinecartRails\"",
         "world_effect_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinWorldEffects\"" else "",
+        // Skies.Modifier: 26.1 appends environment-attribute layers; older nodes wrap the sky darkening and the
+        // client colour getters (the mixin classes are empty stubs on the other era).
+        "sky_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinEnvironmentSkyLayers\"" else ", \"MixinLevelSkyDarken\"",
+        "sky_client_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) "" else
+            ", \"MixinClientLevelSky\", \"MixinDimensionEffectsSky\", \"MixinOverworldFogColor\"",
         // Fabric is told about client block entities by fabric-api, so it needs no mixin for it.
         "flywheel_be_mixins" to "",
         // Fabric has no debug-screen entry registry, so the F3 lines are appended by a mixin there.

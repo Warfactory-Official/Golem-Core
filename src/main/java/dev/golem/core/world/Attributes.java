@@ -1,12 +1,63 @@
 package dev.golem.core.world;
 
+import net.minecraft.core.Holder;
+import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.RangedAttribute;
 
-/** Cross-version construction of identifier-keyed attribute modifiers. */
+/**
+ * Cross-version construction of identifier-keyed attribute modifiers, and the upper bound of vanilla ranged
+ * attributes.
+ */
 public final class Attributes {
 
     private Attributes() {}
+
+    /**
+     * Raises the upper bound of a vanilla {@link RangedAttribute} (for example {@code Attributes.MAX_HEALTH}, 1024,
+     * or {@code Attributes.ATTACK_DAMAGE}, 2048, on 1.20.1, 1.21.1 and 26.1) to at least {@code max}.
+     *
+     * <p>Pre-1.16 content was written against {@code SharedMonsterAttributes}, whose bounds were effectively
+     * unlimited; modern {@code RangedAttribute.sanitizeValue} clamps every computed value to {@code maxValue}, so a
+     * 20,000-health boss is silently a 1,024-health one. The bound is one {@code final} field, made writable by
+     * Core's access widener ({@code accessible} + {@code mutable}) and access transformers ({@code public-f}); no
+     * mixin, reflection or bytecode is involved.
+     *
+     * <p>Idempotent and monotonic: a bound that is already at least {@code max} - another mod (AttributeFix and
+     * the like) may have raised it further - is left alone, so the bound is never lowered. Returns the bound now in
+     * force.
+     *
+     * <p><b>When to call:</b> once, from common mod initialisation (the NeoForge/Forge mod constructor, Fabric's
+     * {@code ModInitializer}), on both physical sides. Vanilla attributes are bound during {@code Bootstrap}, which
+     * every loader finishes before constructing mods, and no entity (and so no {@link AttributeInstance}, whose
+     * {@code getValue} caches the sanitised value) exists yet. The attribute objects are JVM-wide singletons, so in
+     * singleplayer one call covers both the integrated server and the client, which recomputes synced attributes
+     * through the same {@code sanitizeValue}. An instance created earlier would keep a stale clamped value until its
+     * next modifier or base-value change marks it dirty.
+     *
+     * @throws IllegalArgumentException if the attribute is not a {@link RangedAttribute}, or {@code max} is NaN or
+     *                                  below the attribute's minimum
+     */
+    public static double raiseMax(Holder<Attribute> attribute, double max) {
+        return raiseMax(attribute.value(), max);
+    }
+
+    /** As {@link #raiseMax(Holder, double)}, for an attribute object (1.20.1's {@code Attributes} fields). */
+    public static double raiseMax(Attribute attribute, double max) {
+        if (!(attribute instanceof RangedAttribute ranged)) {
+            throw new IllegalArgumentException("not a ranged attribute: " + attribute);
+        }
+        // Forge constructs mods on parallel workers; serialise concurrent raises from different mods.
+        synchronized (Attributes.class) {
+            if (Double.isNaN(max) || max < ranged.getMinValue()) {
+                throw new IllegalArgumentException("bound " + max + " below minimum " + ranged.getMinValue()
+                        + " of " + attribute.getDescriptionId());
+            }
+            if (ranged.getMaxValue() < max) ranged.maxValue = max;
+            return ranged.getMaxValue();
+        }
+    }
 
     public static void replacePermanent(AttributeInstance attribute, String id, double amount) {
         //? if >=1.21 {

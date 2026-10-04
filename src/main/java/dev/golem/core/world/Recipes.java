@@ -151,7 +151,10 @@ public final class Recipes {
      * ticks and ask again whether a (possibly different) grid still satisfies it. The old autocrafter kept
      * a {@code List<IRecipe>} for exactly this; the vanilla recipe and holder types stay hidden here.
      */
-    public record CraftingMatch(Object recipe) {}
+    public record CraftingMatch(Object recipe, String id) {
+        /** The recipe's registry id ({@code hbm:foo}): what a block entity saves to remember its choice - never a list index. */
+        @Override public String id() { return id; }
+    }
 
     /**
      * Every crafting recipe matching the supplied rectangular grid, in recipe-manager order. Server side
@@ -168,7 +171,7 @@ public final class Recipes {
             @SuppressWarnings("unchecked")
             net.minecraft.world.item.crafting.Recipe<CraftingInput> recipe =
                     (net.minecraft.world.item.crafting.Recipe<CraftingInput>) holder.value();
-            if (recipe.matches(craftingInput, level)) matches.add(new CraftingMatch(recipe));
+            if (recipe.matches(craftingInput, level)) matches.add(new CraftingMatch(recipe, holder.id().identifier().toString()));
         }
         //?} elif >=1.21.1 {
         /*if (level.isClientSide()) return List.of();
@@ -178,7 +181,7 @@ public final class Recipes {
             @SuppressWarnings("unchecked")
             net.minecraft.world.item.crafting.Recipe<CraftingInput> recipe =
                     (net.minecraft.world.item.crafting.Recipe<CraftingInput>) holder.value();
-            if (recipe.matches(craftingInput, level)) matches.add(new CraftingMatch(recipe));
+            if (recipe.matches(craftingInput, level)) matches.add(new CraftingMatch(recipe, holder.id().toString()));
         }
         *///?} else {
         /*if (level.isClientSide()) return List.of();
@@ -190,7 +193,7 @@ public final class Recipes {
             @SuppressWarnings("unchecked")
             net.minecraft.world.item.crafting.Recipe<net.minecraft.world.inventory.CraftingContainer> recipe =
                     (net.minecraft.world.item.crafting.Recipe<net.minecraft.world.inventory.CraftingContainer>) candidate;
-            if (recipe.matches(craftingInput, level)) matches.add(new CraftingMatch(recipe));
+            if (recipe.matches(craftingInput, level)) matches.add(new CraftingMatch(recipe, candidate.getId().toString()));
         }
         *///?}
         return matches;

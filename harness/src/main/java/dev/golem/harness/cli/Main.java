@@ -17,16 +17,18 @@ import java.util.Map;
 public final class Main {
 
     private static final String USAGE = """
-            golem-harness — in-game visual test harness for Golem Core mods (two dev clients at a time, never focused)
+            golem-harness — in-game visual test harness for Golem Core mods (two dev clients at a time by default, never focused)
             Reads harness.json from the working directory or its parents (or --config <file> / HARNESS_CONFIG).
 
             Lifecycle
-              up      [--nodes a,b] [--rebuild | --no-build] [--no-sodium] [--show] [--heap 2G] [--world harness] [--max-clients 2]
+              up      [--nodes a,b | --all] [--rebuild | --no-build] [--no-sodium] [--show] [--heap 2G] [--world harness] [--max-clients 2]
                       [--world-type flat|seeded]   seeded = default world preset, fixed seed, world 'harness_seeded'
                       Gradle runs once for all nodes and is skipped for a node whose build inputs are older than its
                       captured launch (--rebuild forces it); each client boots as soon as its launch is captured.
+                      --all  start EVERY declared node at once (cap: allNodesMaxClients). Opt-in only: agents must
+                             not use it, or raise --max-clients above 2, unless the user asked for more than two nodes.
               down    [--nodes a,b | --all]
-              restart [--nodes a,b] (down + up, same options as up)
+              restart [--nodes a,b | --all] (down + up, same options as up)
               status
               logs    --node N [--lines 80] [--grep regex]
               spec    --node N            capture the launch spec only
@@ -91,6 +93,7 @@ public final class Main {
             System.out.println("defaultNodes: " + config.defaultNodes);
             System.out.println("maxClients: " + config.maxClients);
             System.out.println("retentionHours: " + config.retentionHours);
+            System.out.println("allNodesMaxClients: " + config.allNodesMaxClients + " (up --all)");
             return 0;
         }
         State state = State.load();
@@ -152,9 +155,19 @@ public final class Main {
      * reach their world in parallel.
      */
     private static int up(Args args, State state) throws IOException {
-        List<Nodes.Node> requested = args.has("nodes") ? Nodes.parse(args.get("nodes", "")) : Nodes.parse(String.join(",", Nodes.defaultUp()));
-        int max = Integer.parseInt(args.get("max-clients", Integer.toString(Config.get().maxClients)));
+        // `--all` is the explicit opt-in to run every declared node at once. Without it the ordinary
+        // maxClients cap (2) applies, so `--nodes all` alone still refuses past the second client.
+        boolean all = args.flag("all");
+        if (all && args.has("nodes")) throw new HarnessException("--all and --nodes are exclusive");
+        List<Nodes.Node> requested = all ? new ArrayList<>(Nodes.all())
+                : args.has("nodes") ? Nodes.parse(args.get("nodes", "")) : Nodes.parse(String.join(",", Nodes.defaultUp()));
+        int cap = all ? Config.get().allNodesMaxClients : Config.get().maxClients;
+        int max = Integer.parseInt(args.get("max-clients", Integer.toString(cap)));
         Launcher.Options options = options(args);
+        if (max > Config.get().maxClients) {
+            System.out.println("[harness] running up to " + max + " clients at once (" + options.heap + " heap each; ~2 GB working set per client)."
+                    + " Agents: only do this when the user asked for more than two nodes.");
+        }
         List<Nodes.Node> nodes = new ArrayList<>();
         for (Nodes.Node node : requested) {
             if (state.get(node.name()).map(State.Live::alive).orElse(false)) {
@@ -167,7 +180,8 @@ public final class Main {
         long live = state.all().values().stream().filter(State.Live::alive).count();
         if (live + nodes.size() > max) {
             throw new HarnessException("refusing to start " + Nodes.namesOf(nodes) + ": " + live + " client(s) already up and --max-clients is "
-                    + max + ". Run `harness down` first.");
+                    + max + ". Run `harness down` first"
+                    + (all ? "." : ", or use `up --all` to run every node at once (only when more than two nodes were asked for)."));
         }
 
         List<Nodes.Node> build = new ArrayList<>();

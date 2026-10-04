@@ -15,3 +15,8 @@ accessible field net/minecraft/client/renderer/ItemInHandRenderer oMainHandHeigh
 accessible field net/minecraft/client/renderer/ItemInHandRenderer mainHandItem Lnet/minecraft/world/item/ItemStack;
 # GuiScenes: vanilla keeps the GUI render state private and Fabric API does not widen it; NeoForge adds a submit method.
 accessible field net/minecraft/client/gui/GuiGraphicsExtractor guiRenderState Lnet/minecraft/client/renderer/state/gui/GuiRenderState;
+# Spawns.flushFabricPlacements: SpawnPlacements.register is private on Fabric (NeoForge/Forge deliver it through their spawn placement event).
+accessible method net/minecraft/world/entity/SpawnPlacements register (Lnet/minecraft/world/entity/EntityType;Lnet/minecraft/world/entity/SpawnPlacementType;Lnet/minecraft/world/level/levelgen/Heightmap$Types;Lnet/minecraft/world/entity/SpawnPlacements$SpawnPredicate;)V
+# Attributes.raiseMax: RangedAttribute.maxValue is private final; raising a vanilla cap (1.7 content had no upper bound) needs it writable.
+accessible field net/minecraft/world/entity/ai/attributes/RangedAttribute maxValue D
+mutable field net/minecraft/world/entity/ai/attributes/RangedAttribute maxValue D

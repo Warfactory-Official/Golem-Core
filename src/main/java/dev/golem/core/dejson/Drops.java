@@ -118,6 +118,56 @@ public final class Drops {
         return table(namespace, block, pool(null, entry(drop, functions(bonus, explosionDecay()))));
     }
 
+    /**
+     * An ore on the multiplying fortune curve: silk touch drops the ore block; anything else drops
+     * between {@code min} and {@code max} of {@code drop}, then fortune multiplies that count by
+     * {@code ore_drops} ({@code count * (max(0, rand(fortune + 2) - 1) + 1)}). This is the old
+     * {@code BlockOre.quantityDroppedWithBonus}, which rolled its base quantity and then multiplied it.
+     */
+    public static JsonObject oreMultiplied(String namespace, String block, String drop, int min, int max) {
+        return silkOr(namespace, block, drop, countThenMultiply(min, max));
+    }
+
+    /**
+     * {@link #oreMultiplied} without a silk-touch alternative, for a block that cannot be silk
+     * harvested but still multiplies its yield by fortune.
+     */
+    public static JsonObject dropsMultiplied(String namespace, String block, String drop, int min, int max) {
+        return table(namespace, block, pool(null, entry(drop, countThenMultiply(min, max))));
+    }
+
+    /**
+     * Silk touch drops the block; otherwise a rare item with probability {@code chance} replaces the
+     * whole drop, and failing that, {@code min..max} of {@code drop} with no fortune. A burnt log that
+     * very occasionally leaves its bark instead of its charcoal.
+     */
+    public static JsonObject oreOrRare(String namespace, String block, String drop, int min, int max,
+                                       String rare, double chance) {
+        if (!(chance > 0 && chance < 1)) {
+            throw new DejsonException(item(namespace, block) + " rare chance " + chance + " is not in (0, 1)");
+        }
+        JsonObject silk = new JsonObject();
+        silk.addProperty("type", ITEM);
+        silk.add("conditions", conditions(silkTouch()));
+        silk.addProperty("name", item(namespace, block));
+
+        JsonObject random = new JsonObject();
+        random.addProperty("condition", "minecraft:random_chance");
+        random.addProperty("chance", chance);
+        JsonObject rareEntry = entry(rare, functions(explosionDecay()));
+        rareEntry.add("conditions", conditions(random));
+
+        JsonArray children = new JsonArray();
+        children.add(silk);
+        children.add(rareEntry);
+        children.add(entry(drop, functions(count(min, max), explosionDecay())));
+
+        JsonObject alternatives = new JsonObject();
+        alternatives.addProperty("type", "minecraft:alternatives");
+        alternatives.add("children", children);
+        return table(namespace, block, pool(null, alternatives));
+    }
+
     /** The path a block's loot table lives at. */
     /**
      * The block itself, but only from the state where {@code property} is {@code value} — the lower
@@ -268,6 +318,19 @@ public final class Drops {
         setCount.addProperty("add", false);
         setCount.add("count", uniform);
         return setCount;
+    }
+
+    /** set_count (skipped for exactly one), ore_drops fortune, explosion decay. */
+    private static JsonArray countThenMultiply(int min, int max) {
+        JsonArray list = new JsonArray();
+        if (!(min == 1 && max == 1)) list.add(count(min, max));
+        JsonObject bonus = new JsonObject();
+        bonus.addProperty("function", "minecraft:apply_bonus");
+        bonus.addProperty("enchantment", "minecraft:fortune");
+        bonus.addProperty("formula", "minecraft:ore_drops");
+        list.add(bonus);
+        list.add(explosionDecay());
+        return list;
     }
 
     private static JsonObject fortuneBonus() {

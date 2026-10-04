@@ -4,8 +4,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 
 /**
- * The sun's and moon's positions as the old world read them, across 26.1 moving both into environment
- * attributes.
+ * The sky as the old world read and changed it: the sun's and moon's positions across 26.1 moving both into
+ * environment attributes, and runtime sky modifiers ({@link Modifier}).
  *
  * <p>{@link #celestialAngle} is 1.7's {@code getCelestialAngle}: 0 at noon, 0.5 at midnight, wrapping at 1.
  * Before 26.1 that is the dimension's {@code timeOfDay}; from 26.1 it is the {@code visual/sun_angle}
@@ -32,5 +32,112 @@ public final class Skies {
         //?} else {
         /*return level.getMoonPhase();
         *///?}
+    }
+    // ======================================================================== sky modifiers
+
+    /**
+     * A runtime change to how bright and what colour the sky is - the stand-in for a 1.7 {@code WorldProvider}
+     * override ({@code getSunBrightnessFactor}, {@code getSkyColor}, {@code getFogColor}, {@code drawClouds},
+     * {@code getStarBrightness}, {@code getSunBrightness}, {@code calcSunriseSunsetColors}). Every method receives
+     * the vanilla value and returns the one to use; colours are RGB in 0..1. Nothing is asked unless
+     * {@link #active} says so for the level, so an inactive modifier leaves vanilla bit for bit.
+     *
+     * <p>How it is applied: on 26.1 each value is an environment attribute, and Golem Core appends one layer per
+     * attribute after the level's default layers ({@code MixinEnvironmentSkyLayers}); below 26.1 the level's sky
+     * darkening and the client level's colour getters are wrapped ({@code MixinLevelSkyDarken},
+     * {@code MixinClientLevelSky}, {@code MixinDimensionEffectsSky}, {@code MixinOverworldFogColor}).
+     */
+    public interface Modifier {
+        boolean active(Level level);
+
+        /** 1.7 {@code getSunBrightnessFactor}: the 0..1 daylight behind the level's sky darkening (both sides). */
+        default float daylight(Level level, float daylight) { return daylight; }
+
+        /** Client: the sky colour. */
+        default net.minecraft.world.phys.Vec3 skyColor(Level level, net.minecraft.world.phys.Vec3 color) { return color; }
+
+        /** Client: the brightness-dependent fog colour, before vanilla blends the sky into it. */
+        default net.minecraft.world.phys.Vec3 fogColor(Level level, net.minecraft.world.phys.Vec3 color) { return color; }
+
+        /** Client: the cloud colour. */
+        default net.minecraft.world.phys.Vec3 cloudColor(Level level, net.minecraft.world.phys.Vec3 color) { return color; }
+
+        /** Client: the stars' brightness. */
+        default float starBrightness(Level level, float brightness) { return brightness; }
+
+        /** Client: the sky's contribution to the light map (1.7 {@code getSunBrightness}; 0.2 at night, 1 at noon). */
+        default float skyLight(Level level, float factor) { return factor; }
+
+        /** Client: the sunrise/sunset glow as RGBA, or null when there is none. */
+        default float @org.jspecify.annotations.Nullable [] sunriseColor(Level level, float @org.jspecify.annotations.Nullable [] rgba) { return rgba; }
+    }
+
+    private static final java.util.List<Modifier> MODIFIERS = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+    public static void addModifier(Modifier modifier) {
+        MODIFIERS.add(modifier);
+    }
+
+    /** True when any modifier wants to change {@code level}'s sky. Called by the hooks before anything else. */
+    public static boolean active(Level level) {
+        if (MODIFIERS.isEmpty() || level == null) return false;
+        for (Modifier modifier : MODIFIERS) if (modifier.active(level)) return true;
+        return false;
+    }
+
+    public static float daylight(Level level, float value) {
+        for (Modifier m : MODIFIERS) if (m.active(level)) value = m.daylight(level, value);
+        return value;
+    }
+
+    public static net.minecraft.world.phys.Vec3 skyColor(Level level, net.minecraft.world.phys.Vec3 value) {
+        for (Modifier m : MODIFIERS) if (m.active(level)) value = m.skyColor(level, value);
+        return value;
+    }
+
+    public static net.minecraft.world.phys.Vec3 fogColor(Level level, net.minecraft.world.phys.Vec3 value) {
+        for (Modifier m : MODIFIERS) if (m.active(level)) value = m.fogColor(level, value);
+        return value;
+    }
+
+    public static net.minecraft.world.phys.Vec3 cloudColor(Level level, net.minecraft.world.phys.Vec3 value) {
+        for (Modifier m : MODIFIERS) if (m.active(level)) value = m.cloudColor(level, value);
+        return value;
+    }
+
+    public static float starBrightness(Level level, float value) {
+        for (Modifier m : MODIFIERS) if (m.active(level)) value = m.starBrightness(level, value);
+        return value;
+    }
+
+    public static float skyLight(Level level, float value) {
+        for (Modifier m : MODIFIERS) if (m.active(level)) value = m.skyLight(level, value);
+        return value;
+    }
+
+    public static float @org.jspecify.annotations.Nullable [] sunriseColor(Level level, float @org.jspecify.annotations.Nullable [] value) {
+        for (Modifier m : MODIFIERS) if (m.active(level)) value = m.sunriseColor(level, value);
+        return value;
+    }
+
+    /** An ARGB int through an RGB modifier, alpha kept. For the 26.1 colour attributes. */
+    public static int argb(int argb, java.util.function.UnaryOperator<net.minecraft.world.phys.Vec3> op) {
+        net.minecraft.world.phys.Vec3 rgb = new net.minecraft.world.phys.Vec3(((argb >> 16) & 0xFF) / 255.0,
+                ((argb >> 8) & 0xFF) / 255.0, (argb & 0xFF) / 255.0);
+        net.minecraft.world.phys.Vec3 out = op.apply(rgb);
+        return (argb & 0xFF000000) | (channel(out.x) << 16) | (channel(out.y) << 8) | channel(out.z);
+    }
+
+    /** The sunrise ARGB int through {@link #sunriseColor}; 0 alpha means no glow. For the 26.1 attribute. */
+    public static int sunriseArgb(Level level, int argb) {
+        float[] rgba = {((argb >> 16) & 0xFF) / 255F, ((argb >> 8) & 0xFF) / 255F, (argb & 0xFF) / 255F,
+                ((argb >>> 24) & 0xFF) / 255F};
+        float[] out = sunriseColor(level, rgba);
+        if (out == null) return 0;
+        return (channel(out[3]) << 24) | (channel(out[0]) << 16) | (channel(out[1]) << 8) | channel(out[2]);
+    }
+
+    private static int channel(double v) {
+        return Math.max(0, Math.min(255, (int) Math.round(v * 255.0)));
     }
 }

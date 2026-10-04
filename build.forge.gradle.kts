@@ -66,6 +66,11 @@ tasks.processResources {
         // Forge 1.20.1 routes carts through getRailMaxSpeed/onMinecartPass itself.
         "rail_mixins" to "",
         "world_effect_mixins" to "",
+        // Skies.Modifier: 26.1 appends environment-attribute layers; older nodes wrap the sky darkening and the
+        // client colour getters (the mixin classes are empty stubs on the other era).
+        "sky_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinEnvironmentSkyLayers\"" else ", \"MixinLevelSkyDarken\"",
+        "sky_client_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) "" else
+            ", \"MixinClientLevelSky\", \"MixinDimensionEffectsSky\", \"MixinOverworldFogColor\"",
         // No vendored engine below 26.1, so nothing to feed.
         "flywheel_be_mixins" to "",
         "pack_format" to prop("pack_format"),

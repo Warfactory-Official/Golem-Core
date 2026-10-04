@@ -93,6 +93,70 @@ public final class BiomeModifiers {
         DECLARED.add(new Declaration(namespace, name, biomes, List.copyOf(features), step));
     }
 
+    /**
+     * One declared spawn: {@code entity} (an entity id) joins the natural spawns of every biome named by {@code biomes}
+     * (a biome id, a {@code #}-prefixed tag, or {@link #ALL_BIOMES}) except {@code excluded} (a biome id, or null), with
+     * a weight and group size. The spawn category is the entity type's own, as on every loader.
+     */
+    public record SpawnDeclaration(String namespace, String name, String biomes, String excluded, String entity,
+                                   int weight, int minCount, int maxCount) {}
+
+    /** Every biome of every dimension (1.7 {@code BiomeGenBase.getBiomeGenArray()}). */
+    public static final String ALL_BIOMES = "*";
+
+    private static final List<SpawnDeclaration> SPAWNS = Collections.synchronizedList(new ArrayList<>());
+
+    /**
+     * Adds a natural spawn (Forge-family {@code add_spawns}; Fabric {@code BiomeModifications} via
+     * {@link dev.golem.core.world.BiomeFeatures#install()}). The spawner entry is {@code {type, weight, minCount,
+     * maxCount}} on every node (26.1's weighted codec inlines the spawner data).
+     */
+    public static void addSpawns(String namespace, String name, String biomes, String excluded, String entity,
+                                 int weight, int minCount, int maxCount) {
+        if (namespace == null || namespace.isEmpty() || name == null || name.isEmpty()) {
+            throw new DejsonException("a biome modifier needs a namespace and a name");
+        }
+        if (!ALL_BIOMES.equals(biomes)) Models.requireId(biomes.startsWith("#") ? biomes.substring(1) : biomes, "biome");
+        if (excluded != null) Models.requireId(excluded, "biome");
+        Models.requireId(entity, "entity");
+        if (weight < 0 || minCount < 1 || maxCount < minCount) {
+            throw new DejsonException(name + " has an invalid weight or group size");
+        }
+        for (String loader : new String[] {"neoforge", "forge"}) {
+            JsonObject spawner = new JsonObject();
+            // Flat on every node: 26.1's Weighted<SpawnerData> codec inlines the data's fields beside "weight".
+            spawner.addProperty("type", entity);
+            spawner.addProperty("weight", weight);
+            spawner.addProperty("minCount", minCount);
+            spawner.addProperty("maxCount", maxCount);
+            JsonObject modifier = new JsonObject();
+            modifier.addProperty("type", loader + ":add_spawns");
+            if (ALL_BIOMES.equals(biomes)) {
+                JsonObject set = new JsonObject();
+                if (excluded != null) {
+                    set.addProperty("type", loader + ":not");
+                    set.addProperty("value", excluded);
+                } else {
+                    set.addProperty("type", loader + ":any");
+                }
+                modifier.add("biomes", set);
+            } else {
+                if (excluded != null) throw new DejsonException(name + ": an exclusion needs ALL_BIOMES");
+                modifier.addProperty("biomes", biomes);
+            }
+            modifier.add("spawners", spawner);
+            Data.declare("data/" + namespace + "/" + loader + "/biome_modifier/" + name + ".json", modifier);
+        }
+        SPAWNS.add(new SpawnDeclaration(namespace, name, biomes, excluded, entity, weight, minCount, maxCount));
+    }
+
+    /** Every declared spawn, in declaration order. */
+    public static List<SpawnDeclaration> declaredSpawns() {
+        synchronized (SPAWNS) {
+            return List.copyOf(SPAWNS);
+        }
+    }
+
     /** Everything declared so far, in declaration order. */
     public static List<Declaration> declared() {
         synchronized (DECLARED) {

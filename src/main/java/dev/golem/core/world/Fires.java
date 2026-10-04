@@ -37,4 +37,38 @@ public final class Fires {
         return entry != null && entry.getBurnChance() > 0;
         *///?}
     }
+
+    private static final java.util.Map<net.minecraft.world.level.block.Block, int[]> STATED = new java.util.IdentityHashMap<>();
+
+    /**
+     * States a block's fire odds, vanilla's {@code FireBlock.setFlammable(block, igniteOdds, burnOdds)}:
+     * {@code encouragement} is the chance fire spreads onto it, {@code flammability} the chance fire
+     * consumes it. Fabric writes its flammable registry; forge-like loaders answer it from
+     * {@link CompatBlock}'s fire hooks, so there it takes effect for {@code CompatBlock} subclasses only.
+     * Safe to call from a block constructor.
+     */
+    public static void setFlammable(net.minecraft.world.level.block.Block block, int encouragement, int flammability) {
+        synchronized (STATED) {
+            STATED.put(block, new int[] {encouragement, flammability});
+        }
+        //? if fabric {
+        /*net.fabricmc.fabric.api.registry.FlammableBlockRegistry.getDefaultInstance().add(block, encouragement, flammability);
+        *///?}
+    }
+
+    /** The encouragement stated through {@link #setFlammable}, or -1 when none was. */
+    public static int statedEncouragement(net.minecraft.world.level.block.Block block) {
+        synchronized (STATED) {
+            int[] values = STATED.get(block);
+            return values == null ? -1 : values[0];
+        }
+    }
+
+    /** The flammability stated through {@link #setFlammable}, or -1 when none was. */
+    public static int statedFlammability(net.minecraft.world.level.block.Block block) {
+        synchronized (STATED) {
+            int[] values = STATED.get(block);
+            return values == null ? -1 : values[1];
+        }
+    }
 }

@@ -46,6 +46,25 @@ public abstract class CompatCustomRecipe extends CustomRecipe {
         return assembleItems(input);
     }
 
+    /**
+     * What the grid keeps in a slot once {@code consumed} is used up, slot by slot in grid order. The default is
+     * the item's own crafting remainder (a bucket for a milk bucket); a recipe that keeps a tool in the grid
+     * whole - 1.7's {@code getContainerItem} returning a copy - overrides this.
+     */
+    protected ItemStack remainder(List<ItemStack> input, int slot, ItemStack consumed) {
+        return Compat.craftingRemainder(consumed);
+    }
+
+    private net.minecraft.core.NonNullList<ItemStack> remaining(List<ItemStack> input) {
+        net.minecraft.core.NonNullList<ItemStack> left =
+                net.minecraft.core.NonNullList.withSize(input.size(), ItemStack.EMPTY);
+        for (int slot = 0; slot < input.size(); slot++) {
+            ItemStack stack = input.get(slot);
+            if (!stack.isEmpty()) left.set(slot, remainder(input, slot, stack));
+        }
+        return left;
+    }
+
     /** Version-neutral entry points for machines and server-side validation. */
     public final boolean matchesItemStacks(List<ItemStack> input, Level level) {
         return matchesItems(input, level);
@@ -102,6 +121,18 @@ public abstract class CompatCustomRecipe extends CustomRecipe {
     @Override
     public final ItemStack assemble(CraftingContainer input, net.minecraft.core.RegistryAccess registries) {
         return assembleGrid(input.getWidth(), input.getHeight(), items(input));
+    }
+    *///?}
+
+    //? if >=1.21.1 {
+    @Override
+    public net.minecraft.core.NonNullList<ItemStack> getRemainingItems(CraftingInput input) {
+        return remaining(items(input));
+    }
+    //?} else {
+    /*@Override
+    public net.minecraft.core.NonNullList<ItemStack> getRemainingItems(CraftingContainer input) {
+        return remaining(items(input));
     }
     *///?}
 

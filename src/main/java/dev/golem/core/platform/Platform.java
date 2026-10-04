@@ -46,6 +46,17 @@ public final class Platform {
         *///?}
     }
 
+    /** Whether {@code player} is the loader's fake player (a machine or block acting as a player). */
+    public static boolean isFakePlayer(net.minecraft.world.entity.player.Player player) {
+        //? if fabric {
+        /*return player instanceof net.fabricmc.fabric.api.entity.FakePlayer;
+        *///?} elif neoforge {
+        return player instanceof net.neoforged.neoforge.common.util.FakePlayer;
+        //?} elif forge {
+        /*return player instanceof net.minecraftforge.common.util.FakePlayer;
+        *///?}
+    }
+
     /** Whether the current loader is running a development environment. */
     public static boolean isDevelopment() {
         //? if fabric {

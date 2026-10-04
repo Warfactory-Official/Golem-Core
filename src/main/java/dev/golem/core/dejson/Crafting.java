@@ -308,9 +308,9 @@ public final class Crafting {
 
         private final String id;
         private final int count;
-        private final Map<String, Integer> components;
+        private final Map<String, Object> components;
 
-        private Stack(String id, int count, Map<String, Integer> components) {
+        private Stack(String id, int count, Map<String, Object> components) {
             this.id = id;
             this.count = count;
             this.components = components;
@@ -318,6 +318,18 @@ public final class Crafting {
 
         /** The same result, wearing one more component. */
         public Stack with(String component, int value) {
+            return new Stack(id, count, plus(components, component, value));
+        }
+
+        /**
+         * The same result, wearing one more component whose codec reads a string - a material name, or an
+         * enum written by its serialized name. Only the mod's own component recipe types read such a result
+         * on every target (the legacy result reader folds components into NBT as written).
+         */
+        public Stack with(String component, String value) {
+            if (value == null || value.isEmpty()) {
+                throw new DejsonException(id + " is given an empty value for " + component);
+            }
             return new Stack(id, count, plus(components, component, value));
         }
 
@@ -348,7 +360,7 @@ public final class Crafting {
     public static final class Ingredient {
 
         private final List<String> ids;
-        private final Map<String, Integer> components;
+        private final Map<String, Object> components;
         private final List<String> absent;
         private final String remainder;
         private final String fluid;
@@ -356,7 +368,7 @@ public final class Crafting {
         private final String potion;
         private final boolean degrade;
 
-        private Ingredient(List<String> ids, Map<String, Integer> components, List<String> absent,
+        private Ingredient(List<String> ids, Map<String, Object> components, List<String> absent,
                            String remainder, String fluid, int amount, String potion, boolean degrade) {
             this.ids = ids;
             this.components = components;
@@ -374,7 +386,19 @@ public final class Crafting {
 
         /** The same ingredient, matching only stacks carrying this component value. */
         public Ingredient with(String component, int value) {
-            return new Ingredient(ids, plus(components, component, value), absent, remainder, fluid, amount,
+            return new Ingredient(ids, plus(components, component, (Object) value), absent, remainder, fluid, amount,
+                    potion, degrade);
+        }
+
+        /**
+         * The same ingredient, matching only stacks whose component codec writes this string - a registry name
+         * such as {@code hbm:water}. Numeric registry ids are never recipe data: they are not stable.
+         */
+        public Ingredient with(String component, String value) {
+            if (value == null || value.isEmpty()) {
+                throw new DejsonException(name() + " is given an empty value for " + component);
+            }
+            return new Ingredient(ids, plus(components, component, (Object) value), absent, remainder, fluid, amount,
                     potion, degrade);
         }
 
@@ -579,20 +603,22 @@ public final class Crafting {
         return list;
     }
 
-    private static Map<String, Integer> plus(Map<String, Integer> components, String component,
-                                             int value) {
+    private static <V> Map<String, V> plus(Map<String, V> components, String component, V value) {
         Models.requireId(component, "component");
         if (components.containsKey(component)) {
             throw new DejsonException(component + " is given a value twice");
         }
-        Map<String, Integer> plus = new LinkedHashMap<>(components);
+        Map<String, V> plus = new LinkedHashMap<>(components);
         plus.put(component, value);
         return plus;
     }
 
-    private static JsonObject componentMap(Map<String, Integer> components) {
+    private static JsonObject componentMap(Map<String, ?> components) {
         JsonObject json = new JsonObject();
-        components.forEach(json::addProperty);
+        components.forEach((key, value) -> {
+            if (value instanceof Number number) json.addProperty(key, number);
+            else json.addProperty(key, String.valueOf(value));
+        });
         return json;
     }
 

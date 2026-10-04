@@ -109,6 +109,11 @@ tasks.processResources {
         // NeoForge 1.21.1 still calls getRailMaxSpeed/onMinecartPass; 26.1 declares but no longer calls them.
         "rail_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinMinecartRails\"" else "",
         "world_effect_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinWorldEffects\"" else "",
+        // Skies.Modifier: 26.1 appends environment-attribute layers; older nodes wrap the sky darkening and the
+        // client colour getters (the mixin classes are empty stubs on the other era).
+        "sky_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinEnvironmentSkyLayers\"" else ", \"MixinLevelSkyDarken\"",
+        "sky_client_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) "" else
+            ", \"MixinClientLevelSky\", \"MixinDimensionEffectsSky\", \"MixinOverworldFogColor\"",
         "flywheel_be_mixins" to if (hasVendoredFlywheel) ", \"MixinLevelChunkVisuals\"" else "",
         "pack_format" to prop("pack_format"),
         "pack_format_entry" to if (mcVersion.substringBefore('.').toInt() >= 26)
