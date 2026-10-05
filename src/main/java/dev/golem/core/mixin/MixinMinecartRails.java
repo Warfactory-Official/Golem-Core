@@ -1,5 +1,7 @@
 package dev.golem.core.mixin;
 
+import com.llamalad7.mixinextras.injector.ModifyReturnValue;
+import com.llamalad7.mixinextras.sugar.Local;
 import dev.golem.core.world.CompatRailBlock;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -10,7 +12,6 @@ import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
  * Calls {@link CompatRailBlock#getRailMaxSpeed} and {@link CompatRailBlock#onMinecartPass} on the nodes whose
@@ -20,7 +21,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * {@code getMaxSpeed}; (2) NeoForge 26.1 declares {@code IBaseRailBlockExtension.getRailMaxSpeed/onMinecartPass}
  * but nothing calls them any more, and Fabric API has no minecart events; (3) widening does not help, the value
  * has to change inside the cart's own tick. The injections are the smallest that do it: one return-value
- * override on the speed query and one call after the cart's rail step. Forge 1.20.1 and NeoForge 1.21.1 still
+ * modifier on the speed query (a MixinExtras {@code @ModifyReturnValue}, which chains with other cart-speed mods
+ * where a cancellable RETURN inject could return past them) and one call after the cart's rail step. Forge 1.20.1 and NeoForge 1.21.1 still
  * call both methods themselves (Forge {@code moveMinecartOnRail}/{@code moveAlongTrack}), so there this class
  * is empty, is not listed in the mixin config, and the loader does the work.
  *
@@ -41,13 +43,10 @@ public abstract class MixinMinecartRails {
     @Unique
     private BlockState golem$railState;
 
-    @Inject(method = "getMaxSpeed(Lnet/minecraft/server/level/ServerLevel;)D", at = @At("RETURN"), cancellable = true)
-    private void golem$railMaxSpeed(ServerLevel level, CallbackInfoReturnable<Double> cir) {
+    @ModifyReturnValue(method = "getMaxSpeed(Lnet/minecraft/server/level/ServerLevel;)D", at = @At("RETURN"))
+    private double golem$railMaxSpeed(double speed, @Local(argsOnly = true) ServerLevel level) {
         AbstractMinecart self = (AbstractMinecart) (Object) this;
-        if (!AbstractMinecart.useExperimentalMovement(level)) {
-            golem$applyRailSpeed(cir);
-            return;
-        }
+        if (!AbstractMinecart.useExperimentalMovement(level)) return golem$applyRailSpeed(speed);
         // Experimental NewMinecartBehavior: the cart's cap is the maxMinecartSpeed game rule, not a fixed
         // 0.4 blocks/tick, so an absolute Forge rail speed would clamp every experimental cart to 1.12
         // speeds. There a rail's max speed means its ratio to the vanilla rail default: a rail that keeps
@@ -58,8 +57,9 @@ public abstract class MixinMinecartRails {
         if (state.getBlock() instanceof CompatRailBlock rail) {
             double vanilla = self.isInWater() ? 0.2 : 0.4;
             double railSpeed = Math.min(rail.getRailMaxSpeed(state, level, pos, self), CompatRailBlock.CART_SPEED_CAP);
-            cir.setReturnValue(cir.getReturnValue() * railSpeed / vanilla);
+            return speed * railSpeed / vanilla;
         }
+        return speed;
     }
 
     @Inject(method = "tick()V", at = @At("HEAD"))
@@ -91,9 +91,9 @@ public abstract class MixinMinecartRails {
         if (pos != null && state.getBlock() instanceof CompatRailBlock rail) rail.onMinecartPass(state, self.level(), pos, self);
     }
     //?} else if fabric {
-    /*@Inject(method = "getMaxSpeed()D", at = @At("RETURN"), cancellable = true)
-    private void golem$railMaxSpeed(CallbackInfoReturnable<Double> cir) {
-        golem$applyRailSpeed(cir);
+    /*@ModifyReturnValue(method = "getMaxSpeed()D", at = @At("RETURN"))
+    private double golem$railMaxSpeed(double speed) {
+        return golem$applyRailSpeed(speed);
     }
 
     @Inject(method = "moveAlongTrack(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)V",
@@ -106,15 +106,15 @@ public abstract class MixinMinecartRails {
 
     //? if >=26.1 || fabric {
     @Unique
-    private void golem$applyRailSpeed(CallbackInfoReturnable<Double> cir) {
+    private double golem$applyRailSpeed(double speed) {
         AbstractMinecart self = (AbstractMinecart) (Object) this;
         BlockPos pos = CompatRailBlock.railPosition(self);
         BlockState state = self.level().getBlockState(pos);
         if (state.getBlock() instanceof CompatRailBlock rail) {
             // Forge getMaxSpeedWithRail: the rail's cap, never past the cart's own rail cap
-            cir.setReturnValue((double) Math.min(rail.getRailMaxSpeed(state, self.level(), pos, self),
-                    CompatRailBlock.CART_SPEED_CAP));
+            return Math.min(rail.getRailMaxSpeed(state, self.level(), pos, self), CompatRailBlock.CART_SPEED_CAP);
         }
+        return speed;
     }
     //?}
 }

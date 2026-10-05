@@ -1,5 +1,7 @@
 package dev.golem.core.mixin;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import dev.golem.core.world.Spawns;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Mob;
@@ -9,7 +11,6 @@ import net.minecraft.world.level.ServerLevelAccessor;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
@@ -20,8 +21,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * lists are static; (2) Fabric API has no spawn event (Forge and NeoForge use their {@code PositionCheck} event,
  * so this class is listed only in {@code golemcore.fabric.mixins.json}); (3) widening cannot help, the answer has
  * to change inside the spawner. The natural check is a HEAD inject on {@code isValidPositionForMob}; the
- * generation spawn has no method of its own, so its {@code Mob.checkSpawnRules} call is redirected (an inject on
- * {@code Mob.checkSpawnRules} would miss every subclass that overrides it without calling super).
+ * generation spawn has no method of its own, so its {@code Mob.checkSpawnRules} call is wrapped (an inject on
+ * {@code Mob.checkSpawnRules} would miss every subclass that overrides it without calling super). A MixinExtras
+ * {@code @WrapOperation}, not a {@code @Redirect}: only one mod may redirect a call, while wrappers chain, and
+ * spawn-control mods hook this same call.
  */
 @Mixin(NaturalSpawner.class)
 public abstract class MixinNaturalSpawnerCheck {
@@ -47,22 +50,24 @@ public abstract class MixinNaturalSpawnerCheck {
     }
 
     //? if >=26.1 {
-    @Redirect(method = "spawnMobsForChunkGeneration", at = @At(value = "INVOKE",
+    @WrapOperation(method = "spawnMobsForChunkGeneration", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/world/entity/Mob;checkSpawnRules(Lnet/minecraft/world/level/LevelAccessor;Lnet/minecraft/world/entity/EntitySpawnReason;)Z"))
     private static boolean golem$generationSpawnCheck(Mob mob, LevelAccessor level,
-                                                      net.minecraft.world.entity.EntitySpawnReason reason) {
+                                                      net.minecraft.world.entity.EntitySpawnReason reason,
+                                                      Operation<Boolean> original) {
         if (level instanceof ServerLevelAccessor accessor
                 && Spawns.denied(mob, accessor.getLevel(), Spawns.Reason.CHUNK_GENERATION)) return false;
-        return mob.checkSpawnRules(level, reason);
+        return original.call(mob, level, reason);
     }
     //?} else {
-    /*@Redirect(method = "spawnMobsForChunkGeneration", at = @At(value = "INVOKE",
+    /*@WrapOperation(method = "spawnMobsForChunkGeneration", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/world/entity/Mob;checkSpawnRules(Lnet/minecraft/world/level/LevelAccessor;Lnet/minecraft/world/entity/MobSpawnType;)Z"))
     private static boolean golem$generationSpawnCheck(Mob mob, LevelAccessor level,
-                                                      net.minecraft.world.entity.MobSpawnType reason) {
+                                                      net.minecraft.world.entity.MobSpawnType reason,
+                                                      Operation<Boolean> original) {
         if (level instanceof ServerLevelAccessor accessor
                 && Spawns.denied(mob, accessor.getLevel(), Spawns.Reason.CHUNK_GENERATION)) return false;
-        return mob.checkSpawnRules(level, reason);
+        return original.call(mob, level, reason);
     }
     *///?}
 }

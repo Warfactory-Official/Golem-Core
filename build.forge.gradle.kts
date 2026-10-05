@@ -112,6 +112,14 @@ dependencies {
     compileOnly("org.jspecify:jspecify:1.0.0")
     compileOnly("org.spongepowered:mixin:0.8.5")
     annotationProcessor("org.spongepowered:mixin:0.8.5:processor")
+    // MixinExtras (@WrapOperation, @ModifyReturnValue). Unlike Fabric Loader and NeoForge, Forge 1.20.1 does not
+    // bundle it (its installer lists only Mixin 0.8.5, through 47.4.26), so Core nests it (Jar-in-Jar; FML picks the
+    // newest copy any mod nests) and puts it on the dev runtime of Core and of mods built on it. The common
+    // annotation processor writes its injectors into the refmap.
+    compileOnly("io.github.llamalad7:mixinextras-common:0.3.5")
+    annotationProcessor("io.github.llamalad7:mixinextras-common:0.3.5")
+    implementation("io.github.llamalad7:mixinextras-forge:0.5.5")
+    jarJar("io.github.llamalad7:mixinextras-forge:[0.3.5,)") { version { prefer("0.5.5") } }
     // JEI, compile-only and per-node optional — same contract as the other loaders' buildscripts.
     // The facade in dev.golem.core.jei hides the 15.x/19.x/29.x API split from consumers, so this
     // library has to see whichever line the node targets; a node that declares no coordinates

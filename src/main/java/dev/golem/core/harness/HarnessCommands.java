@@ -317,7 +317,19 @@ final class HarnessCommands {
                 mc.options.setCameraType(net.minecraft.client.CameraType.valueOf(value.toUpperCase(java.util.Locale.ROOT)));
                 break;
             default:
-                return Json.error("unknown option " + key);
+                // A key binding by its mapping name, to a saved key name: "key.ok_zoomer.zoom" -> "key.keyboard.k".
+                // Lets a scenario move a binding off a key another mod also defaults to, as a player would.
+                net.minecraft.client.KeyMapping mapping = null;
+                if (key.startsWith("key.")) {
+                    for (net.minecraft.client.KeyMapping candidate : mc.options.keyMappings) {
+                        if (candidate.getName().equals(key)) mapping = candidate;
+                    }
+                }
+                if (mapping == null) return Json.error("unknown option " + key);
+                previous = mapping.saveString();
+                mapping.setKey(com.mojang.blaze3d.platform.InputConstants.getKey(value));
+                net.minecraft.client.KeyMapping.resetMapping();
+                break;
         }
         JsonObject json = Json.ok();
         json.addProperty("previous", previous);

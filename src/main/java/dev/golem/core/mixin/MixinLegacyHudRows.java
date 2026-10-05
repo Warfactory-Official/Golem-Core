@@ -5,7 +5,8 @@ package dev.golem.core.mixin;
 // before 26.1 offers only a post-HUD callback that cannot stop a vanilla row; an access widener (3) cannot add a
 // condition. So: cancel Gui.renderHearts at its head, and for the armour row cancel 1.21.1's renderArmor at its head
 // or, on 1.20.1 where the row is drawn inline in renderPlayerHealth, answer 0 to its single getArmorValue() read
-// (the row draws nothing for 0 armour) - a @Redirect only because 1.20.1 has no method boundary to inject at.
+// (the row draws nothing for 0 armour) - a MixinExtras @ModifyExpressionValue on that read only because 1.20.1 has no
+// method boundary to inject at (it chains with other mods' hooks on the read, which a @Redirect would not).
 //? if fabric && <26.1 {
 
 /*import dev.golem.core.client.VanillaHud;
@@ -29,10 +30,10 @@ public abstract class MixinLegacyHudRows {
         if (VanillaHud.hideArmor()) callback.cancel();
     }
     //?} else {
-    /^@org.spongepowered.asm.mixin.injection.Redirect(method = "renderPlayerHealth", at = @At(value = "INVOKE",
+    /^@com.llamalad7.mixinextras.injector.ModifyExpressionValue(method = "renderPlayerHealth", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/world/entity/player/Player;getArmorValue()I"))
-    private int golem$armorValue(net.minecraft.world.entity.player.Player player) {
-        return VanillaHud.hideArmor() ? 0 : player.getArmorValue();
+    private int golem$armorValue(int armor) {
+        return VanillaHud.hideArmor() ? 0 : armor;
     }
     ^///?}
 }

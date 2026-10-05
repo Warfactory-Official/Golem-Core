@@ -205,6 +205,9 @@ dependencies {
     // target, and keeps @Nullable usable in shared code across the whole matrix.
     compileOnly("org.jspecify:jspecify:1.0.0")
     compileOnly("org.spongepowered:mixin:0.8.5")
+    // MixinExtras (@WrapOperation, @ModifyReturnValue): NeoForge bundles it at runtime on every line we target, so
+    // compile against the oldest API we use and ship nothing.
+    compileOnly("io.github.llamalad7:mixinextras-common:0.3.5")
 
     // JEI, compile-only and per-node optional: the facade in dev.golem.core.jei exists to hide the
     // 19.x/29.x API split from consumers, so this library has to see whichever line the node targets.

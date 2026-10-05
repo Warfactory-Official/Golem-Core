@@ -4,7 +4,6 @@ import com.mojang.blaze3d.platform.Window;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
@@ -42,12 +41,13 @@ public class MixinHarnessWindow {
         dev.golem.core.harness.HarnessWindowHints.apply();
     }
     //?} else {
-    /*// A redirect rather than an @Inject: Forge 1.20.1 ships Mixin 0.8.5, which refuses @Inject at a
-    // non-RETURN point inside a constructor, while a call redirect is legal there on every version.
-    @Redirect(method = "<init>", at = @At(value = "INVOKE",
-            target = "Lorg/lwjgl/glfw/GLFW;glfwDefaultWindowHints()V"))
-    private void golem$harnessWindowHints() {
-        org.lwjgl.glfw.GLFW.glfwDefaultWindowHints();
+    /*// A call wrapper rather than an @Inject: Forge 1.20.1 ships Mixin 0.8.5, which refuses @Inject at a
+    // non-RETURN point inside a constructor, while wrapping a call is legal there on every version. A MixinExtras
+    // @WrapOperation, not a @Redirect, because this class ships to players and window mods hook the same call.
+    @com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation(method = "<init>", at = @At(value = "INVOKE",
+            target = "Lorg/lwjgl/glfw/GLFW;glfwDefaultWindowHints()V", remap = false))
+    private void golem$harnessWindowHints(com.llamalad7.mixinextras.injector.wrapoperation.Operation<Void> original) {
+        original.call();
         dev.golem.core.harness.HarnessWindowHints.apply();
     }
     *///?}

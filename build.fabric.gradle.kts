@@ -148,10 +148,9 @@ tasks.processResources {
         // 1.20.1 has no pre-removal explosion hook for blocks (1.21 added onExplosionHit); see CompatBlock.
         // MixinLegacyStackLimit: no per-stack stack size before the 1.20.5 component; see ItemStacks.setMaxStackSize.
         "legacy_explosion_mixins" to if (mcVersion.startsWith("1.20.")) ", \"MixinExplosionBlockHook\", \"MixinLegacyStackLimit\"" else "",
-        // Modern Fabric's GameTest API has no public dynamic-instance registration callback. The
-        // exact mixin is compiled and named only where Fabric's 26.1 implementation provides it.
-        // Both entries follow MixinLivingEntitySwing, so each carries its own leading comma.
-        "fabric_gametest_mixins" to if (!obfuscated) ", \"MixinFabricGameTestModInitializer\"" else "",
+        // MixinFabricGameTestModInitializer is not listed here: Fabric's GameTest module exists only in dev runs, so
+        // dev.golem.core.gametest.GameTestMixinPlugin adds it when its target is present (a listed mixin with a missing
+        // target fails the required config and crashed players' clients).
         "legacy_client_mixins" to ", \"MixinMouseInput\"" +
             (if (obfuscated) ", \"MixinLegacyCrosshair\"" else "") +
             // VanillaHud: Fabric API before 26.1 has no named HUD elements to suppress hearts/armour by.
