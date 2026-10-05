@@ -2,6 +2,7 @@ package dev.golem.core.flywheel.indirect;
 
 //? if >=26.1 {
 
+import com.mojang.blaze3d.opengl.GlStateManager;
 import com.mojang.blaze3d.opengl.GlTexture;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.GpuTexture;
@@ -29,6 +30,15 @@ import org.lwjgl.opengl.GL43;
 // Resize strategy: re-allocate the whole texture on window-size change. The window check is
 // keyed on framebuffer width/height — if either differs from the recorded value we tear down
 // and rebuild. No partial reuse.
+//
+// Texture binds go through GlStateManager, never raw glActiveTexture/glBindTexture. blaze3d keeps
+// a per-unit cache of the bound texture and skips the GL call when the cache says the texture is
+// already bound; a raw bind leaves that cache naming the texture it replaced, so the next cached
+// "bind" of that texture is skipped and the parameters that follow it land on the pyramid. With
+// Sodium 0.9 on 26.1.2 that happened every few frames (2026-10-05, History §19em-hiz): the pyramid's
+// GL_TEXTURE_MAX_LEVEL was reset to 0, textureSize() in the cull read 0 for every mip above 0, and
+// every instance tested as occluded — machines drew nothing but their shadows until a backend
+// reset generated a new texture.
 public final class HizPyramid {
 
     private int textureId;
@@ -43,10 +53,10 @@ public final class HizPyramid {
         int desiredH = mip0Size(targetHeight);
         if (textureId != 0 && desiredW == width && desiredH == height) return true;
         close();
-        textureId = GL11.glGenTextures();
+        textureId = GlStateManager._genTexture();
         // GL_TEXTURE_2D is the conventional binding target for sampler2D + image2D in the
         // pyramid build / sample paths.
-        GL11.glBindTexture(GL11.GL_TEXTURE_2D, textureId);
+        bind(0, textureId);
         int levels = mipLevels(desiredW, desiredH);
         GL42.glTexStorage2D(GL11.GL_TEXTURE_2D, levels, GL30.GL_R32F, desiredW, desiredH);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
@@ -86,8 +96,7 @@ public final class HizPyramid {
 
         // First pass: vanilla depth → mip 0. Bind depth to sampler unit 0, mip 0 to image unit 0.
         program.useFirst();
-        GL13.glActiveTexture(GL13.GL_TEXTURE0);
-        GL11.glBindTexture(GL11.GL_TEXTURE_2D, depthHandle);
+        bind(0, depthHandle);
         // textureGather wants nearest filtering and the comparison mode disabled — Mojang may
         // have left GL_TEXTURE_COMPARE_MODE on GL_COMPARE_REF_TO_TEXTURE for shadow sampling
         // elsewhere, which would make gather return comparison results instead of raw depth.
@@ -120,12 +129,18 @@ public final class HizPyramid {
 
     public void close() {
         if (textureId != 0) {
-            GL11.glDeleteTextures(textureId);
+            GlStateManager._deleteTexture(textureId);
             textureId = 0;
         }
         width = 0;
         height = 0;
         mipLevels = 0;
+    }
+
+    /** Binds {@code texture} to GL_TEXTURE_2D of {@code unit} through blaze3d's state cache (see the class comment). */
+    static void bind(int unit, int texture) {
+        GlStateManager._activeTexture(GL13.GL_TEXTURE0 + unit);
+        GlStateManager._bindTexture(texture);
     }
 
     // Mip 0 covers the framebuffer at half-resolution snapped down to next power-of-two.

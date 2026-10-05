@@ -310,8 +310,7 @@ public final class IndirectDrawManager implements DrawManager {
         float znear = -proj.m32() / (1.0F - proj.m22());
         cullProgram.setProjectionInfo(znear, proj.m00(), proj.m11());
         if (hizPyramid.textureId() != 0) {
-            GL13.glActiveTexture(GL13.GL_TEXTURE0);
-            GL11.glBindTexture(GL11.GL_TEXTURE_2D, hizPyramid.textureId());
+            HizPyramid.bind(0, hizPyramid.textureId());
             cullProgram.setPyramidInfo(hizPyramid.width(), hizPyramid.height(), hizPyramid.mipLevels() - 1);
         }
         cullProgram.setHizEnabled(hizReady);

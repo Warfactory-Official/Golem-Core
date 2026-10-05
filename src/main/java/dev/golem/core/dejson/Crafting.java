@@ -1,6 +1,7 @@
 package dev.golem.core.dejson;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import java.util.ArrayList;
@@ -333,6 +334,18 @@ public final class Crafting {
             return new Stack(id, count, plus(components, component, value));
         }
 
+        /**
+         * The same result, wearing one more component whose value is a structure - another mod's record
+         * component, such as CC: Tweaked's treasure disk. Pre-component nodes fold it into NBT under the
+         * component id unless the recipe states the item's own NBT ({@link #legacyResultTag}).
+         */
+        public Stack with(String component, JsonObject value) {
+            if (value == null || value.size() == 0) {
+                throw new DejsonException(id + " is given an empty value for " + component);
+            }
+            return new Stack(id, count, plus(components, component, value.deepCopy()));
+        }
+
         private JsonObject json(String recipe) {
             Models.requireId(id, "result");
             if (count < 1) {
@@ -617,9 +630,61 @@ public final class Crafting {
         JsonObject json = new JsonObject();
         components.forEach((key, value) -> {
             if (value instanceof Number number) json.addProperty(key, number);
+            else if (value instanceof JsonElement element) json.add(key, element.deepCopy());
             else json.addProperty(key, String.valueOf(value));
         });
         return json;
+    }
+
+    /**
+     * Loads {@code recipe} only where {@code modId} is loaded, stated in all three loaders' spellings (each loader
+     * reads its own key and the others' are unknown fields its recipe codec ignores): NeoForge's
+     * {@code neoforge:conditions}, Forge's {@code conditions} and Fabric's {@code fabric:load_conditions}. Without
+     * the mod the recipe is skipped before it is parsed, so it may name the mod's items.
+     */
+    public static JsonObject whenModLoaded(JsonObject recipe, String modId) {
+        Models.requireId(modId + ":mod", "mod id");
+        if (recipe.has("neoforge:conditions") || recipe.has("conditions") || recipe.has("fabric:load_conditions")) {
+            throw new DejsonException("a recipe for " + modId + " already carries load conditions");
+        }
+        JsonObject neo = new JsonObject();
+        neo.addProperty("type", "neoforge:mod_loaded");
+        neo.addProperty("modid", modId);
+        JsonArray neoList = new JsonArray();
+        neoList.add(neo);
+        recipe.add("neoforge:conditions", neoList);
+
+        JsonObject forge = new JsonObject();
+        forge.addProperty("type", "forge:mod_loaded");
+        forge.addProperty("modid", modId);
+        JsonArray forgeList = new JsonArray();
+        forgeList.add(forge);
+        recipe.add("conditions", forgeList);
+
+        JsonObject fabric = new JsonObject();
+        fabric.addProperty("condition", "fabric:all_mods_loaded");
+        JsonArray mods = new JsonArray();
+        mods.add(modId);
+        fabric.add("values", mods);
+        JsonArray fabricList = new JsonArray();
+        fabricList.add(fabric);
+        recipe.add("fabric:load_conditions", fabricList);
+        return recipe;
+    }
+
+    /**
+     * The NBT the result carries on a node before item components (1.20.1), where folding its components into
+     * NBT under their ids would be wrong: another mod's item whose old NBT keys are not its component ids (CC:
+     * Tweaked's treasure disk was {@code Title}/{@code SubPath}/{@code Colour}). legacy-recipes.gradle.kts uses
+     * it in place of the components there and drops it on every other node; only the mod's own component recipe
+     * types read a result tag on 1.20.1.
+     */
+    public static JsonObject legacyResultTag(JsonObject recipe, JsonObject tag) {
+        if (tag == null || tag.size() == 0) {
+            throw new DejsonException("an empty legacy result tag");
+        }
+        recipe.add("legacy_result_tag", tag.deepCopy());
+        return recipe;
     }
 
     private static JsonObject declare(String namespace, String id, JsonObject recipe) {

@@ -21,6 +21,10 @@ java {
 repositories {
     mavenCentral()
     maven("https://maven.blamejared.com") { name = "BlameJared" }
+    maven("https://maven.squiddev.cc") {
+        name = "SquidDev"
+        content { includeGroup("cc.tweaked") }
+    }
 }
 
 // Loom's configurations are referenced by name rather than through generated accessors: Kotlin DSL
@@ -175,6 +179,18 @@ dependencies {
     val jeiMc = (findProperty("deps.jei_mc") as String?)?.takeIf { it.isNotBlank() }
     val jeiVer = (findProperty("deps.jei") as String?)?.takeIf { it.isNotBlank() }
     if (jeiMc != null && jeiVer != null) compileOnly("mezz.jei:jei-$jeiMc-common-api:$jeiVer")
+
+    // CC: Tweaked, compile-only and per-node optional: dev.golem.core.computer registers peripherals with the
+    // loader's lookup (NeoForge capability, Forge provider, Fabric BlockApiLookup). The peripheral API itself
+    // (core-api) is the same on every node. A node without coordinates compiles the facade out.
+    val ccMc = (findProperty("deps.cc_mc") as String?)?.takeIf { it.isNotBlank() }
+    val ccVer = (findProperty("deps.cc") as String?)?.takeIf { it.isNotBlank() }
+    if (ccMc != null && ccVer != null) {
+        // core-api names no Minecraft type, so it needs no remapping; FabricPeripherals reaches CC's lookup by its
+        // id rather than through the fabric-api jar, which Loom 1.16 refuses to remap on 1.20.1/1.21.1 (that jar
+        // was built with Loom 1.17).
+        compileOnly("cc.tweaked:cc-tweaked-$ccMc-core-api:$ccVer") { isTransitive = false }
+    }
 }
 
 // Plain-JVM unit tests. The data backends are pure logic over CompoundTag/NbtOps and need no game
