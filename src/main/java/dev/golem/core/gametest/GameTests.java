@@ -263,6 +263,17 @@ public final class GameTests {
     public static void register(Suite suite) {
         for (Function function : suite.functions) addLegacy(function);
     }
+
+    /^*
+     * The tests of {@code suite} alone, NOT added to {@link #pending()}: what a second {@code fabric-gametest}
+     * generator returns (an optional integration's own entrypoint, such as a mod's Sable tests). Returning
+     * {@code pending()} from a second generator would hand every other suite's tests over twice.
+     ^/
+    public static List<TestFunction> functionsOf(Suite suite) {
+        List<TestFunction> functions = new ArrayList<>();
+        for (Function function : suite.functions) addLegacy(function, functions);
+        return functions;
+    }
     *///?}
 
     //? if fabric && >=26.1 {
@@ -313,6 +324,10 @@ public final class GameTests {
      * The stock 24-wide template with its 5-block gap already covers a padding of 8.
      ^/
     private static void addLegacy(Function function) {
+        addLegacy(function, PENDING);
+    }
+
+    private static void addLegacy(Function function, List<TestFunction> into) {
         // Spacers follow their test through the filter.
         if (!selected(function)) return;
         String structure = function.namespace + ":" + EMPTY_STRUCTURE;
@@ -326,7 +341,7 @@ public final class GameTests {
         // field; retain its original constructor and enclosure behavior for that node.
         if (function.padding > 8) {
             //? if >=1.21.1 {
-            PENDING.add(new TestFunction(
+            into.add(new TestFunction(
                     "defaultBatch",
                     function.id() + "_spacer",
                     structure,
@@ -340,7 +355,7 @@ public final class GameTests {
                     true,
                     GameTestHelper::succeed));
             //?} else {
-            /^PENDING.add(new TestFunction(
+            /^into.add(new TestFunction(
                     "defaultBatch",
                     function.id() + "_spacer",
                     structure,
@@ -353,7 +368,7 @@ public final class GameTests {
                     GameTestHelper::succeed));^///?}
         }
         //? if >=1.21.1 {
-        PENDING.add(new TestFunction(
+        into.add(new TestFunction(
                 "defaultBatch",
                 function.id(),
                 structure,
@@ -367,7 +382,7 @@ public final class GameTests {
                 true,
                 function.body.get()));
         //?} else {
-        /^PENDING.add(new TestFunction(
+        /^into.add(new TestFunction(
                 "defaultBatch",
                 function.id(),
                 structure,

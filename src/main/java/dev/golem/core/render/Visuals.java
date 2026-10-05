@@ -78,6 +78,12 @@ public final class Visuals {
      * answer whenever the backend is off or absent.
      */
     public static boolean owns(BlockPos pos) {
+        // A block on a sub-level whose system does not carry instanced visuals (Sable on Fabric has no Flywheel
+        // embedding) is drawn by the engine where its block sits, far from where it is seen: never owned, so its
+        // renderer draws the whole model in place.
+        if (dev.golem.core.world.SubLevels.strandsInstancedVisuals(net.minecraft.client.Minecraft.getInstance().level, pos)) {
+            return false;
+        }
         Ownership test = external;
         if (test != null && test.owns(pos)) return true;
         //? if >=26.1 {

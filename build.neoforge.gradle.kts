@@ -15,6 +15,12 @@ val javaVersion = prop("java_version").toInt()
 // node fails the build outright rather than being ignored.
 val hasVendoredFlywheel = mcVersion.substringBefore('.').toInt() >= 26
 
+// Sable (see the dependency block below) on the nodes that declare its coordinates.
+val sableMc = (findProperty("deps.sable_mc") as String?)?.takeIf { it.isNotBlank() }
+val sableVer = (findProperty("deps.sable") as String?)?.takeIf { it.isNotBlank() }
+val sableCompanionVer = (findProperty("deps.sable_companion") as String?)?.takeIf { it.isNotBlank() }
+val hasSable = sableMc != null && sableVer != null && sableCompanionVer != null
+
 // NeoForge reads exactly one META-INF/accesstransformer.cfg per jar, so the backend's widenings
 // cannot ship as a second file — and they cannot join the shared one either, because GlBuffer does
 // not exist before 26.1 and an access transformer naming a missing class fails the node outright.
@@ -93,6 +99,37 @@ repositories {
         name = "SquidDev"
         content { includeGroup("cc.tweaked") }
     }
+    exclusiveContent {
+        forRepository { maven("https://maven.caffeinemc.net/releases") { name = "CaffeineMC" } }
+        filter { includeGroup("net.caffeinemc") }
+    }
+    exclusiveContent {
+        forRepository { maven("https://maven.ryanhcode.dev/releases") { name = "RyanHCode" } }
+        filter {
+            includeGroup("dev.ryanhcode.sable")
+            includeGroup("dev.ryanhcode.sable-companion")
+        }
+    }
+}
+
+// Sable (moving block sub-levels; Create Aeronautics), an optional peer on the nodes that declare it. Its backend of
+// dev.golem.core.world.SubLevels lives in its own source roots, src/sable (shared) and src/sable-neoforge (this
+// loader's entry points), added only here: no other node sees them,
+// and the shared tree carries no guard for it. Installed at setup only when the `sable` mod is loaded.
+if (hasSable) {
+    sourceSets["main"].java.srcDir(rootProject.file("src/sable/java"))
+    sourceSets["main"].java.srcDir(rootProject.file("src/sable-neoforge/java"))
+    sourceSets["main"].resources.srcDir(rootProject.file("src/sable/resources"))
+    dependencies {
+        compileOnly("dev.ryanhcode.sable-companion:sable-companion-common-$sableMc:$sableCompanionVer") { isTransitive = false }
+        // The split listener (keeping multiblocks whole) is Sable's own API, not Companion's.
+        compileOnly("dev.ryanhcode.sable:sable-common-$sableMc:$sableVer") { isTransitive = false }
+        // Sodium's public API: Sable's sub-level meshes never mark animated sprites drawn, so the Sable root does
+        // (SableSpriteActivity, loaded only when Sodium is present).
+        (findProperty("deps.sodium_api") as String?)?.takeIf { it.isNotBlank() }?.let {
+            compileOnly("net.caffeinemc:sodium-neoforge-api:$it") { isTransitive = false }
+        }
+    }
 }
 
 tasks.processResources {
@@ -119,6 +156,8 @@ tasks.processResources {
         "sky_client_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) "" else
             ", \"MixinClientLevelSky\", \"MixinDimensionEffectsSky\", \"MixinOverworldFogColor\"",
         "flywheel_be_mixins" to if (hasVendoredFlywheel) ", \"MixinLevelChunkVisuals\"" else "",
+        // The Sable integration's own mixin config (src/sable/resources), only on nodes that declare Sable.
+        "sable_mixins" to if (hasSable) "[[mixins]]\nconfig = \"golemcore.sable.mixins.json\"" else "",
         "pack_format" to prop("pack_format"),
         "pack_format_entry" to if (mcVersion.substringBefore('.').toInt() >= 26)
             "\"min_format\": ${prop("pack_format")}, \"max_format\": ${prop("pack_format")}" 

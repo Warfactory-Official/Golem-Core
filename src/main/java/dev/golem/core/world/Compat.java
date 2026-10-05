@@ -353,6 +353,9 @@ public final class Compat {
         // inventory twice.
         //? if <26.1 {
         /*if (level == null || level.isClientSide()) return;
+        // A sub-level system carrying the block elsewhere: its block entity, contents and all, already lives on
+        // at the new position, so nothing may drop (or be rebuilt) at the old one.
+        if (SubLevels.isMoving(level)) return;
         if (level.getBlockEntity(pos) instanceof dev.golem.core.data.CompatBlockEntity be) {
             be.preRemoveSideEffects(pos, state);
         }

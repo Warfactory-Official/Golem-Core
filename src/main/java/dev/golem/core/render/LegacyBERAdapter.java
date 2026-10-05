@@ -39,6 +39,11 @@ public final class LegacyBERAdapter<T extends BlockEntity, S extends CompatRende
     @Override
     public void render(T blockEntity, float partialTicks, PoseStack poseStack, MultiBufferSource bufferSource,
                        int packedLight, int packedOverlay) {
+        // A removed block entity is never drawn. Vanilla's own lists drop it on removal, but a list that leaks one
+        // keeps calling its renderer: Sable's sub-level section rebuild clears a section's "render off-screen" set
+        // without telling the level renderer, so a large model that left its sub-level (split, disassembly) kept
+        // being drawn where it was, relative to the old sub-level, until relog.
+        if (blockEntity.isRemoved()) return;
         Camera camera = Minecraft.getInstance().gameRenderer.getMainCamera();
         Vec3 cameraPos = camera.getPosition();
 

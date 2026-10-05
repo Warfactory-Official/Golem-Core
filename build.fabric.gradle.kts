@@ -25,6 +25,30 @@ repositories {
         name = "SquidDev"
         content { includeGroup("cc.tweaked") }
     }
+    exclusiveContent {
+        forRepository { maven("https://maven.caffeinemc.net/releases") { name = "CaffeineMC" } }
+        filter { includeGroup("net.caffeinemc") }
+    }
+    exclusiveContent {
+        forRepository { maven("https://maven.ryanhcode.dev/releases") { name = "RyanHCode" } }
+        filter {
+            includeGroup("dev.ryanhcode.sable")
+            includeGroup("dev.ryanhcode.sable-companion")
+        }
+    }
+}
+
+// Sable (moving block sub-levels), an optional peer on the nodes that declare it: the shared integration in
+// src/sable plus this loader's entry points in src/sable-fabric, added only here and listed in fabric.mod.json only
+// here (appended to its entrypoints and mixins by processResources). Compiled against, never shipped or required.
+val sableMc = (findProperty("deps.sable_mc") as String?)?.takeIf { it.isNotBlank() }
+val sableVer = (findProperty("deps.sable") as String?)?.takeIf { it.isNotBlank() }
+val sableCompanionVer = (findProperty("deps.sable_companion") as String?)?.takeIf { it.isNotBlank() }
+val hasSable = sableMc != null && sableVer != null && sableCompanionVer != null
+if (hasSable) {
+    sourceSets["main"].java.srcDir(rootProject.file("src/sable/java"))
+    sourceSets["main"].java.srcDir(rootProject.file("src/sable-fabric/java"))
+    sourceSets["main"].resources.srcDir(rootProject.file("src/sable/resources"))
 }
 
 // Loom's configurations are referenced by name rather than through generated accessors: Kotlin DSL
@@ -62,6 +86,14 @@ dependencies {
     cfg("net.fabricmc.fabric-api:fabric-api:${prop("deps.fabric_api")}")
     // Team Reborn Energy: an optional peer for EnergyCompat/EnergyExposure (RebornEnergy), compiled against,
     // never shipped or required. Published on the Fabric maven Loom already adds.
+    if (hasSable && obfuscated) {
+        // Sable's fabric jar carries its common classes; Companion and Sodium's API are their own small jars.
+        "modCompileOnly"("dev.ryanhcode.sable:sable-fabric-$sableMc:$sableVer") { isTransitive = false }
+        "modCompileOnly"("dev.ryanhcode.sable-companion:sable-companion-fabric-$sableMc:$sableCompanionVer") { isTransitive = false }
+        (findProperty("deps.sodium_api") as String?)?.takeIf { it.isNotBlank() }?.let {
+            "modCompileOnly"("net.caffeinemc:sodium-fabric-api:$it") { isTransitive = false }
+        }
+    }
     if (project.hasProperty("deps.tr_energy")) {
         (if (obfuscated) "modCompileOnly" else "compileOnly")("teamreborn:energy:${prop("deps.tr_energy")}") {
             isTransitive = false
@@ -135,6 +167,18 @@ tasks.processResources {
     filesMatching("fabric.mod.json") {
         filter { line -> if (line.trim() == "{")
             "{\n  \"accessWidener\": \"$accessWidenerName\"," else line }
+    }
+    // The Sable integration's entry points and mixin config, only on nodes that declare Sable. Appended by line rather
+    // than templated, so the source fabric.mod.json stays valid JSON (Loom parses it at configuration).
+    if (hasSable) {
+        val sableLines = mapOf(
+            "\"dev.golem.core.platform.FabricEntrypoint\"" to "\"dev.golem.core.sable.SableFabric\"",
+            "\"dev.golem.core.harness.HarnessFabricClient\"" to "\"dev.golem.core.sable.SableFabricClient\"",
+            "\"golemcore.fabric.mixins.json\"" to "\"golemcore.sable.mixins.json\"",
+        )
+        filesMatching("fabric.mod.json") {
+            filter { line -> sableLines[line.trim()]?.let { "$line, $it" } ?: line }
+        }
     }
     allAccessWideners.filter { it != accessWidenerName }.forEach { exclude(it) }
     exclude(
