@@ -175,5 +175,49 @@ public final class Jei {
                                                   java.util.function.Function<ItemStack, String> interpreter) {
         registration.registerSubtypeInterpreter(item, (stack, context) -> interpreter.apply(stack));
     }
+
+    // ------------------------------------------------------------------------------------------- runtime
+
+    /** Adds recipes of one type once JEI's runtime exists ({@code IModPlugin.onRuntimeAvailable}). */
+    public static <T> void addRecipes(mezz.jei.api.runtime.IJeiRuntime runtime, JeiRecipeType<T> type, List<T> recipes) {
+        if (!recipes.isEmpty()) runtime.getRecipeManager().addRecipes(type.unwrap(), recipes);
+    }
+
+    /**
+     * Every vanilla furnace (smelting) recipe JEI knows, as one (input, result) pair per input item. JEI's own lookup is
+     * the only place a 26.1 client can read them (the client no longer receives the recipe manager); the older lines
+     * read the same recipes through the same lookup, so all three answer alike.
+     */
+    public static List<java.util.Map.Entry<ItemStack, ItemStack>> smeltingRecipes(mezz.jei.api.runtime.IJeiRuntime runtime) {
+        List<java.util.Map.Entry<ItemStack, ItemStack>> out = new ArrayList<>();
+        //? if >=26.1 {
+        runtime.getRecipeManager().createRecipeLookup(mezz.jei.api.constants.RecipeTypes.SMELTING).get().forEach(holder -> {
+            var recipe = holder.value();
+            recipe.input().items().forEach(item -> {
+                ItemStack in = new ItemStack(item);
+                ItemStack result = recipe.assemble(new net.minecraft.world.item.crafting.SingleRecipeInput(in));
+                if (!result.isEmpty()) out.add(java.util.Map.entry(in, result));
+            });
+        });
+        //?} elif >=1.21.1 {
+        /*var registries = net.minecraft.client.Minecraft.getInstance().level.registryAccess();
+        runtime.getRecipeManager().createRecipeLookup(mezz.jei.api.constants.RecipeTypes.SMELTING).get().forEach(holder -> {
+            var recipe = holder.value();
+            if (recipe.getIngredients().isEmpty()) return;
+            ItemStack result = recipe.getResultItem(registries);
+            if (result.isEmpty()) return;
+            for (ItemStack in : recipe.getIngredients().get(0).getItems()) out.add(java.util.Map.entry(in.copyWithCount(1), result.copy()));
+        });
+        *///?} else {
+        /*var registries = net.minecraft.client.Minecraft.getInstance().level.registryAccess();
+        runtime.getRecipeManager().createRecipeLookup(mezz.jei.api.constants.RecipeTypes.SMELTING).get().forEach(recipe -> {
+            if (recipe.getIngredients().isEmpty()) return;
+            ItemStack result = recipe.getResultItem(registries);
+            if (result.isEmpty()) return;
+            for (ItemStack in : recipe.getIngredients().get(0).getItems()) out.add(java.util.Map.entry(in.copyWithCount(1), result.copy()));
+        });
+        *///?}
+        return out;
+    }
 }
 //?}

@@ -231,6 +231,39 @@ public abstract class CompatChicken extends net.minecraft.world.entity.animal.ch
     }
     *///?}
 
+    /**
+     * Whether this chicken takes 26.1's biome variant (cold/warm chickens, which lay blue/brown eggs). False by
+     * default: before 26.1 every chicken is the temperate one and lays the plain egg, so a facade subclass keeps that
+     * on every node. Only 26.1 asks; there the variant is pinned to {@code minecraft:temperate} after spawn
+     * initialisation (spawn eggs, natural and chunk-generation spawns, commands).
+     */
+    protected boolean compatBiomeVariants() {
+        return false;
+    }
+
+    /** Whether this chicken lays the plain egg: always below 26.1, the temperate variant on 26.1. */
+    public boolean compatLaysPlainEgg() {
+        //? if >=26.1 {
+        return getVariant().is(net.minecraft.world.entity.animal.chicken.ChickenVariants.TEMPERATE);
+        //?} else {
+        /*return true;
+        *///?}
+    }
+
+    //? if >=26.1 {
+    @Override
+    public net.minecraft.world.entity.SpawnGroupData finalizeSpawn(net.minecraft.world.level.ServerLevelAccessor level,
+            net.minecraft.world.DifficultyInstance difficulty, net.minecraft.world.entity.EntitySpawnReason reason,
+            net.minecraft.world.entity.@org.jspecify.annotations.Nullable SpawnGroupData groupData) {
+        net.minecraft.world.entity.SpawnGroupData out = super.finalizeSpawn(level, difficulty, reason, groupData);
+        if (!compatBiomeVariants()) {
+            setVariant(net.minecraft.world.entity.variant.VariantUtils.getDefaultOrAny(registryAccess(),
+                    net.minecraft.world.entity.animal.chicken.ChickenVariants.TEMPERATE));
+        }
+        return out;
+    }
+    //?}
+
     /** Passenger seat height above the feet, or null for vanilla's (1.20.5 attachment points vs the old riding offset). */
     protected @org.jspecify.annotations.Nullable Double compatPassengerHeight() {
         return null;

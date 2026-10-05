@@ -75,6 +75,48 @@ public final class Spawns {
         *///?}
     }
 
+    // ------------------------------------------------------------------------------------------- potential spawns
+
+    /** A notification that the natural spawner asks for the spawn list of {@code category} at {@code pos}. */
+    @FunctionalInterface
+    public interface PotentialSpawnsHook {
+        void onPotentialSpawns(ServerLevel level, net.minecraft.world.entity.MobCategory category, net.minecraft.core.BlockPos pos);
+    }
+
+    private static final java.util.List<PotentialSpawnsHook> POTENTIAL = new java.util.concurrent.CopyOnWriteArrayList<>();
+    private static boolean potentialHooked;
+
+    /**
+     * Registers a hook run every time the natural spawner reads the spawn list at a position (vanilla's private
+     * {@code NaturalSpawner.mobsAt}, asked once to pick a group entry and once per position to confirm it) - the
+     * modern stand-in for 1.7's {@code WorldEvent.PotentialSpawns}, which {@code WorldServer.spawnRandomCreature} and
+     * {@code canCreatureTypeSpawnHere} fired at the same two places. Forge-like loaders answer from their own
+     * {@code LevelEvent.PotentialSpawns}, which they fire from {@code mobsAt}; Fabric from
+     * {@code MixinNaturalSpawnerCheck}'s HEAD inject on {@code mobsAt}. Notification only: the list is not changed.
+     */
+    public static synchronized void onPotentialSpawns(PotentialSpawnsHook hook) {
+        POTENTIAL.add(hook);
+        if (potentialHooked) return;
+        potentialHooked = true;
+        //? if neoforge {
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.event.level.LevelEvent.PotentialSpawns event) -> {
+                    if (event.getLevel() instanceof ServerLevel level) potentialSpawns(level, event.getMobCategory(), event.getPos());
+                });
+        //?} elif forge {
+        /*net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(
+                (net.minecraftforge.event.level.LevelEvent.PotentialSpawns event) -> {
+                    if (event.getLevel() instanceof ServerLevel level) potentialSpawns(level, event.getMobCategory(), event.getPos());
+                });
+        *///?}
+    }
+
+    /** Runs the potential-spawn hooks. Called by the loader hooks. */
+    public static void potentialSpawns(ServerLevel level, net.minecraft.world.entity.MobCategory category, net.minecraft.core.BlockPos pos) {
+        if (POTENTIAL.isEmpty()) return;
+        for (PotentialSpawnsHook hook : POTENTIAL) hook.onPotentialSpawns(level, category, pos);
+    }
+
     /** True when a registered check refuses the spawn. Called by the loader hooks; OTHER spawns are never refused. */
     public static boolean denied(Mob mob, ServerLevel level, Reason reason) {
         if (reason == Reason.OTHER || CHECKS.isEmpty()) return false;

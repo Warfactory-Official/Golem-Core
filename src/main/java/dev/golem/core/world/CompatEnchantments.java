@@ -80,6 +80,17 @@ public final class CompatEnchantments {
         *///?}
     }
 
+    /** Applies Fire Protection to an armor piece (tests and synthesized gear). */
+    public static void enchantFireProtection(ServerLevel level, ItemStack armor, int protection) {
+        if (protection <= 0) return;
+        //? if >=1.21.1 {
+        armor.enchant(level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT)
+                .getOrThrow(Enchantments.FIRE_PROTECTION), protection);
+        //?} else {
+        /*armor.enchant(Enchantments.FIRE_PROTECTION, protection);
+        *///?}
+    }
+
     /** Applies Silk Touch to a tool for APIs which synthesize a harvesting stack. */
     public static void enchantSilkTouch(ServerLevel level, ItemStack tool) {
         //? if >=1.21.1 {

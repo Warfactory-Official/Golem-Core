@@ -77,14 +77,26 @@ public abstract class CompatContainerScreen<T extends AbstractContainerMenu> ext
             *///?}
             int mouseX, int mouseY, float partialTick) {}
 
-    /** The 26.1 label hook, backported for subclasses. */
+    /**
+     * The 26.1 label hook, backported for subclasses. The default is vanilla's: the title at
+     * ({@code titleLabelX}, {@code titleLabelY}) and "Inventory" at ({@code inventoryLabelX},
+     * {@code inventoryLabelY}), dark grey, no shadow, on every version. This used to be an empty body, which on
+     * 26.1 also overrode vanilla's labels away, so a screen that did not draw its own (or called super for the
+     * title) showed none anywhere.
+     */
     protected void extractLabels(
             //? if >=26.1 {
             GuiGraphicsExtractor graphics,
             //?} else {
             /*GuiGraphics graphics,
             *///?}
-            int mouseX, int mouseY) {}
+            int mouseX, int mouseY) {
+        //? if >=26.1 {
+        super.extractLabels(graphics, mouseX, mouseY);
+        //?} else {
+        /*super.renderLabels(graphics, mouseX, mouseY);
+        *///?}
+    }
 
     /**
      * This screen's <em>own</em> tooltips — the ones for gauges, tanks, bars and other painted regions.

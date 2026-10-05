@@ -137,7 +137,8 @@ public final class RecordingSubmitSink implements SubmitSink {
         PoseStack copy = new PoseStack();
         copy.last().pose().set(poseStack.last().pose());
         copy.last().normal().set(poseStack.last().normal());
-        sink().add(new TextEntry(order, copy, font, x, y, text, shadow, mode, light, color, background));
+        sink().add(new TextEntry(order, copy, font, x, y, text, shadow, mode, light,
+                dev.golem.core.gui.GuiDraw.textColor(color), background));
     }
 
     @Override

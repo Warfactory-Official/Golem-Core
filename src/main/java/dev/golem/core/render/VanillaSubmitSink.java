@@ -91,7 +91,8 @@ public final class VanillaSubmitSink implements SubmitSink {
     @Override
     public void submitText(PoseStack poseStack, Font font, float x, float y, FormattedCharSequence text,
                            boolean shadow, Font.DisplayMode mode, int light, int color, int backgroundColor) {
-        target.submitText(poseStack, x, y, text, shadow, mode, light, color, backgroundColor, 0);
+        target.submitText(poseStack, x, y, text, shadow, mode, light,
+                dev.golem.core.gui.GuiDraw.textColor(color), backgroundColor, 0);
     }
 
     @Override

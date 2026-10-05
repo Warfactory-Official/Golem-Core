@@ -216,7 +216,8 @@ public final class WorldEffects {
         Matrix4f modelView = dispatchingHooks ? new Matrix4f(HOOK_MODEL_VIEW)
                 : new Matrix4f(RenderSystem.getModelViewMatrix());
         ENTRIES.add(new Entry(order, copy, modelView, captureDrawState(), null, null, (drawPose, buffers) ->
-                font.drawInBatch(text, x, y, color, shadow, drawPose.last().pose(), buffers, mode, backgroundColor, light)));
+                font.drawInBatch(text, x, y, dev.golem.core.gui.GuiDraw.textColor(color), shadow, drawPose.last().pose(),
+                        buffers, mode, backgroundColor, light)));
     }
 
     private static Runnable captureDrawState() {

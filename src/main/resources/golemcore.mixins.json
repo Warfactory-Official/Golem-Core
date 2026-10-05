@@ -7,7 +7,7 @@
   "mixins": ["MixinServerGamePacketListener", "MixinConnection", "MixinPacketListenerConnection",
     "MixinChunkMapPromotion", "MixinCreeperFuse", "MixinFallingBlockState", "MixinBoatControl", "MixinLivingHurtAccess", "MixinTntOwner", "MixinClipContext", "MixinServerPlayerMenu", "MixinEntityDataMigration"${rail_mixins}${sky_mixins}],
   "client": ["MixinCamera", "MixinLivingEntityRenderer", "MixinHumanoidModel", "MixinAtlasSources", "MixinHeldItemState", "MixinScreenEffects", "SpriteSourceTypesAccess",
-    "MixinHarnessWindow", "MixinHarnessMouseGrab", "HarnessKeyboardHandlerAccessor", "HarnessMouseHandlerAccessor", "HarnessCreateWorldScreenAccessor", "HarnessContainerScreenAccessor"${legacy_item_owner_mixins}${world_effect_mixins}${flywheel_be_mixins}${sky_client_mixins}],
+    "MixinHarnessWindow", "MixinHarnessMouseGrab", "HarnessKeyboardHandlerAccessor", "HarnessMouseHandlerAccessor", "HarnessCreateWorldScreenAccessor", "HarnessContainerScreenAccessor", "MixinSkyRender"${legacy_item_owner_mixins}${world_effect_mixins}${flywheel_be_mixins}${sky_client_mixins}],
   "server": [],
   "injectors": {
     "defaultRequire": 1

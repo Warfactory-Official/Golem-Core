@@ -286,6 +286,16 @@ public final class GuiDraw {
         *///?}
     }
 
+    /**
+     * The text colour rule of 1.7's {@code FontRenderer} and of {@code Font} before 1.21.6: a colour whose top six
+     * bits are clear ({@code 0x404040}, {@code 0xFFFFFF}, ...) is drawn opaque. 26.1 takes the int as plain ARGB and
+     * skips any text with alpha 0, so the same call drew on 1.20.1/1.21.1 and was invisible on 26.1. Applied by every
+     * text path here (and by the world-text sinks) so a colour means the same on all versions.
+     */
+    public static int textColor(int color) {
+        return (color & 0xFC000000) == 0 ? color | 0xFF000000 : color;
+    }
+
     /** Draws a string. 26.1 shortened {@code drawString} to {@code text}. */
     public static void text(
             //? if >=26.1 {
@@ -294,6 +304,7 @@ public final class GuiDraw {
             /*GuiGraphics graphics,
             *///?}
             net.minecraft.client.gui.Font font, String value, int x, int y, int color, boolean shadow) {
+        color = textColor(color);
         //? if >=26.1 {
         graphics.text(font, value, x, y, color, shadow);
         //?} else {
@@ -310,6 +321,7 @@ public final class GuiDraw {
             *///?}
             net.minecraft.client.gui.Font font, net.minecraft.network.chat.Component value,
             int x, int y, int color, boolean shadow) {
+        color = textColor(color);
         //? if >=26.1 {
         graphics.text(font, value, x, y, color, shadow);
         //?} else {

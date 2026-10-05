@@ -26,6 +26,20 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(NaturalSpawner.class)
 public abstract class MixinNaturalSpawnerCheck {
 
+    /**
+     * {@link Spawns#onPotentialSpawns}: Forge-like loaders fire {@code LevelEvent.PotentialSpawns} from this method; the
+     * arguments are the same on every supported version (only the returned list type changed), so one HEAD inject
+     * serves all three Fabric nodes. Same justification as the class: no vanilla or Fabric hook, nothing to widen.
+     */
+    @Inject(method = "mobsAt", at = @At("HEAD"))
+    private static void golem$potentialSpawns(ServerLevel level, net.minecraft.world.level.StructureManager structureManager,
+                                              net.minecraft.world.level.chunk.ChunkGenerator generator,
+                                              net.minecraft.world.entity.MobCategory category, net.minecraft.core.BlockPos pos,
+                                              net.minecraft.core.Holder<net.minecraft.world.level.biome.Biome> biome,
+                                              CallbackInfoReturnable<?> cir) {
+        Spawns.potentialSpawns(level, category, pos);
+    }
+
     @Inject(method = "isValidPositionForMob", at = @At("HEAD"), cancellable = true)
     private static void golem$naturalSpawnCheck(ServerLevel level, Mob mob, double distance,
                                                 CallbackInfoReturnable<Boolean> cir) {

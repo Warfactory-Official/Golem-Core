@@ -59,6 +59,16 @@ public class CompatBlock extends Block {
     /** Handles an entity entering the block without exposing the 26.1 effect-applier parameters. */
     protected void onEntityInside(BlockState state, Level level, BlockPos pos, net.minecraft.world.entity.Entity entity) {}
 
+    /** Handles a player left-clicking (starting to break) the block, 1.7 {@code onBlockClicked}. Both sides. */
+    protected void onAttack(BlockState state, Level level, BlockPos pos, Player player) {}
+
+    // Vanilla's attack hook is public on 1.20.1 and protected from 1.21 on; public widens it on every node.
+    @Override
+    public void attack(BlockState state, Level level, BlockPos pos, Player player) {
+        super.attack(state, level, pos, player);
+        onAttack(state, level, pos, player);
+    }
+
     /** Handles a neighbouring state change without exposing the changing tick-access parameters. */
     protected BlockState onUpdateShape(BlockState state, LevelReader level, BlockTickScheduler ticks, BlockPos pos,
                                        net.minecraft.core.Direction direction, BlockPos neighbourPos,
