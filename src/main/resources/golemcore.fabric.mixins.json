@@ -5,7 +5,7 @@
   "refmap": "golemcore.refmap.json",
   "plugin": "dev.golem.core.gametest.GameTestMixinPlugin",
   "compatibilityLevel": "${mixin_compatibility}",
-  "mixins": ["MixinLivingEntitySwing", "MixinNaturalSpawnerCheck", "MixinLivingEntityUseFinish"${legacy_explosion_mixins}],
+  "mixins": ["MixinLivingEntitySwing", "MixinNaturalSpawnerCheck", "MixinLivingEntityUseFinish", "MixinMobFinalizeSpawnCheck", "MixinServerLevelSpawnCancel"${legacy_explosion_mixins}],
   "client": ["MixinCameraFov", "MixinFogRendererModifiers"${legacy_client_mixins}${debug_line_mixins}],
   "server": [],
   "injectors": {

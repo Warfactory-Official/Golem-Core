@@ -792,6 +792,34 @@ public final class Gem {
         for (Part<S> root : model.roots) draw(root, state, poseStack, sink, model, defaultLight);
     }
 
+    /** What {@link #walk} hands over for each part that would draw. */
+    @FunctionalInterface
+    public interface Visitor<S> {
+        void part(Part<S> part, Geometry geometry, PoseStack poseStack);
+    }
+
+    /**
+     * Walks a declared model exactly as {@link #replay} draws it - the same visibility tests and the same pose-stack
+     * calls - and hands every part that would draw its geometry, with the pose stack as the draw had it.
+     *
+     * <p>For a pass that has to land on the very depth of a declared part, such as a 1.7 {@code GL_EQUAL} glint over
+     * it. A pose rebuilt through {@link Part#applyTo(Matrix4f, Object)} cannot promise that: the matrix form rotates by
+     * angle, the stack by quaternion, and the last bits differ.
+     */
+    public static <S> void walk(Model<S> model, S state, PoseStack poseStack, Visitor<S> visitor) {
+        for (Part<S> root : model.roots) visit(root, state, poseStack, visitor);
+    }
+
+    private static <S> void visit(Part<S> part, S state, PoseStack poseStack, Visitor<S> visitor) {
+        if (!part.visible(state)) return;
+        poseStack.pushPose();
+        part.applyTo(poseStack, state);
+        Geometry geometry = part.geometryOf(state);
+        if (geometry != null) visitor.part(part, geometry, poseStack);
+        for (Part<S> child : part.children) visit(child, state, poseStack, visitor);
+        poseStack.popPose();
+    }
+
     private static <S> void draw(Part<S> part, S state, PoseStack poseStack, SubmitSink sink,
                                  Model<S> model, int defaultLight) {
         if (!part.visible(state)) return;

@@ -21,3 +21,7 @@ mutable field net/minecraft/world/entity/ai/attributes/RangedAttribute maxValue 
 # Capes: the cape a mod names is installed by wrapping the tab-list entry's skin lookup (final on 1.21.1).
 accessible field net/minecraft/client/multiplayer/PlayerInfo skinLookup Ljava/util/function/Supplier;
 mutable field net/minecraft/client/multiplayer/PlayerInfo skinLookup Ljava/util/function/Supplier;
+
+# CompatParticle: vanilla's ParticleEngine draws only the types in RENDER_ORDER (NeoForge/Forge draw every type); Core appends its own layers.
+accessible field net/minecraft/client/particle/ParticleEngine RENDER_ORDER Ljava/util/List;
+mutable field net/minecraft/client/particle/ParticleEngine RENDER_ORDER Ljava/util/List;

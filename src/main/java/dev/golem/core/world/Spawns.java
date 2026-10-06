@@ -34,6 +34,12 @@ public final class Spawns {
         NATURAL,
         /** Animals placed while a chunk generates (1.7 {@code SpawnerAnimals.performWorldGenSpawning}). */
         CHUNK_GENERATION,
+        /**
+         * The modern periodic world spawners that stand where 1.7's natural spawner was and that its
+         * {@code CheckSpawn} never had to cover: pillager patrols, phantoms and wandering traders with their llamas
+         * ({@link #worldSpawnerReason}). Raids, village sieges, cats, spawners, eggs and commands stay {@link #OTHER}.
+         */
+        WORLD_SPAWNER,
         OTHER
     }
 
@@ -51,12 +57,35 @@ public final class Spawns {
      * modern stand-in for 1.7's {@code LivingSpawnEvent.CheckSpawn} (natural) and {@code PopulateChunkEvent.Populate}
      * {@code ANIMALS} (generation). Forge-like loaders answer it from {@code MobSpawnEvent.PositionCheck} (natural and
      * chunk-generation spawns only; spawner checks are passed through so every loader agrees); Fabric, which has no
-     * spawn event, from {@code MixinNaturalSpawnerCheck} at the same two call sites.
+     * spawn event, from {@code MixinNaturalSpawnerCheck} at the same two call sites. It is also asked, with
+     * {@link Reason#WORLD_SPAWNER}, for patrols, phantoms and wandering traders when their spawn is finalized; a
+     * refused one is never added to the level.
      */
     public static synchronized void onSpawnCheck(SpawnCheck check) {
         CHECKS.add(check);
         if (hooked) return;
         hooked = true;
+        // WORLD_SPAWNER spawns are asked where the mob's spawn is finalized: Forge-like loaders fire FinalizeSpawn from
+        // every vanilla finalizeSpawn call (patrol, phantom and trader spawners included) and drop a mob whose spawn
+        // was cancelled when it is added; Fabric does the same through MixinMobFinalizeSpawnCheck and
+        // MixinServerLevelSpawnCancel. Only WORLD_SPAWNER is answered there, so natural spawns are not asked twice.
+        //? if neoforge {
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.event.entity.living.FinalizeSpawnEvent event) -> {
+                    Reason reason = worldSpawnerReason(event.getEntity(), event.getSpawnType());
+                    if (reason == Reason.WORLD_SPAWNER && denied(event.getEntity(), event.getLevel().getLevel(), reason)) {
+                        event.setSpawnCancelled(true);
+                    }
+                });
+        //?} elif forge {
+        /*net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(
+                (net.minecraftforge.event.entity.living.MobSpawnEvent.FinalizeSpawn event) -> {
+                    Reason reason = worldSpawnerReason(event.getEntity(), event.getSpawnType());
+                    if (reason == Reason.WORLD_SPAWNER && denied(event.getEntity(), event.getLevel().getLevel(), reason)) {
+                        event.setSpawnCancelled(true);
+                    }
+                });
+        *///?}
         //? if neoforge {
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 (net.neoforged.neoforge.event.entity.living.MobSpawnEvent.PositionCheck event) -> {
@@ -125,6 +154,49 @@ public final class Spawns {
         }
         return false;
     }
+
+    /** Mobs whose spawn a check refused while finalizing it (Fabric only; Forge-likes keep the mob's own flag). */
+    private static final java.util.Set<net.minecraft.world.entity.Entity> CANCELLED =
+            java.util.Collections.synchronizedSet(java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>()));
+
+    /**
+     * Fabric: called at the head of {@code Mob.finalizeSpawn} (the call Forge-like loaders turn into FinalizeSpawn);
+     * a refused WORLD_SPAWNER spawn is remembered until {@link #cancelledSpawn} drops it at {@code addFreshEntity}.
+     */
+    public static void finalizing(Mob mob, net.minecraft.world.level.ServerLevelAccessor level, Reason reason) {
+        if (reason == Reason.WORLD_SPAWNER && denied(mob, level.getLevel(), reason)) CANCELLED.add(mob);
+    }
+
+    /** Fabric: true (once) when {@code entity}'s spawn was refused while it was finalized; the add is then dropped. */
+    public static boolean cancelledSpawn(net.minecraft.world.entity.Entity entity) {
+        return entity instanceof Mob && !CANCELLED.isEmpty() && CANCELLED.remove(entity);
+    }
+
+    //? if >=26.1 {
+    /**
+     * Which finalized spawns come from the modern world spawners: {@code PatrolSpawner} (the only PATROL source),
+     * {@code PhantomSpawner} (NATURAL phantoms) and {@code WanderingTraderSpawner} (EVENT traders and trader llamas).
+     */
+    public static Reason worldSpawnerReason(Mob mob, net.minecraft.world.entity.EntitySpawnReason type) {
+        if (type == net.minecraft.world.entity.EntitySpawnReason.PATROL) return Reason.WORLD_SPAWNER;
+        if (type == net.minecraft.world.entity.EntitySpawnReason.NATURAL
+                && mob.getType() == net.minecraft.world.entity.EntityType.PHANTOM) return Reason.WORLD_SPAWNER;
+        if (type == net.minecraft.world.entity.EntitySpawnReason.EVENT
+                && (mob.getType() == net.minecraft.world.entity.EntityType.WANDERING_TRADER
+                || mob.getType() == net.minecraft.world.entity.EntityType.TRADER_LLAMA)) return Reason.WORLD_SPAWNER;
+        return Reason.OTHER;
+    }
+    //?} else {
+    /*public static Reason worldSpawnerReason(Mob mob, net.minecraft.world.entity.MobSpawnType type) {
+        if (type == net.minecraft.world.entity.MobSpawnType.PATROL) return Reason.WORLD_SPAWNER;
+        if (type == net.minecraft.world.entity.MobSpawnType.NATURAL
+                && mob.getType() == net.minecraft.world.entity.EntityType.PHANTOM) return Reason.WORLD_SPAWNER;
+        if (type == net.minecraft.world.entity.MobSpawnType.EVENT
+                && (mob.getType() == net.minecraft.world.entity.EntityType.WANDERING_TRADER
+                || mob.getType() == net.minecraft.world.entity.EntityType.TRADER_LLAMA)) return Reason.WORLD_SPAWNER;
+        return Reason.OTHER;
+    }
+    *///?}
 
     //? if >=26.1 {
     public static Reason reason(net.minecraft.world.entity.EntitySpawnReason type) {

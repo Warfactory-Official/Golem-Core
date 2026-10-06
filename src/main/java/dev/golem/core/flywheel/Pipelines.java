@@ -151,6 +151,9 @@ public final class Pipelines {
                 break;
             case TRANSLUCENT_SORTED_NO_CULL:
                 builder.withShaderDefine("ALPHA_CUTOUT", 0.1F);
+                // Tested on the texel alone, as vanilla's entityTranslucent (the fallback draw of the same rows)
+                // tests it: the composed texel x instance alpha cut 1.7's Torex cloudlets off before their fade ended.
+                builder.withShaderDefine("ALPHA_CUTOUT_TEXTURE");
                 builder.withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT));
                 break;
             case SOURCE_ALPHA_ADDITIVE_NO_CULL:

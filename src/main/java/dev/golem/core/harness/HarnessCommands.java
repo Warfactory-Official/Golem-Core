@@ -312,6 +312,10 @@ final class HarnessCommands {
                 previous = String.valueOf(mc.options.hideGui);
                 mc.options.hideGui = Boolean.parseBoolean(value);
                 break;
+            case "sound_capture":
+                // HarnessSounds: un-mute the sound categories (master stays 0) so every started sound is logged
+                previous = HarnessSounds.capture(mc, Boolean.parseBoolean(value));
+                break;
             case "camera":
                 previous = mc.options.getCameraType().name().toLowerCase(java.util.Locale.ROOT);
                 mc.options.setCameraType(net.minecraft.client.CameraType.valueOf(value.toUpperCase(java.util.Locale.ROOT)));

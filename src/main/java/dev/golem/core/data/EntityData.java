@@ -307,23 +307,62 @@ public final class EntityData<T> {
     private static boolean fabricInstalled;
 
     /^*
-     * Fabric transfers every attachment to the new player on an End return (and copy-on-death ones on a respawn)
-     * in the default phase of COPY_FROM. This phase runs after it and discards the transferred values, before
-     * Lifecycle's player-copy phase runs the consumers' own copies.
+     * Fabric transfers every attachment to the new player on an End return (and copy-on-death ones on a respawn).
+     * Where depends on the fabric-data-attachment version: 1.0.x (1.20.1) does it in the default phase of
+     * COPY_FROM, 1.4.x (1.21.1) and 2.x (26.1) in AFTER_RESPAWN, which fires after COPY_FROM has finished. So:
+     * <ol>
+     *   <li>COPY_FROM, phase {@code entity_data} (after the default phase): discard what 1.0.x transferred;</li>
+     *   <li>COPY_FROM, phase {@code player_copy}: Lifecycle's consumers copy what they mean to keep;</li>
+     *   <li>COPY_FROM, phase {@code entity_data_keep} (after player_copy): remember the new player's values;</li>
+     *   <li>AFTER_RESPAWN, phase {@code entity_data} (after the default phase): put the remembered values back,
+     *       undoing the 1.4.x/2.x transfer (on 1.0.x a no-op).</li>
+     * </ol>
+     * Before this, 1.21.1 and 26.1 Fabric kept the whole old value through an End return (the harness showed the
+     * radiation surviving there and not on NeoForge or Forge; History §19es-client).
      ^/
     private static synchronized void installFabric() {
         if (fabricInstalled) return;
         fabricInstalled = true;
-        var event = net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents.COPY_FROM;
-        event.addPhaseOrdering(net.fabricmc.fabric.api.event.Event.DEFAULT_PHASE, Ids.of(GolemCore.MOD_ID, "entity_data"));
-        event.addPhaseOrdering(Ids.of(GolemCore.MOD_ID, "entity_data"), Ids.of(GolemCore.MOD_ID, "player_copy"));
-        event.register(Ids.of(GolemCore.MOD_ID, "entity_data"), (oldPlayer, newPlayer, alive) -> {
+        var copy = net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents.COPY_FROM;
+        var entityData = Ids.of(GolemCore.MOD_ID, "entity_data");
+        var playerCopy = Ids.of(GolemCore.MOD_ID, "player_copy");
+        var keep = Ids.of(GolemCore.MOD_ID, "entity_data_keep");
+        copy.addPhaseOrdering(net.fabricmc.fabric.api.event.Event.DEFAULT_PHASE, entityData);
+        copy.addPhaseOrdering(entityData, playerCopy);
+        copy.addPhaseOrdering(playerCopy, keep);
+        copy.register(entityData, (oldPlayer, newPlayer, alive) -> {
             for (EntityData<?> declared : ALL) declared.discardFabric(newPlayer);
+        });
+        copy.register(keep, (oldPlayer, newPlayer, alive) -> {
+            java.util.Map<EntityData<?>, Object> values = new java.util.IdentityHashMap<>();
+            for (EntityData<?> declared : ALL) values.put(declared, newPlayer.getAttached(declared.type));
+            KEPT.put(newPlayer.getUUID(), values);
+        });
+        var respawn = net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents.AFTER_RESPAWN;
+        respawn.addPhaseOrdering(net.fabricmc.fabric.api.event.Event.DEFAULT_PHASE, entityData);
+        respawn.register(entityData, (oldPlayer, newPlayer, alive) -> {
+            java.util.Map<EntityData<?>, Object> values = KEPT.remove(newPlayer.getUUID());
+            if (values == null) return;
+            for (EntityData<?> declared : ALL) declared.restoreFabric(newPlayer, values.get(declared));
         });
     }
 
+    /^*
+     * The new player's values after the COPY_FROM consumers ran, until AFTER_RESPAWN puts them back. Keyed by UUID:
+     * the two events were not handed the same key object on 26.1 Fabric (an identity-keyed map missed every time).
+     * One respawn is in flight per player and the entry is removed when it completes.
+     ^/
+    private static final java.util.Map<java.util.UUID, java.util.Map<EntityData<?>, Object>> KEPT =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
     private void discardFabric(Entity entity) {
         entity.removeAttached(type);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void restoreFabric(Entity entity, @Nullable Object kept) {
+        if (kept == null) entity.removeAttached(type);
+        else entity.setAttached(type, (Slot<T>) kept);
     }
     *///?}
 

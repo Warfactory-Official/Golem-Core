@@ -30,6 +30,49 @@ public final class Vertexes {
         *///?}
     }
 
+    /**
+     * {@code buffer} with every texture coordinate written through it mapped by {@code texture} first, as a 1.7
+     * renderer's {@code GL_TEXTURE} matrix mapped it: {@code (u, v, 1) -> texture * (u, v, 1)}. Positions and every
+     * other attribute pass through call for call (the posed {@code addVertex} forms to the buffer's own), so geometry
+     * drawn through it lands on exactly the depth of the same geometry drawn directly - an {@code EQUAL}-depth glint
+     * over its surface.
+     */
+    public static VertexConsumer uvTransformed(VertexConsumer buffer, org.joml.Matrix3fc texture) {
+        return new UvTransformed(buffer, new org.joml.Matrix3f(texture));
+    }
+
+    private record UvTransformed(VertexConsumer delegate, org.joml.Matrix3f texture) implements VertexConsumer {
+        private float mapU(float u, float v) { return texture.m00() * u + texture.m10() * v + texture.m20(); }
+
+        private float mapV(float u, float v) { return texture.m01() * u + texture.m11() * v + texture.m21(); }
+
+        //? if >=1.21 {
+        @Override public VertexConsumer addVertex(float x, float y, float z) { delegate.addVertex(x, y, z); return this; }
+        @Override public VertexConsumer addVertex(PoseStack.Pose pose, float x, float y, float z) { delegate.addVertex(pose, x, y, z); return this; }
+        @Override public VertexConsumer setColor(int r, int g, int b, int a) { delegate.setColor(r, g, b, a); return this; }
+        @Override public VertexConsumer setColor(int argb) { delegate.setColor(argb); return this; }
+        @Override public VertexConsumer setUv(float u, float v) { delegate.setUv(mapU(u, v), mapV(u, v)); return this; }
+        @Override public VertexConsumer setUv1(int u, int v) { delegate.setUv1(u, v); return this; }
+        @Override public VertexConsumer setUv2(int u, int v) { delegate.setUv2(u, v); return this; }
+        @Override public VertexConsumer setNormal(float x, float y, float z) { delegate.setNormal(x, y, z); return this; }
+        //?}
+        //? if >=26.1 {
+        @Override public VertexConsumer setLineWidth(float width) { delegate.setLineWidth(width); return this; }
+        //?}
+        //? if <1.21 {
+        /*@Override public VertexConsumer vertex(double x, double y, double z) { delegate.vertex(x, y, z); return this; }
+        @Override public VertexConsumer vertex(org.joml.Matrix4f matrix, float x, float y, float z) { delegate.vertex(matrix, x, y, z); return this; }
+        @Override public VertexConsumer color(int r, int g, int b, int a) { delegate.color(r, g, b, a); return this; }
+        @Override public VertexConsumer uv(float u, float v) { delegate.uv(mapU(u, v), mapV(u, v)); return this; }
+        @Override public VertexConsumer overlayCoords(int u, int v) { delegate.overlayCoords(u, v); return this; }
+        @Override public VertexConsumer uv2(int u, int v) { delegate.uv2(u, v); return this; }
+        @Override public VertexConsumer normal(float x, float y, float z) { delegate.normal(x, y, z); return this; }
+        @Override public void endVertex() { delegate.endVertex(); }
+        @Override public void defaultColor(int r, int g, int b, int a) { delegate.defaultColor(r, g, b, a); }
+        @Override public void unsetDefaultColor() { delegate.unsetDefaultColor(); }
+        *///?}
+    }
+
     /** Emits a {@code POSITION_TEX} vertex, the glint pipeline's format. */
     public static void positionTex(VertexConsumer buffer, PoseStack.Pose pose, float x, float y, float z,
                                    float u, float v) {

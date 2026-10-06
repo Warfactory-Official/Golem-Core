@@ -52,6 +52,7 @@ public abstract class CompatParticle extends
     private static final int FULLBRIGHT = 0xF000F0;
 
     private ParticleLayer golemLayer = ParticleLayer.TRANSLUCENT;
+    private boolean golemFaint;
     private boolean planeOriented;
     private float planeYaw;
     private float planePitch;
@@ -111,6 +112,21 @@ public abstract class CompatParticle extends
             };
     *///?}
 
+    //? if fabric && <26.1 {
+    /*static {
+        // Vanilla's ParticleEngine draws only the render types listed in its RENDER_ORDER (NeoForge and Forge patch it
+        // to draw every type that holds particles), so on Fabric a particle in one of Core's own layers was ticked and
+        // never drawn. They are appended once, after vanilla's; the field is widened by golemcore.legacy*.accesswidener.
+        java.util.List<net.minecraft.client.particle.ParticleRenderType> order =
+                new java.util.ArrayList<>(net.minecraft.client.particle.ParticleEngine.RENDER_ORDER);
+        for (net.minecraft.client.particle.ParticleRenderType type : java.util.List.of(ADDITIVE_LAYER,
+                FaintParticleLayers.TRANSLUCENT, FaintParticleLayers.ADDITIVE)) {
+            if (!order.contains(type)) order.add(type);
+        }
+        net.minecraft.client.particle.ParticleEngine.RENDER_ORDER = java.util.List.copyOf(order);
+    }
+    *///?}
+
     protected CompatParticle(ClientLevel level, double x, double y, double z, TextureAtlasSprite sprite) {
         //? if >=26.1 {
         super(level, x, y, z, sprite);
@@ -133,6 +149,16 @@ public abstract class CompatParticle extends
     /** Chooses how this particle's quad is drawn. Call from the subclass constructor. */
     protected final void setLayer(ParticleLayer layer) {
         this.golemLayer = layer;
+    }
+
+    /**
+     * Draws every fragment whose alpha is above zero, and writes no depth: a 1.7 particle that set
+     * {@code glAlphaFunc(GL_GREATER, 0)} (or disabled the alpha test) and {@code glDepthMask(false)}. Vanilla's particle
+     * shader discards below alpha 0.1 on every node, which hides a faint particle completely (1.7's white-phosphorus haze
+     * never exceeds 0.025). Keeps this particle's {@link ParticleLayer} blend and light; call from the constructor.
+     */
+    protected final void keepFaintFragments() {
+        this.golemFaint = true;
     }
 
     /** Makes the quad lie in a world-oriented plane instead of facing the camera. */
@@ -340,12 +366,18 @@ public abstract class CompatParticle extends
     //? if >=26.1 {
     @Override
     protected net.minecraft.client.particle.SingleQuadParticle.Layer getLayer() {
+        if (this.golemFaint) {
+            return this.golemLayer == ParticleLayer.ADDITIVE ? FaintParticleLayers.ADDITIVE : FaintParticleLayers.TRANSLUCENT;
+        }
         return this.golemLayer == ParticleLayer.ADDITIVE ? ADDITIVE_LAYER
                 : net.minecraft.client.particle.SingleQuadParticle.Layer.TRANSLUCENT;
     }
     //?} else {
     /*@Override
     public net.minecraft.client.particle.ParticleRenderType getRenderType() {
+        if (this.golemFaint) {
+            return this.golemLayer == ParticleLayer.ADDITIVE ? FaintParticleLayers.ADDITIVE : FaintParticleLayers.TRANSLUCENT;
+        }
         return this.golemLayer == ParticleLayer.ADDITIVE ? ADDITIVE_LAYER
                 : net.minecraft.client.particle.ParticleRenderType.PARTICLE_SHEET_TRANSLUCENT;
     }

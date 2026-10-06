@@ -43,9 +43,17 @@ void main() {
 #endif
     vec4 color = texture(Sampler0, texCoord0);
 #ifdef ALPHA_CUTOUT
+#ifdef ALPHA_CUTOUT_TEXTURE
+    // The texel alone, as vanilla's entity shaders test it: a fading instance (Torex cloudlets at the end of
+    // their life, 1.7 drew them with GL_ALPHA_TEST off) keeps drawing however low its instance alpha falls.
+    if (color.a < ALPHA_CUTOUT) {
+        discard;
+    }
+#else
     if (color.a * vertexColor.a * ColorModulator.a < ALPHA_CUTOUT) {
         discard;
     }
+#endif
 #endif
 
     color *= vertexColor * ColorModulator;

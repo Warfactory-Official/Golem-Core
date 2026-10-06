@@ -114,14 +114,19 @@ public final class ItemStacks {
         *///?}
     }
 
-    /** Returns whether a stack carries only the metadata and damage used by a flattened item family. */
-    public static boolean hasOnlyVariantAndDamage(ItemStack stack, GolemComponent<?> variant) {
+    /**
+     * Returns whether a stack carries nothing but damage and the given components (a mod's typed stand-ins for its old
+     * item metadata) - the modern spelling of "no NBT".
+     */
+    public static boolean hasOnlyVariantAndDamage(ItemStack stack, GolemComponent<?>... allowed) {
         //? if >=1.20.5 {
+        outer:
         for (var component : stack.getComponentsPatch().entrySet()) {
-            if (component.getKey() != variant.type()
-                    && component.getKey() != net.minecraft.core.component.DataComponents.DAMAGE) {
-                return false;
+            if (component.getKey() == net.minecraft.core.component.DataComponents.DAMAGE) continue;
+            for (GolemComponent<?> variant : allowed) {
+                if (component.getKey() == variant.type()) continue outer;
             }
+            return false;
         }
         return true;
         //?} else {
