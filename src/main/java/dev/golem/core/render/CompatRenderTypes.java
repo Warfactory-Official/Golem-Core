@@ -227,12 +227,37 @@ public final class CompatRenderTypes {
         *///?}
     }
 
+    /**
+     * Vanilla 26.1's dragon rays: POSITION_COLOR <b>triangles</b>, additive, no depth write, and <b>culled</b>. For an
+     * old {@code glDisable(GL_CULL_FACE)} additive pass use {@link #additive()} / {@link #additiveTriangles()}.
+     */
     public static RenderType dragonRays() {
         //? if >=26.1 {
         return RenderTypes.dragonRays();
         //?} else {
-        /*return RenderType.lightning();
+        /*return AdditiveRenderType.dragonRays();
         *///?}
+    }
+
+    /**
+     * Old untextured additive geometry ({@code GL_SRC_ALPHA, GL_ONE}, depth mask off, face culling off) as
+     * POSITION_COLOR <b>quads</b>, identical on every node. Emit each face once: both sides are drawn.
+     */
+    public static RenderType additive() {
+        return AdditiveRenderType.quads();
+    }
+
+    /** {@link #additive()} for geometry emitted as POSITION_COLOR <b>triangles</b>. */
+    public static RenderType additiveTriangles() {
+        return AdditiveRenderType.triangles();
+    }
+
+    /**
+     * {@link #additive()} that still writes depth: an old renderer that disabled culling and blended additively but
+     * never called {@code glDepthMask(false)}, so its near faces hide the far faces of the same glow.
+     */
+    public static RenderType additiveDepthWrite() {
+        return AdditiveRenderType.quadsDepth();
     }
 
     /** Textureless alpha-weighted additive sheets, matching vanilla's lightning pipeline. */
