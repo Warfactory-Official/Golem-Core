@@ -33,6 +33,11 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <p>Items are untouched: 1.7 drew a CT block's item with the plain base icons too.
  *
+ * <p>Coexists with connected-texture mods (Chisel CTM, CTM Lib, Continuity, Fusion): it is code-registered per block
+ * and reads none of their data - no {@code "ctm"} or {@code "fusion"} texture metadata, no {@code ctm:} model loader,
+ * no OptiFine {@code .properties}. A mod that ships such data must not ship it for a block registered here; HBM
+ * removed its 1.12 {@code "ctm"} metadata for that reason (otherwise Chisel CTM wraps the same models a second time).
+ *
  * <p>Client-only.
  */
 public final class ConnectedTextures {
@@ -51,7 +56,16 @@ public final class ConnectedTextures {
         String[] sheets(BlockState state);
     }
 
-    private record Spec(Sheets sheets, Connector connector) {}
+    /**
+     * 1.7 {@code getFragments(world, x, y, z, side)} in full: the pair may differ per face (the graphite pile draws
+     * its top sheet on DOWN/UP and its channel sheets on the sides).
+     */
+    @FunctionalInterface
+    public interface FaceSheets {
+        String[] sheets(BlockState state, Direction face);
+    }
+
+    private record Spec(FaceSheets sheets, Connector connector) {}
 
     private record Pending(java.util.function.Supplier<? extends Block> block, Spec spec) {}
 
@@ -63,16 +77,30 @@ public final class ConnectedTextures {
      * Gives the block connected textures. Call from client initialisation, before the first resource load; the block
      * is only resolved at the first model bake, so a registry supplier may be passed before registration.
      */
-    public static synchronized void register(java.util.function.Supplier<? extends Block> block, Sheets sheets,
+    public static void register(java.util.function.Supplier<? extends Block> block, Sheets sheets,
+                                Connector connector) {
+        register(block, (FaceSheets) (state, face) -> sheets.sheets(state), connector);
+    }
+
+    /** As {@link #register(java.util.function.Supplier, Sheets, Connector)}, with a sheet pair per face. */
+    public static synchronized void register(java.util.function.Supplier<? extends Block> block, FaceSheets sheets,
                                              Connector connector) {
         PENDING.add(new Pending(block, new Spec(sheets, connector)));
         install();
     }
 
-    /** Resolves the registered suppliers (idempotent; from the first bake on). */
+    /**
+     * Resolves the registered suppliers (idempotent) and drops the built quarters: a bake follows a re-stitch, which
+     * makes new sprites with new atlas UVs. Called at the start of every bake.
+     */
     private static synchronized void resolve() {
         for (Pending pending : PENDING) SPECS.put(pending.block().get(), pending.spec());
         PENDING.clear();
+        //? if >=26.1 {
+        QUADS26.clear();
+        //?} else {
+        /*LEGACY_QUADS.clear();
+        *///?}
     }
 
     /** How many blocks are registered, and how many block-state models were wrapped at the last bake. */
@@ -82,6 +110,23 @@ public final class ConnectedTextures {
 
     public static int wrapped() {
         return wrapped;
+    }
+
+    /**
+     * For tests: the 24 quarter types the model draws at {@code pos} (face-major in {@link Direction} order, quarters
+     * TL, TR, BL, BR; the type is 1.7's {@code CT} constant - 0..3 unconnected, 4.. connected, 8.. inner corner,
+     * 12.. horizontal, 16.. vertical, plus 1 right and 2 bottom), or null if the block there is not registered.
+     */
+    public static int[] fragmentsAt(BlockGetter level, BlockPos pos) {
+        BlockState state = level.getBlockState(pos);
+        Spec spec = SPECS.get(state.getBlock());
+        return spec == null ? null : fragments(level, pos, state, spec);
+    }
+
+    /** For tests: the base sprite and sheet ids a registered state draws on {@code face}, or null. */
+    public static String[] sheetsOf(BlockState state, Direction face) {
+        Spec spec = SPECS.get(state.getBlock());
+        return spec == null ? null : spec.sheets.sheets(state, face);
     }
 
     private static volatile int wrapped;
@@ -238,46 +283,65 @@ public final class ConnectedTextures {
         return new float[]{du, dv, du + lenU, dv + lenV};
     }
 
-    /** The per-state sprite pair, resolved from the block atlas. */
-    static TextureAtlasSprite[] sprites(Spec spec, BlockState state) {
-        String[] ids = spec.sheets.sheets(state);
-        return new TextureAtlasSprite[]{
-                Sprites.sprite(Sprites.Atlas.BLOCKS, dev.golem.core.Ids.parse(ids[0])),
-                Sprites.sprite(Sprites.Atlas.BLOCKS, dev.golem.core.Ids.parse(ids[1]))};
+    /** A face's base sprite and {@code _ct} sheet; sprites are compared by identity (a re-stitch makes new ones). */
+    private record Pair(TextureAtlasSprite base, TextureAtlasSprite ct) {
+        @Override
+        public boolean equals(Object o) {
+            return o instanceof Pair p && p.base == base && p.ct == ct;
+        }
+
+        @Override
+        public int hashCode() {
+            return System.identityHashCode(base) * 31 + System.identityHashCode(ct);
+        }
+    }
+
+    /** The sprite pair of one face of a state, resolved from the block atlas. */
+    private static Pair sprites(Spec spec, BlockState state, Direction face) {
+        String[] ids = spec.sheets.sheets(state, face);
+        return new Pair(Sprites.sprite(Sprites.Atlas.BLOCKS, dev.golem.core.Ids.parse(ids[0])),
+                Sprites.sprite(Sprites.Atlas.BLOCKS, dev.golem.core.Ids.parse(ids[1])));
     }
 
     /**
-     * A block's cache of built quarter quads: [face][quarter][fragment type 0..19], built on first use per sprite
-     * pair. {@code Q} is the version's quad type.
+     * Built quarter quads per sprite pair: [face][quarter][fragment type 0..19], built on first use. Cleared at every
+     * bake (see {@link #resolve()}). {@code Q} is the version's quad type.
      */
     static final class QuadCache<Q> {
-        private final Map<String, Object[][][]> byPair = new ConcurrentHashMap<>();
+        private final Map<Pair, Object[][][]> byPair = new ConcurrentHashMap<>();
         private final QuadFactory<Q> factory;
 
         QuadCache(QuadFactory<Q> factory) {
             this.factory = factory;
         }
 
+        void clear() {
+            byPair.clear();
+        }
+
         @SuppressWarnings("unchecked")
         List<Q>[] quads(Spec spec, BlockState state, int[] types) {
-            TextureAtlasSprite[] s = sprites(spec, state);
-            Object[][][] table = byPair.computeIfAbsent(s[0].contents().name() + "|" + s[1].contents().name(),
-                    key -> new Object[6][4][20]);
             List<Q>[] byFace = new List[6];
-            for (int face = 0; face < 6; face++) {
-                List<Q> list = new ArrayList<>(4);
-                for (int q = 0; q < 4; q++) {
-                    int type = types[face * 4 + q];
-                    Object built = table[face][q][type];
-                    if (built == null) {
-                        built = factory.build(quarter(face, q, type, s[0], s[1]), type < 4 ? s[0] : s[1], face);
-                        table[face][q][type] = built;
-                    }
-                    list.add((Q) built);
-                }
-                byFace[face] = list;
-            }
+            for (int face = 0; face < 6; face++) byFace[face] = quads(spec, state, types, face);
             return byFace;
+        }
+
+        /** The four quarters of one face. */
+        @SuppressWarnings("unchecked")
+        List<Q> quads(Spec spec, BlockState state, int[] types, int face) {
+            Pair s = sprites(spec, state, Direction.from3DDataValue(face));
+            Object[][] table = byPair.computeIfAbsent(s, key -> new Object[6][4][20])[face];
+            List<Q> list = new ArrayList<>(4);
+            for (int q = 0; q < 4; q++) {
+                int type = types[face * 4 + q];
+                Object built = table[q][type];
+                if (built == null) {
+                    built = factory.build(quarter(face, q, type, s.base(), s.ct()), type < 4 ? s.base() : s.ct(), face);
+                    table[q][type] = built;
+                }
+                list.add((Q) built);
+            }
+            return list;
         }
     }
 
@@ -533,7 +597,7 @@ public final class ConnectedTextures {
             Spec spec = state == null ? null : spec(state);
             if (types == null || spec == null) return super.getQuads(state, side, rand, data, renderType);
             if (side == null) return List.of();
-            return LEGACY_QUADS.quads(spec, state, types)[side.get3DDataValue()];
+            return LEGACY_QUADS.quads(spec, state, types, side.get3DDataValue());
         }
     }
 
@@ -582,7 +646,7 @@ public final class ConnectedTextures {
             Spec spec = state == null ? null : spec(state);
             if (types == null || spec == null) return super.getQuads(state, side, rand, data, renderType);
             if (side == null) return List.of();
-            return LEGACY_QUADS.quads(spec, state, types)[side.get3DDataValue()];
+            return LEGACY_QUADS.quads(spec, state, types, side.get3DDataValue());
         }
     }
 
