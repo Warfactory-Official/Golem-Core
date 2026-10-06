@@ -23,6 +23,7 @@ public final class Main {
             Lifecycle
               up      [--nodes a,b | --all] [--rebuild | --no-build] [--no-sodium] [--show] [--heap 2G] [--world harness] [--max-clients 2]
                       [--world-type flat|seeded]   seeded = default world preset, fixed seed, world 'harness_seeded'
+                      [--username Name]   the offline player name (default: the loader's dev name, Dev / Player###)
                       Gradle runs once for all nodes and is skipped for a node whose build inputs are older than its
                       captured launch (--rebuild forces it); each client boots as soon as its launch is captured.
                       --all  start EVERY declared node at once (cap: allNodesMaxClients). Opt-in only: agents must
@@ -143,6 +144,7 @@ public final class Main {
         o.worldType = args.get("world-type", "flat");
         if (!o.worldType.equals("flat") && !o.worldType.equals("seeded")) throw new HarnessException("--world-type flat | seeded");
         o.world = args.get("world", o.worldType.equals("seeded") ? Client.SEEDED_WORLD : o.world);
+        o.username = args.get("username", null);
         o.verbose = args.flag("verbose");
         o.guiScale = Integer.parseInt(args.get("gui-scale", "2"));
         return o;

@@ -64,6 +64,15 @@ public abstract class CompatHumanoidLayer extends RenderLayer {
     public abstract void submit(Worn worn, PoseStack pose, SubmitSink sink, int light, HumanoidPose parts,
             CameraInfo camera);
 
+    /**
+     * Whether this layer also draws on a wearer with nothing in any armour slot. Off by default, so an armour layer
+     * costs nothing on the unarmoured; a layer for something that is not equipment (a player's own wings, a tail)
+     * turns it on.
+     */
+    protected boolean drawsUnequipped() {
+        return false;
+    }
+
     /** The parent humanoid model, or null if this layer was attached to a renderer that has none. */
     protected final HumanoidModel<?> humanoidModel() {
         Object model = getParentModel();
@@ -85,7 +94,7 @@ public abstract class CompatHumanoidLayer extends RenderLayer {
 
         Worn worn = new Worn(humanoid.headEquipment, humanoid.chestEquipment,
                 humanoid.legsEquipment, humanoid.feetEquipment);
-        if (worn.isEmpty()) return;
+        if (worn.isEmpty() && !drawsUnequipped()) return;
 
         submit(worn, pose, new VanillaSubmitSink(collector), lightCoords,
                 new HumanoidPose(model, humanoid.isCrouching, humanoid.isBaby, isInvisible(humanoid),
@@ -123,7 +132,7 @@ public abstract class CompatHumanoidLayer extends RenderLayer {
                 living.getItemBySlot(EquipmentSlot.CHEST),
                 living.getItemBySlot(EquipmentSlot.LEGS),
                 living.getItemBySlot(EquipmentSlot.FEET));
-        if (worn.isEmpty()) return;
+        if (worn.isEmpty() && !drawsUnequipped()) return;
 
         HumanoidPose parts = new HumanoidPose(model, living.isCrouching(), living.isBaby(),
                 living.isInvisible(), living instanceof net.minecraft.world.entity.player.Player player ? player : null);

@@ -34,6 +34,8 @@ public final class Launcher {
         public String world = Config.get().world;
         /** "flat" (default superflat world) or "seeded" (default preset, fixed seed, world harness_seeded). */
         public String worldType = "flat";
+        /** The offline player name, replacing the dev run's own {@code --username}; null keeps it. */
+        public String username = null;
         public int width = 1280;
         public int height = 720;
         public int guiScale = 2;
@@ -292,7 +294,15 @@ public final class Launcher {
         argfile.add("-cp");
         argfile.add(String.join(java.io.File.pathSeparator, spec.classpath()));
         argfile.add(spec.mainClass());
-        argfile.addAll(spec.programArgs());
+        List<String> program = new ArrayList<>(spec.programArgs());
+        if (options.username != null) {
+            // Minecraft rejects a repeated --username, so the dev run's own one is dropped first.
+            int at = program.indexOf("--username");
+            if (at >= 0) program.subList(at, Math.min(at + 2, program.size())).clear();
+            program.add("--username");
+            program.add(options.username);
+        }
+        argfile.addAll(program);
         argfile.add("--width");
         argfile.add(Integer.toString(options.width));
         argfile.add("--height");

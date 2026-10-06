@@ -18,3 +18,5 @@ accessible method net/minecraft/world/entity/SpawnPlacements register (Lnet/mine
 # Attributes.raiseMax: RangedAttribute.maxValue is private final; raising a vanilla cap (1.7 content had no upper bound) needs it writable.
 accessible field net/minecraft/world/entity/ai/attributes/RangedAttribute maxValue D
 mutable field net/minecraft/world/entity/ai/attributes/RangedAttribute maxValue D
+# Capes: 1.20.1 keeps the cape in the tab-list entry's texture map.
+accessible field net/minecraft/client/multiplayer/PlayerInfo textureLocations Ljava/util/Map;

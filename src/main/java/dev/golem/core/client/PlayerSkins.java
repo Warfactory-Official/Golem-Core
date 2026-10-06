@@ -29,4 +29,20 @@ public final class PlayerSkins {
         return player.getSkinTextureLocation();
     }
     *///?}
+
+    /** The cape texture the cape layer draws for this player, or null for none - legacy {@code getLocationCape()}. */
+    //? if >=26.1 {
+    public static @org.jspecify.annotations.Nullable Identifier cape(AbstractClientPlayer player) {
+        var cape = player.getSkin().cape();
+        return cape == null ? null : cape.texturePath();
+    }
+    //?} elif >=1.21 {
+    /*public static @org.jspecify.annotations.Nullable ResourceLocation cape(AbstractClientPlayer player) {
+        return player.getSkin().capeTexture();
+    }
+    *///?} else {
+    /*public static @org.jspecify.annotations.Nullable ResourceLocation cape(AbstractClientPlayer player) {
+        return player.getCloakTextureLocation();
+    }
+    *///?}
 }

@@ -127,7 +127,7 @@ The CLI finds `harness.json` by walking up from the working directory, so run it
 ## Commands
 
 ```bash
-harness up [--nodes a,b | --all] [--rebuild | --no-build] [--no-sodium] [--show] [--heap 2G] [--world harness] [--world-type seeded]
+harness up [--nodes a,b | --all] [--rebuild | --no-build] [--no-sodium] [--show] [--heap 2G] [--world harness] [--world-type seeded] [--username Name]
 harness down [--nodes a,b | --all]
 harness restart [--nodes a,b | --all]    # down + up, same options as up
 harness status                           # live clients: in world, screen, fps, heap
@@ -150,6 +150,7 @@ harness help                             # everything
 | `--show` | Keep the windows visible (still unfocused) |
 | `--heap 1500M` | Change the heap per client |
 | `--world-type seeded` | Use the seeded normal world (see Worlds) |
+| `--username Name` | Offline player name instead of the dev run's (`Dev` / `Player###`); a singleplayer host keeps one player in `level.dat` whatever the name |
 
 How `up` saves time:
 
