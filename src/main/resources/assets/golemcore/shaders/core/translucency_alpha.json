@@ -1,0 +1,7 @@
+{
+  "vertex": "golemcore:translucency_alpha",
+  "fragment": "golemcore:translucency_alpha",
+  "attributes": ["Position"],
+  "samplers": [{"name": "Sampler0"}],
+  "uniforms": []
+}

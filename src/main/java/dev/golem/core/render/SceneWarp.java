@@ -29,8 +29,16 @@ import java.io.IOException;
  *
  * <p>Sampler0 is the same detached scene copy as {@link HeatDistortionRenderType}, captured once per pass at the
  * first scene-sampling draw, so it holds everything drawn before. Sampler1 is a texture chosen per render type.
- * The geometry is depth tested against the world without writing depth and is blended translucently (the
- * shader owns the alpha).
+ * The geometry is depth tested without writing depth and is blended translucently (the shader owns the alpha).
+ *
+ * <p>Seen through water or glass: the geometry is depth tested against the world <i>under</i> its translucent
+ * layer (see {@code Translucency}), and the shader gets that layer to put back over itself. Sampler2 is the scene
+ * as it was under the translucent layer, Sampler3's alpha is how much the layer covers each pixel, and Sampler4
+ * is the world depth including the layer (sample all three with {@code texelFetch} at {@code gl_FragCoord}, or at
+ * a projected point). Where Sampler4 is nearer than the fragment, the layer lies in front of it, and the shader's
+ * result {@code H} becomes {@code scene + (H - under) * (1 - cover.a)}. Without a capture this frame (a shader pack
+ * in use) Sampler2 and Sampler3 are the scene copy and the depth test is against the full world depth, so that
+ * case never arises.
  *
  * <p>There are no custom uniforms (the 26.1 pipeline has no scalar custom-uniform binding), so parameters
  * travel in the vertex. The vertex is the entity format on every node: position, an 8-bit RGBA colour, UV0
@@ -134,6 +142,9 @@ public final class SceneWarp {
                 .withFragmentShader(dev.golem.core.Ids.parse(modernShaderId()))
                 .withSampler("Sampler0")
                 .withSampler("Sampler1")
+                .withSampler("Sampler2")
+                .withSampler("Sampler3")
+                .withSampler("Sampler4")
                 .withVertexFormat(FORMAT, com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS)
                 .withDepthStencilState(new DepthStencilState(
                         com.mojang.blaze3d.platform.CompareOp.LESS_THAN_OR_EQUAL, false))
@@ -145,6 +156,12 @@ public final class SceneWarp {
                 .withTexture("Sampler0", HeatDistortionRenderType.sceneTexture(),
                         () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR))
                 .withTexture("Sampler1", texture,
+                        () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST))
+                .withTexture("Sampler2", Translucency.underTexture(),
+                        () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR))
+                .withTexture("Sampler3", Translucency.coverTexture(),
+                        () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST))
+                .withTexture("Sampler4", Translucency.depthTexture(),
                         () -> RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST))
                 .createRenderSetup());
     }
@@ -196,14 +213,16 @@ public final class SceneWarp {
                 Minecraft minecraft = Minecraft.getInstance();
                 RenderSystem.setShaderTexture(0, HeatDistortionRenderType.sceneTextureId());
                 RenderSystem.setShaderTexture(1, minecraft.getTextureManager().getTexture(texture).getId());
+                RenderSystem.setShaderTexture(2, Translucency.underTextureId());
+                RenderSystem.setShaderTexture(3, Translucency.coverTextureId());
+                RenderSystem.setShaderTexture(4, Translucency.depthTextureId());
                 shader().safeGetUniform("windowSize").set((float) minecraft.getWindow().getWidth(),
                         (float) minecraft.getWindow().getHeight());
             }
 
             @Override
             public void clearRenderState() {
-                RenderSystem.setShaderTexture(0, 0);
-                RenderSystem.setShaderTexture(1, 0);
+                for (int i = 0; i <= 4; i++) RenderSystem.setShaderTexture(i, 0);
                 super.clearRenderState();
             }
         }

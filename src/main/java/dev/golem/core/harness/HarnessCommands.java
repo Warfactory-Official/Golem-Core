@@ -335,6 +335,20 @@ final class HarnessCommands {
                 /*previous = "none";
                 *///?}
                 break;
+            case "fabulous":
+                // the split translucency targets ("Improved Transparency" on 26.1, Fabulous graphics before); off = Fancy
+                //? if >=26.1 {
+                previous = String.valueOf(mc.options.improvedTransparency().get());
+                mc.options.improvedTransparency().set(Boolean.parseBoolean(value));
+                //?} else {
+                /*previous = String.valueOf(mc.options.graphicsMode().get() == net.minecraft.client.GraphicsStatus.FABULOUS);
+                mc.options.graphicsMode().set(Boolean.parseBoolean(value)
+                        ? net.minecraft.client.GraphicsStatus.FABULOUS : net.minecraft.client.GraphicsStatus.FANCY);
+                // the option's own callback returns early on a GPU-warnlist warning, leaving Fabulous render types
+                // without their targets (a crash on the next frame); rebuild the transparency targets either way
+                mc.levelRenderer.allChanged();
+                *///?}
+                break;
             case "camera":
                 previous = mc.options.getCameraType().name().toLowerCase(java.util.Locale.ROOT);
                 mc.options.setCameraType(net.minecraft.client.CameraType.valueOf(value.toUpperCase(java.util.Locale.ROOT)));

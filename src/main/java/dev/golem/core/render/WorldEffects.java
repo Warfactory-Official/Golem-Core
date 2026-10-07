@@ -1,5 +1,6 @@
 package dev.golem.core.render;
 
+import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import java.util.ArrayList;
@@ -52,13 +53,18 @@ public final class WorldEffects {
             if (worldDepth != null) worldDepth.destroyBuffers();
             worldDepth = null;
             DepthMerge.close();
+            Translucency.close();
         });
         // 26.1 has no loader callback after the transparency framegraph has been composed.
         //? if >=26.1 {
         //? if fabric {
-        /*net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.AFTER_TRANSLUCENT_TERRAIN
+        /*net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.BEFORE_TRANSLUCENT_TERRAIN
+                .register(context -> beforeTranslucent());
+        net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.AFTER_TRANSLUCENT_TERRAIN
                 .register(context -> captureDepth());
         *///?} elif neoforge {
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.client.event.RenderLevelStageEvent.AfterTranslucentFeatures event) -> beforeTranslucent());
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 (net.neoforged.neoforge.client.event.RenderLevelStageEvent.AfterTranslucentBlocks event) -> captureDepth());
         //?}
@@ -69,6 +75,7 @@ public final class WorldEffects {
         //?} else {
         /^net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.START.register(context -> begin(context.matrixStack().last().pose()));
         ^///?}
+        net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.BEFORE_DEBUG_RENDER.register(context -> beforeTranslucent());
         net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.AFTER_TRANSLUCENT.register(context -> captureDepth());
         // Iris (Fabric) runs its composite and final passes at renderLevel's RETURN, after LAST, painting over what
         // was drawn there; under a shader pack world effects end at END instead, over the finished image.
@@ -80,6 +87,7 @@ public final class WorldEffects {
         /^net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 (net.neoforged.neoforge.client.event.RenderLevelStageEvent event) -> {
                     if (event.getStage() == net.neoforged.neoforge.client.event.RenderLevelStageEvent.Stage.AFTER_SKY) begin(event.getModelViewMatrix());
+                    if (event.getStage() == net.neoforged.neoforge.client.event.RenderLevelStageEvent.Stage.AFTER_BLOCK_ENTITIES) beforeTranslucent();
                     if (event.getStage() == net.neoforged.neoforge.client.event.RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) captureDepth();
                     if (event.getStage() == net.neoforged.neoforge.client.event.RenderLevelStageEvent.Stage.AFTER_LEVEL) end();
                 });
@@ -87,11 +95,49 @@ public final class WorldEffects {
         /^net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(
                 (net.minecraftforge.client.event.RenderLevelStageEvent event) -> {
                     if (event.getStage() == net.minecraftforge.client.event.RenderLevelStageEvent.Stage.AFTER_SKY) begin(event.getPoseStack().last().pose());
+                    if (event.getStage() == net.minecraftforge.client.event.RenderLevelStageEvent.Stage.AFTER_BLOCK_ENTITIES) beforeTranslucent();
                     if (event.getStage() == net.minecraftforge.client.event.RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) captureDepth();
                     if (event.getStage() == net.minecraftforge.client.event.RenderLevelStageEvent.Stage.AFTER_LEVEL) end();
                 });
         ^///?}
         *///?}
+    }
+
+    /**
+     * Just before translucent terrain (Fast/Fancy): with a scene-warp effect pending, saves what the translucent layer
+     * will be drawn over (see {@link Translucency}). This is the latest loader point before translucent terrain on
+     * each node; what is still drawn between it and the terrain is opaque, and the shader treats it as covered.
+     */
+    private static void beforeTranslucent() {
+        if (!seesThroughTranslucency()) return;
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.levelRenderer.getTranslucentTarget() != null) return;
+        //? if <26.1 {
+        /*int readTarget = org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER_BINDING);
+        int drawTarget = org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER_BINDING);
+        *///?}
+        try {
+            Translucency.before(minecraft.getMainRenderTarget());
+        } finally {
+            //? if <26.1 {
+            /*com.mojang.blaze3d.platform.GlStateManager._glBindFramebuffer(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER, readTarget);
+            com.mojang.blaze3d.platform.GlStateManager._glBindFramebuffer(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER, drawTarget);
+            *///?}
+        }
+    }
+
+    /** A scene-warp effect is pending this frame and no shader pack owns the targets. */
+    private static boolean seesThroughTranslucency() {
+        if (!isCollecting() || dev.golem.core.client.ShaderPacks.inUse()) return false;
+        for (Entry entry : ENTRIES) {
+            if (SceneWarp.isSceneSampling(entry.type())) return true;
+        }
+        return false;
+    }
+
+    /** The world depth captured after translucency (nearest of every world layer); null before the first capture. */
+    static RenderTarget worldDepth() {
+        return worldDepth;
     }
 
     /** Save real world depth before the Fabulous fullscreen combine clears/overwrites main depth. */
@@ -117,6 +163,8 @@ public final class WorldEffects {
             DepthMerge.merge(worldDepth, source, minecraft.levelRenderer.getTranslucentTarget(),
                     minecraft.levelRenderer.getItemEntityTarget());
             depthCaptured = true;
+            if (seesThroughTranslucency()) Translucency.after(source, minecraft.levelRenderer.getTranslucentTarget(),
+                    minecraft.levelRenderer.getItemEntityTarget());
         } finally {
             //? if <26.1 {
             /*com.mojang.blaze3d.platform.GlStateManager._glBindFramebuffer(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER, readTarget);
@@ -313,7 +361,15 @@ public final class WorldEffects {
         }
     }
 
+    private static void useDepth(RenderTarget main, RenderTarget depth) {
+        main.copyDepthFrom(depth);
+        //? if <26.1 {
+        /*main.bindWrite(false);
+        *///?}
+    }
+
     public static void clear() {
+        Translucency.clear();
         ENTRIES.clear();
         collecting = false;
         depthCaptured = false;
@@ -330,7 +386,9 @@ public final class WorldEffects {
             MultiBufferSource.BufferSource buffers = Minecraft.getInstance().renderBuffers().bufferSource();
             buffers.endBatch();
             if (!depthCaptured) throw new IllegalStateException("World effects submitted without world depth capture");
-            Minecraft.getInstance().getMainRenderTarget().copyDepthFrom(worldDepth);
+            Translucency.settle();
+            RenderTarget main = Minecraft.getInstance().getMainRenderTarget();
+            main.copyDepthFrom(worldDepth);
             //? if <26.1 {
             /*Minecraft.getInstance().getMainRenderTarget().bindWrite(false);
             *///?}
@@ -368,11 +426,15 @@ public final class WorldEffects {
                 RenderSystem.getModelViewStack().last().pose().set(entry.modelView());
                 RenderSystem.applyModelViewMatrix();
                 *///?}
+                // a scene warp is tested against the world under translucency; its shader puts the layer back over it
+                boolean under = Translucency.active() && SceneWarp.isSceneSampling(entry.type());
+                if (under) useDepth(main, Translucency.under());
                 try {
                     if (entry.buffered() != null) entry.buffered().accept(entry.pose(), buffers);
                     else entry.geometry().render(entry.pose().last(), buffers.getBuffer(entry.type()));
                     buffers.endBatch();
                 } finally {
+                    if (under) useDepth(main, worldDepth);
                     //? if >=1.21 {
                     RenderSystem.getModelViewStack().popMatrix();
                     //? if <26.1 {
