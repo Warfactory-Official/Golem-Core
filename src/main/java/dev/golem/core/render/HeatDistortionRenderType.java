@@ -149,12 +149,18 @@ public final class HeatDistortionRenderType {
     }
 
     static boolean isSceneSampling(RenderType renderType) {
-        return RenderTypes.contains(renderType);
+        return RenderTypes.contains(renderType) || SceneWarp.isSceneSampling(renderType);
     }
 
     static void prepareSceneForPass() {
         SceneTexture.capture();
         reportCapture();
+    }
+
+    /** The detached scene copy, shared with {@link SceneWarp} so a pass is captured once. */
+    static Identifier sceneTexture() {
+        installSceneTexture();
+        return SceneTexture.ID;
     }
 
     private static final class RenderTypes {
@@ -252,7 +258,10 @@ public final class HeatDistortionRenderType {
         private static void capture() {
             RenderTarget main = Minecraft.getInstance().getMainRenderTarget();
             ensureCopy(main);
-            if (copy != null) main.blitAndBlendToTexture(copy.getColorTextureView());
+            // A raw copy, not blitAndBlendToTexture: that blends by the main target's alpha, and the sky below
+            // the horizon is alpha 0 on 26.1, so every sampled sky pixel came out black.
+            if (copy != null) RenderSystem.getDevice().createCommandEncoder().copyTextureToTexture(
+                    main.getColorTexture(), copy.getColorTexture(), 0, 0, 0, 0, 0, main.width, main.height);
         }
 
         @Override
@@ -277,12 +286,18 @@ public final class HeatDistortionRenderType {
     }
 
     static boolean isSceneSampling(RenderType renderType) {
-        return TYPES.containsValue(renderType);
+        return TYPES.containsValue(renderType) || SceneWarp.isSceneSampling(renderType);
     }
 
     static void prepareSceneForPass() {
         SceneCopy.capture();
         reportCapture();
+    }
+
+    /^* The detached scene copy's GL texture, shared with {@link SceneWarp} so a pass is captured once. ^/
+    static int sceneTextureId() {
+        ensureReloadListener();
+        return SceneCopy.textureId();
     }
 
     private static void ensureReloadListener() {

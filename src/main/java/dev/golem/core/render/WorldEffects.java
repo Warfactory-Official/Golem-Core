@@ -70,7 +70,12 @@ public final class WorldEffects {
         /^net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.START.register(context -> begin(context.matrixStack().last().pose()));
         ^///?}
         net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.AFTER_TRANSLUCENT.register(context -> captureDepth());
-        net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.LAST.register(context -> end());
+        // Iris (Fabric) runs its composite and final passes at renderLevel's RETURN, after LAST, painting over what
+        // was drawn there; under a shader pack world effects end at END instead, over the finished image.
+        net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.LAST.register(context -> {
+            if (!dev.golem.core.client.ShaderPacks.inUse()) end();
+        });
+        net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.END.register(context -> end());
         //?} elif neoforge {
         /^net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 (net.neoforged.neoforge.client.event.RenderLevelStageEvent event) -> {
@@ -172,8 +177,14 @@ public final class WorldEffects {
         return new Matrix4f(VIEW_ROTATION);
     }
 
+    /**
+     * Whether geometry submitted now belongs to the frame being collected. Not during a shader pack's shadow pass: the
+     * pack renders entities again from the sun's view, and their submissions would be replayed into the player's view
+     * with the shadow camera's matrices (a second, displaced copy of each effect).
+     */
     public static boolean isCollecting() {
-        return collecting && level == Minecraft.getInstance().level;
+        return collecting && level == Minecraft.getInstance().level
+                && !dev.golem.core.client.ShaderPacks.renderingShadowPass();
     }
 
     /**
