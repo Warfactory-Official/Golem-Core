@@ -24,6 +24,8 @@ public final class Main {
               up      [--nodes a,b | --all] [--rebuild | --no-build] [--no-sodium] [--show] [--heap 2G] [--world harness] [--max-clients 2]
                       [--world-type flat|seeded]   seeded = default world preset, fixed seed, world 'harness_seeded'
                       [--username Name]   the offline player name (default: the loader's dev name, Dev / Player###)
+                      [--size 1920x1080]  the window size (default 1280x720); check status window_width/height,
+                                          an OS may shrink a window larger than the screen
                       Gradle runs once for all nodes and is skipped for a node whose build inputs are older than its
                       captured launch (--rebuild forces it); each client boots as soon as its launch is captured.
                       --all  start EVERY declared node at once (cap: allNodesMaxClients). Opt-in only: agents must
@@ -147,7 +149,33 @@ public final class Main {
         o.username = args.get("username", null);
         o.verbose = args.flag("verbose");
         o.guiScale = Integer.parseInt(args.get("gui-scale", "2"));
+        String size = args.get("size", null);
+        if (size != null) {
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("(\\d{3,5})x(\\d{3,5})").matcher(size);
+            if (!m.matches()) throw new HarnessException("--size WIDTHxHEIGHT, e.g. 1920x1080");
+            o.width = Integer.parseInt(m.group(1));
+            o.height = Integer.parseInt(m.group(2));
+            warnIfLargerThanScreen(o.width, o.height);
+        }
         return o;
+    }
+
+    /**
+     * Windows shrinks a window larger than the desktop to fit it (2560x1440 on a 1920x1200 screen became a 1924x1181
+     * framebuffer, 2026-10-07), and does it after boot, so {@code status} still shows the requested size at first.
+     */
+    private static void warnIfLargerThanScreen(int width, int height) {
+        try {
+            java.awt.Rectangle screen = java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment()
+                    .getDefaultScreenDevice().getDefaultConfiguration().getBounds();
+            if (width > screen.width || height > screen.height) {
+                System.err.println("[harness] WARNING: --size " + width + "x" + height + " is larger than the screen ("
+                        + screen.width + "x" + screen.height + "); the OS will shrink the window. Read the real size"
+                        + " from the client's framebuffer, not from the requested one.");
+            }
+        } catch (Throwable headless) {
+            // no display information: nothing to compare against
+        }
     }
 
     /**

@@ -127,7 +127,7 @@ The CLI finds `harness.json` by walking up from the working directory, so run it
 ## Commands
 
 ```bash
-harness up [--nodes a,b | --all] [--rebuild | --no-build] [--no-sodium] [--show] [--heap 2G] [--world harness] [--world-type seeded] [--username Name]
+harness up [--nodes a,b | --all] [--rebuild | --no-build] [--no-sodium] [--show] [--heap 2G] [--world harness] [--world-type seeded] [--username Name] [--size 1920x1080]
 harness down [--nodes a,b | --all]
 harness restart [--nodes a,b | --all]    # down + up, same options as up
 harness status                           # live clients: in world, screen, fps, heap
@@ -149,6 +149,7 @@ harness help                             # everything
 | `--no-sodium` | Leave out Sodium/Embeddium (and Indium) |
 | `--show` | Keep the windows visible (still unfocused) |
 | `--heap 1500M` | Change the heap per client |
+| `--size 1920x1080` | Window size (default 1280x720). Windows shrinks a window larger than the screen to fit it, *after* boot, so `status` may still show the requested size; `up` warns when the size exceeds the screen. Read the real size from the framebuffer (`Minecraft.getWindow().getWidth()`) when it matters |
 | `--world-type seeded` | Use the seeded normal world (see Worlds) |
 | `--username Name` | Offline player name instead of the dev run's (`Dev` / `Player###`); a singleplayer host keeps one player in `level.dat` whatever the name |
 
