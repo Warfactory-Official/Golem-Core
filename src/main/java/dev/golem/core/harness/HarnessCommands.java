@@ -316,6 +316,25 @@ final class HarnessCommands {
                 // HarnessSounds: un-mute the sound categories (master stays 0) so every started sound is logged
                 previous = HarnessSounds.capture(mc, Boolean.parseBoolean(value));
                 break;
+            case "max_fps":
+                // 260 is vanilla's slider sentinel for "unlimited"; frame-time measurements need it with vsync off
+                previous = String.valueOf(mc.options.framerateLimit().get());
+                mc.options.framerateLimit().set(Integer.parseInt(value));
+                break;
+            case "vsync":
+                previous = String.valueOf(mc.options.enableVsync().get());
+                mc.options.enableVsync().set(Boolean.parseBoolean(value));
+                break;
+            case "inactivity_fps":
+                // harness input never counts as activity, so "afk" caps a measured client at 30 fps after a minute
+                //? if >=26.1 {
+                previous = mc.options.inactivityFpsLimit().get().name().toLowerCase(java.util.Locale.ROOT);
+                mc.options.inactivityFpsLimit().set(net.minecraft.client.InactivityFpsLimit.valueOf(
+                        value.toUpperCase(java.util.Locale.ROOT)));
+                //?} else {
+                /*previous = "none";
+                *///?}
+                break;
             case "camera":
                 previous = mc.options.getCameraType().name().toLowerCase(java.util.Locale.ROOT);
                 mc.options.setCameraType(net.minecraft.client.CameraType.valueOf(value.toUpperCase(java.util.Locale.ROOT)));

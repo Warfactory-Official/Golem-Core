@@ -94,6 +94,37 @@ public final class EngineState {
         }
     }
 
+    /** The off reason {@link #followShaderPack} sets, and the only one it ever clears. */
+    static final String SHADER_PACK = "a shader pack is in use";
+
+    /**
+     * Keeps the engine off for as long as Iris or Oculus has a shader pack enabled, and back on once it has not.
+     *
+     * <p>The published engine does the same: its backends report themselves unsupported while
+     * {@code ShadersModHelper.isShaderPackInUse()} and it falls back to its off backend. A pack replaces the world
+     * pipeline with its own G-buffers and composite passes; the engine's raw GL draws land in vanilla's main target,
+     * which the pack's final pass paints over, so an engine left on draws every machine into nothing while each
+     * machine's vanilla renderer stands down for it — every instanced machine invisible. Off, the vanilla renderers
+     * draw, and those the pack does shade.
+     *
+     * <p>Only the shader-pack reason is undone here: an engine the player switched off, or one that failed, stays
+     * off. Call once per frame on the render thread, before anything asks whether the engine is running.
+     */
+    public static void followShaderPack() {
+        boolean pack = dev.golem.core.client.ShaderPacks.inUse();
+        if (pack && running()) {
+            switchOff(SHADER_PACK);
+            GolemCore.LOG.info("Golem flywheel paused while a shader pack is in use; machines draw through their "
+                    + "vanilla renderers");
+            dev.golem.core.flywheel.visual.VisualizationLifecycle.teardownIfPending();
+        } else if (!pack && SHADER_PACK.equals(off)) {
+            if (!switchOn()) return;
+            dev.golem.core.flywheel.backend.BackendManager.reset();
+            dev.golem.core.flywheel.visual.VisualizationLifecycle.rebuildCurrent();
+            GolemCore.LOG.info("Golem flywheel resumed: no shader pack in use");
+        }
+    }
+
     /** Claims a pending teardown, so exactly one safe point performs it. */
     public static boolean takeTeardown() {
         synchronized (EngineState.class) {

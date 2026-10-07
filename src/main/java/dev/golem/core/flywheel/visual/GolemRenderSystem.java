@@ -30,6 +30,9 @@ public final class GolemRenderSystem {
     private static long lastTrace;
     private static int peakWrites;
     private static boolean warnedIdle;
+    /** The frame the engine last started running on; the idle warning counts from here, not from game start. */
+    private static int runningSince;
+    private static boolean wasRunning;
 
     private static long traceInterval() {
         String on = System.getProperty("golem.flywheel.trace");
@@ -76,13 +79,19 @@ public final class GolemRenderSystem {
     }
 
     public static void onFrameStart(float partialTick) {
+        dev.golem.core.flywheel.EngineState.followShaderPack();
         VisualizationLifecycle.teardownIfPending();
         DrawStats.rollOver();
         if (!dev.golem.core.flywheel.EngineState.running()) {
             // Keep the frame counter moving: a visual that claimed the last frame must not still
             // appear to own this one if the engine comes back.
             frameId++;
+            wasRunning = false;
             return;
+        }
+        if (!wasRunning) {
+            wasRunning = true;
+            runningSince = frameId;
         }
         diagnose();
         Minecraft minecraft = Minecraft.getInstance();
@@ -132,12 +141,12 @@ public final class GolemRenderSystem {
                     frameWrites, peakWrites, DrawStats.skipped());
             peakWrites = 0;
         }
-        if (!warnedIdle && census[0] > 0 && !GemBlockEntityVisual.announced() && frameId > 120) {
+        if (!warnedIdle && census[0] > 0 && !GemBlockEntityVisual.announced() && frameId - runningSince > 120) {
             warnedIdle = true;
             GolemCore.LOG.warn(
                     "Golem flywheel holds {} gem visuals but has drawn none in {} frames; those machines "
                             + "are rendering through their vanilla renderers",
-                    census[0], frameId);
+                    census[0], frameId - runningSince);
         }
     }
 

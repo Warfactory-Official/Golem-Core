@@ -363,6 +363,46 @@ public final class Compat {
     }
 
     /**
+     * Runs {@link CompatBlock#onBlockRemoved} for a block that has already left {@code pos} by a path that never
+     * reports it — a write straight into a chunk section. Does nothing for a block that is not a
+     * {@link CompatBlock}, so it is cheap to call for every cell of a bulk clear.
+     *
+     * <p>A multiblock tearing itself down, a light rebuilding its beam: those live in the removal hook, and a
+     * section write skips it on every node.
+     */
+    public static void blockRemoved(ServerLevel level, net.minecraft.core.BlockPos pos,
+                                    net.minecraft.world.level.block.state.BlockState old) {
+        if (old.getBlock() instanceof CompatBlock block && !level.getBlockState(pos).is(block)) {
+            block.onBlockRemoved(old, level, pos, false);
+        }
+    }
+
+    /**
+     * {@code level.setBlock} that always runs the removed block's {@link CompatBlock#onBlockRemoved}, with or without
+     * {@code Block.UPDATE_NEIGHBORS} in {@code flags}.
+     *
+     * <p>Below 26.1 vanilla calls the removal hook ({@code onRemove}) on every block change. 26.1 calls its
+     * replacement ({@code affectNeighborsAfterRemoval}) only when the flags ask for neighbour updates or a piston
+     * move, so a caller that suppresses neighbour updates for speed (a nuke clearing millions of blocks) silently
+     * loses every multiblock teardown on 26.1 alone. This restores the older contract on 26.1 and is a plain
+     * {@code setBlock} below it. Returns what {@code setBlock} returned.
+     */
+    public static boolean setBlockWithRemoval(ServerLevel level, net.minecraft.core.BlockPos pos,
+                                              net.minecraft.world.level.block.state.BlockState state, int flags) {
+        //? if >=26.1 {
+        net.minecraft.world.level.block.state.BlockState old = level.getBlockState(pos);
+        boolean changed = level.setBlock(pos, state, flags);
+        if (changed && (flags & (net.minecraft.world.level.block.Block.UPDATE_NEIGHBORS
+                | net.minecraft.world.level.block.Block.UPDATE_MOVE_BY_PISTON)) == 0) {
+            blockRemoved(level, pos, old);
+        }
+        return changed;
+        //?} else {
+        /*return level.setBlock(pos, state, flags);
+        *///?}
+    }
+
+    /**
      * Marks a chunk as needing to be written back to disk.
      *
      * <p>26.1 replaced the {@code setUnsaved(boolean)} setter with {@code markUnsaved()}; there is no
