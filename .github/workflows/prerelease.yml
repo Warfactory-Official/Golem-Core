@@ -34,6 +34,11 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Build every node
+        # ModDevGradle builds Minecraft through its binary pipeline whenever CI=true (GitHub always sets
+        # it). That jar keeps Forge's signature digests over remapped classes (SecurityException in the
+        # 1.20.1 Forge tests) and loses parameter names, so build with the local recompile pipeline.
+        env:
+          CI: "false"
         run: bash ./gradlew chiseledBuild --no-daemon --stacktrace
 
       - name: Collect release jars
