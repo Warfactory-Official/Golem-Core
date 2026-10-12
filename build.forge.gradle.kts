@@ -195,3 +195,6 @@ publishing {
         }
     }
 }
+
+// Modrinth + CurseForge upload of this node's jar; run every node with the root `publishAllMods`.
+apply(from = rootProject.file("gradle/mod/publish.gradle.kts"))
