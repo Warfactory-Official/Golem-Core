@@ -1,0 +1,59 @@
+# Builds every node (chiseledBuild) and publishes the release jars as a GitHub pre-release.
+# Runs on every push to main and on demand.
+name: Pre-release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: prerelease-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      # Each node compiles on its own toolchain (1.20.1 -> 17, 1.21.1 -> 21, 26.1 -> 25). The last
+      # one listed becomes JAVA_HOME, which runs Gradle itself.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: |
+            17
+            21
+            25
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build every node
+        run: bash ./gradlew chiseledBuild --no-daemon --stacktrace
+
+      - name: Collect release jars
+        id: jars
+        run: |
+          mkdir -p dist
+          # build/libs holds the release jar per node (remapJar/reobfJar/jar); devlibs is not shipped.
+          find versions/*/build/libs -maxdepth 1 -name '*.jar' ! -name '*-sources.jar' -exec cp {} dist/ \;
+          ls -l dist
+          test -n "$(ls dist)" || { echo "No jars produced"; exit 1; }
+          version=$(grep -E '^mod.version=' gradle.properties | cut -d= -f2 | tr -d '[:space:]')
+          echo "tag=v${version}-build.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Create pre-release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.jars.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: Golem Core ${{ steps.jars.outputs.version }} build ${{ github.run_number }}
+          prerelease: true
+          generate_release_notes: true
+          files: dist/*.jar
