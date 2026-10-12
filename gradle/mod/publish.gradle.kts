@@ -18,6 +18,8 @@
 //   golem.build.publish.optional           optional dependencies, comma separated slugs (both sites)
 //   golem.build.publish.minecraftVersions  game versions this jar is listed for; default deps.minecraft
 //   golem.build.publish.skip               true leaves this node out (snapshot nodes are left out anyway)
+//   golem.build.publish.environment        Modrinth environment: client_and_server (default: the mod has content
+//                                          on both sides), client_only, server_only, client_or_server, ...
 //
 // Per-run switches (-P on the command line, or ORG_GRADLE_PROJECT_<name> in CI):
 //   publish.dryRun=true     builds and logs every upload without making it (no tokens needed)
@@ -98,6 +100,8 @@ configure<me.modmuss50.mpp.ModPublishExtension> {
         accessToken.set(providers.environmentVariable("MODRINTH_TOKEN")
             .orElse(providers.gradleProperty("modrinth.token")))
         minecraftVersions.addAll(gameVersions)
+        environment.set(me.modmuss50.mpp.platforms.modrinth.ModrinthEnvironment.valueOf(
+            setting("environment").ifEmpty { "client_and_server" }.uppercase()))
         if (requires.isNotEmpty()) requires(*requires.toTypedArray())
         if (optional.isNotEmpty()) optional(*optional.toTypedArray())
     }
