@@ -69,8 +69,15 @@ public final class GameTestHelpers {
         // is what 1.21's makeMockPlayer(GameType) reports, so it is reproduced here.
         boolean creative = gameType == GameType.CREATIVE;
         boolean spectator = gameType == GameType.SPECTATOR;
-        Player player = new Player(helper.getLevel(), BlockPos.ZERO, 0.0F,
-                new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(), "test-mock-player")) {
+        // A named class, not an anonymous one: javac derives an anonymous constructor's parameters from
+        // the superclass's, and some generated Forge 1.20.1 jars name them all alike ("variable o is
+        // already defined").
+        final class MockPlayer extends Player {
+            MockPlayer() {
+                super(helper.getLevel(), BlockPos.ZERO, 0.0F,
+                        new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(), "test-mock-player"));
+            }
+
             @Override public boolean isSpectator() { return spectator; }
             @Override public boolean isCreative() { return creative; }
             @Override public boolean isLocalPlayer() { return true; }
@@ -84,7 +91,8 @@ public final class GameTestHelpers {
                 return dropped;
             }
             //?}
-        };
+        }
+        Player player = new MockPlayer();
         player.getAbilities().instabuild = creative;
         player.getAbilities().invulnerable = creative;
         return player;
@@ -236,11 +244,17 @@ public final class GameTestHelpers {
     public static ServerPlayer mockServerPlayerInLevel(GameTestHelper helper) {
         //? if forge && <1.20.5 {
         /*ServerLevel level = helper.getLevel();
-        ServerPlayer player = new ServerPlayer(level.getServer(), level,
-                new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(), "test-mock-player")) {
+        // Named for the same reason as mockPlayer's.
+        final class FixturePlayer extends ServerPlayer {
+            FixturePlayer() {
+                super(level.getServer(), level,
+                        new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(), "test-mock-player"));
+            }
+
             @Override public boolean isSpectator() { return false; }
             @Override public boolean isCreative() { return true; }
-        };
+        }
+        ServerPlayer player = new FixturePlayer();
         Connection connection = new Connection(PacketFlow.SERVERBOUND);
         new EmbeddedChannel(connection);
         level.getServer().getPlayerList().placeNewPlayer(connection, player);

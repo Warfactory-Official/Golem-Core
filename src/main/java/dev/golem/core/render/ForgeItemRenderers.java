@@ -24,15 +24,21 @@ public final class ForgeItemRenderers {
             @Override
             public BlockEntityWithoutLevelRenderer getCustomRenderer() {
                 if (itemRenderer == null) {
-                    Minecraft minecraft = Minecraft.getInstance();
-                    itemRenderer = new BlockEntityWithoutLevelRenderer(
-                            minecraft.getBlockEntityRenderDispatcher(), minecraft.getEntityModels()) {
+                    // A named class, not an anonymous one: javac derives an anonymous constructor's
+                    // parameters from the superclass's, and some generated Forge 1.20.1 jars name them
+                    // all alike ("variable o is already defined").
+                    final class ItemRenderer extends BlockEntityWithoutLevelRenderer {
+                        ItemRenderer(Minecraft minecraft) {
+                            super(minecraft.getBlockEntityRenderDispatcher(), minecraft.getEntityModels());
+                        }
+
                         @Override
                         public void renderByItem(ItemStack stack, ItemDisplayContext context, PoseStack poseStack,
                                                  MultiBufferSource buffers, int light, int overlay) {
                             renderer.render(stack, context, poseStack, buffers, light, overlay);
                         }
-                    };
+                    }
+                    itemRenderer = new ItemRenderer(Minecraft.getInstance());
                 }
                 return itemRenderer;
             }

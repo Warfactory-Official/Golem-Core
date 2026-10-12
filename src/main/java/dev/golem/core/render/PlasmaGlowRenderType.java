@@ -101,21 +101,28 @@ public final class PlasmaGlowRenderType {
 
         private static net.minecraft.client.renderer.ShaderInstance shader() {
             if (shader == null) {
+                // A named class, not an anonymous one: javac derives an anonymous constructor's parameters
+                // from the superclass's, and some generated Forge 1.20.1 jars name them all alike
+                // ("variable o is already defined").
+                final class GlowShader extends net.minecraft.client.renderer.ShaderInstance {
+                    GlowShader() throws java.io.IOException {
+                        super(net.minecraft.client.Minecraft.getInstance().getResourceManager(),
+                                "rendertype_entity_translucent_emissive", DefaultVertexFormat.NEW_ENTITY);
+                    }
+
+                    @Override
+                    public void apply() {
+                        super.apply();
+                        // Keep vanilla's BlendMode cache in its normal state. A different JSON blend
+                        // makes later shaders overwrite special ambient blends (notably the vignette).
+                        com.mojang.blaze3d.systems.RenderSystem.enableBlend();
+                        com.mojang.blaze3d.systems.RenderSystem.blendFunc(
+                                com.mojang.blaze3d.platform.GlStateManager.SourceFactor.SRC_ALPHA,
+                                com.mojang.blaze3d.platform.GlStateManager.DestFactor.ONE);
+                    }
+                }
                 try {
-                    shader = new net.minecraft.client.renderer.ShaderInstance(
-                            net.minecraft.client.Minecraft.getInstance().getResourceManager(),
-                            "rendertype_entity_translucent_emissive", DefaultVertexFormat.NEW_ENTITY) {
-                        @Override
-                        public void apply() {
-                            super.apply();
-                            // Keep vanilla's BlendMode cache in its normal state. A different JSON blend
-                            // makes later shaders overwrite special ambient blends (notably the vignette).
-                            com.mojang.blaze3d.systems.RenderSystem.enableBlend();
-                            com.mojang.blaze3d.systems.RenderSystem.blendFunc(
-                                    com.mojang.blaze3d.platform.GlStateManager.SourceFactor.SRC_ALPHA,
-                                    com.mojang.blaze3d.platform.GlStateManager.DestFactor.ONE);
-                        }
-                    };
+                    shader = new GlowShader();
                 } catch (java.io.IOException exception) {
                     throw new IllegalStateException("Could not load additive glow shader", exception);
                 }
