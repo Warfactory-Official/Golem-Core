@@ -36,6 +36,15 @@ repositories {
             includeGroup("dev.ryanhcode.sable-companion")
         }
     }
+    // REI and its Cloth Config / Architectury dependencies (the optional `rei` peer, see deps.rei).
+    exclusiveContent {
+        forRepository { maven("https://maven.shedaniel.me") { name = "Shedaniel" } }
+        filter {
+            includeGroup("me.shedaniel")
+            includeGroup("me.shedaniel.cloth")
+            includeGroup("dev.architectury")
+        }
+    }
 }
 
 // Sable (moving block sub-levels), an optional peer on the nodes that declare it: the shared integration in
@@ -139,6 +148,9 @@ tasks.processResources {
         // dev.golem.core.gametest.TestChunks: a 26.1 test waits until its whole plot is entity-ticking.
         "gametest_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinGameTestChunks\"" else "",
         "rail_mixins" to ", \"MixinMinecartRails\"",
+        // Gliders: fabric-api's EntityElytraEvents.CUSTOM grants the flight; only the wings mixins (always listed) apply.
+        "glider_mixins" to "",
+        "glider_client_mixins" to "",
         "world_effect_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinWorldEffects\"" else "",
         // Skies.Modifier: 26.1 appends environment-attribute layers; older nodes wrap the sky darkening and the
         // client colour getters (the mixin classes are empty stubs on the other era).
@@ -228,6 +240,25 @@ dependencies {
     val jeiMc = (findProperty("deps.jei_mc") as String?)?.takeIf { it.isNotBlank() }
     val jeiVer = (findProperty("deps.jei") as String?)?.takeIf { it.isNotBlank() }
     if (jeiMc != null && jeiVer != null) compileOnly("mezz.jei:jei-$jeiMc-common-api:$jeiVer")
+
+    // REI, compile-only and per-node optional, like JEI: the adapter in dev.golem.core.rei feeds a mod's neutral
+    // viewer declarations (dev.golem.core.viewer) to REI 12/16/26. Fabric REI jars are intermediary-mapped below 26.1.
+    // Its POM's Fabric Loader / Fabric API are left out: the node declares its own.
+    (findProperty("deps.rei") as String?)?.takeIf { it.isNotBlank() }?.let { rei ->
+        (if (obfuscated) "modCompileOnly" else "compileOnly")("me.shedaniel:RoughlyEnoughItems-api-fabric:$rei") {
+            exclude(group = "net.fabricmc")
+            exclude(group = "net.fabricmc.fabric-api")
+        }
+        // REI 26's Fabric POM lists Cloth Config and Architectury at runtime scope; REI's API types name theirs
+        // (Point, Rectangle, FluidStack), so the compile classpath needs them as well.
+        for (dep in listOfNotNull(
+            (findProperty("deps.rei_cloth") as String?)?.takeIf { it.isNotBlank() }?.let { "me.shedaniel.cloth:cloth-config-fabric:$it" },
+            (findProperty("deps.rei_architectury") as String?)?.takeIf { it.isNotBlank() }?.let { "dev.architectury:architectury-fabric:$it" },
+        )) (if (obfuscated) "modCompileOnly" else "compileOnly")(dep) {
+            exclude(group = "net.fabricmc")
+            exclude(group = "net.fabricmc.fabric-api")
+        }
+    }
 
     // CC: Tweaked, compile-only and per-node optional: dev.golem.core.computer registers peripherals with the
     // loader's lookup (NeoForge capability, Forge provider, Fabric BlockApiLookup). The peripheral API itself

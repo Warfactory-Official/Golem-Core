@@ -110,6 +110,15 @@ repositories {
             includeGroup("dev.ryanhcode.sable-companion")
         }
     }
+    // REI and its Cloth Config / Architectury dependencies (the optional `rei` peer, see deps.rei).
+    exclusiveContent {
+        forRepository { maven("https://maven.shedaniel.me") { name = "Shedaniel" } }
+        filter {
+            includeGroup("me.shedaniel")
+            includeGroup("me.shedaniel.cloth")
+            includeGroup("dev.architectury")
+        }
+    }
 }
 
 // Sable (moving block sub-levels; Create Aeronautics), an optional peer on the nodes that declare it. Its backend of
@@ -153,6 +162,9 @@ tasks.processResources {
         // dev.golem.core.gametest.TestChunks: a 26.1 test waits until its whole plot is entity-ticking.
         "gametest_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinGameTestChunks\"" else "",
         "rail_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinMinecartRails\"" else "",
+        // Gliders: 26.1 has canGlide (covers the starts too); 1.21.1 asks the chest item at three points.
+        "glider_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinGliderFlight\"" else ", \"MixinGliderFlight\", \"MixinGliderStart\"",
+        "glider_client_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) "" else ", \"MixinGliderClientStart\"",
         "world_effect_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinWorldEffects\"" else "",
         // Skies.Modifier: 26.1 appends environment-attribute layers; older nodes wrap the sky darkening and the
         // client colour getters (the mixin classes are empty stubs on the other era).
@@ -221,6 +233,12 @@ dependencies {
     val jeiMc = (findProperty("deps.jei_mc") as String?)?.takeIf { it.isNotBlank() }
     val jeiVer = (findProperty("deps.jei") as String?)?.takeIf { it.isNotBlank() }
     if (jeiMc != null && jeiVer != null) compileOnly("mezz.jei:jei-$jeiMc-common-api:$jeiVer")
+
+    // REI, compile-only and per-node optional, like JEI: the adapter in dev.golem.core.rei feeds a mod's neutral
+    // viewer declarations (dev.golem.core.viewer) to REI 16/26. A node without deps.rei compiles it out (`rei`).
+    (findProperty("deps.rei") as String?)?.takeIf { it.isNotBlank() }?.let { rei ->
+        compileOnly("me.shedaniel:RoughlyEnoughItems-api-neoforge:$rei")
+    }
 
     // CC: Tweaked, compile-only and per-node optional: dev.golem.core.computer registers peripherals with the
     // loader's lookup (NeoForge capability, Forge provider, Fabric BlockApiLookup). The peripheral API itself

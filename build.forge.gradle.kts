@@ -51,6 +51,15 @@ repositories {
         name = "SquidDev"
         content { includeGroup("cc.tweaked") }
     }
+    // REI and its Cloth Config / Architectury dependencies (the optional `rei` peer, see deps.rei).
+    exclusiveContent {
+        forRepository { maven("https://maven.shedaniel.me") { name = "Shedaniel" } }
+        filter {
+            includeGroup("me.shedaniel")
+            includeGroup("me.shedaniel.cloth")
+            includeGroup("dev.architectury")
+        }
+    }
 }
 
 tasks.processResources {
@@ -73,6 +82,9 @@ tasks.processResources {
         // dev.golem.core.gametest.TestChunks: a 26.1 test waits until its whole plot is entity-ticking.
         "gametest_mixins" to "",
         "rail_mixins" to "",
+        // Gliders: the chest item's canElytraFly/elytraFlightTick (flight + server start) and the client start check.
+        "glider_mixins" to ", \"MixinGliderFlight\", \"MixinGliderStart\"",
+        "glider_client_mixins" to ", \"MixinGliderClientStart\"",
         "world_effect_mixins" to "",
         // Skies.Modifier: 26.1 appends environment-attribute layers; older nodes wrap the sky darkening and the
         // client colour getters (the mixin classes are empty stubs on the other era).
@@ -133,6 +145,16 @@ dependencies {
     val jeiMc = (findProperty("deps.jei_mc") as String?)?.takeIf { it.isNotBlank() }
     val jeiVer = (findProperty("deps.jei") as String?)?.takeIf { it.isNotBlank() }
     if (jeiMc != null && jeiVer != null) compileOnly("mezz.jei:jei-$jeiMc-common-api:$jeiVer")
+
+    // REI, compile-only and per-node optional, like JEI: the adapter in dev.golem.core.rei feeds a mod's neutral
+    // viewer declarations (dev.golem.core.viewer) to REI 12. Its Forge jars are SRG-mapped, hence `modCompileOnly`.
+    (findProperty("deps.rei") as String?)?.takeIf { it.isNotBlank() }?.let { rei ->
+        modCompileOnly("me.shedaniel:RoughlyEnoughItems-api-forge:$rei")
+        // MDG Legacy remaps the API jar alone, not its POM dependencies; REI's API types name Cloth Config's and
+        // Architectury's (Point, Rectangle, FluidStack), so they are compiled against as well.
+        (findProperty("deps.rei_cloth") as String?)?.takeIf { it.isNotBlank() }?.let { modCompileOnly("me.shedaniel.cloth:cloth-config-forge:$it") }
+        (findProperty("deps.rei_architectury") as String?)?.takeIf { it.isNotBlank() }?.let { modCompileOnly("dev.architectury:architectury-forge:$it") }
+    }
 
     // CC: Tweaked, compile-only and per-node optional: dev.golem.core.computer registers peripherals with the
     // loader's lookup (NeoForge capability, Forge provider, Fabric BlockApiLookup). The peripheral API itself
