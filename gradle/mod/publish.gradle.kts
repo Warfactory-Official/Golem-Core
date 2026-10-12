@@ -8,9 +8,12 @@
 // `stonecutter.tasks.named("publishMods")` (`publishAllMods` in every Golem Core project).
 //
 // Keys, read from the project's gradle.properties (a node's own gradle.properties may override any):
-//   golem.build.publish.modrinthProject    Modrinth project id or slug; blank skips Modrinth
+//   golem.build.publish.modrinthProject    Modrinth project ID (8 characters, ⋯ menu > Copy ID); blank skips
+//                                          Modrinth. A slug only resolves once the project is approved.
 //   golem.build.publish.curseforgeProject  CurseForge numeric project id; blank skips CurseForge
-//   golem.build.publish.requires           required dependencies, comma separated project slugs (both sites)
+//   golem.build.publish.requires           required dependencies, comma separated, used on both sites:
+//                                          Modrinth takes IDs or slugs (IDs for unapproved projects),
+//                                          CurseForge takes slugs
 //   golem.build.publish.fabricRequires     extra required dependencies on Fabric nodes (fabric-api)
 //   golem.build.publish.optional           optional dependencies, comma separated slugs (both sites)
 //   golem.build.publish.minecraftVersions  game versions this jar is listed for; default deps.minecraft
