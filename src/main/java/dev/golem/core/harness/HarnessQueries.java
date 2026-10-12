@@ -49,6 +49,14 @@ final class HarnessQueries {
         json.addProperty("window_height", minecraft.getWindow().getScreenHeight());
         json.addProperty("focused", minecraft.isWindowActive());
         json.addProperty("singleplayer", minecraft.hasSingleplayerServer());
+        // True once the chunk renderer has no section build queued or running (Sodium answers for its own builder).
+        // A scenario that changes the render distance must wait for it before placing blocks: Sodium rebuilds every
+        // section after that change, and a block entity placed meanwhile could be missing from its section's lists.
+        //? if >=1.21 {
+        json.addProperty("sections_built", minecraft.level != null && minecraft.levelRenderer.hasRenderedAllSections());
+        //?} else {
+        /*json.addProperty("sections_built", minecraft.level != null && minecraft.levelRenderer.hasRenderedAllChunks());
+        *///?}
         if (minecraft.level != null) {
             json.addProperty("dimension", dimensionId(minecraft.level));
             json.addProperty("game_time", minecraft.level.getGameTime());
@@ -250,6 +258,24 @@ final class HarnessQueries {
                     : String.valueOf(BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(be.getType())));
             entry.addProperty("replayed", counts[0]);
             entry.addProperty("skipped", counts[1]);
+            if (be != null) {
+                // Why vanilla may not have submitted it at all: a removed or state-invalid block entity is never
+                // extracted, and an off-screen renderer's block entity is drawn only from the level's global set.
+                // With Sodium the global set is not read: Sodium keeps its own per-section lists from its chunk builds.
+                entry.addProperty("removed", be.isRemoved());
+                entry.addProperty("valid_state", be.getType().isValid(be.getBlockState()));
+                //? if >=26.1 {
+                entry.addProperty("in_global_set", minecraft.level.getGloballyRenderedBlockEntities().contains(be));
+                net.minecraft.client.renderer.blockentity.BlockEntityRenderer<BlockEntity, ?> renderer =
+                        minecraft.getBlockEntityRenderDispatcher().getRenderer(be);
+                entry.addProperty("renderer", renderer == null ? null : renderer.getClass().getSimpleName());
+                if (renderer != null) {
+                    entry.addProperty("off_screen", renderer.shouldRenderOffScreen());
+                    entry.addProperty("should_render", renderer.shouldRender(be,
+                            minecraft.gameRenderer.getMainCamera().position()));
+                }
+                //?}
+            }
             out.add(entry);
         }
         json.add("positions", out);

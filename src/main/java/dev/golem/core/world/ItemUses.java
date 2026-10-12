@@ -18,12 +18,13 @@ public final class ItemUses {
 
     private ItemUses() {}
 
-    private static final List<BiConsumer<LivingEntity, ItemStack>> FINISH = new CopyOnWriteArrayList<>();
+    /** Every listener, in phase order; register through the {@code on...} method or directly, with a phase. */
+    public static final dev.golem.core.hook.Hook<BiConsumer<LivingEntity, ItemStack>> FINISH = dev.golem.core.hook.Hook.notifying();
     private static boolean hooked;
 
     /** Registers a handler for a finished item use on the server: (entity, stack before use). */
     public static synchronized void onFinish(BiConsumer<LivingEntity, ItemStack> handler) {
-        FINISH.add(handler);
+        FINISH.register(handler);
         if (hooked) return;
         hooked = true;
         //? if neoforge {

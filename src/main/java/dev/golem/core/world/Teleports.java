@@ -26,4 +26,30 @@ public final class Teleports {
         /*return entity.teleportTo(level, x, y, z, java.util.Set.of(), entity.getYRot(), entity.getXRot());
         *///?}
     }
+
+    /**
+     * Puts {@code passenger} back on {@code vehicle} after both were teleported separately. Dismounting gives the
+     * passenger vanilla's 60-tick boarding cooldown, which refuses an ordinary {@code startRiding}, so this mounts by
+     * force, as vanilla's own cross-level vehicle move remounts its passengers. 26.1 added a trailing "send the mount
+     * event and triggers" flag (kept on). Returns whether the passenger now rides the vehicle.
+     */
+    public static boolean remount(Entity passenger, Entity vehicle) {
+        //? if >=26.1 {
+        return passenger.startRiding(vehicle, true, true);
+        //?} else {
+        /*return passenger.startRiding(vehicle, true);
+        *///?}
+    }
+
+    /**
+     * The world's spawn point (1.7 {@code getSpawnPoint}, kept with the overworld): where a player without a bed
+     * respawns. 26.1 keeps it as the server's respawn data, before 26.1 the overworld's shared spawn position.
+     */
+    public static net.minecraft.core.BlockPos worldSpawn(net.minecraft.server.MinecraftServer server) {
+        //? if >=26.1 {
+        return server.overworld().getRespawnData().globalPos().pos();
+        //?} else {
+        /*return server.overworld().getSharedSpawnPos();
+        *///?}
+    }
 }

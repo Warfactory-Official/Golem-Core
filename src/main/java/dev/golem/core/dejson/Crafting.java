@@ -673,6 +673,26 @@ public final class Crafting {
     }
 
     /**
+     * Keeps {@code recipe} in the game only while every literal holds: a flag declared with
+     * {@code dev.golem.core.world.RecipeTables.flag}, or {@code !flag} for its negation. Written as the top-level
+     * {@code "golem:requires"} list, which every loader's recipe parser ignores; Golem Core removes the recipe from the
+     * server's recipe manager after each datapack load while a literal fails. The two sides of a config branch are two
+     * recipes, one with {@code flag} and one with {@code !flag}.
+     */
+    public static JsonObject requires(JsonObject recipe, String... literals) {
+        if (literals.length == 0) throw new DejsonException("a recipe requires no flag");
+        if (recipe.has("golem:requires")) throw new DejsonException("a recipe already carries golem:requires");
+        JsonArray list = new JsonArray();
+        for (String literal : literals) {
+            String name = literal.startsWith("!") ? literal.substring(1) : literal;
+            if (name.isEmpty() || name.startsWith("!")) throw new DejsonException("bad recipe flag literal " + literal);
+            list.add(literal);
+        }
+        recipe.add("golem:requires", list);
+        return recipe;
+    }
+
+    /**
      * The NBT the result carries on a node before item components (1.20.1), where folding its components into
      * NBT under their ids would be wrong: another mod's item whose old NBT keys are not its component ids (CC:
      * Tweaked's treasure disk was {@code Title}/{@code SubPath}/{@code Colour}). legacy-recipes.gradle.kts uses

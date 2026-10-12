@@ -32,12 +32,7 @@ public abstract class MixinFogRendererModifiers {
         net.minecraft.client.renderer.fog.FogData data = cir.getReturnValue();
         Vec3 color = Fogs.color(entity, new Vec3(data.color.x(), data.color.y(), data.color.z()));
         data.color.set((float) color.x, (float) color.y, (float) color.z, data.color.w());
-        float far = Fogs.far(entity, Fogs.renderDistanceBlocks());
-        if (Float.isNaN(far)) return;
-        data.environmentalStart = 0.0F;
-        data.environmentalEnd = far;
-        data.skyEnd = Math.min(data.skyEnd, far);
-        data.cloudEnd = Math.min(data.cloudEnd, far);
+        Fogs.applyDistances(data, entity);
     }
 }
 //?} else {

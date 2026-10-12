@@ -25,11 +25,12 @@ public final class BlockBreaks {
         void onBreak(ServerPlayer player, ServerLevel level, BlockPos pos, BlockState state);
     }
 
-    private static final List<Handler> HANDLERS = new CopyOnWriteArrayList<>();
+    /** Every listener, in phase order; register through the {@code on...} method or directly, with a phase. */
+    public static final dev.golem.core.hook.Hook<Handler> HANDLERS = dev.golem.core.hook.Hook.notifying();
     private static boolean hooked;
 
     public static synchronized void onBreak(Handler handler) {
-        HANDLERS.add(handler);
+        HANDLERS.register(handler);
         if (hooked) return;
         hooked = true;
         //? if neoforge && >=26.1 {

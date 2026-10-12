@@ -340,6 +340,141 @@ public class CompatBlock extends Block {
     }
     *///?}
 
+    /**
+     * An entity landed on this block after falling {@code fallDistance} blocks (the old {@code onFallenUpon}).
+     * The default is vanilla's: fall damage. An override that keeps fall damage calls
+     * {@link #defaultFallOn}. Vanilla's {@code fallOn} took the distance as a {@code float} until 26.1 and as a
+     * {@code double} since; this hook takes the {@code double} on every node.
+     */
+    protected void onFallOn(Level level, BlockState state, BlockPos pos, net.minecraft.world.entity.Entity entity,
+                            double fallDistance) {
+        defaultFallOn(level, state, pos, entity, fallDistance);
+    }
+
+    /** Vanilla's {@code fallOn}: the entity takes its fall damage. */
+    protected final void defaultFallOn(Level level, BlockState state, BlockPos pos,
+                                       net.minecraft.world.entity.Entity entity, double fallDistance) {
+        //? if >=26.1 {
+        super.fallOn(level, state, pos, entity, fallDistance);
+        //?} else {
+        /*super.fallOn(level, state, pos, entity, (float) fallDistance);
+        *///?}
+    }
+
+    //? if >=26.1 {
+    @Override
+    public void fallOn(Level level, BlockState state, BlockPos pos, net.minecraft.world.entity.Entity entity,
+                       double fallDistance) {
+        onFallOn(level, state, pos, entity, fallDistance);
+    }
+    //?} else {
+    /*@Override
+    public void fallOn(Level level, BlockState state, BlockPos pos, net.minecraft.world.entity.Entity entity,
+                       float fallDistance) {
+        onFallOn(level, state, pos, entity, fallDistance);
+    }
+    *///?}
+
+    // ======================================================================== soil (1.7 canSustainPlant)
+
+    /**
+     * Whether a plant may stand on this block at {@code soilPos} (1.7 {@code Block.canSustainPlant}): {@link
+     * dev.golem.core.hook.Verdict#ALLOW} keeps it, {@link dev.golem.core.hook.Verdict#DENY} pops it,
+     * {@link dev.golem.core.hook.Verdict#PASS} (the default) leaves it to the plant, as vanilla. {@code plant} is the
+     * plant's state above. Asked by NeoForge/Forge through their soil hook ({@code canSustainPlant}) and on Fabric by
+     * {@code MixinVegetationSoil} from the plant's own survival check (every {@code BushBlock}/{@code VegetationBlock}:
+     * crops, saplings, flowers, stems); crops keep their light requirement except on NeoForge, whose crops take a soil
+     * answer as final.
+     */
+    protected dev.golem.core.hook.Verdict onSustainPlant(net.minecraft.world.level.BlockGetter level, BlockPos soilPos,
+                                                         BlockState soil, BlockState plant) {
+        return dev.golem.core.hook.Verdict.PASS;
+    }
+
+    /** {@link #onSustainPlant}, for the loader glue. */
+    public final dev.golem.core.hook.Verdict sustainsPlant(net.minecraft.world.level.BlockGetter level, BlockPos soilPos,
+                                                           BlockState soil, BlockState plant) {
+        return onSustainPlant(level, soilPos, soil, plant);
+    }
+
+    //? if neoforge && >=26.1 {
+    @Override
+    public net.minecraft.util.TriState canSustainPlant(BlockState state,
+            net.minecraft.world.level.BlockGetter level, BlockPos soilPosition, net.minecraft.core.Direction facing,
+            BlockState plant) {
+        return switch (onSustainPlant(level, soilPosition, state, plant)) {
+            case ALLOW -> net.minecraft.util.TriState.TRUE;
+            case DENY -> net.minecraft.util.TriState.FALSE;
+            case PASS -> super.canSustainPlant(state, level, soilPosition, facing, plant);
+        };
+    }
+    //?} elif neoforge {
+    /*@Override
+    public net.neoforged.neoforge.common.util.TriState canSustainPlant(BlockState state,
+            net.minecraft.world.level.BlockGetter level, BlockPos soilPosition, net.minecraft.core.Direction facing,
+            BlockState plant) {
+        return switch (onSustainPlant(level, soilPosition, state, plant)) {
+            case ALLOW -> net.neoforged.neoforge.common.util.TriState.TRUE;
+            case DENY -> net.neoforged.neoforge.common.util.TriState.FALSE;
+            case PASS -> super.canSustainPlant(state, level, soilPosition, facing, plant);
+        };
+    }
+    *///?} elif forge {
+    /*@Override
+    public boolean canSustainPlant(BlockState state, net.minecraft.world.level.BlockGetter level, BlockPos pos,
+            net.minecraft.core.Direction facing, net.minecraftforge.common.IPlantable plantable) {
+        dev.golem.core.hook.Verdict verdict = onSustainPlant(level, pos, state, plantable.getPlant(level, pos.relative(facing)));
+        return verdict == dev.golem.core.hook.Verdict.PASS ? super.canSustainPlant(state, level, pos, facing, plantable)
+                : verdict == dev.golem.core.hook.Verdict.ALLOW;
+    }
+    *///?}
+
+    // ======================================================================== light opacity 0 (1.7 lightOpacity)
+
+    /**
+     * Whether this state is fully transparent to light, 1.7's {@code lightOpacity} 0 (every block that was not an
+     * opaque cube): it dampens neither block nor sky light, and sky light passes down through it undiminished, so
+     * {@code canSeeSky} below it is still true. Vanilla derives both from the shape and the occlusion flag (a
+     * non-occluding full cube dampens by one and stops the sky column); the default keeps vanilla's answer. Must depend
+     * on the state alone: vanilla caches it per state. A waterlogged state keeps the water's dampening.
+     */
+    protected boolean isLightTransparent(BlockState state) {
+        return false;
+    }
+
+    //? if >=26.1 {
+    @Override
+    protected boolean propagatesSkylightDown(BlockState state) {
+        return isLightTransparent(state) && state.getFluidState().isEmpty() || super.propagatesSkylightDown(state);
+    }
+
+    @Override
+    protected int getLightDampening(BlockState state) {
+        return isLightTransparent(state) && state.getFluidState().isEmpty() ? 0 : super.getLightDampening(state);
+    }
+    //?} elif >=1.21.1 {
+    /*@Override
+    protected boolean propagatesSkylightDown(BlockState state, net.minecraft.world.level.BlockGetter level, BlockPos pos) {
+        return isLightTransparent(state) && state.getFluidState().isEmpty() || super.propagatesSkylightDown(state, level, pos);
+    }
+
+    @Override
+    protected int getLightBlock(BlockState state, net.minecraft.world.level.BlockGetter level, BlockPos pos) {
+        return isLightTransparent(state) && state.getFluidState().isEmpty() ? 0 : super.getLightBlock(state, level, pos);
+    }
+    *///?} else {
+    /*@Override
+    public boolean propagatesSkylightDown(BlockState state, net.minecraft.world.level.BlockGetter level, BlockPos pos) {
+        return isLightTransparent(state) && state.getFluidState().isEmpty() || super.propagatesSkylightDown(state, level, pos);
+    }
+
+    @Override
+    @SuppressWarnings("deprecation")
+    public int getLightBlock(BlockState state, net.minecraft.world.level.BlockGetter level, BlockPos pos) {
+        return isLightTransparent(state) && state.getFluidState().isEmpty() ? 0 : super.getLightBlock(state, level, pos);
+    }
+    *///?}
+
     //? if forgelike {
     /**
      * Forge-like loaders read fire odds from the block (vanilla's table is private there), so the values

@@ -27,6 +27,48 @@ public final class Lifecycle {
 
     private Lifecycle() {}
 
+    /**
+     * An entity was added to a server level: loaded with its chunk, spawned, or arrived from another level (a player
+     * changing dimension or respawning is reported for the level it arrives in). Listeners see it already in the level.
+     */
+    public static final dev.golem.core.hook.Hook<BiConsumer<net.minecraft.world.entity.Entity, ServerLevel>> ENTITY_LOAD =
+            dev.golem.core.hook.Hook.notifying();
+    private static boolean entityLoadHooked;
+
+    /** Registers an {@link #ENTITY_LOAD} listener. */
+    public static synchronized void onEntityLoad(BiConsumer<net.minecraft.world.entity.Entity, ServerLevel> handler) {
+        ENTITY_LOAD.register(handler);
+        if (entityLoadHooked) return;
+        entityLoadHooked = true;
+        //? if fabric {
+        /*net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents.ENTITY_LOAD.register(Lifecycle::entityLoaded);
+        // A player moved between levels or respawned is not always reported as loaded; report it for its new level.
+        //? if >=26.1 {
+        net.fabricmc.fabric.api.entity.event.v1.ServerEntityLevelChangeEvents.AFTER_PLAYER_CHANGE_LEVEL.register(
+                (player, origin, destination) -> entityLoaded(player, destination));
+        //?} else {
+        /^net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents.AFTER_PLAYER_CHANGE_WORLD.register(
+                (player, origin, destination) -> entityLoaded(player, destination));
+        ^///?}
+        net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents.AFTER_RESPAWN.register(
+                (oldPlayer, newPlayer, alive) -> entityLoaded(newPlayer, (ServerLevel) newPlayer.level()));
+        *///?} elif neoforge {
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.event.entity.EntityJoinLevelEvent event) -> {
+                    if (event.getLevel() instanceof ServerLevel level) entityLoaded(event.getEntity(), level);
+                });
+        //?} elif forge {
+        /*net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(
+                (net.minecraftforge.event.entity.EntityJoinLevelEvent event) -> {
+                    if (event.getLevel() instanceof ServerLevel level) entityLoaded(event.getEntity(), level);
+                });
+        *///?}
+    }
+
+    private static void entityLoaded(net.minecraft.world.entity.Entity entity, ServerLevel level) {
+        for (BiConsumer<net.minecraft.world.entity.Entity, ServerLevel> listener : ENTITY_LOAD) listener.accept(entity, level);
+    }
+
     /** Runs at the end of every server tick. */
     public static void onServerTick(Consumer<MinecraftServer> handler) {
         //? if fabric {
@@ -154,10 +196,114 @@ public final class Lifecycle {
         *///?}
     }
 
+    /**
+     * A player has joined the server and stands in its level. {@code firstTime} is true when this player has never
+     * played in this world before - vanilla found no saved player data, so its statistics are fresh (no play time, never
+     * left the game); 1.7 mods kept a per-player flag for this (hbm-space's {@code HbmPlayerProps.hasWarped}).
+     * NeoForge/Forge {@code PlayerLoggedInEvent}, Fabric {@code ServerPlayConnectionEvents.JOIN}.
+     */
+    public static final dev.golem.core.hook.Hook<PlayerJoin> PLAYER_JOIN = dev.golem.core.hook.Hook.notifying();
+    private static boolean playerJoinHooked;
+
+    /** Registers a {@link #PLAYER_JOIN} listener. */
+    public static synchronized void onPlayerJoin(PlayerJoin handler) {
+        PLAYER_JOIN.register(handler);
+        if (playerJoinHooked) return;
+        playerJoinHooked = true;
+        //? if fabric {
+        /*net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.JOIN.register(
+                (listener, sender, server) -> playerJoined(listener.getPlayer()));
+        *///?} elif neoforge {
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent event) -> {
+                    if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer player) playerJoined(player);
+                });
+        //?} elif forge {
+        /*net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(
+                (net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent event) -> {
+                    if (event.getEntity() instanceof net.minecraft.server.level.ServerPlayer player) playerJoined(player);
+                });
+        *///?}
+    }
+
+    /**
+     * Whether {@code player} has never played in this world before: no play time and no "leave game" in its statistics,
+     * which vanilla loads from the world's {@code stats} folder with the player (a new player starts both at 0).
+     */
+    public static boolean isFirstJoin(net.minecraft.server.level.ServerPlayer player) {
+        var stats = player.getStats();
+        return stats.getValue(net.minecraft.stats.Stats.CUSTOM.get(net.minecraft.stats.Stats.PLAY_TIME)) == 0
+                && stats.getValue(net.minecraft.stats.Stats.CUSTOM.get(net.minecraft.stats.Stats.LEAVE_GAME)) == 0;
+    }
+
+    private static void playerJoined(net.minecraft.server.level.ServerPlayer player) {
+        boolean first = isFirstJoin(player);
+        for (PlayerJoin listener : PLAYER_JOIN) listener.joined(player, first);
+    }
+
+    @FunctionalInterface
+    public interface PlayerJoin {
+        void joined(net.minecraft.server.level.ServerPlayer player, boolean firstTime);
+    }
+
     @FunctionalInterface
     public interface PlayerCopy {
         void copy(net.minecraft.server.level.ServerPlayer oldPlayer, net.minecraft.server.level.ServerPlayer newPlayer,
                   boolean alive);
+    }
+
+    /**
+     * The server is sending its datapack contents (tags, recipes) to {@code players}: one player joining, or everyone
+     * after a {@code /reload} (possibly nobody). A mod syncs its own data-driven tables to the same players here.
+     */
+    public static void onDatapackSync(BiConsumer<MinecraftServer, java.util.List<net.minecraft.server.level.ServerPlayer>> handler) {
+        //? if fabric {
+        /*net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SYNC_DATA_PACK_CONTENTS.register(
+                (player, joined) -> handler.accept(((ServerLevel) player.level()).getServer(), java.util.List.of(player)));
+        *///?} elif neoforge {
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.event.OnDatapackSyncEvent event) -> handler.accept(
+                        event.getPlayerList().getServer(), event.getRelevantPlayers().toList()));
+        //?} elif forge {
+        /*net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(
+                (net.minecraftforge.event.OnDatapackSyncEvent event) -> handler.accept(
+                        event.getPlayerList().getServer(),
+                        event.getPlayer() != null ? java.util.List.of(event.getPlayer()) : event.getPlayerList().getPlayers()));
+        *///?}
+    }
+
+    /**
+     * The server's datapack contents (recipes, tags, ...) are new and not yet sent to any player: once before the server
+     * starts, and after every {@code /reload}, before the reload's sync packets. A handler may change the server's recipe
+     * manager here and every player receives the changed set.
+     *
+     * <p>On Fabric the reload hook is per-player ({@code SYNC_DATA_PACK_CONTENTS}), so the handler can run once per
+     * player, plus once more after the reload ({@code END_DATA_PACK_RELOAD}, for a reload with nobody online): it must be
+     * idempotent, e.g. by remembering the recipe manager instance it last handled (each reload creates a new one).
+     */
+    public static void onDatapackReloaded(Consumer<MinecraftServer> handler) {
+        //? if fabric {
+        /*net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SERVER_STARTING.register(handler::accept);
+        net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.SYNC_DATA_PACK_CONTENTS.register(
+                (player, joined) -> handler.accept(((ServerLevel) player.level()).getServer()));
+        net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents.END_DATA_PACK_RELOAD.register(
+                (server, resources, success) -> handler.accept(server));
+        *///?} elif neoforge {
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(net.neoforged.bus.api.EventPriority.HIGHEST,
+                (net.neoforged.neoforge.event.server.ServerAboutToStartEvent event) -> handler.accept(event.getServer()));
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(net.neoforged.bus.api.EventPriority.HIGHEST,
+                (net.neoforged.neoforge.event.OnDatapackSyncEvent event) -> {
+                    // A null player is the /reload broadcast; a joining player sees the set already handled.
+                    if (event.getPlayer() == null) handler.accept(event.getPlayerList().getServer());
+                });
+        //?} elif forge {
+        /*net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(net.minecraftforge.eventbus.api.EventPriority.HIGHEST,
+                (net.minecraftforge.event.server.ServerAboutToStartEvent event) -> handler.accept(event.getServer()));
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(net.minecraftforge.eventbus.api.EventPriority.HIGHEST,
+                (net.minecraftforge.event.OnDatapackSyncEvent event) -> {
+                    if (event.getPlayer() == null) handler.accept(event.getPlayerList().getServer());
+                });
+        *///?}
     }
 
     /** Runs once the server has finished starting, every level loaded. */

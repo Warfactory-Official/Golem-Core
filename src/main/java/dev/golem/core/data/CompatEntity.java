@@ -48,6 +48,14 @@ public abstract class CompatEntity extends Entity {
     }
     //?}
 
+    //? if <1.21 {
+    /*// Entity.getRandom (public on every entity from 1.20.5): this entity's own random, backported so callers outside
+    // the subclass can spell it the modern way.
+    public net.minecraft.util.RandomSource getRandom() {
+        return this.random;
+    }
+    *///?}
+
     //? if <26.1 {
     /*// 26.1 Entity.isInvulnerableToBase: the vanilla invulnerability answer, backported so a subclass can
     // spell it the 26.1 way on every node.

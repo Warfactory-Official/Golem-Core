@@ -214,6 +214,22 @@ public final class Effects {
         return instance.getEffect();
     }
 
+    /** The registry id of {@code instance}'s effect, {@code "minecraft:wither"}. */
+    public static String id(MobEffectInstance instance) {
+        //? if >=1.21 {
+        return String.valueOf(net.minecraft.core.registries.BuiltInRegistries.MOB_EFFECT.getKey(instance.getEffect().value()));
+        //?} else {
+        /*return String.valueOf(net.minecraft.core.registries.BuiltInRegistries.MOB_EFFECT.getKey(instance.getEffect()));
+        *///?}
+    }
+
+    /** An instance of the effect registered as {@code id}; fails if there is none. */
+    public static MobEffectInstance instance(String id, int duration, int amplifier) {
+        MobEffect effect = net.minecraft.core.registries.BuiltInRegistries.MOB_EFFECT.getOptional(dev.golem.core.Ids.parse(id))
+                .orElseThrow(() -> new IllegalArgumentException("no effect " + id));
+        return instanceRegistered(effect, duration, amplifier);
+    }
+
     public static void clear(LivingEntity entity) {
         entity.removeAllEffects();
     }

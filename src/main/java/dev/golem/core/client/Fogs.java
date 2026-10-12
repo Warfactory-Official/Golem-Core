@@ -15,6 +15,11 @@ import net.minecraft.world.phys.Vec3;
  * {@code MixinFogRendererModifiers} at the same two places. On 26.1 the distance replaces the environmental fog and
  * caps the sky and cloud fog the way vanilla's own world fog (the boss-bar fog) does; below 26.1 it is the shader fog of
  * both the sky and the terrain pass. Nothing changes unless a modifier is {@link Modifier#active active}.
+ *
+ * <p>Linear only: Golem ships no override of vanilla's shader includes (user decision 2026-10-11: an override of
+ * {@code minecraft:shaders/include/fog.glsl} risks clashing with other mods and shader packs). A legacy exponential fog
+ * ({@code GL_EXP}) is approximated by its caller with a linear fog ending where the exponential one is 95 % opaque
+ * ({@code ln 20 / density}).
  */
 public final class Fogs {
 
@@ -32,13 +37,15 @@ public final class Fogs {
          * {@code renderDistanceBlocks} is the render distance in blocks.
          */
         default float far(Entity camera, float renderDistanceBlocks) { return Float.NaN; }
+
     }
 
-    private static final List<Modifier> MODIFIERS = new CopyOnWriteArrayList<>();
+    /** Every listener, in phase order; register through the {@code on...} method or directly, with a phase. */
+    public static final dev.golem.core.hook.Hook<Modifier> MODIFIERS = dev.golem.core.hook.Hook.notifying();
     private static boolean hooked;
 
     public static synchronized void addModifier(Modifier modifier) {
-        MODIFIERS.add(modifier);
+        MODIFIERS.register(modifier);
         if (hooked) return;
         hooked = true;
         //? if neoforge {
@@ -57,11 +64,7 @@ public final class Fogs {
                     float far = far(camera, renderDistanceBlocks());
                     if (Float.isNaN(far)) return;
                     //? if >=26.1 {
-                    net.minecraft.client.renderer.fog.FogData data = event.getFogData();
-                    data.environmentalStart = 0.0F;
-                    data.environmentalEnd = far;
-                    data.skyEnd = Math.min(data.skyEnd, far);
-                    data.cloudEnd = Math.min(data.cloudEnd, far);
+                    applyDistances(event.getFogData(), camera);
                     //?} else {
                     /*event.setNearPlaneDistance(0.0F);
                     event.setFarPlaneDistance(far);
@@ -96,6 +99,18 @@ public final class Fogs {
     public static float renderDistanceBlocks() {
         return net.minecraft.client.Minecraft.getInstance().options.getEffectiveRenderDistance() * 16.0F;
     }
+
+    //? if >=26.1 {
+    /** 26.1: writes the active modifiers' distances into vanilla's fog data (NeoForge's event and Fabric's mixin). */
+    public static void applyDistances(net.minecraft.client.renderer.fog.FogData data, Entity camera) {
+        float far = far(camera, renderDistanceBlocks());
+        if (Float.isNaN(far)) return;
+        data.environmentalStart = 0.0F;
+        data.environmentalEnd = far;
+        data.skyEnd = Math.min(data.skyEnd, far);
+        data.cloudEnd = Math.min(data.cloudEnd, far);
+    }
+    //?}
 
     public static boolean active(Entity camera) {
         if (MODIFIERS.isEmpty() || camera == null) return false;

@@ -2,6 +2,7 @@ package dev.golem.core.data;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.DataResult;
 import java.util.function.Function;
 
 /** DataFixerUpper spellings that moved between the 1.20.1 and 1.20.5 DFU lines. */
@@ -19,6 +20,20 @@ public final class Codecs {
         return keyCodec.dispatch(key, type, codec);
         //?} else {
         /*return keyCodec.dispatch(key, type, k -> codec.apply(k).codec());
+        *///?}
+    }
+
+    /**
+     * {@code keyCodec.partialDispatch(key, type, codec)} (failing lookups) where each variant is a {@link MapCodec}; the
+     * 1.20.1 DFU only accepts plain codecs there, so the map codec is wrapped for it.
+     */
+    public static <K, E> Codec<E> partialDispatch(Codec<K> keyCodec, String key,
+                                                  Function<? super E, ? extends DataResult<? extends K>> type,
+                                                  Function<? super K, ? extends DataResult<? extends MapCodec<? extends E>>> codec) {
+        //? if >=1.20.5 {
+        return keyCodec.partialDispatch(key, type, codec);
+        //?} else {
+        /*return keyCodec.partialDispatch(key, type, k -> codec.apply(k).map(MapCodec::codec));
         *///?}
     }
 }

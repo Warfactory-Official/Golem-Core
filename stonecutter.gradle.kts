@@ -52,6 +52,8 @@ stonecutter parameters {
         string(current.parsed < "26.1") {
             replace("net.minecraft.world.entity.animal.chicken.Chicken", "net.minecraft.world.entity.animal.Chicken")
             replace("net.minecraft.world.entity.animal.squid.Squid", "net.minecraft.world.entity.animal.Squid")
+            replace("net.minecraft.world.entity.animal.cow.Cow", "net.minecraft.world.entity.animal.Cow")
+            replace("net.minecraft.world.entity.animal.fish.WaterAnimal", "net.minecraft.world.entity.animal.WaterAnimal")
             replace("net.minecraft.world.entity.vehicle.minecart.AbstractMinecartContainer",
                     "net.minecraft.world.entity.vehicle.AbstractMinecartContainer")
             replace("net.minecraft.world.entity.vehicle.minecart.AbstractMinecart",

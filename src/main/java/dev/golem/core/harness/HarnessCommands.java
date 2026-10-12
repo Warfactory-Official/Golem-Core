@@ -223,17 +223,25 @@ final class HarnessCommands {
             json.addProperty("focused", mc.isWindowActive());
             return json;
         });
-        handlers.put("log", (mc, req) -> HarnessLog.tail(Json.integer(req, "lines", 50), Json.str(req, "filter", "")));
+        handlers.put("log", (mc, req) -> HarnessLog.tail(Json.integer(req, "lines", 50), Json.str(req, "filter", ""),
+                req.has("since") ? req.get("since").getAsLong() : -1L));
         handlers.put("teleport", (mc, req) -> {
             if (mc.player == null) return Json.error("no player");
             HarnessCamera.stop();
             mc.player.connection.sendCommand(String.format(java.util.Locale.ROOT, "tp @s %s %s %s",
                     Json.number(req, "x", mc.player.getX()), Json.number(req, "y", mc.player.getY()), Json.number(req, "z", mc.player.getZ())));
-            BlockPos target = new BlockPos((int) Math.floor(Json.number(req, "x", 0)), (int) Math.floor(Json.number(req, "y", 0)), (int) Math.floor(Json.number(req, "z", 0)));
+            double tx = Json.number(req, "x", mc.player.getX());
+            double ty = Json.number(req, "y", mc.player.getY());
+            double tz = Json.number(req, "z", mc.player.getZ());
             long start = Harness.tick();
             return (HarnessServer.Pending) m -> {
                 if (m.player == null) return Json.error("no player");
-                boolean arrived = m.player.blockPosition().distManhattan(target) <= 2 && m.level.hasChunkAt(m.player.blockPosition());
+                // Arrived once the client stands where the command put it (within half a block, so a player who starts to
+                // fall after landing still counts). The block test this replaced, Manhattan distance <= 2, passed at once
+                // for a target within two blocks of the start, before the server had moved the player: the next lookAt
+                // then aimed from the old position, and Fixtures.placeOnTop placed its block into the player's own feet,
+                // which the block refused (VisualScreens, "screens that did not open: [turret_howard]", 1.20.1 Fabric).
+                boolean arrived = m.player.position().distanceToSqr(tx, ty, tz) < 0.25 && m.level.hasChunkAt(m.player.blockPosition());
                 return arrived && Harness.tick() > start ? Json.ok() : null;
             };
         });
@@ -269,8 +277,18 @@ final class HarnessCommands {
             case "block_entity": return HarnessQueries.blockEntity(mc, req);
             case "entities": return HarnessQueries.entities(mc, req);
             case "screen": return HarnessQueries.screen(mc);
-            case "log": return HarnessLog.tail(Json.integer(req, "lines", 50), Json.str(req, "filter", ""));
+            case "log": return HarnessLog.tail(Json.integer(req, "lines", 50), Json.str(req, "filter", ""),
+                req.has("since") ? req.get("since").getAsLong() : -1L);
             case "gem": return HarnessQueries.gem(mc, req);
+            case "recipe_table": {
+                // what the client received in Golem Core's recipe-table sync for {"table": "<ns>:<name>"}
+                JsonObject out = new JsonObject();
+                com.google.gson.JsonArray ids = new com.google.gson.JsonArray();
+                for (String id : dev.golem.core.world.RecipeTables.receivedIds(Json.str(req, "table", ""))) ids.add(id);
+                out.add("ids", ids);
+                out.addProperty("count", ids.size());
+                return out;
+            }
             default:
                 var custom = HarnessQueryRegistry.get(kind);
                 if (custom == null) return Json.error("unknown query kind " + kind);
@@ -348,6 +366,11 @@ final class HarnessCommands {
                 // without their targets (a crash on the next frame); rebuild the transparency targets either way
                 mc.levelRenderer.allChanged();
                 *///?}
+                break;
+            case "clouds":
+                // fancy, fast or off (the bundled options.txt turns clouds off)
+                previous = mc.options.cloudStatus().get().name().toLowerCase(java.util.Locale.ROOT);
+                mc.options.cloudStatus().set(net.minecraft.client.CloudStatus.valueOf(value.toUpperCase(java.util.Locale.ROOT)));
                 break;
             case "camera":
                 previous = mc.options.getCameraType().name().toLowerCase(java.util.Locale.ROOT);

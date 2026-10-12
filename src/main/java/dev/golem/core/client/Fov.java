@@ -3,7 +3,10 @@ package dev.golem.core.client;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.item.ItemStack;
 
-/** A client-side callback for changing the computed camera FOV. */
+/**
+ * A client-side callback for changing the computed camera FOV, and the FOV the world is being drawn with this frame
+ * ({@link #current}).
+ */
 public final class Fov {
 
     private Fov() {}
@@ -31,6 +34,47 @@ public final class Fov {
                 (net.minecraftforge.client.event.ViewportEvent.ComputeFov event) ->
                         event.setFOV(apply((float) event.getFOV(), (float) event.getPartialTick())));
         *///?}
+    }
+
+    private static volatile float lastWorldFov = Float.NaN;
+    private static boolean recording;
+
+    /**
+     * The field of view, in degrees, the level is drawn with this frame: the options' FOV after vanilla's dynamic
+     * modifier (sprinting, speed and slowness, a drawn bow, scoping), the death and under-fluid narrowing, the
+     * loaders' FOV events and {@link #register}'s callback - 1.7's {@code EntityRenderer.getFOVModifier(partialTicks,
+     * true)}. 26.1 keeps it on the camera ({@code Camera.getFov()}); before 26.1 {@code GameRenderer.getFov} is
+     * private and called once per frame for the level, so the value it returned is recorded (Fabric: the FOV mixin;
+     * Forge/NeoForge: a lowest-priority {@code ComputeFov} listener installed on the first call here, so the very
+     * first frame reads the options' FOV).
+     */
+    public static float current() {
+        Minecraft minecraft = Minecraft.getInstance();
+        //? if >=26.1 {
+        return minecraft.gameRenderer.getMainCamera().getFov();
+        //?} else {
+        /*if (!recording) {
+            recording = true;
+            //? if neoforge {
+            net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(net.neoforged.bus.api.EventPriority.LOWEST,
+                    (net.neoforged.neoforge.client.event.ViewportEvent.ComputeFov event) -> {
+                        if (event.usedConfiguredFov()) record(event.getFOV());
+                    });
+            //?} elif forge {
+            /^net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(net.minecraftforge.eventbus.api.EventPriority.LOWEST,
+                    (net.minecraftforge.client.event.ViewportEvent.ComputeFov event) -> {
+                        if (event.usedConfiguredFov()) record(event.getFOV());
+                    });
+            ^///?}
+        }
+        float fov = lastWorldFov;
+        return Float.isNaN(fov) ? minecraft.options.fov().get().floatValue() : fov;
+        *///?}
+    }
+
+    /** Records the level FOV vanilla computed this frame (before 26.1; see {@link #current}). */
+    public static void record(double fov) {
+        lastWorldFov = (float) fov;
     }
 
     /** Applies the installed callback to the local player's main-hand item. */

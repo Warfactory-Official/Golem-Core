@@ -43,7 +43,8 @@ import net.minecraft.resources.ResourceLocation;
  * <p>How each version draws it: 26.1 records one immediate draw through a pipeline with vanilla's
  * {@code core/position_color} or {@code core/position_tex_color} shader and the chosen blend (no depth state, as
  * vanilla's {@code CELESTIAL}); before 26.1 the same two shaders through {@code BufferUploader} with the blend set on
- * {@code RenderSystem}. Vanilla's sun and moon textures moved into the {@code celestials} atlas in 26.1;
+ * {@code RenderSystem}, except that textured draws use {@code golemcore:sky_tex_color_legacy}, vanilla's program with
+ * 26.1's discard at alpha 0 instead of 0.1 (1.7 drew the sky without the alpha test). Vanilla's sun and moon textures moved into the {@code celestials} atlas in 26.1;
  * {@link Texture#sun()} and {@link Texture#moon} hide that, so a quad's UVs are always 0..1 over the image.
  */
 public final class Sky {
@@ -76,6 +77,16 @@ public final class Sky {
 
         private static final Texture SUN = new Texture("minecraft", "sun", -2);
         private static final Texture[] MOON = new Texture[8];
+
+        /** {@code namespace:path} of a plain image ({@link GuiCanvas}, {@link #shaderQuads}). */
+        String id() {
+            return namespace + ":" + path;
+        }
+
+        /** True for a plain image, false for vanilla's sun or a moon phase. */
+        boolean plain() {
+            return celestial == -1;
+        }
 
         /** Vanilla's sun image (1.7 {@code textures/environment/sun.png}). */
         public static Texture sun() {
@@ -134,16 +145,182 @@ public final class Sky {
         return moonPhase;
     }
 
+    /**
+     * The colour this frame's sky disc is drawn with (1.7 {@code world.getSkyColor(renderViewEntity, partialTicks)}), after
+     * every {@link dev.golem.core.world.Skies.Modifier}; RGB 0..1. On 26.1 the frame's extracted {@code visual/sky_color};
+     * before it {@code ClientLevel.getSkyColor} at the camera.
+     */
+    public net.minecraft.world.phys.Vec3 skyColor() {
+        //? if >=26.1 {
+        int argb = net.minecraft.client.Minecraft.getInstance().gameRenderer.getGameRenderState().levelRenderState.skyRenderState.skyColor;
+        return new net.minecraft.world.phys.Vec3(((argb >> 16) & 0xFF) / 255.0, ((argb >> 8) & 0xFF) / 255.0, (argb & 0xFF) / 255.0);
+        //?} else {
+        /*net.minecraft.world.phys.Vec3 camera = net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+        return level.getSkyColor(camera, partialTick);
+        *///?}
+    }
+
     /** Untextured quads: {@code xyz} holds 3 floats per vertex, 4 vertices per quad, coloured {@code r g b a}. */
     public void quads(Blend blend, float r, float g, float b, float a, float... xyz) {
         if (xyz.length < 12) return;
         draw(null, blend, r, g, b, a, xyz, 3);
     }
 
+    /**
+     * Untextured quads with a colour per vertex, interpolated across each quad (1.7's {@code GL_SMOOTH} shading):
+     * {@code xyzrgba} holds 7 floats per vertex, 4 vertices per quad. A 1.7 triangle fan (centre, then rim) becomes one
+     * quad per rim segment, {@code (centre, rim[j], rim[j + 1], centre)}, which keeps the fan's winding.
+     */
+    public void coloredQuads(Blend blend, float... xyzrgba) {
+        if (xyzrgba.length < 28) return;
+        draw(null, blend, 1.0F, 1.0F, 1.0F, 1.0F, xyzrgba, 7);
+    }
+
     /** Textured quads: {@code xyzuv} holds 5 floats per vertex (UV 0..1 over the texture), 4 vertices per quad. */
     public void texturedQuads(Texture texture, Blend blend, float r, float g, float b, float a, float... xyzuv) {
         if (xyzuv.length < 20) return;
         draw(texture, blend, r, g, b, a, xyzuv, 5);
+    }
+
+    /**
+     * One-pixel lines (1.7 {@code GL_LINES} / {@code GL_LINE_LOOP} at line width 1): {@code xyz} holds 3 floats per
+     * vertex; with {@code loop} the vertices are one closed line loop, else consecutive pairs are separate segments.
+     */
+    public void lines(Blend blend, float r, float g, float b, float a, boolean loop, float... xyz) {
+        int n = xyz.length / 3;
+        if (n < 2) return;
+        float[] v;
+        if (loop) {
+            v = new float[n * 2 * 3];
+            for (int i = 0; i < n; i++) {
+                int j = (i + 1) % n;
+                System.arraycopy(xyz, i * 3, v, i * 6, 3);
+                System.arraycopy(xyz, j * 3, v, i * 6 + 3, 3);
+            }
+        } else {
+            v = java.util.Arrays.copyOf(xyz, (n / 2) * 6);
+        }
+        drawLines(null, blend, r, g, b, a, v, 3);
+    }
+
+    /**
+     * Points one pixel across (1.7 {@code GL_POINTS} at point size 1), textured with the texel at UV (0, 0) of
+     * {@code texture} the way 1.7 sampled a bound texture for points without texture coordinates: {@code xyz} holds 3
+     * floats per point. Drawn as one-pixel line segments (no node draws points), each across the camera's right
+     * direction for one pixel's width at its distance and the current field of view.
+     */
+    public void points(Texture texture, Blend blend, float r, float g, float b, float a, float... xyz) {
+        int n = xyz.length / 3;
+        if (n < 1) return;
+        Matrix4f m = pose.last().pose();
+        org.joml.Vector3f right = new org.joml.Matrix3f(m).invert().transform(new org.joml.Vector3f(1, 0, 0));
+        if (right.lengthSquared() > 0) right.normalize();
+        int height = Math.max(1, net.minecraft.client.Minecraft.getInstance().getWindow().getHeight());
+        double fov = dev.golem.core.client.Fov.current();
+        float perDistance = (float) (2.0 * Math.tan(Math.toRadians(fov) / 2.0) / height);
+        float[] v = new float[n * 2 * 5];
+        for (int i = 0; i < n; i++) {
+            float x = xyz[i * 3], y = xyz[i * 3 + 1], z = xyz[i * 3 + 2];
+            float px = perDistance * (float) Math.sqrt(x * x + y * y + z * z);
+            int o = i * 10;
+            v[o] = x; v[o + 1] = y; v[o + 2] = z; v[o + 3] = 0; v[o + 4] = 0;
+            v[o + 5] = x + right.x * px; v[o + 6] = y + right.y * px; v[o + 7] = z + right.z * px; v[o + 8] = 0; v[o + 9] = 0;
+        }
+        drawLines(texture, blend, r, g, b, a, v, 5);
+    }
+
+    // ======================================================================== mod shaders
+
+    /**
+     * A mod's fragment shader for {@link #shaderQuads}, the stand-in for 1.7's {@code Shader.use()} around a sky quad
+     * (hbm-space's planet clouds, city lights, black-hole sun...). The file is {@code <namespace>:shaders/core/<name>.fsh},
+     * one file for every node, in GLSL 1.50:
+     *
+     * <pre>
+     * #version 150
+     * #ifdef GOLEM_SKY_UBO
+     * layout(std140) uniform GolemSkyShader { mat4 GolemSkyLocal; vec4 GolemSkyParams[16]; };
+     * #define PARAM(i) GolemSkyParams[(i) / 4][(i) % 4]
+     * #else
+     * uniform float GolemSkyParams[64];
+     * #define PARAM(i) GolemSkyParams[i]
+     * #endif
+     * uniform sampler2D Sampler0;    // only as many as the shader declares (up to Sampler2)
+     * in vec2 texCoord0;             // 1.7 gl_TexCoord[0].xy
+     * in vec3 localPos;              // the position as submitted (1.7 gl_Vertex, hbm-space default.vert's vPosition)
+     * out vec4 fragColor;
+     * </pre>
+     *
+     * {@code PARAM(0..63)} are the call's parameters (1.7's {@code setUniform} values, an int as a float). The vertex
+     * half, the matrices and the program are Golem's ({@code golemcore:core/sky_shader} on 26.1, where
+     * {@code GOLEM_SKY_UBO} is defined; {@code golemcore:sky_shader_legacy} and a generated program JSON before).
+     */
+    public static final class Shader {
+        private final String namespace;
+        private final String name;
+        private final int samplers;
+
+        private Shader(String namespace, String name, int samplers) {
+            this.namespace = namespace;
+            this.name = name;
+            this.samplers = samplers;
+        }
+
+        /**
+         * The shader {@code <namespace>:shaders/core/<name>.fsh}, which samples {@code Sampler0 .. Sampler<samplers - 1>}
+         * (0 to 3).
+         */
+        public static Shader of(String namespace, String name, int samplers) {
+            if (samplers < 0 || samplers > 3) throw new IllegalArgumentException("a sky shader samples 0 to 3 textures");
+            return new Shader(namespace, name, samplers);
+        }
+
+        String namespace() {
+            return namespace;
+        }
+
+        String name() {
+            return name;
+        }
+
+        int samplers() {
+            return samplers;
+        }
+
+        /** {@code namespace:name}. */
+        public String id() {
+            return namespace + ":" + name;
+        }
+    }
+
+    /** How many floats a {@link #shaderQuads} parameter block has ({@code PARAM(0)} to {@code PARAM(63)}). */
+    public static final int SHADER_PARAMS = SkyShaders.PARAMS;
+
+    /**
+     * Quads drawn by a mod's {@link Shader}: {@code xyzuv} holds 5 floats per vertex, 4 vertices per quad, in the
+     * current pose (the shader sees the position as given in {@code localPos}); {@code params} up to
+     * {@link #SHADER_PARAMS} floats (missing ones are 0); {@code textures} one plain image per sampler the shader declares,
+     * sampled with repeat and nearest filtering as 1.7's texture manager left them. No depth test or write and no fog,
+     * as every sky draw; {@code cull} false is 1.7's {@code glDisable(GL_CULL_FACE)}. The fragment's colour is blended as
+     * it is: the shader decides the alpha (1.7's sky shaders ignored {@code glColor}).
+     */
+    public void shaderQuads(Shader shader, Blend blend, boolean cull, float[] params, Texture[] textures, float... xyzuv) {
+        int quads = xyzuv.length / 20;
+        if (quads < 1) return;
+        String[] ids = new String[shader.samplers];
+        for (int i = 0; i < shader.samplers; i++) {
+            Texture texture = textures[i];
+            if (texture.celestial != -1) throw new IllegalArgumentException("sky shaders sample plain images only");
+            ids[i] = texture.namespace + ":" + texture.path;
+        }
+        float[] block = java.util.Arrays.copyOf(params, SHADER_PARAMS);
+        SkyShaders.draw(shader.namespace, shader.name, shader.samplers, blend, cull, ids, new Matrix4f(pose.last().pose()),
+                block, xyzuv, quads);
+    }
+
+    /** How many {@link #shaderQuads} draws of {@code shader} this client has made (a positive signal for tests). */
+    public static long shaderDraws(Shader shader) {
+        return SkyShaders.draws(shader.id());
     }
 
     // ======================================================================== per-version drawing
@@ -154,13 +331,16 @@ public final class Sky {
     private static final BlendFunction BLEND_ADDITIVE = BlendFunction.OVERLAY; // SRC_ALPHA, ONE, ONE, ZERO
 
     private static RenderPipeline pipeline(String name, boolean textured, BlendFunction blend) {
+        return pipeline(name, textured, blend, VertexFormat.Mode.QUADS);
+    }
+
+    private static RenderPipeline pipeline(String name, boolean textured, BlendFunction blend, VertexFormat.Mode mode) {
         RenderPipeline.Builder builder = RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET)
                 .withLocation("pipeline/golem_sky_" + name)
                 .withVertexShader(textured ? "core/position_tex_color" : "core/position_color")
                 .withFragmentShader(textured ? "core/position_tex_color" : "core/position_color")
                 .withColorTargetState(new ColorTargetState(blend))
-                .withVertexFormat(textured ? DefaultVertexFormat.POSITION_TEX_COLOR : DefaultVertexFormat.POSITION_COLOR,
-                        VertexFormat.Mode.QUADS);
+                .withVertexFormat(textured ? DefaultVertexFormat.POSITION_TEX_COLOR : DefaultVertexFormat.POSITION_COLOR, mode);
         if (textured) builder.withSampler("Sampler0");
         // No depth state: neither tested nor written, as vanilla's CELESTIAL and STARS pipelines.
         return builder.build();
@@ -175,6 +355,39 @@ public final class Sky {
     private static final RenderType TYPE_COLOR_ADDITIVE = RenderType.create("golem_sky_color_additive",
             RenderSetup.builder(COLOR_ADDITIVE).createRenderSetup());
     private static final java.util.Map<String, RenderType> TEXTURED = new java.util.HashMap<>();
+    private static final RenderPipeline LINE_COLOR_ALPHA = pipeline("line_color_alpha", false, BLEND_ALPHA, VertexFormat.Mode.DEBUG_LINES);
+    private static final RenderPipeline LINE_COLOR_ADDITIVE = pipeline("line_color_additive", false, BLEND_ADDITIVE, VertexFormat.Mode.DEBUG_LINES);
+    private static final RenderPipeline LINE_TEX_ALPHA = pipeline("line_tex_alpha", true, BLEND_ALPHA, VertexFormat.Mode.DEBUG_LINES);
+    private static final RenderPipeline LINE_TEX_ADDITIVE = pipeline("line_tex_additive", true, BLEND_ADDITIVE, VertexFormat.Mode.DEBUG_LINES);
+    private static final RenderType TYPE_LINE_COLOR_ALPHA = RenderType.create("golem_sky_line_color_alpha",
+            RenderSetup.builder(LINE_COLOR_ALPHA).createRenderSetup());
+    private static final RenderType TYPE_LINE_COLOR_ADDITIVE = RenderType.create("golem_sky_line_color_additive",
+            RenderSetup.builder(LINE_COLOR_ADDITIVE).createRenderSetup());
+    private static final java.util.Map<String, RenderType> TEXTURED_LINES = new java.util.HashMap<>();
+
+    private static RenderType texturedLines(Identifier texture, Blend blend) {
+        return TEXTURED_LINES.computeIfAbsent(blend + "|" + texture, key -> RenderType.create("golem_sky_line_tex",
+                RenderSetup.builder(blend == Blend.ALPHA ? LINE_TEX_ALPHA : LINE_TEX_ADDITIVE)
+                        .withTexture("Sampler0", texture).createRenderSetup()));
+    }
+
+    /** {@link #lines} / {@link #points}: plain images only. */
+    private void drawLines(Texture texture, Blend blend, float r, float g, float b, float a, float[] v, int stride) {
+        RenderType type = texture == null ? (blend == Blend.ALPHA ? TYPE_LINE_COLOR_ALPHA : TYPE_LINE_COLOR_ADDITIVE)
+                : texturedLines(Identifier.fromNamespaceAndPath(texture.namespace, texture.path), blend);
+        Matrix4f m = pose.last().pose();
+        BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.DEBUG_LINES,
+                texture == null ? DefaultVertexFormat.POSITION_COLOR : DefaultVertexFormat.POSITION_TEX_COLOR);
+        int count = (v.length / (stride * 2)) * 2;
+        for (int i = 0; i < count; i++) {
+            int o = i * stride;
+            var vertex = builder.addVertex(m, v[o], v[o + 1], v[o + 2]);
+            if (texture != null) vertex.setUv(v[o + 3], v[o + 4]);
+            vertex.setColor(r, g, b, a);
+        }
+        MeshData mesh = builder.build();
+        if (mesh != null) type.draw(mesh);
+    }
 
     private static RenderType textured(Identifier texture, Blend blend) {
         return TEXTURED.computeIfAbsent(blend + "|" + texture, key -> RenderType.create("golem_sky_tex",
@@ -209,7 +422,8 @@ public final class Sky {
             int o = i * stride;
             var vertex = builder.addVertex(m, v[o], v[o + 1], v[o + 2]);
             if (texture != null) vertex.setUv(u0 + v[o + 3] * (u1 - u0), v0 + v[o + 4] * (v1 - v0));
-            vertex.setColor(r, g, b, a);
+            if (stride == 7) vertex.setColor(v[o + 3], v[o + 4], v[o + 5], v[o + 6]);
+            else vertex.setColor(r, g, b, a);
         }
         MeshData mesh = builder.build();
         if (mesh != null) type.draw(mesh);
@@ -218,12 +432,50 @@ public final class Sky {
     void end() {
     }
     //?} else {
-    /*private void draw(Texture texture, Blend blend, float r, float g, float b, float a, float[] v, int stride) {
+    /*private static final String TEX_SHADER = "golemcore:sky_tex_color_legacy";
+    private static net.minecraft.client.renderer.ShaderInstance texShader;
+    private static Blend texBlend = Blend.ALPHA;
+    private static boolean texReloadRegistered;
+
+    /^*
+     * The textured program: vanilla's {@code position_tex_color} with the discard at alpha 0 instead of 0.1, as 26.1's
+     * own {@code core/position_tex_color} and 1.7's sky (drawn with {@code GL_ALPHA_TEST} disabled). With vanilla's
+     * 1.20.1/1.21.1 program every texel below alpha 0.1 vanished: a star's soft halo became a hard-edged disc and a
+     * flare drawn at a quarter alpha lost its faint parts. Its {@code apply()} resets the blend (the program's JSON
+     * states none on purpose, see {@code FaintParticleLayers}), so the hook sets this draw's blend again.
+     ^/
+    private static net.minecraft.client.renderer.ShaderInstance texShader() {
+        if (!texReloadRegistered) {
+            texReloadRegistered = true;
+            dev.golem.core.client.ClientResourceReloads.register("golemcore", "sky_tex_color", () -> {
+                if (texShader != null) texShader.close();
+                texShader = null;
+            });
+        }
+        if (texShader != null) return texShader;
+        try {
+            texShader = ShaderLoader.load(net.minecraft.client.Minecraft.getInstance().getResourceManager(), TEX_SHADER,
+                    DefaultVertexFormat.POSITION_TEX_COLOR, () -> blend(texBlend));
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException("Could not load shader " + TEX_SHADER, e);
+        }
+        return texShader;
+    }
+
+    private static void blend(Blend blend) {
+        RenderSystem.enableBlend();
+        RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA,
+                blend == Blend.ALPHA ? GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA : GlStateManager.DestFactor.ONE,
+                GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
+    }
+
+    private void draw(Texture texture, Blend blend, float r, float g, float b, float a, float[] v, int stride) {
         float u0 = 0, v0 = 0, u1 = 1, v1 = 1;
         if (texture == null) {
             RenderSystem.setShader(GameRenderer::getPositionColorShader);
         } else {
-            RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
+            texBlend = blend;
+            RenderSystem.setShader(Sky::texShader);
             ResourceLocation location;
             if (texture.celestial == -1) {
                 location = dev.golem.core.Ids.of(texture.namespace, texture.path);
@@ -252,7 +504,8 @@ public final class Sky {
             int o = i * stride;
             var vertex = builder.addVertex(m, v[o], v[o + 1], v[o + 2]);
             if (texture != null) vertex.setUv(u0 + v[o + 3] * (u1 - u0), v0 + v[o + 4] * (v1 - v0));
-            vertex.setColor(r, g, b, a);
+            if (stride == 7) vertex.setColor(v[o + 3], v[o + 4], v[o + 5], v[o + 6]);
+            else vertex.setColor(r, g, b, a);
         }
         com.mojang.blaze3d.vertex.MeshData mesh = builder.build();
         if (mesh != null) BufferUploader.drawWithShader(mesh);
@@ -263,6 +516,48 @@ public final class Sky {
             int o = i * stride;
             var vertex = builder.vertex(m, v[o], v[o + 1], v[o + 2]);
             if (texture != null) vertex.uv(u0 + v[o + 3] * (u1 - u0), v0 + v[o + 4] * (v1 - v0));
+            if (stride == 7) vertex.color(v[o + 3], v[o + 4], v[o + 5], v[o + 6]).endVertex();
+            else vertex.color(r, g, b, a).endVertex();
+        }
+        BufferUploader.drawWithShader(builder.end());
+        ^///?}
+    }
+
+    /^* {@link #lines} / {@link #points}: plain images only. ^/
+    private void drawLines(Texture texture, Blend blend, float r, float g, float b, float a, float[] v, int stride) {
+        if (texture == null) {
+            RenderSystem.setShader(GameRenderer::getPositionColorShader);
+        } else {
+            texBlend = blend;
+            RenderSystem.setShader(Sky::texShader);
+            RenderSystem.setShaderTexture(0, dev.golem.core.Ids.of(texture.namespace, texture.path));
+        }
+        RenderSystem.enableBlend();
+        RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA,
+                blend == Blend.ALPHA ? GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA : GlStateManager.DestFactor.ONE,
+                GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
+        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+        RenderSystem.lineWidth(1.0F);
+        VertexFormat format = texture == null ? DefaultVertexFormat.POSITION_COLOR : DefaultVertexFormat.POSITION_TEX_COLOR;
+        Matrix4f m = pose.last().pose();
+        int count = (v.length / (stride * 2)) * 2;
+        //? if >=1.21 {
+        BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.DEBUG_LINES, format);
+        for (int i = 0; i < count; i++) {
+            int o = i * stride;
+            var vertex = builder.addVertex(m, v[o], v[o + 1], v[o + 2]);
+            if (texture != null) vertex.setUv(v[o + 3], v[o + 4]);
+            vertex.setColor(r, g, b, a);
+        }
+        com.mojang.blaze3d.vertex.MeshData mesh = builder.build();
+        if (mesh != null) BufferUploader.drawWithShader(mesh);
+        //?} else {
+        /^BufferBuilder builder = Tesselator.getInstance().getBuilder();
+        builder.begin(VertexFormat.Mode.DEBUG_LINES, format);
+        for (int i = 0; i < count; i++) {
+            int o = i * stride;
+            var vertex = builder.vertex(m, v[o], v[o + 1], v[o + 2]);
+            if (texture != null) vertex.uv(v[o + 3], v[o + 4]);
             vertex.color(r, g, b, a).endVertex();
         }
         BufferUploader.drawWithShader(builder.end());

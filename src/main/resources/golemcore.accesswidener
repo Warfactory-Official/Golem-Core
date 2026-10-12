@@ -22,3 +22,5 @@ accessible field net/minecraft/world/entity/ai/attributes/RangedAttribute maxVal
 mutable field net/minecraft/world/entity/ai/attributes/RangedAttribute maxValue D
 # Capes: the cape a mod names is installed by wrapping the tab-list entry's skin lookup.
 accessible field net/minecraft/client/multiplayer/PlayerInfo skinLookup Ljava/util/function/Supplier;
+# RecipeTables.removeListedRecipes: recipe_removals take any recipe out of the server's recipe manager; 26.1 has no public setter.
+accessible field net/minecraft/world/item/crafting/RecipeManager recipes Lnet/minecraft/world/item/crafting/RecipeMap;

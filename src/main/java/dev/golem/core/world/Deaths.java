@@ -18,18 +18,20 @@ public final class Deaths {
 
     private Deaths() {}
 
-    private static final List<BiPredicate<LivingEntity, DamageSource>> ALLOW = new CopyOnWriteArrayList<>();
-    private static final List<BiConsumer<LivingEntity, DamageSource>> AFTER = new CopyOnWriteArrayList<>();
+    /** Every listener, in phase order; register through the {@code on...} method or directly, with a phase. */
+    public static final dev.golem.core.hook.Hook<BiPredicate<LivingEntity, DamageSource>> ALLOW = dev.golem.core.hook.Hook.notifying();
+    /** Every listener, in phase order; register through the {@code on...} method or directly, with a phase. */
+    public static final dev.golem.core.hook.Hook<BiConsumer<LivingEntity, DamageSource>> AFTER = dev.golem.core.hook.Hook.notifying();
     private static boolean installed;
 
     /** Registers a veto: return {@code false} to cancel the death (the handler must restore health). */
     public static void onAllowDeath(BiPredicate<LivingEntity, DamageSource> handler) {
-        ALLOW.add(handler);
+        ALLOW.register(handler);
     }
 
     /** Registers a notification for a death that was not vetoed. */
     public static void onDeath(BiConsumer<LivingEntity, DamageSource> handler) {
-        AFTER.add(handler);
+        AFTER.register(handler);
     }
 
     private static boolean allow(LivingEntity entity, DamageSource source) {

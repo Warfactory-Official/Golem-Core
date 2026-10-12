@@ -12,16 +12,25 @@ import dev.golem.core.dejson.BiomeModifiers;
  */
 public final class BiomeFeatures {
 
-    private static boolean installed;
+    /** How many declarations earlier calls handed over; a later call (another mod's) hands over only the newer ones. */
+    private static int installedFeatures;
+    private static int installedSpawns;
 
     private BiomeFeatures() {}
 
-    /** Hands every declared biome modifier to the loader. Idempotent; call during mod initialisation. */
+    /**
+     * Hands every declared biome modifier not handed over yet to the loader. Idempotent; call during mod initialisation,
+     * after declaring. Each mod calls it after its own declarations (HBM, then an addon that declares its own).
+     */
     public static synchronized void install() {
-        if (installed) return;
-        installed = true;
         //? if fabric {
-        /*for (BiomeModifiers.Declaration declaration : BiomeModifiers.declared()) {
+        /*java.util.List<BiomeModifiers.Declaration> features = BiomeModifiers.declared();
+        java.util.List<BiomeModifiers.SpawnDeclaration> spawns = BiomeModifiers.declaredSpawns();
+        int fromFeature = installedFeatures;
+        int fromSpawn = installedSpawns;
+        installedFeatures = features.size();
+        installedSpawns = spawns.size();
+        for (BiomeModifiers.Declaration declaration : features.subList(fromFeature, features.size())) {
             java.util.function.Predicate<net.fabricmc.fabric.api.biome.v1.BiomeSelectionContext> selector;
             String biomes = declaration.biomes();
             if (biomes.startsWith("#")) {
@@ -49,7 +58,7 @@ public final class BiomeFeatures {
                         for (var key : keys) context.getGenerationSettings().addFeature(step, key);
                     });
         }
-        for (BiomeModifiers.SpawnDeclaration spawn : BiomeModifiers.declaredSpawns()) {
+        for (BiomeModifiers.SpawnDeclaration spawn : spawns.subList(fromSpawn, spawns.size())) {
             java.util.function.Predicate<net.fabricmc.fabric.api.biome.v1.BiomeSelectionContext> selector;
             String biomes = spawn.biomes();
             if (BiomeModifiers.ALL_BIOMES.equals(biomes)) {

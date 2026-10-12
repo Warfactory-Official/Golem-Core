@@ -9,8 +9,14 @@ public class FabricEntrypoint implements ModInitializer {
     @Override
     public void onInitialize() {
         GolemCore.LOG.info("Golem Core loaded on {} for MC {}", GolemCore.loader(), GolemCore.MC_VERSION);
+        dev.golem.core.registry.RegistryDump.install(); // dev only: GOLEM_REGISTRY_DUMP=<file>
+        dev.golem.core.world.Physics.init();
+        dev.golem.core.world.RecipeTables.init();
+        dev.golem.core.data.DataFiles.init();
         // The GUI scene renderer must be registered before the game renderer builds its PiP list.
         if (Platform.isClient()) dev.golem.core.gui.GuiScenes.bootstrap();
+        // Every Golem-based mod's golemcore:entry, in dependency order, and the registries filled once.
+        ModEntries.runFabric();
     }
 }
 *///?}

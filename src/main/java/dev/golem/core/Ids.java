@@ -40,6 +40,29 @@ public final class Ids {
     }
 
     /**
+     * The registry name this node gives a vanilla item that the newest API spells {@code id}: the inverse of
+     * {@link #canonicalItemId}. {@code "minecraft:short_grass"} is {@code "minecraft:grass"} on 1.20.1; an id the node
+     * registers as written (every mod id, every unrenamed vanilla id) comes back unchanged, as does one no spelling of
+     * which is registered.
+     */
+    public static String nodeItemId(String id) {
+        if (!id.startsWith("minecraft:") || net.minecraft.core.registries.BuiltInRegistries.ITEM.containsKey(parse(id))) return id;
+        for (String old : new String[] {"minecraft:chain", "minecraft:grass", "minecraft:scute"}) {
+            if (canonicalItemId(old).equals(id) && net.minecraft.core.registries.BuiltInRegistries.ITEM.containsKey(parse(old))) return old;
+        }
+        return id;
+    }
+
+    /** As {@link #nodeItemId}, for the blocks of those renamed items ({@code short_grass} and {@code iron_chain} are blocks too). */
+    public static String nodeBlockId(String id) {
+        if (!id.startsWith("minecraft:") || net.minecraft.core.registries.BuiltInRegistries.BLOCK.containsKey(parse(id))) return id;
+        for (String old : new String[] {"minecraft:chain", "minecraft:grass"}) {
+            if (canonicalItemId(old).equals(id) && net.minecraft.core.registries.BuiltInRegistries.BLOCK.containsKey(parse(old))) return old;
+        }
+        return id;
+    }
+
+    /**
      * Whether a vanilla item tag exists on older versions but not in the newest API. Such a tag can hold a mod's
      * items on an old node through vanilla's own nesting, yet no id roster generated against the newest version
      * can name it. {@code minecraft:tools} is 1.19.4–1.20.4's aggregate of the per-tool tags; 26.1 ships only

@@ -56,6 +56,30 @@ public final class GolemCodec<P extends GolemPayload> {
         return new GolemCodec<>(payloadType, id, encoder, decoder);
     }
 
+    /**
+     * Like {@link #of}, but the encoder and decoder take the registry-aware buffer, so a payload can share one write/read
+     * method with block-entity sync ({@code serialize(RegistryFriendlyByteBuf)}) without naming the plain buffer type.
+     * Where the registry-aware buffer does not exist (below 1.20.5) it is the plain buffer itself. Modern play transports
+     * already hand a registry-aware buffer; any other buffer is wrapped over the same bytes (see
+     * {@link GolemBuffers#registry}).
+     */
+    public static <P extends GolemPayload> GolemCodec<P> ofRegistry(Class<P> payloadType,
+            //? if >=26.1 {
+            Identifier
+            //?} else {
+            /*ResourceLocation
+            *///?}
+            id,
+            //? if >=1.20.5 {
+            BiConsumer<P, net.minecraft.network.RegistryFriendlyByteBuf> encoder,
+            Function<net.minecraft.network.RegistryFriendlyByteBuf, P> decoder) {
+            //?} else {
+            /*BiConsumer<P, FriendlyByteBuf> encoder, Function<FriendlyByteBuf, P> decoder) {
+            *///?}
+        return new GolemCodec<>(payloadType, id, (payload, buffer) -> encoder.accept(payload, GolemBuffers.registry(buffer)),
+                buffer -> decoder.apply(GolemBuffers.registry(buffer)));
+    }
+
     /** Concrete payload class required by Forge 1.20.1's {@code SimpleChannel}. */
     public Class<P> payloadType() {
         return payloadType;

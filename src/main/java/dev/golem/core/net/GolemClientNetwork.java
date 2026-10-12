@@ -17,9 +17,15 @@ final class GolemClientNetwork {
 
     private GolemClientNetwork() {}
 
+    //? if fabric
+    /*private static final java.util.Set<String> INSTALLED = new java.util.HashSet<>();*/
+
     //? if fabric && >=1.20.5 {
-    /*static void install() {
-        GolemNetwork.clientRegistrations().forEach(GolemClientNetwork::register);
+    /*static synchronized void install() {
+        // Called more than once (each mod's client init, then Golem Core at client start); each channel once.
+        for (GolemNetwork.ClientRegistration<?> registration : new java.util.ArrayList<>(GolemNetwork.clientRegistrations())) {
+            if (INSTALLED.add(registration.codec().id().toString())) register(registration);
+        }
     }
 
     private static <P extends GolemPayload> void register(GolemNetwork.ClientRegistration<P> registration) {
@@ -45,8 +51,11 @@ final class GolemClientNetwork {
         ClientPlayNetworking.send(payload);
     }
     *///?} elif fabric {
-    /*static void install() {
-        GolemNetwork.clientRegistrations().forEach(GolemClientNetwork::register);
+    /*static synchronized void install() {
+        // Called more than once (each mod's client init, then Golem Core at client start); each channel once.
+        for (GolemNetwork.ClientRegistration<?> registration : new java.util.ArrayList<>(GolemNetwork.clientRegistrations())) {
+            if (INSTALLED.add(registration.codec().id().toString())) register(registration);
+        }
     }
 
     private static <P extends GolemPayload> void register(GolemNetwork.ClientRegistration<P> registration) {

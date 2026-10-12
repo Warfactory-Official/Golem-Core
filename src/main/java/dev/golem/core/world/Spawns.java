@@ -49,7 +49,8 @@ public final class Spawns {
         boolean deny(Mob mob, ServerLevel level, Reason reason);
     }
 
-    private static final java.util.List<SpawnCheck> CHECKS = new java.util.concurrent.CopyOnWriteArrayList<>();
+    /** Every listener, in phase order; register through the {@code on...} method or directly, with a phase. */
+    public static final dev.golem.core.hook.Hook<SpawnCheck> CHECKS = dev.golem.core.hook.Hook.notifying();
     private static boolean hooked;
 
     /**
@@ -62,7 +63,7 @@ public final class Spawns {
      * refused one is never added to the level.
      */
     public static synchronized void onSpawnCheck(SpawnCheck check) {
-        CHECKS.add(check);
+        CHECKS.register(check);
         if (hooked) return;
         hooked = true;
         // WORLD_SPAWNER spawns are asked where the mob's spawn is finalized: Forge-like loaders fire FinalizeSpawn from
@@ -112,7 +113,8 @@ public final class Spawns {
         void onPotentialSpawns(ServerLevel level, net.minecraft.world.entity.MobCategory category, net.minecraft.core.BlockPos pos);
     }
 
-    private static final java.util.List<PotentialSpawnsHook> POTENTIAL = new java.util.concurrent.CopyOnWriteArrayList<>();
+    /** Every listener, in phase order; register through the {@code on...} method or directly, with a phase. */
+    public static final dev.golem.core.hook.Hook<PotentialSpawnsHook> POTENTIAL = dev.golem.core.hook.Hook.notifying();
     private static boolean potentialHooked;
 
     /**
@@ -124,7 +126,7 @@ public final class Spawns {
      * {@code MixinNaturalSpawnerCheck}'s HEAD inject on {@code mobsAt}. Notification only: the list is not changed.
      */
     public static synchronized void onPotentialSpawns(PotentialSpawnsHook hook) {
-        POTENTIAL.add(hook);
+        POTENTIAL.register(hook);
         if (potentialHooked) return;
         potentialHooked = true;
         //? if neoforge {
@@ -279,6 +281,7 @@ public final class Spawns {
     public static void flushFabricPlacements() {
         //? if fabric {
         /*for (PlacementEntry entry : PLACEMENTS) registerVanilla(entry);
+        PLACEMENTS.clear(); // Golem Core flushes once (ModEntries); a second call registers nothing twice
         *///?}
     }
 

@@ -23,15 +23,18 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
  * but is implemented purely against vanilla APIs so the same code compiles and runs on every loader.
  *
  * <p>Common content classes ({@code ModItems}, {@code ModBlocks}, ...) declare their entries against
- * instances of this class. Each entry is stored as a deferred factory; the actual registration is
- * driven later by the loader-specific bootstrap via {@link #flushTo(RegistrationSink)} (NeoForge,
- * per {@code RegisterEvent}) or {@link #flushAll(RegistrationSink)} (Fabric, during init).
+ * instances of this class. Each entry is stored as a deferred factory. Golem Core fills the registries itself, once,
+ * from every mod's registers ({@link dev.golem.core.platform.ModEntries}): per {@code RegisterEvent} through
+ * {@link #flushRegistry} on NeoForge and Forge, all at once through {@link #flushAllToVanilla} on Fabric. A mod never
+ * flushes; a register is flushed at most once, and an entry added after its register was flushed is reported, since it
+ * will never exist.
  *
  * <p>Every entry's id is set on its {@link Item.Properties}/{@link BlockBehaviour.Properties} before
  * construction, as required by 26.1.
  */
 public class DeferredRegister<T> {
 
+    // Guarded by itself: NeoForge and Forge may construct mods, and so create their registers, in parallel.
     private static final List<DeferredRegister<?>> ALL = new ArrayList<>();
 
     /**
@@ -42,6 +45,10 @@ public class DeferredRegister<T> {
      */
     private static List<ResourceKey<? extends Registry<?>>> flushOrder() {
         return List.of(
+            // Sound events before blocks, as vanilla creates the registries and as NeoForge/Forge fire their
+            // RegisterEvents: a block whose BlockSetType or SoundType reads a mod sound event in its factory
+            // (NTM: Space's fence gate) found it unregistered on Fabric only.
+            Registries.SOUND_EVENT,
             Registries.BLOCK,
             //? if >=1.20.5 && <26.1 {
             /*// Pre-26.1 armour items take a Holder<ArmorMaterial> at construction, so the materials
@@ -63,6 +70,7 @@ public class DeferredRegister<T> {
     protected final String namespace;
     private final Map<String, Function<ResourceKey<T>, ? extends T>> entries = new LinkedHashMap<>();
     private final Map<String, Supplier<ResourceKey<T>>> keys = new LinkedHashMap<>();
+    private volatile boolean flushed;
 
     protected DeferredRegister(ResourceKey<? extends Registry<T>> registryKey, String namespace) {
         this(constant(Objects.requireNonNull(registryKey)), namespace);
@@ -72,7 +80,9 @@ public class DeferredRegister<T> {
     protected DeferredRegister(Supplier<? extends ResourceKey<? extends Registry<T>>> registryKey, String namespace) {
         this.registryKey = lazy(Objects.requireNonNull(registryKey));
         this.namespace = Objects.requireNonNull(namespace);
-        ALL.add(this);
+        synchronized (ALL) {
+            ALL.add(this);
+        }
     }
 
     public static <T> DeferredRegister<T> create(ResourceKey<? extends Registry<T>> registryKey, String namespace) {
@@ -149,6 +159,10 @@ public class DeferredRegister<T> {
         if (entries.putIfAbsent(name, factory) != null) {
             throw new IllegalArgumentException("Duplicate registration: " + namespace + ":" + name);
         }
+        if (flushed) {
+            dev.golem.core.GolemCore.LOG.error("{}:{} was registered after its registry was filled; it will not exist",
+                    namespace, name);
+        }
         Supplier<ResourceKey<T>> key = lazy(() -> ResourceKey.create(getRegistryKey(), dev.golem.core.Ids.of(namespace, name)));
         keys.put(name, key);
         return new RegistryObject<>(registryKey, key);
@@ -162,25 +176,52 @@ public class DeferredRegister<T> {
         return registryKey.get();
     }
 
-    /** Push every entry of this register into the given sink. */
+    /** The namespace every entry of this register is registered under. */
+    public String namespace() {
+        return namespace;
+    }
+
+    /** Push every entry of this register into the given sink; a second flush of the same register does nothing. */
     public void flushTo(RegistrationSink sink) {
+        if (flushed) {
+            dev.golem.core.GolemCore.LOG.warn("A {} register for {} was flushed twice; the second flush was ignored",
+                    dev.golem.core.Ids.keyId(getRegistryKey()), namespace);
+            return;
+        }
+        flushed = true;
         ResourceKey<? extends Registry<T>> registry = getRegistryKey();
-        entries.forEach((name, factory) -> {
+        String registryPath = dev.golem.core.Ids.keyId(registry).getPath();
+        entries.forEach((name, original) -> {
             ResourceKey<T> key = keys.get(name).get();
+            Function<ResourceKey<T>, ? extends T> factory =
+                    Substitutions.resolve(Substitutions.ENTRY + registryPath, namespace + ":" + name, original);
             sink.accept(registry, key, () -> factory.apply(key));
         });
     }
 
     // --- static flush helpers used by the loader bootstraps ---
 
+    /** A snapshot of every register any mod has created. */
     public static List<DeferredRegister<?>> all() {
-        return Collections.unmodifiableList(ALL);
+        synchronized (ALL) {
+            return Collections.unmodifiableList(new ArrayList<>(ALL));
+        }
+    }
+
+    /**
+     * Pushes every mod's registers for {@code registry} into {@code sink}: Golem Core's {@code RegisterEvent}
+     * listener on NeoForge and Forge, which fires once per registry after every mod is constructed.
+     */
+    public static void flushRegistry(ResourceKey<? extends Registry<?>> registry, RegistrationSink sink) {
+        for (DeferredRegister<?> register : all()) {
+            if (register.getRegistryKey().equals(registry)) register.flushTo(sink);
+        }
     }
 
     /**
      * Flushes every register straight into the vanilla registries, honouring {@link #flushOrder()} so
-     * dependencies (blocks before items) are registered first. Used by Fabric, which registers everything
-     * synchronously at init time.
+     * dependencies (blocks before items) are registered first. Golem Core calls this once on Fabric, which
+     * registers everything synchronously at init time, after every mod's declarations.
      *
      * <p>This is what a loader with no deferred-registration phase (Fabric) wants, and writing it out
      * at the call site meant writing the root-registry lookup too — which is exactly the kind of thing
@@ -203,7 +244,7 @@ public class DeferredRegister<T> {
 
     /** Pushes every register into {@code sink}, in {@link #flushOrder()} first and then declaration order. */
     public static void flushAll(RegistrationSink sink) {
-        List<DeferredRegister<?>> remaining = new ArrayList<>(ALL);
+        List<DeferredRegister<?>> remaining = new ArrayList<>(all());
         for (ResourceKey<? extends Registry<?>> order : flushOrder()) {
             remaining.removeIf(dr -> {
                 if (dr.getRegistryKey().equals(order)) {
@@ -226,10 +267,14 @@ public class DeferredRegister<T> {
         }
 
         public <I extends Item> RegistryObject<I> registerItem(String name, Function<Item.Properties, ? extends I> factory, UnaryOperator<Item.Properties> properties) {
+            // The factory is resolved as the entry is built, so a substitution declared before then is honoured.
+            String id = namespace + ":" + name;
             //? if >=26.1 {
-            return register(name, key -> factory.apply(properties.apply(new Item.Properties()).setId(key)));
+            return register(name, key -> Substitutions.resolve(Substitutions.ITEM, id, factory)
+                    .apply(properties.apply(new Item.Properties()).setId(key)));
             //?} else {
-            /*return register(name, key -> factory.apply(properties.apply(new Item.Properties())));
+            /*return register(name, key -> Substitutions.resolve(Substitutions.ITEM, id, factory)
+                    .apply(properties.apply(new Item.Properties())));
             *///?}
         }
 
@@ -246,15 +291,16 @@ public class DeferredRegister<T> {
         }
 
         public RegistryObject<BlockItem> registerBlockItem(String name, Supplier<? extends Block> block, UnaryOperator<Item.Properties> properties) {
-            // The item's translation key must be "block.<ns>.<name>", matching the block, rather than
-            // "item.<ns>.<name>". How that is achieved is version-dependent: 26.1 made item description
-            // ids explicit and needs useBlockDescriptionPrefix(), whereas pre-26.1 BlockItem already
-            // overrides getDescriptionId() to defer to its block, so no opt-in exists or is needed.
+            // The item's translation key must be "block.<ns>.<name>" rather than "item.<ns>.<name>": 26.1 made
+            // item description ids explicit and needs useBlockDescriptionPrefix(); before 26.1 BlockItem defers
+            // to its block, which is the same key only while the item is named like its block, so
+            // Compat.blockDescription marks the properties for CompatBlockItem to answer 26.1's key.
             //? if >=26.1 {
             return registerItem(name, props -> new dev.golem.core.world.CompatBlockItem(block.get(), props),
                     p -> properties.apply(p).useBlockDescriptionPrefix());
             //?} else {
-            /*return registerItem(name, props -> new dev.golem.core.world.CompatBlockItem(block.get(), props), properties);
+            /*return registerItem(name, props -> new dev.golem.core.world.CompatBlockItem(block.get(), props),
+                    p -> dev.golem.core.world.Compat.blockDescription(properties.apply(p)));
             *///?}
         }
 
@@ -271,10 +317,13 @@ public class DeferredRegister<T> {
         }
 
         public <B extends Block> RegistryObject<B> registerBlock(String name, Function<BlockBehaviour.Properties, ? extends B> factory, UnaryOperator<BlockBehaviour.Properties> properties) {
+            String id = namespace + ":" + name;
             //? if >=26.1 {
-            return register(name, key -> factory.apply(properties.apply(BlockBehaviour.Properties.of()).setId(key)));
+            return register(name, key -> Substitutions.resolve(Substitutions.BLOCK, id, factory)
+                    .apply(properties.apply(BlockBehaviour.Properties.of()).setId(key)));
             //?} else {
-            /*return register(name, key -> factory.apply(properties.apply(BlockBehaviour.Properties.of())));
+            /*return register(name, key -> Substitutions.resolve(Substitutions.BLOCK, id, factory)
+                    .apply(properties.apply(BlockBehaviour.Properties.of())));
             *///?}
         }
 

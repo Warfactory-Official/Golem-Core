@@ -127,6 +127,9 @@ public final class GameTests {
     /** Every declared function, used by loaders whose API provides no registration event. */
     private static final List<Function> FUNCTIONS = new ArrayList<>();
 
+    /** The ids of {@link #FUNCTIONS}: the tests {@link TestChunks} holds until their plot is entity-ticking. */
+    private static final java.util.Set<String> DECLARED = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
     /**
      * Environments, one per namespace <b>per registry load</b> — keyed by the event, not held statically.
      *
@@ -171,9 +174,18 @@ public final class GameTests {
         REGISTERS.computeIfAbsent(namespace, ns -> DeferredRegister.create(Registries.TEST_FUNCTION, ns))
                 .register(name, body);
         FUNCTIONS.add(function);
+        DECLARED.add(function.id());
+        TestChunks.declare();
         //?}
         return function;
     }
+
+    //? if >=26.1 {
+    /** Whether {@code id} ({@code namespace:name}) is a test declared here. */
+    static boolean declares(String id) {
+        return DECLARED.contains(id);
+    }
+    //?}
 
     /**
      * The middle of the free space a test declared with {@code padding} owns, in the helper's relative
@@ -192,6 +204,45 @@ public final class GameTests {
         /*int width = padding > 64 ? 184 : padding > 28 ? 152 : padding > 8 ? 80 : 24;
         return new net.minecraft.core.BlockPos(width / 2, y, width / 2);
         *///?}
+    }
+
+    /**
+     * The helper-relative position of an absolute one: the exact inverse of {@code helper.absolutePos}, as 26.1's
+     * {@code GameTestHelper.relativePos} is. Below 26.1 vanilla's {@code relativePos} rotates the offset by the test's
+     * rotation turned another 180 degrees, so on an unrotated test it negates x and z: a block entity placed at
+     * {@code absolutePos(12, 2, 12)} was looked up at relative {@code (-12, 2, -12)}. Here the inverse is built from
+     * {@code absolutePos} itself (origin plus a quarter-turn multiple, whose inverse is the same turn applied three
+     * times), so it holds for every rotation.
+     */
+    public static net.minecraft.core.BlockPos relativePos(GameTestHelper helper, net.minecraft.core.BlockPos absolute) {
+        //? if >=26.1 {
+        return helper.relativePos(absolute);
+        //?} else {
+        /*net.minecraft.core.BlockPos origin = helper.absolutePos(net.minecraft.core.BlockPos.ZERO);
+        net.minecraft.core.BlockPos offset = absolute.subtract(origin);
+        for (int i = 0; i < 3; i++) offset = helper.absolutePos(offset).subtract(origin);
+        return offset;
+        *///?}
+    }
+
+    /**
+     * Holds the chunks under {@code origin + (minX..maxX, minZ..maxZ)} (blocks, relative to the test's origin)
+     * entity-ticking, generating them and the ring around them now, until the returned action runs. For a test whose
+     * entity leaves its plot (a rocket's flight corridor): every test's own plot is already held before it starts (26.1)
+     * or covered by its padded template (older versions). Holds are counted per chunk, so tests that share a chunk never
+     * release it from under each other; on 26.1 a hold also ends with its test.
+     */
+    public static Runnable holdChunks(GameTestHelper helper, int minX, int maxX, int minZ, int maxZ) {
+        net.minecraft.core.BlockPos origin = helper.absolutePos(net.minecraft.core.BlockPos.ZERO);
+        return TestChunks.hold(helper.getLevel(), origin, (origin.getX() + minX) >> 4, (origin.getX() + maxX) >> 4,
+                (origin.getZ() + minZ) >> 4, (origin.getZ() + maxZ) >> 4);
+    }
+
+    /** Whether every chunk under {@code origin + (minX..maxX, minZ..maxZ)} (as {@link #holdChunks}) is entity-ticking. */
+    public static boolean chunksTicking(GameTestHelper helper, int minX, int maxX, int minZ, int maxZ) {
+        net.minecraft.core.BlockPos origin = helper.absolutePos(net.minecraft.core.BlockPos.ZERO);
+        return TestChunks.ticking(helper.getLevel(), (origin.getX() + minX) >> 4, (origin.getX() + maxX) >> 4,
+                (origin.getZ() + minZ) >> 4, (origin.getZ() + maxZ) >> 4);
     }
 
     /**

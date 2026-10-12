@@ -28,14 +28,15 @@ public final class AttackInput {
 
     private AttackInput() {}
 
-    private static final List<BooleanSupplier> GUARDS = new CopyOnWriteArrayList<>();
+    /** Every listener, in phase order; register through the {@code on...} method or directly, with a phase. */
+    public static final dev.golem.core.hook.Hook<BooleanSupplier> GUARDS = dev.golem.core.hook.Hook.notifying();
     private static boolean installed;
     /** Clicks this class consumed so far (harness and tests read it as the positive signal). */
     private static long consumed;
 
     /** While {@code guard} answers {@code true}, attack clicks only swing the main hand. Installs the bridge itself. */
     public static void consumeWhile(BooleanSupplier guard) {
-        GUARDS.add(guard);
+        GUARDS.register(guard);
         install();
     }
 

@@ -64,6 +64,7 @@ public final class LivingAttributes {
             net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry.register(
                     entry.type().get(), entry.attributes().get());
         }
+        ENTRIES.clear(); // Golem Core flushes once (ModEntries); a second call registers nothing twice
         *///?}
     }
 }

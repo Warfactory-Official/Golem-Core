@@ -59,12 +59,13 @@ public final class Capes {
         *///?}
     }
 
-    private static final List<Provider> PROVIDERS = new CopyOnWriteArrayList<>();
+    /** Every listener, in phase order; register through the {@code on...} method or directly, with a phase. */
+    public static final dev.golem.core.hook.Hook<Provider> PROVIDERS = dev.golem.core.hook.Hook.notifying();
     private static boolean installed;
 
     /** Declares a cape provider. Call during client initialization. */
     public static synchronized void register(Provider provider) {
-        PROVIDERS.add(provider);
+        PROVIDERS.register(provider);
         if (!installed) {
             installed = true;
             ClientTicks.onEndTick(Capes::apply);

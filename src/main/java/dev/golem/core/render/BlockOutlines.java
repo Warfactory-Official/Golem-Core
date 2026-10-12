@@ -15,14 +15,15 @@ import java.util.function.BooleanSupplier;
  */
 public final class BlockOutlines {
 
-    private static final List<BooleanSupplier> SUPPRESSORS = new CopyOnWriteArrayList<>();
+    /** Every listener, in phase order; register through the {@code on...} method or directly, with a phase. */
+    public static final dev.golem.core.hook.Hook<BooleanSupplier> SUPPRESSORS = dev.golem.core.hook.Hook.notifying();
     private static boolean registered;
 
     private BlockOutlines() {}
 
     /** Skips vanilla's block outline on every frame {@code condition} answers true. */
     public static void suppressWhen(BooleanSupplier condition) {
-        SUPPRESSORS.add(condition);
+        SUPPRESSORS.register(condition);
         register();
     }
 

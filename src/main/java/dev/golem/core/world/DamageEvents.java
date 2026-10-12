@@ -17,17 +17,19 @@ public final class DamageEvents {
 
     private DamageEvents() {}
 
-    private static final List<Consumer<DamageEvent>> ATTACK = new CopyOnWriteArrayList<>();
-    private static final List<Consumer<DamageEvent>> HURT = new CopyOnWriteArrayList<>();
+    /** Every listener, in phase order; register through the {@code on...} method or directly, with a phase. */
+    public static final dev.golem.core.hook.Hook<Consumer<DamageEvent>> ATTACK = dev.golem.core.hook.Hook.notifying();
+    /** Every listener, in phase order; register through the {@code on...} method or directly, with a phase. */
+    public static final dev.golem.core.hook.Hook<Consumer<DamageEvent>> HURT = dev.golem.core.hook.Hook.notifying();
     private static final ThreadLocal<Piercing> PIERCING = new ThreadLocal<>();
     private static boolean installed;
 
     public static void onAttack(Consumer<DamageEvent> handler) {
-        ATTACK.add(handler);
+        ATTACK.register(handler);
     }
 
     public static void onHurt(Consumer<DamageEvent> handler) {
-        HURT.add(handler);
+        HURT.register(handler);
     }
 
     /** Runs a damage call with HBM-style flat-threshold and percentage piercing context. */

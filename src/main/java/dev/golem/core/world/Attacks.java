@@ -16,12 +16,14 @@ public final class Attacks {
 
     private Attacks() {}
 
-    private static final List<BiConsumer<Player, Entity>> HANDLERS = new CopyOnWriteArrayList<>();
-    private static final List<BiPredicate<Player, Entity>> INTERCEPTORS = new CopyOnWriteArrayList<>();
+    /** Every listener, in phase order; register through the {@code on...} method or directly, with a phase. */
+    public static final dev.golem.core.hook.Hook<BiConsumer<Player, Entity>> HANDLERS = dev.golem.core.hook.Hook.notifying();
+    /** Every listener, in phase order; register through the {@code on...} method or directly, with a phase. */
+    public static final dev.golem.core.hook.Hook<BiPredicate<Player, Entity>> INTERCEPTORS = dev.golem.core.hook.Hook.notifying();
     private static boolean installed;
 
     public static void onPlayerAttack(BiConsumer<Player, Entity> handler) {
-        HANDLERS.add(handler);
+        HANDLERS.register(handler);
     }
 
     /**
@@ -31,7 +33,7 @@ public final class Attacks {
      * {@code !player.level().isClientSide()}. The attack packet is still sent. Installs the bridge itself.
      */
     public static void interceptPlayerAttack(BiPredicate<Player, Entity> handler) {
-        INTERCEPTORS.add(handler);
+        INTERCEPTORS.register(handler);
         install();
     }
 

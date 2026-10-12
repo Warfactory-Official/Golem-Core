@@ -67,15 +67,25 @@ final class HarnessLog {
         }
     }
 
-    /** Of the last {@code count} lines, those matching {@code regex} (all of them when empty). */
-    static JsonObject tail(int count, String regex) {
+    /**
+     * Of the last {@code count} lines, those matching {@code regex} (all of them when empty). With {@code since >= 0}
+     * (a {@code total} an earlier answer gave, i.e. a client's log mark) only lines logged at or after that running index
+     * are considered, still at most the last {@code count}. The lines and {@code total} are read under one lock, so a
+     * client's "since the mark" read cannot lose its first lines to lines logged between two queries (it did: a
+     * scenario that marked, right-clicked and then read lost the right-click's sound line whenever a geiger click was
+     * logged between its "how many lines now" and "give me the last N lines" queries).
+     */
+    static JsonObject tail(int count, String regex, long since) {
         Pattern pattern = regex == null || regex.isEmpty() ? null : Pattern.compile(regex);
         JsonArray out = new JsonArray();
+        long total;
         synchronized (lines) {
+            total = dropped + lines.size();
+            long available = since < 0 ? count : Math.min(count, Math.max(0, total - since));
             java.util.Iterator<String> it = lines.descendingIterator();
             java.util.ArrayDeque<String> picked = new java.util.ArrayDeque<>();
             int seen = 0;
-            while (it.hasNext() && seen++ < count) {
+            while (it.hasNext() && seen++ < available) {
                 String line = it.next();
                 if (pattern == null || pattern.matcher(line).find()) picked.addFirst(line);
             }
@@ -84,11 +94,10 @@ final class HarnessLog {
         JsonObject json = Json.ok();
         json.add("lines", out);
         json.addProperty("dropped", dropped);
-        synchronized (lines) {
-            // Running count of every line ever buffered; a client stores it as a mark and later asks
-            // only for lines after the mark.
-            json.addProperty("total", dropped + lines.size());
-        }
+        // Running count of every line ever buffered; a client stores it as a mark and later asks only for lines after
+        // the mark ("since").
+        json.addProperty("total", total);
+        if (since >= 0) json.addProperty("since", since);
         return json;
     }
 }

@@ -227,10 +227,17 @@ public final class Client implements AutoCloseable {
 
     /** Lines logged since {@link #markLog} (all lines when no mark was set), filtered by regex. */
     public List<String> logSinceMark(String filterRegex) {
-        JsonObject all = query("log", obj("lines", 0, "filter", ""));
-        long total = all.get("total").getAsLong();
-        long since = logMark < 0 ? 4000 : Math.max(0, total - logMark);
-        return log((int) Math.min(4000, since), filterRegex);
+        if (logMark < 0) return log(4000, filterRegex);
+        // one query: the listener cuts at the mark under its own lock ("since"). Two queries ("total now", then "the last
+        // total - mark lines") lost the first lines after the mark whenever a line was logged between them.
+        JsonObject reply = query("log", obj("lines", 4000, "filter", filterRegex, "since", logMark));
+        if (!reply.has("since")) { // a listener from before "since": the old two-query read
+            long total = query("log", obj("lines", 0, "filter", "")).get("total").getAsLong();
+            return log((int) Math.min(4000, Math.max(0, total - logMark)), filterRegex);
+        }
+        List<String> out = new ArrayList<>();
+        for (JsonElement e : reply.getAsJsonArray("lines")) out.add(e.getAsString());
+        return out;
     }
 
     // ---- actions ---------------------------------------------------------------------------

@@ -32,7 +32,10 @@ public class MixinCameraFov {
     @ModifyReturnValue(method = "getFov", at = @At("RETURN"))
     private double golem$modifyFov(double fov, @Local(argsOnly = true) float partialTick,
             @Local(argsOnly = true) boolean useFovSetting) {
-        return useFovSetting ? Fov.apply((float) fov, partialTick) : fov;
+        if (!useFovSetting) return fov;
+        double out = Fov.apply((float) fov, partialTick);
+        Fov.record(out);
+        return out;
     }
 }
 ^///?}

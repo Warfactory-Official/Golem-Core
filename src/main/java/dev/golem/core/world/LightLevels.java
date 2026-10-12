@@ -24,6 +24,24 @@ public final class LightLevels {
         *///?}
     }
 
+    /** How much light {@code state} absorbs, 0..15, from vanilla's per-state cache (position-independent). */
+    public static int opacity(net.minecraft.world.level.block.state.BlockState state) {
+        //? if >=1.21.2 {
+        return state.getLightDampening();
+        //?} else {
+        /*return state.getLightBlock(net.minecraft.world.level.EmptyBlockGetter.INSTANCE, BlockPos.ZERO);
+        *///?}
+    }
+
+    /** Whether sky light passes down through {@code state} at full strength (vanilla's per-state cache). */
+    public static boolean propagatesSkylightDown(net.minecraft.world.level.block.state.BlockState state) {
+        //? if >=1.21.2 {
+        return state.propagatesSkylightDown();
+        //?} else {
+        /*return state.propagatesSkylightDown(net.minecraft.world.level.EmptyBlockGetter.INSTANCE, BlockPos.ZERO);
+        *///?}
+    }
+
     /** {@code getBlockLightValue}: the brighter of block light and sky light (darkened by time of day). */
     public static int combined(LevelReader level, BlockPos pos) {
         return level.getMaxLocalRawBrightness(pos);

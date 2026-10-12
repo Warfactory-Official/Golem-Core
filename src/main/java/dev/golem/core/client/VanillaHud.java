@@ -85,4 +85,27 @@ public final class VanillaHud {
                 });
         *///?}
     }
+
+    /**
+     * Draws one of vanilla's air bubbles (full, or bursting) at a GUI position, 9 by 9: for a mod's own air row, as
+     * hbm-space's oxygen HUD drew {@code icons.png} at u 16 (full) / 25 (bursting), v 18. The bubble is a GUI sprite
+     * from 1.20.2 on ({@code hud/air}, {@code hud/air_bursting}) and an {@code icons.png} cell before.
+     */
+    public static void airBubble(
+            //? if >=26.1 {
+            net.minecraft.client.gui.GuiGraphicsExtractor graphics,
+            //?} else {
+            /*net.minecraft.client.gui.GuiGraphics graphics,
+            *///?}
+            int x, int y, boolean bursting) {
+        //? if >=26.1 {
+        graphics.blitSprite(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED,
+                net.minecraft.resources.Identifier.withDefaultNamespace(bursting ? "hud/air_bursting" : "hud/air"), x, y, 9, 9);
+        //?} elif >=1.21 {
+        /*graphics.blitSprite(net.minecraft.resources.ResourceLocation.withDefaultNamespace(
+                bursting ? "hud/air_bursting" : "hud/air"), x, y, 9, 9);
+        *///?} else {
+        /*graphics.blit(new net.minecraft.resources.ResourceLocation("textures/gui/icons.png"), x, y, bursting ? 25 : 16, 18, 9, 9);
+        *///?}
+    }
 }

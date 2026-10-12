@@ -134,6 +134,10 @@ tasks.processResources {
         "legacy_item_owner_mixins" to if (mcVersion.substringBefore('.').toInt() < 26)
             ", \"MixinItemRenderer\"" else "",
         // Fabric API has no minecart events, so every Fabric node calls the rail hooks through a mixin.
+        // The 1.20.5 physics attributes, backported on 1.20.1 only (dev.golem.core.world.Physics).
+        "physics_mixins" to if (mcVersion.startsWith("1.20.")) ", \"MixinLegacyAttributeSupplier\", \"MixinLegacyLivingPhysics\", \"MixinLegacyFabricGravity\"" else "",
+        // dev.golem.core.gametest.TestChunks: a 26.1 test waits until its whole plot is entity-ticking.
+        "gametest_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinGameTestChunks\"" else "",
         "rail_mixins" to ", \"MixinMinecartRails\"",
         "world_effect_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinWorldEffects\"" else "",
         // Skies.Modifier: 26.1 appends environment-attribute layers; older nodes wrap the sky darkening and the
@@ -141,6 +145,8 @@ tasks.processResources {
         "sky_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinEnvironmentSkyLayers\"" else ", \"MixinLevelSkyDarken\"",
         "sky_client_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) "" else
             ", \"MixinClientLevelSky\", \"MixinDimensionEffectsSky\", \"MixinOverworldFogColor\"",
+        // Clouds: Fabric 26.1 has no cloud hook (DimensionRenderingRegistry serves 1.20.1/1.21.1).
+        "cloud_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinCloudRender\", \"MixinWeatherRender\"" else "",
         // Fabric is told about client block entities by fabric-api, so it needs no mixin for it.
         "flywheel_be_mixins" to "",
         // Fabric has no debug-screen entry registry, so the F3 lines are appended by a mixin there.

@@ -42,9 +42,10 @@ public final class GolemNetwork {
     private record ServerRegistration<P extends GolemPayload>(GolemCodec<P> codec,
             BiConsumer<P, ServerPlayer> handler) {}
 
-    private static final List<GolemCodec<?>> CLIENT_DECLARATIONS = new ArrayList<>();
-    private static final List<ClientRegistration<?>> CLIENT_REGISTRATIONS = new ArrayList<>();
-    private static final List<ServerRegistration<?>> SERVER_REGISTRATIONS = new ArrayList<>();
+    // Synchronized: NeoForge and Forge may construct mods, and so declare their payloads, in parallel.
+    private static final List<GolemCodec<?>> CLIENT_DECLARATIONS = java.util.Collections.synchronizedList(new ArrayList<>());
+    private static final List<ClientRegistration<?>> CLIENT_REGISTRATIONS = java.util.Collections.synchronizedList(new ArrayList<>());
+    private static final List<ServerRegistration<?>> SERVER_REGISTRATIONS = java.util.Collections.synchronizedList(new ArrayList<>());
     private static Supplier<ClientContext> clientContextSupplier;
 
     /**
@@ -293,17 +294,24 @@ public final class GolemNetwork {
         return index;
     }
 
+    // Golem Core calls this once, in common setup, for every mod's payloads. SimpleChannel numbers messages in the
+    // order they are added and both sides must agree, so they are added sorted by id, not in the order mods (which
+    // Forge may construct in parallel) declared them.
     public static void flushCommonRegistrations() {
-        CLIENT_DECLARATIONS.forEach(GolemNetwork::registerForgeClient);
+        List<GolemCodec<?>> clients = new ArrayList<>(CLIENT_DECLARATIONS);
         CLIENT_DECLARATIONS.clear();
+        clients.sort(java.util.Comparator.comparing(codec -> codec.id().toString()));
+        clients.forEach(GolemNetwork::registerForgeClient);
         flushServerRegistrations();
     }
 
     public static void flushClientRegistrations() {}
 
     public static void flushServerRegistrations() {
-        SERVER_REGISTRATIONS.forEach(GolemNetwork::registerForgeServer);
+        List<ServerRegistration<?>> servers = new ArrayList<>(SERVER_REGISTRATIONS);
         SERVER_REGISTRATIONS.clear();
+        servers.sort(java.util.Comparator.comparing(registration -> registration.codec().id().toString()));
+        servers.forEach(GolemNetwork::registerForgeServer);
     }
 
     private static <P extends GolemPayload> void registerForgeClient(GolemCodec<P> codec) {

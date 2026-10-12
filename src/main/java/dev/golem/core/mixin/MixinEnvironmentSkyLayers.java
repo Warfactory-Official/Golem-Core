@@ -23,6 +23,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * <p>{@code SKY_LIGHT_LEVEL} (the level's sky darkening, {@code skyDarken = 15 - level}) is mapped onto 1.7's
  * daylight factor as {@code (level - 4) / 11}: 4 is the overworld's darkest sky light, 11 its range, which is the
  * pre-26.1 {@code skyDarken = (1 - daylight) * 11}.
+ *
+ * <p>The same TAIL also serves {@link dev.golem.core.client.Clouds} (a dimension's own cloud layers): a cloud-colour
+ * layer that opens or closes vanilla's cloud pass for a registered level, and on NeoForge a
+ * {@code neoforge:visual/custom_clouds} layer that selects Golem's {@code CustomCloudsRenderer} there. NeoForge reads that
+ * attribute only from data or a layer; a shared dimension type cannot carry a NeoForge-only attribute (Fabric rejects the
+ * file), so the layer is the only place to set it. Both answer their input for every other level. The same goes for
+ * {@link dev.golem.core.client.Precipitation} and {@code neoforge:visual/custom_weather_effects}.
  */
 @Mixin(EnvironmentAttributeSystem.class)
 public abstract class MixinEnvironmentSkyLayers {
@@ -43,10 +50,29 @@ public abstract class MixinEnvironmentSkyLayers {
                 Skies.active(level) ? Skies.argb(value, c -> Skies.cloudColor(level, c)) : value);
         builder.addTimeBasedLayer(EnvironmentAttributes.STAR_BRIGHTNESS, (value, tick) ->
                 Skies.active(level) ? Skies.starBrightness(level, value) : value);
+        // the factor is pre-26.1's sun-brightness * 0.95 + 0.05 and the colour follows the same brightness (Skies)
         builder.addTimeBasedLayer(EnvironmentAttributes.SKY_LIGHT_FACTOR, (value, tick) ->
-                Skies.active(level) ? Skies.skyLight(level, value) : value);
+                Skies.active(level) ? Skies.skyLightFactor(level, value) : value);
+        builder.addTimeBasedLayer(EnvironmentAttributes.SKY_LIGHT_COLOR, (value, tick) ->
+                Skies.active(level) ? Skies.skyLightColor(level, value) : value);
         builder.addTimeBasedLayer(EnvironmentAttributes.SUNRISE_SUNSET_COLOR, (value, tick) ->
                 Skies.active(level) ? Skies.sunriseArgb(level, value) : value);
+        // dev.golem.core.client.Clouds: vanilla adds its cloud pass only for an opaque cloud colour; a registered
+        // level's own layers need the pass while it has any (and none while it has none).
+        builder.addTimeBasedLayer(EnvironmentAttributes.CLOUD_COLOR, (value, tick) ->
+                dev.golem.core.client.Clouds.cloudColorAttribute(level, value));
+        //? if neoforge {
+        builder.addTimeBasedLayer(net.neoforged.neoforge.common.world.NeoForgeEnvironmentAttributes.CUSTOM_CLOUDS,
+                (value, tick) -> dev.golem.core.client.Clouds.has(level)
+                        ? dev.golem.core.Ids.of(dev.golem.core.client.Clouds.NAMESPACE, dev.golem.core.client.Clouds.PATH)
+                        : value);
+        // dev.golem.core.client.Precipitation: Golem's CustomWeatherEffectRenderer for a registered level
+        builder.addTimeBasedLayer(net.neoforged.neoforge.common.world.NeoForgeEnvironmentAttributes.CUSTOM_WEATHER_EFFECTS,
+                (value, tick) -> dev.golem.core.client.Precipitation.has(level)
+                        ? dev.golem.core.Ids.of(dev.golem.core.render.PrecipitationRendering.NAMESPACE,
+                                dev.golem.core.render.PrecipitationRendering.PATH)
+                        : value);
+        //?}
     }
 }
 //?} else {

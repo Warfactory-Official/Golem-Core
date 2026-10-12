@@ -10,9 +10,31 @@ import net.minecraft.world.level.block.Block;
 /** A {@link BlockItem} with version-neutral tooltip, pre-placement and air-use hooks. */
 public class CompatBlockItem extends BlockItem {
 
+    //? if <26.1 {
+    /*private final boolean blockPrefix;
+    private String compatDescriptionId;
+    *///?}
+
     public CompatBlockItem(Block block, Properties properties) {
         super(block, properties);
+        //? if <26.1 {
+        /*blockPrefix = Compat.takeBlockDescription(properties);
+        *///?}
     }
+
+    //? if <26.1 {
+    /*@Override
+    public String getDescriptionId() {
+        if (!blockPrefix) return super.getDescriptionId();
+        String id = compatDescriptionId;
+        if (id == null) {
+            var key = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(this);
+            id = net.minecraft.Util.makeDescriptionId("block", key);
+            if (net.minecraft.core.registries.BuiltInRegistries.ITEM.containsKey(key)) compatDescriptionId = id;
+        }
+        return id;
+    }
+    *///?}
 
     //? if forge {
     /*@Override

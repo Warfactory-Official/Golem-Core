@@ -18,12 +18,13 @@ public final class Sleeps {
 
     private Sleeps() {}
 
-    private static final List<BiConsumer<Player, BlockPos>> ATTEMPTS = new CopyOnWriteArrayList<>();
+    /** Every listener, in phase order; register through the {@code on...} method or directly, with a phase. */
+    public static final dev.golem.core.hook.Hook<BiConsumer<Player, BlockPos>> ATTEMPTS = dev.golem.core.hook.Hook.notifying();
     private static boolean hooked;
 
     /** Registers a handler for a server-side bed attempt: (player, bed position). */
     public static synchronized void onSleepAttempt(BiConsumer<Player, BlockPos> handler) {
-        ATTEMPTS.add(handler);
+        ATTEMPTS.register(handler);
         if (hooked) return;
         hooked = true;
         //? if neoforge {

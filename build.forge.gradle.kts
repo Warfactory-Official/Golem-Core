@@ -68,6 +68,10 @@ tasks.processResources {
         "legacy_item_owner_mixins" to if (mcVersion.substringBefore('.').toInt() < 26)
             ", \"MixinItemRenderer\"" else "",
         // Forge 1.20.1 routes carts through getRailMaxSpeed/onMinecartPass itself.
+        // The 1.20.5 physics attributes, backported on 1.20.1 only (dev.golem.core.world.Physics).
+        "physics_mixins" to if (mcVersion.startsWith("1.20.")) ", \"MixinLegacyAttributeSupplier\", \"MixinLegacyLivingPhysics\"" else "",
+        // dev.golem.core.gametest.TestChunks: a 26.1 test waits until its whole plot is entity-ticking.
+        "gametest_mixins" to "",
         "rail_mixins" to "",
         "world_effect_mixins" to "",
         // Skies.Modifier: 26.1 appends environment-attribute layers; older nodes wrap the sky darkening and the
@@ -75,6 +79,8 @@ tasks.processResources {
         "sky_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinEnvironmentSkyLayers\"" else ", \"MixinLevelSkyDarken\"",
         "sky_client_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) "" else
             ", \"MixinClientLevelSky\", \"MixinDimensionEffectsSky\", \"MixinOverworldFogColor\"",
+        // Clouds: Forge's only seam is the effects object's renderClouds (see MixinLegacyCloudRender).
+        "cloud_mixins" to ", \"MixinLegacyCloudRender\", \"MixinLegacyWeatherRender\"",
         // No vendored engine below 26.1, so nothing to feed.
         "flywheel_be_mixins" to "",
         "pack_format" to prop("pack_format"),

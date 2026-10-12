@@ -32,13 +32,14 @@ public final class ItemFirstUse {
         InteractionResult use(ItemStack stack, UseOnContext context);
     }
 
-    private static final List<Handler> HANDLERS = new CopyOnWriteArrayList<>();
+    /** Every listener, in phase order; register through the {@code on...} method or directly, with a phase. */
+    public static final dev.golem.core.hook.Hook<Handler> HANDLERS = dev.golem.core.hook.Hook.notifying();
     private static boolean installed;
 
     private ItemFirstUse() {}
 
     public static synchronized void register(Handler handler) {
-        HANDLERS.add(handler);
+        HANDLERS.register(handler);
         if (installed) return;
         installed = true;
         //? if fabric {

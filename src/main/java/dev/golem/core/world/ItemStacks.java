@@ -71,6 +71,65 @@ public final class ItemStacks {
         *///?}
     }
 
+    /**
+     * Items by registry name as the newest API spells it, on every node: {@code "minecraft:short_grass"} decodes to the
+     * node's own item ({@link Ids#nodeItemId}) and every item encodes to its newest-API name ({@link Ids#canonicalItemId}).
+     * An unknown id is an error everywhere, as on 26.1: 1.20.1's defaulted-registry {@code byNameCodec} silently decodes it
+     * to air instead.
+     */
+    public static com.mojang.serialization.Codec<net.minecraft.world.item.Item> itemCodec() {
+        return com.mojang.serialization.Codec.STRING.comapFlatMap(id -> {
+            String node;
+            try {
+                node = Ids.parse(id).toString();
+            } catch (RuntimeException e) {
+                return com.mojang.serialization.DataResult.error(() -> "Not a valid item id: " + id);
+            }
+            node = Ids.nodeItemId(node);
+            if (!net.minecraft.core.registries.BuiltInRegistries.ITEM.containsKey(Ids.parse(node))) {
+                return com.mojang.serialization.DataResult.error(() -> "Unknown item: " + id);
+            }
+            return com.mojang.serialization.DataResult.success(net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(Ids.parse(node)));
+        }, item -> Ids.canonicalItemId(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item).toString()));
+    }
+
+    /**
+     * {@code stack} in the newest API's item-stack JSON spelling on every node: {@code {"id", "count", "components"}}, the id
+     * as {@link Ids#canonicalItemId} names it, the component keys sorted, {@code "components"} left out when there are none,
+     * {@code {}} for an empty stack. For text that must read the same on every node (a GameTest's dump); never parse it
+     * back. Below 1.20.5 a {@link GolemComponent}'s value is re-encoded with its codec (1.20.1 keeps a boolean as a byte),
+     * the damage value is {@code minecraft:damage} when not zero, and any other NBT key is converted as it is.
+     */
+    public static com.google.gson.JsonObject modernJson(ItemStack stack, com.mojang.serialization.DynamicOps<com.google.gson.JsonElement> ops) {
+        com.google.gson.JsonObject out = new com.google.gson.JsonObject();
+        if (stack.isEmpty()) return out;
+        java.util.TreeMap<String, com.google.gson.JsonElement> components = new java.util.TreeMap<>();
+        //? if >=1.20.5 {
+        com.google.gson.JsonElement encoded = ItemStack.OPTIONAL_CODEC.encodeStart(ops, stack).result().orElse(null);
+        if (encoded != null && encoded.isJsonObject() && encoded.getAsJsonObject().get("components") instanceof com.google.gson.JsonObject patch) {
+            for (var entry : patch.entrySet()) components.put(entry.getKey(), entry.getValue());
+        }
+        //?} else {
+        /*net.minecraft.nbt.CompoundTag tag = stack.getTag();
+        if (tag != null) {
+            for (String key : tag.getAllKeys()) {
+                if (key.equals("Damage")) continue;
+                components.put(key, GolemComponent.legacyJson(key, tag.get(key)).orElseGet(() ->
+                        net.minecraft.nbt.NbtOps.INSTANCE.convertTo(com.mojang.serialization.JsonOps.INSTANCE, tag.get(key))));
+            }
+        }
+        if (stack.getDamageValue() != 0) components.put("minecraft:damage", new com.google.gson.JsonPrimitive(stack.getDamageValue()));
+        *///?}
+        out.addProperty("id", Ids.canonicalItemId(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()).toString()));
+        out.addProperty("count", stack.getCount());
+        if (!components.isEmpty()) {
+            com.google.gson.JsonObject sorted = new com.google.gson.JsonObject();
+            components.forEach(sorted::add);
+            out.add("components", sorted);
+        }
+        return out;
+    }
+
     /** Returns whether both stacks have the same item and item data, ignoring their counts. */
     public static boolean sameItemAndData(ItemStack first, ItemStack second) {
         //? if >=1.20.5 {

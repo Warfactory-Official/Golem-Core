@@ -45,6 +45,9 @@ public final class GolemComponent<T> {
     private static final java.util.Set<String> KEYS =
             java.util.Collections.synchronizedSet(new java.util.LinkedHashSet<>());
 
+    /** Every declared component by its id, for {@link #legacyJson}. */
+    private static final Map<String, GolemComponent<?>> BY_KEY = new java.util.concurrent.ConcurrentHashMap<>();
+
     private final String key;
     //? if >=1.21.1 {
     // The registered type may hold a different value class than T: a component whose natural value
@@ -70,6 +73,7 @@ public final class GolemComponent<T> {
     private <S> GolemComponent(String namespace, String name, Supplier<Codec<S>> storedCodec,
                                java.util.function.Function<T, S> toStored, java.util.function.Function<S, T> fromStored) {
         key = declare(namespace, name);
+        BY_KEY.put(key, this);
         //? if >=1.21.1 {
         // The registry is named on first use, as every Golem register's is (see RegistryObject).
         DeferredRegister<DataComponentType<?>> register = REGISTERS.computeIfAbsent(namespace,
@@ -109,6 +113,7 @@ public final class GolemComponent<T> {
     //? if <1.21.1 {
     /*private GolemComponent(String namespace, String name, LegacyValue<T> legacy) {
         key = declare(namespace, name);
+        BY_KEY.put(key, this);
         codec = null;
         this.legacy = legacy;
     }
@@ -123,6 +128,26 @@ public final class GolemComponent<T> {
     /** The id this component is registered under, {@code namespace:name}. */
     public String key() {
         return key;
+    }
+
+    /**
+     * Below 1.21.1, the value a 1.20.1 item tag holds under a declared component's {@code key}, re-encoded with that
+     * component's codec as the component JSON of newer versions spells it (NBT has no boolean: 1.20.1 stores one as a
+     * byte). Empty for a key no component declared, for a stack-valued component, and on newer versions.
+     */
+    public static Optional<com.google.gson.JsonElement> legacyJson(String key, net.minecraft.nbt.Tag value) {
+        GolemComponent<?> component = BY_KEY.get(key);
+        return component == null || value == null ? Optional.empty() : component.legacyJsonOf(value);
+    }
+
+    private Optional<com.google.gson.JsonElement> legacyJsonOf(net.minecraft.nbt.Tag value) {
+        //? if >=1.21.1 {
+        return Optional.empty();
+        //?} else {
+        /*if (legacy != null) return Optional.empty();
+        return codec.get().parse(NbtOps.INSTANCE, value).result()
+                .flatMap(decoded -> codec.get().encodeStart(com.mojang.serialization.JsonOps.INSTANCE, decoded).result());
+        *///?}
     }
 
     /** Every component id declared through this facade so far. */

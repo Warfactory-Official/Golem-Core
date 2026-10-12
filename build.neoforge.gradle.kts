@@ -148,6 +148,10 @@ tasks.processResources {
         "legacy_item_owner_mixins" to if (mcVersion.substringBefore('.').toInt() < 26)
             ", \"MixinItemRenderer\"" else "",
         // NeoForge 1.21.1 still calls getRailMaxSpeed/onMinecartPass; 26.1 declares but no longer calls them.
+        // The 1.20.5 physics attributes, backported on 1.20.1 only (dev.golem.core.world.Physics).
+        "physics_mixins" to "",
+        // dev.golem.core.gametest.TestChunks: a 26.1 test waits until its whole plot is entity-ticking.
+        "gametest_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinGameTestChunks\"" else "",
         "rail_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinMinecartRails\"" else "",
         "world_effect_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinWorldEffects\"" else "",
         // Skies.Modifier: 26.1 appends environment-attribute layers; older nodes wrap the sky darkening and the
@@ -155,6 +159,8 @@ tasks.processResources {
         "sky_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinEnvironmentSkyLayers\"" else ", \"MixinLevelSkyDarken\"",
         "sky_client_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) "" else
             ", \"MixinClientLevelSky\", \"MixinDimensionEffectsSky\", \"MixinOverworldFogColor\"",
+        // Clouds: NeoForge 26.1 uses CustomCloudsRenderer; 1.21.1 has only the effects object's renderClouds.
+        "cloud_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) "" else ", \"MixinLegacyCloudRender\", \"MixinLegacyWeatherRender\"",
         "flywheel_be_mixins" to if (hasVendoredFlywheel) ", \"MixinLevelChunkVisuals\"" else "",
         // The Sable integration's own mixin config (src/sable/resources), only on nodes that declare Sable.
         "sable_mixins" to if (hasSable) "[[mixins]]\nconfig = \"golemcore.sable.mixins.json\"" else "",

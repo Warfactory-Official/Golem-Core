@@ -41,12 +41,13 @@ public final class Skyboxes {
         default void afterSky(Sky sky) {}
     }
 
-    private static final List<Skybox> SKYBOXES = new CopyOnWriteArrayList<>();
+    /** Every listener, in phase order; register through the {@code on...} method or directly, with a phase. */
+    public static final dev.golem.core.hook.Hook<Skybox> SKYBOXES = dev.golem.core.hook.Hook.notifying();
     private static float lastAngle;
     private static int lastPhase;
 
     public static void register(Skybox skybox) {
-        SKYBOXES.add(skybox);
+        SKYBOXES.register(skybox);
     }
 
     // ======================================================================== hooks (MixinSkyRender only)

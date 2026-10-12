@@ -53,7 +53,8 @@ public final class ChestLoot {
     private record Injection(String table, String name, int rollsMin, int rollsMax, int emptyWeight,
                              List<Entry> entries) {}
 
-    private static final List<Injection> INJECTIONS = new CopyOnWriteArrayList<>();
+    /** Every listener, in phase order; register through the {@code on...} method or directly, with a phase. */
+    public static final dev.golem.core.hook.Hook<Injection> INJECTIONS = dev.golem.core.hook.Hook.notifying();
     private static boolean hooked;
 
     /**
@@ -67,7 +68,7 @@ public final class ChestLoot {
         if (emptyWeight < 0) throw new IllegalArgumentException("empty weight " + emptyWeight);
         if (entries.isEmpty()) throw new IllegalArgumentException(table + " injection " + name + " has no entries");
         Ids.parse(table);
-        INJECTIONS.add(new Injection(table, name, rollsMin, rollsMax, emptyWeight, List.copyOf(entries)));
+        INJECTIONS.register(new Injection(table, name, rollsMin, rollsMax, emptyWeight, List.copyOf(entries)));
         if (!hooked) {
             hooked = true;
             hook();

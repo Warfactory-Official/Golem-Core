@@ -15,6 +15,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * <p>Rungs 1 and 2 have no cross-loader camera-position event, and an access widener cannot expose a
  * callback. The smallest remaining hook is an invoker for vanilla's protected {@code Camera.move} plus a
  * TAIL injection into the public setup method; it does not touch private state or transform bytecode.
+ *
+ * <p>{@link CameraHooks#DISTANCE} (the detached camera's distance, 1.7 {@code thirdPersonDistance}) is one
+ * {@code @ModifyArg} on the distance vanilla hands {@code getMaxZoom}, so the block clipping still applies. Rung 2:
+ * NeoForge has {@code CalculateDetachedCameraDistanceEvent}, but Forge 1.20.1 and fabric-api have no camera-distance
+ * event, and 26.1's {@code camera_distance} attribute is server-synced entity state, not a client view setting; one
+ * argument modifier here serves all six nodes the same way.
  */
 @Mixin(net.minecraft.client.Camera.class)
 public abstract class MixinCamera {
@@ -25,6 +31,26 @@ public abstract class MixinCamera {
     *///?} else if <1.21.1 {
     /*@Invoker("move")
     protected abstract void golem$move(double x, double y, double z);
+    *///?}
+
+    //? if >=26.1 {
+    @org.spongepowered.asm.mixin.injection.ModifyArg(method = "alignWithEntity",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Camera;getMaxZoom(F)F"))
+    private float golem$thirdPersonDistance(float distance) {
+        return CameraHooks.thirdPersonDistance(((net.minecraft.client.Camera) (Object) this).entity(), distance);
+    }
+    //?} elif >=1.21.1 {
+    /*@org.spongepowered.asm.mixin.injection.ModifyArg(method = "setup",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Camera;getMaxZoom(F)F"))
+    private float golem$thirdPersonDistance(float distance) {
+        return CameraHooks.thirdPersonDistance(((net.minecraft.client.Camera) (Object) this).getEntity(), distance);
+    }
+    *///?} else {
+    /*@org.spongepowered.asm.mixin.injection.ModifyArg(method = "setup",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Camera;getMaxZoom(D)D"))
+    private double golem$thirdPersonDistance(double distance) {
+        return CameraHooks.thirdPersonDistance(((net.minecraft.client.Camera) (Object) this).getEntity(), (float) distance);
+    }
     *///?}
 
     //? if >=26.1 {

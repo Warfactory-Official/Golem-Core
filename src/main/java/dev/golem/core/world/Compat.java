@@ -163,19 +163,31 @@ public final class Compat {
     }
 
     /**
-     * Makes a block item's translation key follow its block ({@code block.<ns>.<name>}).
+     * Makes a block item's translation key {@code block.<ns>.<item name>}: 26.1's {@code useBlockDescriptionPrefix}.
      *
-     * <p>26.1 needs the opt-in because item description ids became explicit; before that
-     * {@code BlockItem} already overrode {@code getDescriptionId} to defer to its block, so there is
-     * nothing to call and nothing to do.
+     * <p>Before 26.1 {@code BlockItem.getDescriptionId} defers to its block instead, which is the same key only while the
+     * item is named like its block. An item of a block family (one block, several named items, such as
+     * {@code concrete_ext_bronze} of {@code concrete_ext}) had its block's key there and the 26.1 key on 26.1 (and code
+     * reading the key, such as 1.7's metal-name Faraday rule, disagreed). So below 26.1 the properties are marked and a
+     * {@link CompatBlockItem} built from them answers 26.1's key; another {@code BlockItem} keeps its block's.
      */
     public static Item.Properties blockDescription(Item.Properties properties) {
         //? if >=26.1 {
         return properties.useBlockDescriptionPrefix();
         //?} else {
-        /*return properties;
+        /*BLOCK_DESCRIPTION.add(properties);
+        return properties;
         *///?}
     }
+
+    //? if <26.1 {
+    /*private static final java.util.Set<Item.Properties> BLOCK_DESCRIPTION =
+            java.util.Collections.synchronizedSet(java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>()));
+
+    static boolean takeBlockDescription(Item.Properties properties) {
+        return BLOCK_DESCRIPTION.remove(properties);
+    }
+    *///?}
 
     /**
      * Chunk coordinates. 26.1 made {@code ChunkPos} a record with {@code x()}/{@code z()} accessors;

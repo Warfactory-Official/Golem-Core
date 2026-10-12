@@ -72,10 +72,11 @@ public final class Skies {
         default float @org.jspecify.annotations.Nullable [] sunriseColor(Level level, float @org.jspecify.annotations.Nullable [] rgba) { return rgba; }
     }
 
-    private static final java.util.List<Modifier> MODIFIERS = new java.util.concurrent.CopyOnWriteArrayList<>();
+    /** Every listener, in phase order; register through the {@code on...} method or directly, with a phase. */
+    public static final dev.golem.core.hook.Hook<Modifier> MODIFIERS = dev.golem.core.hook.Hook.notifying();
 
     public static void addModifier(Modifier modifier) {
-        MODIFIERS.add(modifier);
+        MODIFIERS.register(modifier);
     }
 
     /** True when any modifier wants to change {@code level}'s sky. Called by the hooks before anything else. */
@@ -113,6 +114,39 @@ public final class Skies {
     public static float skyLight(Level level, float value) {
         for (Modifier m : MODIFIERS) if (m.active(level)) value = m.skyLight(level, value);
         return value;
+    }
+
+    /**
+     * The client level's sky light after the modifiers ({@link Modifier#skyLight}, 1.7's {@code getSunBrightness}) as
+     * last computed for its light map, or NaN before any. 26.1 only: its light map reads the factor and colour as two
+     * attributes, and {@link dev.golem.core.client.Lightmaps}' classic formula needs the brightness behind both.
+     */
+    public static volatile float clientSkyLight = Float.NaN;
+
+    /**
+     * 26.1's {@code visual/sky_light_factor} for a level with an active modifier. The attribute is the light map's
+     * multiplier, which pre-26.1 light maps derive from the sun brightness as {@code f * 0.95 + 0.05} (the overworld
+     * timeline's 1 by day and 0.24 by night are exactly that of 1.7's 1 and 0.2). The modifiers speak in the sun
+     * brightness on every node, so the vanilla factor is turned back into one first, and the result into a factor again.
+     */
+    public static float skyLightFactor(Level level, float factor) {
+        float sun = skyLight(level, (factor - 0.05F) / 0.95F);
+        if (level.isClientSide()) clientSkyLight = sun;
+        return net.minecraft.util.Mth.clamp(sun * 0.95F + 0.05F, 0.0F, 1.0F);
+    }
+
+    /**
+     * 26.1's {@code visual/sky_light_color} for a level with an active modifier: pre-26.1's (and 1.7's) sky light colour
+     * from the sun brightness, {@code (f, f, 1)} lerped 35 % to white - the overworld timeline's white by day and
+     * {@code 0.48, 0.48, 1} by night are exactly that of 1 and 0.2. Uses the brightness {@link #skyLightFactor} just
+     * computed (26.1 reads the factor first); the vanilla colour when there is none yet.
+     */
+    public static int skyLightColor(Level level, int argb) {
+        float sun = clientSkyLight;
+        if (!level.isClientSide() || Float.isNaN(sun)) return argb;
+        float rg = net.minecraft.util.Mth.clamp(sun + (1.0F - sun) * 0.35F, 0.0F, 1.0F);
+        int c = Math.round(rg * 255.0F);
+        return (argb & 0xFF000000) | c << 16 | c << 8 | 0xFF;
     }
 
     public static float @org.jspecify.annotations.Nullable [] sunriseColor(Level level, float @org.jspecify.annotations.Nullable [] value) {
