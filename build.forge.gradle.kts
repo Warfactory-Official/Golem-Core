@@ -51,6 +51,11 @@ repositories {
         name = "SquidDev"
         content { includeGroup("cc.tweaked") }
     }
+    // KubeJS and Rhino (the optional `kubejs` peer, see deps.kubejs).
+    exclusiveContent {
+        forRepository { maven("https://maven.latvian.dev/releases") { name = "LatvianDev" } }
+        filter { includeGroup("dev.latvian.mods") }
+    }
     // REI and its Cloth Config / Architectury dependencies (the optional `rei` peer, see deps.rei).
     exclusiveContent {
         forRepository { maven("https://maven.shedaniel.me") { name = "Shedaniel" } }
@@ -100,6 +105,8 @@ tasks.processResources {
     )
     inputs.properties(props)
     filesMatching(listOf("META-INF/mods.toml", "pack.mcmeta", "*.mixins.json")) { expand(props) }
+    // Golem Core's KubeJS plugin list names classes that exist only where the `kubejs` constant holds.
+    if ((findProperty("deps.kubejs") as String?).isNullOrBlank()) exclude("kubejs.plugins.txt")
     exclude(
         "fabric.mod.json", "golemcore.fabric.mixins.json", "META-INF/neoforge.mods.toml",
         "META-INF/accesstransformer.cfg", "META-INF/golemcore.forge.accesstransformer.cfg",
@@ -154,6 +161,16 @@ dependencies {
         // Architectury's (Point, Rectangle, FluidStack), so they are compiled against as well.
         (findProperty("deps.rei_cloth") as String?)?.takeIf { it.isNotBlank() }?.let { modCompileOnly("me.shedaniel.cloth:cloth-config-forge:$it") }
         (findProperty("deps.rei_architectury") as String?)?.takeIf { it.isNotBlank() }?.let { modCompileOnly("dev.architectury:architectury-forge:$it") }
+    }
+
+    // KubeJS 6, compile-only and per-node optional (see the NeoForge buildscript). Its Forge jars are SRG-mapped, hence
+    // `modCompileOnly`; MDG Legacy remaps each jar alone, and KubeJS 6's API names Rhino's and Architectury's types.
+    (findProperty("deps.kubejs") as String?)?.takeIf { it.isNotBlank() }?.let { kubejs ->
+        modCompileOnly("dev.latvian.mods:kubejs-forge:$kubejs") { isTransitive = false }
+        modCompileOnly("dev.latvian.mods:rhino-forge:${prop("deps.kubejs_rhino")}") { isTransitive = false }
+        (findProperty("deps.kubejs_architectury") as String?)?.takeIf { it.isNotBlank() }?.let {
+            modCompileOnly("dev.architectury:architectury-forge:$it") { isTransitive = false }
+        }
     }
 
     // CC: Tweaked, compile-only and per-node optional: dev.golem.core.computer registers peripherals with the

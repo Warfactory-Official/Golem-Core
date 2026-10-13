@@ -54,6 +54,27 @@ public final class ModEntries {
         //?}
     }
 
+    /**
+     * Scripting adapters (Golem Core's KubeJS plugin) call this before they read {@link dev.golem.core.script.Scripts}:
+     * when it returns, every Golem-based mod has run its declarations (its script groups and bindings exist).
+     * NeoForge: nothing to do, each mod's metadata orders it before KubeJS ({@code kubejs-order.gradle.kts}).
+     * Forge 1.20.1: waits for every loaded Golem-based mod's declarations, since Forge constructs mods in parallel.
+     * Fabric: runs Golem Core's main initialisation (every mod's declarations, in dependency order) now, if Fabric has
+     * not run it yet; main entrypoints run in no set order, and this is still the main stage.
+     */
+    public static void ensureDeclared() {
+        //? if fabric {
+        /*FabricEntrypoint.initialize();
+        *///?} else if forge {
+        /*String waiter = net.minecraftforge.fml.ModLoadingContext.get().getActiveNamespace();
+        for (var mod : net.minecraftforge.fml.ModList.get().getMods()) {
+            String id = mod.getModId();
+            if (id.equals(GolemCore.MOD_ID) || id.equals(waiter) || !isGolemBased(id)) continue;
+            awaitDeclared(waiter, id);
+        }
+        *///?}
+    }
+
     private static void addStarted(ModEntry entry) {
         synchronized (STARTED) {
             if (registeredRan) {
@@ -83,6 +104,13 @@ public final class ModEntries {
             if (dependency.getOrdering() != net.minecraftforge.forgespi.language.IModInfo.Ordering.AFTER) continue;
             String other = dependency.getModId();
             if (other.equals(GolemCore.MOD_ID) || !isGolemBased(other)) continue;
+            awaitDeclared(modId, other);
+        }
+    }
+
+    /^* Blocks {@code modId}'s loading worker until {@code other} has run its declarations. ^/
+    private static void awaitDeclared(String modId, String other) {
+        {
             java.util.concurrent.CountDownLatch latch =
                     DECLARED.computeIfAbsent(other, id -> new java.util.concurrent.CountDownLatch(1));
             try {

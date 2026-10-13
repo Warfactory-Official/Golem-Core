@@ -1,0 +1,2 @@
+# Golem Core's KubeJS plugin: recipe schemas for every RecipeTables table, dev.golem.core.script bindings and events.
+dev.golem.core.kubejs.ScriptsPlugin

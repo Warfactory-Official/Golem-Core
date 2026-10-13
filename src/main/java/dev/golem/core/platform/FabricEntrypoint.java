@@ -6,8 +6,20 @@ import net.fabricmc.api.ModInitializer;
 
 public class FabricEntrypoint implements ModInitializer {
 
+    private static final java.util.concurrent.atomic.AtomicBoolean INITIALIZED = new java.util.concurrent.atomic.AtomicBoolean();
+
     @Override
     public void onInitialize() {
+        initialize();
+    }
+
+    /^*
+     * Golem Core's main initialisation, once: from this entrypoint, or earlier from a mod that needs every Golem-based
+     * mod declared before its own main entrypoint finishes (Golem Core's KubeJS plugin, through
+     * {@link ModEntries#ensureDeclared}); Fabric runs main entrypoints in no set order.
+     ^/
+    static void initialize() {
+        if (!INITIALIZED.compareAndSet(false, true)) return;
         GolemCore.LOG.info("Golem Core loaded on {} for MC {}", GolemCore.loader(), GolemCore.MC_VERSION);
         dev.golem.core.registry.RegistryDump.install(); // dev only: GOLEM_REGISTRY_DUMP=<file>
         dev.golem.core.world.Physics.init();

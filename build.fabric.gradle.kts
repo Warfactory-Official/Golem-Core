@@ -36,6 +36,11 @@ repositories {
             includeGroup("dev.ryanhcode.sable-companion")
         }
     }
+    // KubeJS and Rhino (the optional `kubejs` peer, see deps.kubejs).
+    exclusiveContent {
+        forRepository { maven("https://maven.latvian.dev/releases") { name = "LatvianDev" } }
+        filter { includeGroup("dev.latvian.mods") }
+    }
     // REI and its Cloth Config / Architectury dependencies (the optional `rei` peer, see deps.rei).
     exclusiveContent {
         forRepository { maven("https://maven.shedaniel.me") { name = "Shedaniel" } }
@@ -212,6 +217,8 @@ tasks.processResources {
         exclude("assets/golemcore/shaders/core/golem_*")
     }
     exclude("META-INF/neoforge.mods.toml", "META-INF/mods.toml")
+    // Golem Core's KubeJS plugin list names classes that exist only where the `kubejs` constant holds.
+    if ((findProperty("deps.kubejs") as String?).isNullOrBlank()) exclude("kubejs.plugins.txt")
 }
 
 publishing {
@@ -258,6 +265,16 @@ dependencies {
             exclude(group = "net.fabricmc")
             exclude(group = "net.fabricmc.fabric-api")
         }
+    }
+
+    // KubeJS 6, compile-only and per-node optional (see the NeoForge buildscript); intermediary-mapped below 26.1.
+    // KubeJS 6's API names Rhino's and Architectury's types; the node declares its own Fabric Loader / Fabric API.
+    (findProperty("deps.kubejs") as String?)?.takeIf { it.isNotBlank() }?.let { kubejs ->
+        for (dep in listOfNotNull(
+            "dev.latvian.mods:kubejs-fabric:$kubejs",
+            "dev.latvian.mods:rhino-fabric:${prop("deps.kubejs_rhino")}",
+            (findProperty("deps.kubejs_architectury") as String?)?.takeIf { it.isNotBlank() }?.let { "dev.architectury:architectury-fabric:$it" },
+        )) (if (obfuscated) "modCompileOnly" else "compileOnly")(dep) { isTransitive = false }
     }
 
     // CC: Tweaked, compile-only and per-node optional: dev.golem.core.computer registers peripherals with the

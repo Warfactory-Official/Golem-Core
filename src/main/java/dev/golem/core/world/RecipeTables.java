@@ -82,6 +82,13 @@ public final class RecipeTables {
         return table;
     }
 
+    /** Every declared table, sorted by id; for tools (the scripting adapter). */
+    public static List<Table<?>> all() {
+        List<Table<?>> all = new ArrayList<>(TABLES.values());
+        all.sort(Comparator.comparing(Table::id));
+        return all;
+    }
+
     /** Golem Core's entrypoints call this on every side. */
     public static void init() {
         GolemNetwork.declarePlayToClient(SyncPayload.CODEC);
@@ -134,6 +141,7 @@ public final class RecipeTables {
         private volatile List<Entry<T>> entries = List.of();
         private volatile Object source;
         private volatile List<String> received = List.of();
+        private volatile RecipeFields fields;
 
         /** Fires after the rows changed (server reload, or a client receiving them), on that side's thread. */
         public final Hook<Runnable> changed = Hook.notifying();
@@ -162,6 +170,31 @@ public final class RecipeTables {
 
         public MapCodec<T> codec() {
             return codec.get();
+        }
+
+        /**
+         * States the row's fields for scripts ({@link RecipeFields}); call once, at declaration. Returns this table.
+         */
+        public Table<T> fields(RecipeFields stated) {
+            fields = java.util.Objects.requireNonNull(stated);
+            return this;
+        }
+
+        /**
+         * The row's fields: the stated ones, then one {@link RecipeFields.Kind#JSON} field for every other key of the
+         * codec (so a subclass's extra keys, or a table that stated nothing, are still writable).
+         */
+        public RecipeFields fields() {
+            RecipeFields result = fields == null ? RecipeFields.of() : fields;
+            java.util.Iterator<String> keys = codec().keys(JsonOps.INSTANCE)
+                    .map(key -> JsonOps.INSTANCE.getStringValue(key).result().orElse(null)).iterator();
+            while (keys.hasNext()) {
+                String key = keys.next();
+                if (key != null && result.get(key) == null) {
+                    result = result.add(RecipeFields.field(key, RecipeFields.Kind.JSON).optional());
+                }
+            }
+            return result;
         }
 
         /** The current rows, sorted by recipe id: the server's after its last reload, or the last ones synced. */
@@ -392,16 +425,16 @@ public final class RecipeTables {
         final Table<T> table;
         final T value;
         //? if <1.20.5
-        /*private final net.minecraft.resources.ResourceLocation id;*/
+        //private final net.minecraft.resources.ResourceLocation id;
 
         TableRecipe(Table<T> table, T value
                 //? if <1.20.5
-                /*, net.minecraft.resources.ResourceLocation id*/
+                //, net.minecraft.resources.ResourceLocation id
         ) {
             this.table = table;
             this.value = value;
             //? if <1.20.5
-            /*this.id = id;*/
+            //this.id = id;
         }
 
         @Override

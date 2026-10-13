@@ -5,6 +5,7 @@ plugins {
 }
 
 fun prop(name: String): String = property(name) as String
+fun propOrNull(name: String): String? = (findProperty(name) as String?)?.takeIf { it.isNotBlank() }
 
 val mcVersion = stonecutter.current.version
 val javaVersion = prop("java_version").toInt()
@@ -51,8 +52,12 @@ java {
     withSourcesJar()
 }
 
+// The NeoForge this build runs on: deps.neoforge, or deps.neoforge_kubejs in a -Pkubejs.run=true dev run (KubeJS may need
+// an older build; see versions/*/gradle.properties). Release jars always use deps.neoforge.
+val neoforgeVersion = propOrNull("deps.neoforge_kubejs")?.takeIf { propOrNull("kubejs.run") == "true" } ?: prop("deps.neoforge")
+
 neoForge {
-    version = prop("deps.neoforge")
+    version = neoforgeVersion
 
     // Node projects live in versions/<node>/ and have no src/ of their own — the shared tree is two
     // levels up. A bare "src/main/..." here resolves to nothing, and because the declaration is
@@ -110,6 +115,11 @@ repositories {
             includeGroup("dev.ryanhcode.sable-companion")
         }
     }
+    // KubeJS and Rhino (the optional `kubejs` peer, see deps.kubejs).
+    exclusiveContent {
+        forRepository { maven("https://maven.latvian.dev/releases") { name = "LatvianDev" } }
+        filter { includeGroup("dev.latvian.mods") }
+    }
     // REI and its Cloth Config / Architectury dependencies (the optional `rei` peer, see deps.rei).
     exclusiveContent {
         forRepository { maven("https://maven.shedaniel.me") { name = "Shedaniel" } }
@@ -150,7 +160,7 @@ tasks.processResources {
         "mod_license" to prop("mod.license"),
         "mod_description" to prop("mod.description"),
         "minecraft_range" to prop("deps.minecraft_range"),
-        "neoforge_version" to prop("deps.neoforge"),
+        "neoforge_version" to neoforgeVersion,
         "neoforge_loader_range" to prop("deps.neoforge_loader_range"),
         "java_version" to javaVersion.toString(),
         "mixin_compatibility" to if (javaVersion <= 17) "JAVA_17" else "JAVA_21",
@@ -190,6 +200,8 @@ tasks.processResources {
         "META-INF/golemcore.forge.accesstransformer.cfg",
         "META-INF/golemcore.flywheel.accesstransformer.cfg",
     )
+    // Golem Core's KubeJS plugin list names classes that exist only where the `kubejs` constant holds.
+    if ((findProperty("deps.kubejs") as String?).isNullOrBlank()) exclude("kubejs.plugins.txt")
     dependsOn(mergeAccessTransformers)
     from(mergedAccessTransformer) { into("META-INF") }
     // The golem_* shaders belong to the vendored Flywheel backend, which only exists on 26.1.
@@ -238,6 +250,14 @@ dependencies {
     // viewer declarations (dev.golem.core.viewer) to REI 16/26. A node without deps.rei compiles it out (`rei`).
     (findProperty("deps.rei") as String?)?.takeIf { it.isNotBlank() }?.let { rei ->
         compileOnly("me.shedaniel:RoughlyEnoughItems-api-neoforge:$rei")
+    }
+
+    // KubeJS, compile-only and per-node optional: dev.golem.core.kubejs turns every RecipeTables table into a script
+    // recipe schema and serves dev.golem.core.script's bindings and events (8.x on 26.1, 7.x on 1.21.1). Rhino is the
+    // script engine KubeJS's API names. A node without deps.kubejs compiles the adapter out (`kubejs`).
+    (findProperty("deps.kubejs") as String?)?.takeIf { it.isNotBlank() }?.let { kubejs ->
+        compileOnly("dev.latvian.mods:kubejs-neoforge:$kubejs") { isTransitive = false }
+        compileOnly("dev.latvian.mods:rhino:${prop("deps.kubejs_rhino")}") { isTransitive = false }
     }
 
     // CC: Tweaked, compile-only and per-node optional: dev.golem.core.computer registers peripherals with the
