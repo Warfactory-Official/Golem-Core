@@ -17,9 +17,9 @@ import org.spongepowered.asm.mixin.injection.At;
  *
  * <p>1.20.5 gave {@code ClipContext} a constructor taking a {@code CollisionContext}, which is what
  * {@code Compat.clip} needs for an entity-less trace. 1.20.1 has only the entity constructor, and it
- * calls {@code CollisionContext.of(entity)} without a null check — so the null that reads as "no
+ * calls {@code CollisionContext.of(entity)} without a null check, so the null that reads as "no
  * entity" there crashes inside {@code EntityCollisionContext}. This routes a null entity to the empty
- * context, which is exactly what the later constructor does. Empty on every other node. A MixinExtras
+ * context, which is what the later constructor does. Empty on every other node. A MixinExtras
  * {@code @WrapOperation} rather than a {@code @Redirect}, so another mod's hook on the same call still runs.
  */
 @Mixin(ClipContext.class)

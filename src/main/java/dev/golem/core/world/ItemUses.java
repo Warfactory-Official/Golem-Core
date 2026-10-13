@@ -1,5 +1,6 @@
 package dev.golem.core.world;
 
+import dev.golem.core.hook.Hook;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiConsumer;
@@ -19,7 +20,7 @@ public final class ItemUses {
     private ItemUses() {}
 
     /** Every listener, in phase order; register through the {@code on...} method or directly, with a phase. */
-    public static final dev.golem.core.hook.Hook<BiConsumer<LivingEntity, ItemStack>> FINISH = dev.golem.core.hook.Hook.notifying();
+    public static final Hook<BiConsumer<LivingEntity, ItemStack>> FINISH = Hook.notifying();
     private static boolean hooked;
 
     /** Registers a handler for a finished item use on the server: (entity, stack before use). */

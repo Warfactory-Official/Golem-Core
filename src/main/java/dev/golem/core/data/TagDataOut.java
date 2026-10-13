@@ -23,8 +23,8 @@ import dev.golem.core.GolemCore;
  *       provider is threaded in at construction. It is nullable because plenty of writes use codecs
  *       that touch no registries; those work with plain {@code NbtOps}.</li>
  *   <li><b>Encode failures.</b> {@code ValueOutput.store} swallows and reports errors rather than
- *       throwing. Matching that matters — a codec failure mid-save must not abort the whole block
- *       entity's write and corrupt the chunk — so failures are logged and the key is skipped.</li>
+ *       throwing. A codec failure mid-save must not abort the block entity's write and corrupt the
+ *       chunk, so failures are logged and the key is skipped.</li>
  * </ul>
  ^/
 public final class TagDataOut implements DataOut {

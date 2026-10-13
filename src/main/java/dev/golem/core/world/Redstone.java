@@ -10,7 +10,7 @@ import net.minecraft.world.level.block.state.BlockState;
 public final class Redstone {
     private Redstone() {}
 
-    /** Reads the old HBM torch input: comparator override when present, otherwise ordinary signal. */
+    /** Reads the 1.12.2 torch input: comparator override when present, otherwise ordinary signal. */
     public static int read(Level level, BlockPos pos, Direction direction) {
         BlockState state = level.getBlockState(pos);
         int value = level.getSignal(pos, direction);

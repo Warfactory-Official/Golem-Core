@@ -24,17 +24,14 @@ public final class Attributes {
      * Core's access widener ({@code accessible} + {@code mutable}) and access transformers ({@code public-f}); no
      * mixin, reflection or bytecode is involved.
      *
-     * <p>Idempotent and monotonic: a bound that is already at least {@code max} - another mod (AttributeFix and
-     * the like) may have raised it further - is left alone, so the bound is never lowered. Returns the bound now in
-     * force.
+     * <p>Idempotent and monotonic: a bound that is already at least {@code max} (another mod may have raised it
+     * further) is left alone. Returns the bound in force.
      *
      * <p><b>When to call:</b> once, from common mod initialisation (the NeoForge/Forge mod constructor, Fabric's
-     * {@code ModInitializer}), on both physical sides. Vanilla attributes are bound during {@code Bootstrap}, which
-     * every loader finishes before constructing mods, and no entity (and so no {@link AttributeInstance}, whose
-     * {@code getValue} caches the sanitised value) exists yet. The attribute objects are JVM-wide singletons, so in
-     * singleplayer one call covers both the integrated server and the client, which recomputes synced attributes
-     * through the same {@code sanitizeValue}. An instance created earlier would keep a stale clamped value until its
-     * next modifier or base-value change marks it dirty.
+     * {@code ModInitializer}), on both physical sides, before any entity exists: an {@link AttributeInstance}
+     * caches the sanitised value in {@code getValue} and keeps a stale clamped one until its next modifier or
+     * base-value change. The attribute objects are JVM-wide singletons, so in singleplayer one call covers both
+     * the integrated server and the client.
      *
      * @throws IllegalArgumentException if the attribute is not a {@link RangedAttribute}, or {@code max} is NaN or
      *                                  below the attribute's minimum

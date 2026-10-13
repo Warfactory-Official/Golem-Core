@@ -16,11 +16,9 @@ import org.jspecify.annotations.Nullable;
  * {@link SubmitSink} backed by vanilla's collector, for versions that have the submit pipeline
  * natively. Geometry passes straight through; the engine owns batching and draw ordering.
  *
- * <p>Two collector references are kept because vanilla needs both. Geometry goes to {@code target},
- * which may be an ordered view produced by {@link #order}. Items need the <i>root</i> collector:
- * {@code ItemStackRenderState#submit} accepts only the full {@code SubmitNodeCollector}, never an
- * ordered view. Item draws therefore ignore the current order on 26.1 — a vanilla limitation this
- * facade surfaces rather than invents.
+ * <p>Two collector references are kept. Geometry goes to {@code target}, which may be an ordered view produced by
+ * {@link #order}. Items need the <i>root</i> collector: {@code ItemStackRenderState#submit} accepts only the full
+ * {@code SubmitNodeCollector}, so item draws ignore the current order on 26.1 (a vanilla limitation).
  */
 public final class VanillaSubmitSink implements SubmitSink {
 

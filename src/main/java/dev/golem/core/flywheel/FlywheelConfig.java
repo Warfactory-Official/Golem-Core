@@ -18,17 +18,16 @@ import java.util.Locale;
  * The player-facing backend switch for Core's vendored engine: {@code config/golemcore-flywheel.json}.
  *
  * <p>Shaped after the published engine's own client config ({@code flywheel.json} on Fabric,
- * {@code flywheel-client.toml} on NeoForge): one {@code backend} key whose value is {@code DEFAULT} or a
- * backend name — {@code off}, {@code instancing}, {@code indirect}, with or without the published
- * {@code flywheel:} prefix — so a player who turns the published engine off on 1.20.1/1.21.1 turns this
- * one off the same way on 26.1. {@code /flywheel backend <value>} writes the same file.
+ * {@code flywheel-client.toml} on NeoForge): one {@code backend} key, {@code DEFAULT} or one of {@code off},
+ * {@code instancing}, {@code indirect}, with or without the published {@code flywheel:} prefix. Turning the
+ * published engine off on 1.20.1/1.21.1 and this one off on 26.1 therefore works the same way.
+ * {@code /flywheel backend <value>} writes the same file.
  *
- * <p>The JVM switch {@code -Dgolem.flywheel.backend} and the environment variable
- * {@code GOLEM_FLYWHEEL_BACKEND} still win over the file, because a dev client launched through Gradle
- * has no other way in.
+ * <p>The JVM switch {@code -Dgolem.flywheel.backend} and the environment variable {@code GOLEM_FLYWHEEL_BACKEND}
+ * win over the file, for dev clients launched through Gradle.
  *
- * <p>Deliberately common code: it names no engine type, so reading it from a node without the engine
- * is harmless, and nothing below 26.1 ever writes it.
+ * <p>Common code: it names no engine type, so reading it on a node without the engine is harmless, and nothing
+ * below 26.1 writes it.
  */
 public final class FlywheelConfig {
 

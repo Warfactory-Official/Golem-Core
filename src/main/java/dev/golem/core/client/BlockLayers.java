@@ -5,11 +5,11 @@ package dev.golem.core.client;
  *
  * <p>26.1, NeoForge and Forge read {@code render_type} from the model JSON themselves. Fabric below 26.1 has no
  * model-level layer: every block draws on the solid layer unless something registers it with Fabric API's
- * {@code BlockRenderLayerMap}, so a cutout torch or grate showed its transparent texels as a coloured plate
- * (2026-10-06). There, {@link #install} reads each of the namespace's blockstates after every client resource
- * reload, follows their models up the parent chain to the first {@code render_type}, and registers the most
- * transparent layer the block's models ask for (Fabric's layer is per block, not per model). Elsewhere it does
- * nothing. Logs {@code Render layers from render_type: N <namespace> block(s)}.
+ * {@code BlockRenderLayerMap}, or a cutout torch or grate draws its transparent texels as a coloured plate.
+ * {@link #install} reads the namespace's blockstates after every client resource reload, follows each model up
+ * its parent chain to the first {@code render_type}, and registers the most transparent layer the block's models
+ * ask for (Fabric's layer is per block, not per model). Elsewhere it does nothing. Logs
+ * {@code Render layers from render_type: N <namespace> block(s)}.
  */
 public final class BlockLayers {
 

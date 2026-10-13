@@ -14,12 +14,11 @@ import net.minecraft.resources.ResourceLocation;
  *
  * <p>26.1 made the render pipeline an explicit first argument to {@code blit}
  * ({@code RenderPipelines.GUI_TEXTURED}), where older versions inferred it. It also renamed the
- * graphics object itself — {@code GuiGraphics} became {@code GuiGraphicsExtractor} once HUD drawing
+ * graphics object itself: {@code GuiGraphics} became {@code GuiGraphicsExtractor} once HUD drawing
  * split into an extract pass.
  *
- * <p>Neither difference is expressible as a text replacement: the pipeline argument has to be added or
- * removed, not renamed. Routing blits through here means screens are written once and the argument
- * juggling lives in a single method.
+ * <p>Neither is a text replacement: the pipeline argument has to be added or removed, not renamed. Screens
+ * call these methods and are written once.
  */
 public final class GuiDraw {
 
@@ -93,10 +92,9 @@ public final class GuiDraw {
     /**
      * Stretches a normalised source rectangle of a texture across the whole GUI.
      *
-     * <p>Vanilla names a blit's source region in texels, so expressing a UV rectangle means knowing the
-     * texture's own dimensions; below 26.1 there is no overload that takes UVs at all. This draws the
-     * whole texture into an oversized rectangle and lets the screen edge crop it instead, which needs no
-     * texture dimensions, is exact for every one of them, and behaves identically on every version.
+     * <p>Vanilla names a blit's source region in texels, and below 26.1 no overload takes UVs. This draws the
+     * whole texture into an oversized rectangle and lets the screen edge crop it, which needs no texture
+     * dimensions and behaves the same on every version.
      */
     public static void blitUvFullscreen(
             //? if >=26.1 {
@@ -115,11 +113,11 @@ public final class GuiDraw {
     }
 
     /**
-     * Draws a stitched atlas sprite into a GUI rectangle — a generated one included.
+     * Draws a stitched atlas sprite into a GUI rectangle, including a generated one.
      *
-     * <p>A GUI blit names a texture file, and a sprite that only exists on an atlas has none: it has an
-     * atlas and a corner of it. The atlas's own pixel size is not public on every version, but the
-     * sprite's is, and a sprite's size over its UV span is that same number exactly.
+     * <p>A GUI blit names a texture file; a sprite that only exists on an atlas has an atlas and a corner of
+     * it. The atlas's pixel size is not public on every version, but the sprite's size over its UV span
+     * gives it.
      */
     public static void blitSprite(
             //? if >=26.1 {
@@ -166,8 +164,7 @@ public final class GuiDraw {
      * Fills an axis-aligned rectangle with a solid ARGB colour, from {@code (x0, y0)} inclusive to
      * {@code (x1, y1)} exclusive.
      *
-     * <p>Remember the alpha: a colour written as {@code 0xFFFFFF} has alpha zero and draws nothing at
-     * all. That has cost this project a debugging session before.
+     * <p>Include the alpha: {@code 0xFFFFFF} has alpha zero and draws nothing.
      */
     public static void fill(
             //? if >=26.1 {
@@ -181,7 +178,7 @@ public final class GuiDraw {
 
     /**
      * Fills a rectangle whose colour runs from {@code colorTop} at {@code y0} to {@code colorBottom} at
-     * {@code y1}, each channel interpolated — alpha included, which is what makes it useful for a fade.
+     * {@code y1}, each channel interpolated, alpha included, which is what makes it useful for a fade.
      * Same name and argument order on every version; only the graphics type differs.
      */
     public static void fillGradient(
@@ -213,19 +210,15 @@ public final class GuiDraw {
         float r = ((color >> 16) & 0xFF) / 255F;
         float g = ((color >> 8) & 0xFF) / 255F;
         float b = (color & 0xFF) / 255F;
-        // Two things this era needs that 26.1 does for itself, both of which silently produce "no
-        // translucency at all" rather than a wrong shade:
+        // Two things this era needs that 26.1 does itself; both silently give "no translucency":
         //
-        // 1. Blending is off. The plain blit path draws with getPositionTexShader and never calls
-        //    enableBlend, so a shader-colour alpha is discarded and the quad lands opaque. 26.1's
-        //    coloured blit enables blend around its draw. defaultBlendFunc is set too: vanilla's
-        //    coloured path relies on the ambient func, which is not guaranteed mid-GUI-pass.
+        // 1. Blending is off. The plain blit path (getPositionTexShader) never calls enableBlend, so a
+        //    shader-colour alpha is discarded and the quad lands opaque. defaultBlendFunc is set too,
+        //    since the ambient func is not guaranteed mid-GUI-pass.
         //
-        // 2. Z-ordering is by depth buffer, not submission order. 26.1 draws GUI elements in the order
-        //    they are submitted, so a tint quad drawn after an item lands on top of it. Here the item is
-        //    rendered at a raised Z (renderItem pushes it to ~150) while blit draws at Z 0, so the quad
-        //    fails the depth test against the item it is meant to dim and never appears. Raising the
-        //    transform above the item reproduces 26.1's "later submission wins".
+        // 2. Z-ordering is by depth buffer, not submission order. renderItem raises the item to Z ~150
+        //    while blit draws at Z 0, so a tint quad fails the depth test against the item it should
+        //    dim. Raising the transform above the item reproduces 26.1's "later submission wins".
         graphics.pose().pushPose();
         graphics.pose().translate(0.0F, 0.0F, 200.0F);
         com.mojang.blaze3d.systems.RenderSystem.enableBlend();
@@ -243,7 +236,7 @@ public final class GuiDraw {
      * {@code setTooltipForNextFrame} when HUD drawing became a deferred extract pass; the parameters
      * are otherwise identical.
      *
-     * <p>Deliberately a helper rather than a Stonecutter replacement: {@code extractTooltip} (the
+     * <p>A helper rather than a Stonecutter replacement: {@code extractTooltip} (the
      * Screen override) also maps to {@code renderTooltip}, so a string swap would be non-injective
      * and would corrupt the source on the reverse pass.
      */

@@ -1,5 +1,6 @@
 package dev.golem.core.world;
 
+import dev.golem.core.hook.Hook;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
@@ -28,7 +29,7 @@ public final class BlockPlaces {
     }
 
     /** Every listener, in phase order; register through {@link #onPlace} (which hooks the loader once) or directly. */
-    public static final dev.golem.core.hook.Hook<Handler> HANDLERS = dev.golem.core.hook.Hook.notifying();
+    public static final Hook<Handler> HANDLERS = Hook.notifying();
     private static boolean hooked;
 
     public static synchronized void onPlace(Handler handler) {

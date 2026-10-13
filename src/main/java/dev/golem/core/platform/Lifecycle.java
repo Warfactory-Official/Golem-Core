@@ -1,27 +1,24 @@
 package dev.golem.core.platform;
 
+import dev.golem.core.hook.Hook;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.chunk.LevelChunk;
 
 /**
  * Server lifecycle callbacks, under one set of names on every loader and every version.
  *
- * <p>These exist because fabric-api renamed several of its own events between the 1.21.1 and 26.1
- * lines — {@code ServerWorldEvents} became {@code ServerLevelEvents}, and {@code CHUNK_LOAD} grew a
- * third "newly generated" parameter, changing its SAM. None of that is a Minecraft difference, so none
- * of it should be visible to a consumer: a mod that wants to know when a level unloads should say so
- * once.
+ * <p>fabric-api renamed several of its own events between the 1.21.1 and 26.1 lines:
+ * {@code ServerWorldEvents} became {@code ServerLevelEvents}, and {@code CHUNK_LOAD} has a third
+ * "newly generated" parameter, changing its SAM. That is not a Minecraft difference, so a consumer
+ * should not see it.
  *
- * <p>NeoForge and Forge are kept apart rather than folded into {@code forgelike}: the whole event
- * package moved from {@code net.minecraftforge} to {@code net.neoforged}, and the tick event was
- * re-modelled from one class with a phase field into separate Pre/Post classes. That is two different
- * APIs wearing similar names, not one API with a rename.
- *
- * <p>Registration timing is unchanged — each loader's entrypoint still calls these at the moment it
- * always did. This only removes the naming churn, not the ordering.
+ * <p>NeoForge and Forge are separate implementations rather than one {@code forgelike} one: the event
+ * package moved from {@code net.minecraftforge} to {@code net.neoforged}, and the tick event is one
+ * class with a phase field on Forge and separate Pre/Post classes on NeoForge.
  */
 public final class Lifecycle {
 
@@ -31,12 +28,12 @@ public final class Lifecycle {
      * An entity was added to a server level: loaded with its chunk, spawned, or arrived from another level (a player
      * changing dimension or respawning is reported for the level it arrives in). Listeners see it already in the level.
      */
-    public static final dev.golem.core.hook.Hook<BiConsumer<net.minecraft.world.entity.Entity, ServerLevel>> ENTITY_LOAD =
-            dev.golem.core.hook.Hook.notifying();
+    public static final Hook<BiConsumer<Entity, ServerLevel>> ENTITY_LOAD =
+            Hook.notifying();
     private static boolean entityLoadHooked;
 
     /** Registers an {@link #ENTITY_LOAD} listener. */
-    public static synchronized void onEntityLoad(BiConsumer<net.minecraft.world.entity.Entity, ServerLevel> handler) {
+    public static synchronized void onEntityLoad(BiConsumer<Entity, ServerLevel> handler) {
         ENTITY_LOAD.register(handler);
         if (entityLoadHooked) return;
         entityLoadHooked = true;

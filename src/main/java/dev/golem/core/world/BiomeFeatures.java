@@ -51,7 +51,7 @@ public final class BiomeFeatures {
             }
             // One modification per declaration, named like the forge-family modifier file. Fabric applies modifications
             // sorted by id and the forge-family loaders apply modifier files sorted by id, so both end with the same
-            // feature list in the same order — which is what seeds each feature's placement. (addFeature per feature
+            // feature list in the same order, which is what seeds each feature's placement. (addFeature per feature
             // would name each modification after its feature and re-sort the list alphabetically.)
             net.fabricmc.fabric.api.biome.v1.BiomeModifications.create(dev.golem.core.Ids.of(declaration.namespace(), declaration.name()))
                     .add(net.fabricmc.fabric.api.biome.v1.ModificationPhase.ADDITIONS, selector, context -> {

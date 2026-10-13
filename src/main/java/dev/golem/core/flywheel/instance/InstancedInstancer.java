@@ -7,7 +7,7 @@ import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.resources.Identifier;
 
-// UBO-backed Instancer for the INSTANCING backend. No separate UBO — the inherited SlabBuffer
+// UBO-backed Instancer for the INSTANCING backend. No separate UBO: the inherited SlabBuffer
 // is itself created with USAGE_UNIFORM and bound directly via pass.setUniform at draw time.
 // flush() is just slabBuffer.releaseRetired() + a single glFlushMappedNamedBufferRange over
 // the dirty span; setters wrote directly into the mapped slab during the visual plan.

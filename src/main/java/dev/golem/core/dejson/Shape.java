@@ -7,11 +7,10 @@ import java.util.Map;
 /**
  * The set of model files one declaration stands in for.
  *
- * <p>Most shapes are a single model, but the irregular ones are not: a stair is three
- * ({@code <base>}, {@code <base>_inner}, {@code <base>_outer}) and a slab is three
- * ({@code <base>}, {@code <base>_top}, {@code <base>_double}). Returning a map keyed by full model
- * id keeps that arity out of the caller's hands, and keeps the derived names in one place so the
- * {@link Dispatch} that points at them cannot drift.
+ * <p>Most shapes are a single model; a stair is three ({@code <base>}, {@code <base>_inner},
+ * {@code <base>_outer}) and a slab is three ({@code <base>}, {@code <base>_top}, {@code <base>_double}).
+ * The map is keyed by full model id so the derived names live in one place and the {@link Dispatch}
+ * that points at them cannot drift.
  */
 @FunctionalInterface
 public interface Shape {

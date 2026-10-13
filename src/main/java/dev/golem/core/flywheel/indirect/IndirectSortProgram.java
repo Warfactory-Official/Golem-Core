@@ -16,12 +16,12 @@ import java.io.Reader;
 
 // Holder for the GPU sort programs over translucent visList slices. Two paths share this
 // loader:
-//   - Multi-pass radix (hist → scan → scatter), 2 passes covering the high 16 bits of each
+//   - Multi-pass radix (hist, scan, scatter), 2 passes covering the high 16 bits of each
 //     entry's .x field (the depth key). The .y field (32-bit instance index) is carried
 //     along by the scatter as an 8-byte payload but never inspected.
 //   - Single-workgroup bitonic, used when every draw in a sortable group has live ≤ TILE_SIZE.
-// Same loader pattern as IndirectComputeProgram (compile, link, cache uniform locations) —
-// Mojang's RenderPipeline only handles vertex/fragment programs.
+// Same loader pattern as IndirectComputeProgram (compile, link, cache uniform locations),
+// because Mojang's RenderPipeline only handles vertex/fragment programs.
 public final class IndirectSortProgram {
 
     // TILE_SIZE matches local_size_x in every sort shader. 256 chosen so the scatter's
@@ -29,7 +29,7 @@ public final class IndirectSortProgram {
     // min subgroupSize = 16 (Intel Arc), MAX_WARPS = TILE_SIZE / 16 = 16 ≤ 32.
     public static final int TILE_SIZE = 256;
     public static final int BUCKETS = 256;
-    // Two byte-radix passes over bits 16..31 of each entry's .x field — the high 16 bits hold
+    // Two byte-radix passes over bits 16..31 of each entry's .x field. The high 16 bits hold
     // the depth key (low 16 of .x stay 0 from cull). The .y payload is carried by scatter and
     // never inspected; same-key entries retain their cull-atomic-write order.
     public static final int PASSES = 2;

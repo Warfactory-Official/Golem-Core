@@ -28,12 +28,11 @@ public abstract class CompatMobEffect extends MobEffect {
     protected abstract boolean applyCompatEffectTick(LivingEntity entity, int amplifier);
 
     /**
-     * Whether {@link #applyCompatEffectTick} runs on this tick. Override to change the cadence — an
-     * effect that acts every tick returns {@code true} unconditionally.
+     * Whether {@link #applyCompatEffectTick} runs on this tick. Override to change the cadence; an
+     * effect that acts every tick returns {@code true}.
      *
-     * <p>This exists for the same reason as the tick callback above: 1.21 renamed the vanilla hook
-     * from {@code isDurationEffectTick} to {@code shouldApplyEffectTickThisTick}. Leaving it out is
-     * what forced consumers to hand-guard one method of a class whose sibling was already abstracted.
+     * <p>1.21 renamed the vanilla hook from {@code isDurationEffectTick} to
+     * {@code shouldApplyEffectTickThisTick}.
      */
     protected boolean shouldApplyTick(int duration, int amplifier) {
         //? if >=1.21 {

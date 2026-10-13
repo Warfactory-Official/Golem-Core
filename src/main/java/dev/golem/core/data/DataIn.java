@@ -8,10 +8,8 @@ import java.util.Optional;
 /**
  * Read side of block-entity persistence. The counterpart to {@link DataOut}.
  *
- * <p>Mirrors 26.1's {@code ValueInput}. Note the {@code *Or} accessors: 26.1 made the default value
- * explicit at every call site, where the old {@code CompoundTag} API returned a silent zero/empty for
- * a missing key. Keeping the 26.1 spelling means the backport cannot quietly reintroduce that
- * ambiguity — the default is always stated, on every version.
+ * <p>Mirrors 26.1's {@code ValueInput}. The {@code *Or} accessors state the default at every call site on every
+ * version; {@code CompoundTag} returns a silent zero/empty for a missing key.
  */
 public interface DataIn {
 
@@ -43,7 +41,7 @@ public interface DataIn {
     /** A nested compound, empty if absent. */
     Optional<DataIn> child(String name);
 
-    /** A nested compound, or an empty one if absent — for the common read-with-defaults case. */
+    /** A nested compound, or an empty one if absent. Covers the common read-with-defaults case. */
     DataIn childOrEmpty(String name);
 
     /** The child compounds under a key, empty list if absent. */

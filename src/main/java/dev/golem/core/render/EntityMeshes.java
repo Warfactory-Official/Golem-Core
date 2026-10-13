@@ -19,23 +19,21 @@ import net.minecraft.resources.Identifier;
 *///?}
 
 /**
- * The posed cubes of a living entity's main model, in the entity's own space — legacy HBM's
+ * The posed cubes of a living entity's main model, in the entity's own space; legacy HBM's
  * {@code ModelRendererUtil.getBoxesFromMob}, which walked the render's {@code ModelBase.boxList} with the matrices
  * {@code RenderLivingBase} would have used ({@code applyRotations}, {@code prepareScale}) from an identity modelview.
  *
- * <p>Here the entity's own renderer is run once from an identity pose into a recorder, so whatever a renderer does to
- * its model (rotations, scale, baby scale, sitting) is the same transform the frame would use. Only the main model is
- * kept, chosen the same way on every node: on 26.1 the submission of the renderer's own model object, before 26.1 the
+ * <p>The entity's own renderer is run once from an identity pose into a recorder, so whatever it does to its
+ * model (rotations, scale, baby scale, sitting) matches the frame's transform. Only the main model is kept,
+ * chosen the same way on every node: on 26.1 the submission of the renderer's own model object, before 26.1 the
  * first buffer whose render type carries the entity's texture (vanilla {@code LivingEntityRenderer} draws the model
- * before any layer). Not "the first buffer requested": that is a layer's when the body is skipped (an invisible mob)
- * or an event listener's that drew first, and 26.1's identity match is immune to both. An invisible mob whose body
- * is not drawn therefore yields no cubes on any node.
+ * before any layer). "The first buffer requested" would be a layer's when the body is skipped (an invisible mob) or
+ * an event listener's that drew first. An invisible mob whose body is not drawn yields no cubes on any node.
  *
- * <p>Vanilla cubes emit their six faces in a fixed order, so the vertex stream is cut into cubes of 24 vertices; a
- * cube is a convex hexahedron, which is what the legacy cutter relied on. A cube with fewer faces (1.21+
- * {@code CubeDefinition} visible faces) would shift every later cut, so each 24-vertex group is validated (at most 8
- * corners, each used a multiple of 3 times) and a group that fails drops one quad and retries, resynchronising on the
- * next whole cube instead of handing the cutter garbage.
+ * <p>Vanilla cubes emit their six faces in a fixed order, so the vertex stream is cut into cubes of 24 vertices
+ * (a convex hexahedron, which the legacy cutter relied on). A cube with fewer faces (1.21+ {@code CubeDefinition}
+ * visible faces) would shift every later cut, so each 24-vertex group is validated (at most 8 corners, each used
+ * a multiple of 3 times); a group that fails drops one quad and retries, resynchronising on the next whole cube.
  *
  * <p>Client-only.
  */
@@ -269,11 +267,10 @@ public final class EntityMeshes {
     //?} else {
     /*/^*
      * Hands the model's buffer to the recorder and every other one to the sink. The model's buffer is the first one
-     * whose render type is drawn with the entity's own texture: every type {@code LivingEntityRenderer.getRenderType}
-     * picks (cutout, translucent for a see-through invisible mob, outline when glowing) names it in its texture
-     * state, while armor, held items and most layers draw from other textures. That keeps a skipped body (invisible
-     * mob) and a {@code RenderLivingEvent.Pre} listener that draws first from being taken for the model, which is what
-     * 26.1's model-identity match already does.
+     * whose render type uses the entity's own texture: every type {@code LivingEntityRenderer.getRenderType} picks
+     * (cutout, translucent, outline when glowing) names it, while armor, held items and most layers use other
+     * textures. A skipped body (invisible mob) or a {@code RenderLivingEvent.Pre} listener that draws first is
+     * therefore not taken for the model, as in 26.1's model-identity match.
      ^/
     private static final class Buffers implements net.minecraft.client.renderer.MultiBufferSource {
         private final Recorder recorder;

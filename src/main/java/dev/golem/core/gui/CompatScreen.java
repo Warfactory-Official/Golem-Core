@@ -163,10 +163,9 @@ public abstract class CompatScreen extends Screen {
      *
      * <p>1.20.2 moved {@code renderBackground} to the top of {@code Screen.render} and made it run the
      * menu blur, so anything already in the framebuffer when {@code super.render} is entered gets
-     * blurred. Drawing the panel first therefore softens every pixel of it while the foreground pass —
-     * text, items — stays sharp, which reads as a texture problem rather than an ordering one. Vanilla's
-     * own container screens avoid it the same way, by hanging {@code renderBg} off
-     * {@code renderBackground}. 1.20.1 has neither the blur nor the call, so it keeps the plain order.
+     * blurred. A panel drawn first goes soft while text and items stay sharp, which looks like a
+     * texture problem. Vanilla's container screens hang {@code renderBg} off {@code renderBackground}
+     * for the same reason. 1.20.1 has neither the blur nor the call, so it keeps the plain order.
      */
     //? if >=1.21 && <26.1 {
     /*@Override

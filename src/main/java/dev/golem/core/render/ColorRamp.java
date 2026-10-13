@@ -7,17 +7,13 @@ import java.util.function.IntUnaryOperator;
  *
  * <p>Greyscale shape art is drawn once, inside a known luminance band, and recoloured per material by
  * mapping that band onto the material's own light and dark colours. Each channel is interpolated
- * independently: a source channel sitting at the band's light end lands on the target's light end, one
- * at the dark end lands on the target's dark end, and everything between follows the straight line
- * through them. Values outside the band extrapolate along the same line, then truncate into a byte —
- * the art is authored to stay inside it.
+ * independently along the straight line through the two ends. Values outside the band extrapolate along the
+ * same line, then truncate into a byte; the art is authored to stay inside it.
  *
- * <p>A multiply cannot express this. A tint has no offset term, so it can reach the target's light end
- * or its dark end but never both, and shadows collapse toward hue-times-black instead of landing on the
- * declared dark colour.
+ * <p>A multiply cannot express this: a tint has no offset term, so it can reach the target's light end or its
+ * dark end but never both.
  *
- * <p>This class names no Minecraft type on purpose: the arithmetic is the part that has to be exactly
- * right, and keeping it here lets it be tested in a plain JVM.
+ * <p>No Minecraft type is named here, so the arithmetic can be tested in a plain JVM.
  *
  * @param sourceLight the light end of the band the art is drawn in, {@code 0xRRGGBB}
  * @param sourceDark  the dark end of that band
@@ -58,7 +54,7 @@ public record ColorRamp(int sourceLight, int sourceDark, int targetLight, int ta
     }
 
     /**
-     * The same remap over {@code 0xAABBGGRR} pixels — the layout {@code NativeImage} keeps in memory on
+     * The same remap over {@code 0xAABBGGRR} pixels, the layout {@code NativeImage} keeps in memory on
      * every version this library targets, and therefore the one a raw pixel copy hands out.
      */
     public IntUnaryOperator abgrOperator() {

@@ -13,7 +13,7 @@ import net.minecraft.resources.ResourceKey;
  *   <li>Fabric calls {@code Registry.register} directly during mod initialization.</li>
  * </ul>
  *
- * The method is intentionally non-generic (using wildcards) so it can be implemented with a lambda.
+ * The method is non-generic (using wildcards) so it can be implemented with a lambda.
  */
 @FunctionalInterface
 public interface RegistrationSink {

@@ -19,7 +19,7 @@ import net.minecraft.network.chat.Component;
  * <p>Same spelling and same effect as the published {@code FlwCommands} on 1.20.1/1.21.1: the choice
  * is saved to the config file and applied at once. Switching off tears every visual down and hands
  * every machine back to its vanilla renderer on the next frame. Switching on rebuilds the visuals for
- * the loaded area — but only if the engine started with the game, because its pipelines are declared at
+ * the loaded area, but only if the engine started with the game, because its pipelines are declared at
  * startup; an engine that was off then says so and asks for a restart.
  *
  * <p>Not registered when a mod with the published engine's id is present, so the two can never fight

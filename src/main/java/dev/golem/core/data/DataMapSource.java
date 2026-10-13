@@ -3,6 +3,7 @@ package dev.golem.core.data;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.mojang.serialization.DataResult;
 import com.mojang.serialization.JsonOps;
 import dev.golem.core.world.DataSource;
 import java.util.ArrayList;
@@ -94,7 +95,7 @@ public abstract class DataMapSource<V> extends DataSource<DataMapSource.File<V>>
     }
 
     /** The value, or the codec's message (DFU's no-argument {@code getOrThrow} does not exist below 1.20.5). */
-    private <T> T unwrap(com.mojang.serialization.DataResult<T> result, String entry) {
+    private <T> T unwrap(DataResult<T> result, String entry) {
         return result.result().orElseThrow(() -> new IllegalStateException(describe() + " " + entry + ": "
                 + result.error().map(error -> error.message()).orElse("?")));
     }

@@ -49,6 +49,9 @@ public class DeferredRegister<T> {
             // RegisterEvents: a block whose BlockSetType or SoundType reads a mod sound event in its factory
             // (NTM: Space's fence gate) found it unregistered on Fabric only.
             Registries.SOUND_EVENT,
+            // Fluids before blocks and items, as vanilla (and NeoForge) register them: a world fluid's bucket
+            // takes its fluid at construction (dev.golem.core.fluid.WorldFluids).
+            Registries.FLUID,
             Registries.BLOCK,
             //? if >=1.20.5 && <26.1 {
             /*// Pre-26.1 armour items take a Holder<ArmorMaterial> at construction, so the materials
@@ -128,9 +131,9 @@ public class DeferredRegister<T> {
 
     /**
      * A block-entity-type register. Like {@link #createBlocks}/{@link #createItems} its registry is named
-     * lazily, and its kind is known from its class: a registrar choosing among several registers can pick
-     * it without resolving any registry key, so a registration class using one still initialises in a
-     * plain JVM on every node (see {@link RegistryObject}).
+     * lazily, and its kind is known from its class, so a registrar can pick it among several registers without
+     * resolving a registry key and the registration class still initialises in a plain JVM (see
+     * {@link RegistryObject}).
      */
     public static BlockEntityTypes createBlockEntityTypes(String namespace) {
         return new BlockEntityTypes(namespace);
@@ -223,10 +226,8 @@ public class DeferredRegister<T> {
      * dependencies (blocks before items) are registered first. Golem Core calls this once on Fabric, which
      * registers everything synchronously at init time, after every mod's declarations.
      *
-     * <p>This is what a loader with no deferred-registration phase (Fabric) wants, and writing it out
-     * at the call site meant writing the root-registry lookup too — which is exactly the kind of thing
-     * that changed: 26.1 looks up by {@code ResourceKey} and throws when absent, older versions look
-     * up by location and return the value. That belongs here, not in every consumer's initializer.
+     * <p>The root-registry lookup differs by version: 26.1 looks up by {@code ResourceKey} and throws when absent,
+     * older versions look up by location and return the value. That stays here, not in consumers.
      */
     @SuppressWarnings({"unchecked", "rawtypes"})
     public static void flushAllToVanilla() {

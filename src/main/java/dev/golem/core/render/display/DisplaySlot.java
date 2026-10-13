@@ -3,10 +3,10 @@ package dev.golem.core.render.display;
 /**
  * The display contexts a vanilla {@code display{}} block names, as a version-neutral enum.
  *
- * <p>Deliberately not {@code ItemDisplayContext}: that enum gained {@code on_shelf} at 26.1, so its
- * membership differs across the range, and it is a Minecraft class in a place that has to stay loadable
- * without one — the model generator runs headless. These eight are the contexts every supported version
- * reads, which is also exactly the set the 1.7 item frames have a matrix for.
+ * <p>This is not {@code ItemDisplayContext}: that enum gained {@code on_shelf} at 26.1, so its membership differs
+ * across the range, and it is a Minecraft class where Minecraft must not be needed (the model generator runs
+ * headless). These eight are the contexts every supported version reads, and the set the 1.7 item frames have a
+ * matrix for.
  *
  * <p>{@code none} is absent on purpose: vanilla never looks a transform up for it, and a model that
  * named one would be stating something nothing applies.
@@ -35,8 +35,8 @@ public enum DisplaySlot {
 
     /**
      * Whether {@code ItemTransform.apply} will negate this slot's x translation and its y and z
-     * rotations — which it does for the two left hands whatever the file says, so a frame meant for one
-     * of them ships pre-negated.
+     * rotations. It does so for the two left hands whatever the file says, so a frame meant for one of
+     * them ships pre-negated.
      */
     public boolean leftHand() {
         return this == THIRD_PERSON_LEFT_HAND || this == FIRST_PERSON_LEFT_HAND;

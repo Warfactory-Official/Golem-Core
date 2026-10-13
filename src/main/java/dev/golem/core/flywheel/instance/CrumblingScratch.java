@@ -14,9 +14,9 @@ import org.lwjgl.system.MemoryUtil;
 // Transient UBO for the crumbling pass. The main per-Instancer UBOs can't be sliced per instance
 // without UBO offset alignment problems (typically 256 B; our stride is 96 B). Instead, the
 // crumbling pass packs each (mesh, progress) group of instances into a small dedicated UBO and
-// binds the whole thing — gl_InstanceID indexes into the packed range starting at 0.
+// binds the whole thing. gl_InstanceID indexes into the packed range starting at 0.
 //
-// fill() must be called BEFORE opening a render pass — it issues writeToBuffer which is
+// fill() must be called before opening a render pass. It issues writeToBuffer, which is
 // forbidden inside an open pass. Returns a parallel list of GpuBufferSlices, one per input
 // group, so the caller can bind them inside the pass.
 public final class CrumblingScratch {
@@ -57,7 +57,7 @@ public final class CrumblingScratch {
         long totalBytes = cursor;
         ensureCapacity(totalBytes);
 
-        // memCalloc zeros the buffer — alignment gaps between groups stay zero and never confuse
+        // memCalloc zeros the buffer. Alignment gaps between groups stay zero and never confuse
         // a validator (no GPU consumer reads them, but writeToBuffer uploads the whole range).
         ByteBuffer staging = MemoryUtil.memCalloc((int) totalBytes).order(ByteOrder.nativeOrder());
         try {

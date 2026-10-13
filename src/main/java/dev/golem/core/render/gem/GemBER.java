@@ -7,6 +7,10 @@ import dev.golem.core.render.CompatRenderState;
 import dev.golem.core.render.SubmitSink;
 import dev.golem.core.render.gem.Gem.Model;
 import dev.golem.core.render.Visuals;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
@@ -15,18 +19,16 @@ import org.jspecify.annotations.Nullable;
  * A block-entity renderer that declares its model instead of drawing it.
  *
  * <p>Subclasses implement two things: {@link #setup} states the model once, and {@link #extract} reads
- * the block entity into the render state the model's channels bind to. There is no submit step to
- * write — {@link #submit} is final, and replays the declaration. That is the whole point: a renderer
- * with its own submit body can only feed the vanilla pass, and the instanced backend needs the same
- * model expressed as data it can allocate against before the first frame.
+ * the block entity into the render state the model's channels bind to. {@link #submit} is final and
+ * replays the declaration; a renderer with its own submit body could only feed the vanilla pass, and the
+ * instanced backend needs the model as data it can allocate against before the first frame.
  *
- * <p>The model is built on first use rather than in the constructor. Its parts name loaded meshes, and
- * a subclass field holding one is still null while a superclass constructor runs — calling an
- * overridable setup step from the constructor would hand {@code setup} a half-built renderer. First
- * use is on the render thread, after resources are loaded, and only ever happens once.
+ * <p>The model is built on first use, not in the constructor: its parts name loaded meshes, and a subclass
+ * field holding one is still null while a superclass constructor runs, so calling {@code setup} there would
+ * hand it a half-built renderer. First use is on the render thread, after resources are loaded, once.
  *
- * <p>{@link #viewDistance} and {@link #shouldRenderOffScreen} come from the model rather than from
- * overrides, so a machine states how far it draws in the same place it states what it draws.
+ * <p>{@link #viewDistance} and {@link #shouldRenderOffScreen} come from the model, so a machine states how
+ * far it draws where it states what it draws.
  */
 public abstract class GemBER<T extends BlockEntity, S extends CompatRenderState> implements CompatBER<T, S> {
 
@@ -63,13 +65,12 @@ public abstract class GemBER<T extends BlockEntity, S extends CompatRenderState>
      * Per-position count of submits that replayed the declaration and submits that left it to an
      * instanced visual, while {@link #trace(boolean)} is on.
      *
-     * <p>A correct instanced frame and a correct vanilla frame are the same pixels, so a screenshot
-     * cannot say which path drew a machine — and "the engine is off, so the vanilla renderer draws"
-     * is precisely the claim a fallback test has to prove rather than infer. Off by default: it costs a
-     * map write per machine per frame, and only a test harness ever asks.
+     * <p>An instanced frame and a vanilla frame are the same pixels, so a screenshot cannot say which path
+     * drew a machine; a fallback test needs this count. Off by default: it costs a map write per machine
+     * per frame.
      */
     private static volatile boolean tracing;
-    private static final java.util.Map<Long, int[]> TRACE = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final Map<Long, int[]> TRACE = new ConcurrentHashMap<>();
 
     /** Turns replay tracing on or off; turning it on starts every count from zero. */
     public static void trace(boolean on) {
@@ -87,8 +88,8 @@ public abstract class GemBER<T extends BlockEntity, S extends CompatRenderState>
     }
 
     /** Every position traced since tracing was switched on. */
-    public static java.util.List<net.minecraft.core.BlockPos> tracedPositions() {
-        java.util.List<net.minecraft.core.BlockPos> out = new java.util.ArrayList<>();
+    public static List<net.minecraft.core.BlockPos> tracedPositions() {
+        List<net.minecraft.core.BlockPos> out = new ArrayList<>();
         for (Long packed : TRACE.keySet()) out.add(net.minecraft.core.BlockPos.of(packed));
         return out;
     }
@@ -105,11 +106,9 @@ public abstract class GemBER<T extends BlockEntity, S extends CompatRenderState>
      * Geometry a machine <em>builds</em> rather than places: a beam whose vertices come from where it
      * lands, a flame that billboards to the camera, a fluid surface whose shape is its fill level.
      *
-     * <p>There is no resident mesh for the instanced backend to allocate one of these against, so this
-     * runs through the vanilla pass on every node and in every frame — including a frame where the
-     * instanced backend owns the declared tree and the replay above was skipped. Override it only for
-     * geometry that genuinely has no fixed shape; a mesh placed by a transform, however the transform is
-     * computed, belongs in {@link #setup} where both backends can read it.
+     * <p>The instanced backend has no resident mesh for these, so this runs through the vanilla pass on every
+     * node in every frame, including frames where the instanced backend owns the declared tree. Override it
+     * only for geometry with no fixed shape; a mesh placed by a computed transform belongs in {@link #setup}.
      */
     protected void submitUndeclared(S state, PoseStack poseStack, SubmitSink sink, CameraInfo camera) {}
 

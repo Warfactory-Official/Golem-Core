@@ -161,9 +161,9 @@ final class GemModelTest {
     }
 
     /**
-     * The bus order is the one the weapon renderers already apply — translate, the three rotations in
-     * the bus's own axis order, the pivot subtracted, then scale — so a keyframe table written for a
-     * gun reads identically on a machine.
+     * The bus order is the one the weapon renderers apply: translate, the three rotations in
+     * the bus's own axis order, the pivot subtracted, then scale. A keyframe table written for a
+     * gun therefore reads identically on a machine.
      */
     @Test
     void aBusPlaysInTheOrderTheWeaponRenderersUse() {
@@ -210,7 +210,7 @@ final class GemModelTest {
 
     /**
      * A mesh or a skin read from the state is what a machine with several shapes or several paint jobs
-     * declares instead of one part per combination — and it is also what stops that part being rigid,
+     * declares instead of one part per combination. It also stops that part being rigid,
      * because the bucket it draws from can move.
      */
     @Test

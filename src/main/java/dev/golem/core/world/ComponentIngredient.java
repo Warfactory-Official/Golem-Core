@@ -1,12 +1,21 @@
 package dev.golem.core.world;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.golem.core.Ids;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -16,17 +25,17 @@ import net.minecraft.world.item.crafting.Ingredient;
  * A crafting ingredient that can say what the flattened 1.7 ingredients said.
  *
  * <ul>
- *   <li>{@code items} — item ids, and item tags written {@code #namespace:path}; any one matches.</li>
- *   <li>{@code components} / {@code absent_components} — exact components the stack must carry, or must not
+ *   <li>{@code items}: item ids, and item tags written {@code #namespace:path}; any one matches.</li>
+ *   <li>{@code components} / {@code absent_components}: exact components the stack must carry, or must not
  *       (1.7 metadata and NBT flattened into components). A number matches an integer component; a string
  *       matches a component whose codec writes that string (a registry name such as {@code hbm:water} -
  *       never a numeric registry id, which is not stable across saves).</li>
- *   <li>{@code fluid} + {@code fluid_amount} — a full fluid container of that fluid and amount, whatever
+ *   <li>{@code fluid} + {@code fluid_amount}: a full fluid container of that fluid and amount, whatever
  *       the container, per the mod's {@link FilledContainers} dictionary (1.7 {@code getDict}). The grid
  *       keeps the emptied container.</li>
- *   <li>{@code potion} — the potion the stack carries ({@code minecraft:water} is 1.7's potion meta 0).</li>
- *   <li>{@code remainder} — an explicit item the grid keeps instead of the item's own remainder.</li>
- *   <li>{@code degrade} — the stack itself stays in the grid one point more worn (1.7 crafting tools).</li>
+ *   <li>{@code potion}: the potion the stack carries ({@code minecraft:water} is 1.7's potion meta 0).</li>
+ *   <li>{@code remainder}: an explicit item the grid keeps instead of the item's own remainder.</li>
+ *   <li>{@code degrade}: the stack itself stays in the grid one point more worn (1.7 crafting tools).</li>
  * </ul>
  * Every constraint given has to hold. With no {@code items}, the other constraints alone decide.
  */
@@ -36,7 +45,7 @@ public final class ComponentIngredient {
             new ComponentIngredient(List.of(), Map.of(), List.of(), "", "", 0, "", false);
 
     /** A component value as recipe data writes it: a number or a string. */
-    private static final Codec<com.mojang.datafixers.util.Either<Integer, String>> VALUE = Codec.either(Codec.INT, Codec.STRING);
+    private static final Codec<Either<Integer, String>> VALUE = Codec.either(Codec.INT, Codec.STRING);
 
     public static final Codec<ComponentIngredient> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Codec.STRING.listOf().optionalFieldOf("items", List.of()).forGetter(value -> value.items),
@@ -96,22 +105,22 @@ public final class ComponentIngredient {
         }
     }
 
-    private static Map<String, Integer> ints(Map<String, com.mojang.datafixers.util.Either<Integer, String>> values) {
-        Map<String, Integer> ints = new java.util.HashMap<>();
+    private static Map<String, Integer> ints(Map<String, Either<Integer, String>> values) {
+        Map<String, Integer> ints = new HashMap<>();
         values.forEach((key, value) -> value.ifLeft(number -> ints.put(key, number)));
         return ints;
     }
 
-    private static Map<String, String> strings(Map<String, com.mojang.datafixers.util.Either<Integer, String>> values) {
-        Map<String, String> strings = new java.util.HashMap<>();
+    private static Map<String, String> strings(Map<String, Either<Integer, String>> values) {
+        Map<String, String> strings = new HashMap<>();
         values.forEach((key, value) -> value.ifRight(text -> strings.put(key, text)));
         return strings;
     }
 
-    private Map<String, com.mojang.datafixers.util.Either<Integer, String>> componentValues() {
-        Map<String, com.mojang.datafixers.util.Either<Integer, String>> values = new java.util.LinkedHashMap<>();
-        components.forEach((key, value) -> values.put(key, com.mojang.datafixers.util.Either.left(value)));
-        stringComponents.forEach((key, value) -> values.put(key, com.mojang.datafixers.util.Either.right(value)));
+    private Map<String, Either<Integer, String>> componentValues() {
+        Map<String, Either<Integer, String>> values = new LinkedHashMap<>();
+        components.forEach((key, value) -> values.put(key, Either.left(value)));
+        stringComponents.forEach((key, value) -> values.put(key, Either.right(value)));
         return values;
     }
 
@@ -124,26 +133,26 @@ public final class ComponentIngredient {
         return new ComponentIngredient(List.of(), Map.of(), List.of(), "", fluid, amount, "", false);
     }
 
-    public static ComponentIngredient fromJson(com.google.gson.JsonElement element) {
+    public static ComponentIngredient fromJson(JsonElement element) {
         if (element.isJsonPrimitive() && element.getAsJsonPrimitive().isString()) {
             return of(element.getAsString());
         }
-        com.google.gson.JsonObject object = element.getAsJsonObject();
-        com.google.gson.JsonElement itemValues = object.get("items");
+        JsonObject object = element.getAsJsonObject();
+        JsonElement itemValues = object.get("items");
         List<String> items = new ArrayList<>();
         if (itemValues != null && itemValues.isJsonArray()) {
-            for (com.google.gson.JsonElement value : itemValues.getAsJsonArray()) items.add(value.getAsString());
+            for (JsonElement value : itemValues.getAsJsonArray()) items.add(value.getAsString());
         } else if (object.has("item")) {
             items.add(object.get("item").getAsString());
         } else if (object.has("tag")) {
             items.add("#" + object.get("tag").getAsString());
         }
-        Map<String, Integer> components = new java.util.HashMap<>();
-        Map<String, String> stringComponents = new java.util.HashMap<>();
-        com.google.gson.JsonObject componentValues = object.getAsJsonObject("components");
+        Map<String, Integer> components = new HashMap<>();
+        Map<String, String> stringComponents = new HashMap<>();
+        JsonObject componentValues = object.getAsJsonObject("components");
         if (componentValues != null) {
-            for (Map.Entry<String, com.google.gson.JsonElement> entry : componentValues.entrySet()) {
-                com.google.gson.JsonElement value = entry.getValue();
+            for (Map.Entry<String, JsonElement> entry : componentValues.entrySet()) {
+                JsonElement value = entry.getValue();
                 if (value.isJsonPrimitive() && value.getAsJsonPrimitive().isString()) {
                     stringComponents.put(entry.getKey(), value.getAsString());
                 } else {
@@ -152,9 +161,9 @@ public final class ComponentIngredient {
             }
         }
         List<String> absentComponents = new ArrayList<>();
-        com.google.gson.JsonArray absentValues = object.getAsJsonArray("absent_components");
+        JsonArray absentValues = object.getAsJsonArray("absent_components");
         if (absentValues != null) {
-            for (com.google.gson.JsonElement value : absentValues) absentComponents.add(value.getAsString());
+            for (JsonElement value : absentValues) absentComponents.add(value.getAsString());
         }
         return new ComponentIngredient(items, components, absentComponents,
                 string(object, "remainder"), string(object, "fluid"),
@@ -163,7 +172,7 @@ public final class ComponentIngredient {
                 stringComponents);
     }
 
-    private static String string(com.google.gson.JsonObject object, String key) {
+    private static String string(JsonObject object, String key) {
         return object.has(key) ? object.get(key).getAsString() : "";
     }
 
@@ -172,10 +181,10 @@ public final class ComponentIngredient {
         List<String> items = new ArrayList<>(itemCount);
         for (int i = 0; i < itemCount; i++) items.add(buffer.readUtf());
         int componentCount = buffer.readVarInt();
-        Map<String, Integer> components = new java.util.HashMap<>();
+        Map<String, Integer> components = new HashMap<>();
         for (int i = 0; i < componentCount; i++) components.put(buffer.readUtf(), buffer.readVarInt());
         int stringCount = buffer.readVarInt();
-        Map<String, String> stringComponents = new java.util.HashMap<>();
+        Map<String, String> stringComponents = new HashMap<>();
         for (int i = 0; i < stringCount; i++) stringComponents.put(buffer.readUtf(), buffer.readUtf());
         int absentCount = buffer.readVarInt();
         List<String> absentComponents = new ArrayList<>(absentCount);
@@ -279,7 +288,7 @@ public final class ComponentIngredient {
         if (!fluid.isEmpty()) return FilledContainers.emptied(consumed);
         if (degrade) return Ingredients.degraded(consumed);
         if (!remainder.isEmpty()) {
-            Item item = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(Ids.parse(remainder));
+            Item item = BuiltInRegistries.ITEM.getValue(Ids.parse(remainder));
             return item == Items.AIR ? ItemStack.EMPTY : new ItemStack(item);
         }
         return Compat.craftingRemainder(consumed);
@@ -298,7 +307,7 @@ public final class ComponentIngredient {
             } else if (!potion.isEmpty()) {
                 stacks.add(Ingredients.potionStack(entry, potion));
             } else {
-                Item item = net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(Ids.parse(entry));
+                Item item = BuiltInRegistries.ITEM.getValue(Ids.parse(entry));
                 if (item != Items.AIR) stacks.add(new ItemStack(item));
             }
         }
@@ -310,8 +319,8 @@ public final class ComponentIngredient {
         if (isEmpty()) return Ingredient.of();
         if (items.size() == 1 && items.get(0).startsWith("#") && fluid.isEmpty()) {
             // A lone tag stays a lazily bound tag, so it displays correctly even before tags are loaded.
-            net.minecraft.tags.TagKey<Item> tag = net.minecraft.tags.TagKey.create(
-                    net.minecraft.core.registries.Registries.ITEM, Ids.parse(items.get(0).substring(1)));
+            TagKey<Item> tag = TagKey.create(
+                    Registries.ITEM, Ids.parse(items.get(0).substring(1)));
             //? if >=26.1 {
             java.util.Optional<net.minecraft.core.HolderSet.Named<Item>> set =
                     net.minecraft.core.registries.BuiltInRegistries.ITEM.get(tag);

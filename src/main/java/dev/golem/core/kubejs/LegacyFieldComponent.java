@@ -77,7 +77,7 @@ final class LegacyFieldComponent implements RecipeComponent<JsonElement> {
         return value;
     }
 
-    // ----- script value or file JSON -> row JSON ------------------------------------------------------------------
+    // Script value or file JSON -> row JSON
 
     @Override
     public JsonElement read(RecipeJS recipe, Object from) {
@@ -173,7 +173,7 @@ final class LegacyFieldComponent implements RecipeComponent<JsonElement> {
         return BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
     }
 
-    // ----- filters and replacements -------------------------------------------------------------------------------
+    // Filters and replacements
 
     @Override
     public boolean isInput(RecipeJS recipe, JsonElement value, ReplacementMatch match) {

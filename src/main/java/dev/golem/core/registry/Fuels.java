@@ -7,10 +7,10 @@ import net.minecraft.world.item.Item;
 /**
  * Furnace burn times, registered the same way on every loader and version.
  *
- * <p>The shape of this changed twice and in opposite directions. NeoForge reads burn times from a
- * {@code neoforge:furnace_fuels} data map — plain JSON, no code at all. Fabric registered them into a
- * global mutable {@code FuelRegistry} until 26.1, which replaced it with a {@code FuelValues} builder
- * assembled per-server. A consumer holding a map of item to ticks should not have to care which.
+ * <p>The loaders differ. NeoForge reads burn times from a {@code neoforge:furnace_fuels} data map: plain
+ * JSON, no code at all. Fabric below 26.1 registers them into a global mutable {@code FuelRegistry}; 26.1
+ * uses a {@code FuelValues} builder assembled per server. A consumer holding a map of item to ticks does
+ * not see which.
  *
  * <p>On NeoForge this is a no-op by design: the {@code neoforge:furnace_fuels} data map already carries
  * the values, and registering them twice would be the bug. Forge 1.20.1 has no fuel data map; there the
@@ -53,6 +53,6 @@ public final class Fuels {
                     if (ticks != null) event.setBurnTime(ticks);
                 });
         *///?}
-        // NeoForge: nothing to do — see the class note.
+        // NeoForge: nothing to do. See the class note.
     }
 }

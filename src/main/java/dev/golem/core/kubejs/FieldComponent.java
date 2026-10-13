@@ -111,7 +111,7 @@ final class FieldComponent implements RecipeComponent<JsonElement> {
         return field.isList() ? one.asArray() : one;
     }
 
-    // ----- script value -> row JSON -------------------------------------------------------------------------------
+    // Script value to row JSON
 
     @Override
     public JsonElement wrap(RecipeScriptContext cx, @Nullable Object from) {
@@ -208,7 +208,7 @@ final class FieldComponent implements RecipeComponent<JsonElement> {
         return BuiltInRegistries.ITEM.getKey(item).toString();
     }
 
-    // ----- filters and replacements -------------------------------------------------------------------------------
+    // Filters and replacements
 
     @Override
     public boolean matches(RecipeMatchContext cx, JsonElement value, ReplacementMatchInfo match) {

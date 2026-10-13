@@ -13,13 +13,11 @@ import net.minecraft.world.inventory.MenuType;
 /**
  * Menus that carry a {@link BlockPos} to the client when they open.
  *
- * <p>Vanilla's own menu type cannot send extra opening data, so every loader invented its own — and
- * then renamed it. NeoForge has {@code IMenuTypeExtension}; Fabric had {@code ExtendedScreenHandlerType}
- * and renamed it to {@code ExtendedMenuType} in the 26.1 line, having already changed how the data is
- * written (a {@code StreamCodec} from 1.20.5, a raw buffer write before that). Four spellings of one
- * idea, none of them Minecraft's.
+ * <p>Vanilla's menu type cannot send extra opening data, so every loader has its own: NeoForge has
+ * {@code IMenuTypeExtension}; Fabric's {@code ExtendedScreenHandlerType} became {@code ExtendedMenuType}
+ * in the 26.1 line, and its data moved from a raw buffer write to a {@code StreamCodec} in 1.20.5.
  *
- * <p>The position is what a machine menu needs in practice: the container re-derives its state from
+ * <p>The position is what a machine menu needs: the container re-derives its state from
  * {@code level.getBlockState(pos)} on both sides, which is safer than trusting a client-sent value.
  */
 public final class Menus {

@@ -11,16 +11,15 @@ import org.jspecify.annotations.Nullable;
 /**
  * A {@link Geometry} stated in code rather than loaded from a file.
  *
- * <p>Not every lump this mod draws comes out of an OBJ. A primed charge is a textured cube, an ejected
- * sawblade is two crossed sheets, and both were written as loops emitting vertices straight into the
- * buffer. That is a shape the vanilla pass can draw and the instanced backend cannot see, because the
- * triangles only exist for the duration of the call.
+ * <p>Not every lump comes out of an OBJ: a primed charge is a textured cube and an ejected sawblade is two
+ * crossed sheets. Written as a loop emitting vertices into the buffer, such a shape can be drawn by the
+ * vanilla pass but is invisible to the instanced backend, because its triangles only exist for the duration
+ * of the call.
  *
- * <p>Core owns this rather than the consumer for the reason {@link Geometry} does not own a parser: the
- * interleaved {@code x, y, z, u, v, nx, ny, nz} layout is the instanced backend's, and a consumer
- * writing it by hand would be transcribing a detail that is not its to know. Quads are the currency
- * because the vanilla pass takes them directly, while {@link #vertices} splits each into the two
- * triangles the mesh pool wants — the same two forms {@code WavefrontObj} hands over for a loaded group.
+ * <p>Quads are the currency because the vanilla pass takes them directly, while {@link #vertices} splits
+ * each into the two triangles the mesh pool wants, in the interleaved {@code x, y, z, u, v, nx, ny, nz}
+ * layout that belongs to the instanced backend, not to consumers. These are the same two forms
+ * {@code WavefrontObj} hands over for a loaded group.
  */
 public final class Quads {
 

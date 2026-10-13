@@ -4,14 +4,16 @@ import com.google.gson.JsonObject;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
  * The texture slots of one generated model, in declaration order.
  *
  * <p><b>Slots are never pruned.</b> A texture entry that no face in the parent chain references is
- * not dead weight — it can be the slot carrier a Java model baker or a connected-texture engine
+ * not dead weight. It can be the slot carrier a Java model baker or a connected-texture engine
  * reads. Dropping one fails the bake with "Missing texture references" instead of merely drawing an
  * untextured face, and the report names the model rather than whatever deleted the entry. Anything
  * put here is emitted.
@@ -88,8 +90,8 @@ public final class Slots {
      * layer feeds these to the resource manager once it has one, which is the only point at which
      * "does this texture exist" can be answered.
      */
-    public java.util.Set<String> sprites() {
-        java.util.Set<String> sprites = new java.util.LinkedHashSet<>();
+    public Set<String> sprites() {
+        Set<String> sprites = new LinkedHashSet<>();
         for (String value : values.values()) {
             if (!value.startsWith("#")) {
                 sprites.add(value);

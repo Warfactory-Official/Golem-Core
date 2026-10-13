@@ -5,8 +5,8 @@ package dev.golem.core.flywheel.indirect;
 import org.lwjgl.system.MemoryUtil;
 
 // Packed scatter records consumed by the scatter compute shader. Each record is
-// (sizeAndSrcOffset uint, dstOffset uint) — upper 8 bits of sizeAndSrcOffset carry the copy
-// size in uints, lower 24 bits carry the source offset in uints (24 bits = 16 MB staging
+// (sizeAndSrcOffset uint, dstOffset uint). The upper 8 bits of sizeAndSrcOffset carry the copy
+// size in uints, the lower 24 bits the source offset in uints (24 bits = 16 MB staging
 // ring max). Large transfers are split into max-256-byte (64-uint) copies so each fits in one
 // workgroup of the scatter shader (local_size_x = 64 with one uint per invocation).
 //

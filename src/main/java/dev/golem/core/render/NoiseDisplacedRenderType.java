@@ -34,18 +34,18 @@ import java.util.Map;
  * space</em>.
  *
  * <p>The vertex format is {@code POSITION_TEX_COLOR}: {@code UV0.x} is the texture coordinate the shader samples with,
- * {@code UV0.y} carries the per-vertex time (the old program's {@code time} uniform, set per particle). Positions arrive
- * already posed (render space), so the object-space offset is mapped by {@link #localMatrix}: on 26.1 through the render
- * type's texture transform ({@code TextureMat}, read by the draw after submission in the same frame), before 26.1
- * through a {@code LocalMat} uniform set when the type's state is applied. Either way the matrix is read when the batch is
- * drawn, after every submission of the frame, so each drawing object that needs its own matrix takes its own
- * <em>slot</em> ({@code 0 .. SLOTS - 1}): a separate render type with its own matrix. Slot 0 is the one-argument form
- * (a first-person effect drawn once per frame); third-person users hand out the others per frame.
+ * {@code UV0.y} carries the per-vertex time (1.12's {@code time} uniform, set per particle). Positions arrive
+ * already posed (render space), so the object-space offset is mapped by {@link #localMatrix}: on 26.1 through the
+ * render type's texture transform ({@code TextureMat}), before 26.1 through a {@code LocalMat} uniform set when the
+ * type's state is applied. Either way the matrix is read when the batch is drawn, after every submission of the
+ * frame, so each drawing object that needs its own matrix takes its own <em>slot</em> ({@code 0 .. SLOTS - 1}), a
+ * separate render type. Slot 0 is the one-argument form (a first-person effect drawn once per frame);
+ * third-person users hand out the others per frame.
  *
  * <p>Resources: {@code <namespace>:shaders/core/<name>.vsh/.fsh} on 26.1 (pipeline {@code <namespace>:pipeline/<name>});
  * below 26.1 the program {@code <namespace>:shaders/core/<name>.json} (its stages may be named differently), loaded through
  * {@link ShaderLoader} (the Fabric program-name trap is handled there). The JSON must <em>not</em> state a blend: on
- * 1.20.1 (1.21.1's {@code ShaderInstance} no longer reads one) a program blend becomes {@code BlendMode.lastApplied}, and the next vanilla core shader whose (opaque) mode
+ * 1.20.1 (1.21.1's {@code ShaderInstance} does not read one) a program blend becomes {@code BlendMode.lastApplied}, and the next vanilla core shader whose (opaque) mode
  * differs then disables blending after its own render type enabled it (vignette, HUD and translucent geometry drawn
  * opaque). The render type's {@code LIGHTNING_TRANSPARENCY} sets {@code SRC_ALPHA / ONE}; the program's default
  * (opaque) blend that {@code apply()} re-applies over it is undone after every {@code apply()}, as {@link Bloom} does.

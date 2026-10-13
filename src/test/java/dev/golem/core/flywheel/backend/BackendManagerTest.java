@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 /**
  * The backend choice must never throw: it runs from the client level-load listener, where a throw is a
  * crash for a feature that is only an acceleration. Every bad setting falls back like the published
- * engine's config does, and "nothing usable" is null — no visualization, vanilla renderers draw.
+ * engine's config does, and "nothing usable" is null: no visualization, vanilla renderers draw.
  */
 final class BackendManagerTest {
 

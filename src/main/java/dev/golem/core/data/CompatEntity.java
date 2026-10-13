@@ -19,11 +19,9 @@ import net.minecraft.world.level.storage.ValueOutput;
 /**
  * Entity counterpart to {@link CompatBlockEntity}.
  *
- * <p>This exists for a reason worth stating: entities and block entities persist through <i>different
- * vanilla hooks</i> ({@code addAdditionalSaveData} versus {@code saveAdditional}) but routinely share
- * the same serialisation helpers — a fluid tank's {@code save} method, a status-effect's {@code load}.
- * Converting only block entities to {@link DataIn}/{@link DataOut} would force those shared helpers to
- * carry two signatures, one per caller. Giving entities the same facade keeps every helper single-signature.
+ * <p>Entities and block entities persist through different vanilla hooks ({@code addAdditionalSaveData}
+ * versus {@code saveAdditional}) but share serialisation helpers such as a fluid tank's {@code save}.
+ * The same {@link DataIn}/{@link DataOut} facade keeps those helpers single-signature.
  *
  * <p>As with block entities, subclasses override {@link #loadData}/{@link #saveData} and never see the
  * version difference.
@@ -129,14 +127,12 @@ public abstract class CompatEntity extends Entity {
      * 26.1 splits the server-authoritative path into {@code hurtServer(ServerLevel, …)}, older versions
      * have only {@code hurt(DamageSource, float)}. Return false to ignore the damage entirely.
      *
-     * <p>{@link Compat#hurt} is the matching call side; this is the override side, which was missing.
+     * <p>{@link Compat#hurt} is the matching call side.
      */
     protected boolean onHurt(net.minecraft.world.damagesource.DamageSource source, float amount) {
-        // Not delegated to super: 26.1 makes Entity.hurtServer ABSTRACT, so there is no inherited
-        // behaviour to fall back on and every entity has to state its own answer. Rather than give the
-        // two eras different defaults — vanilla's damage handling below 26.1, a compile error above —
-        // this models 26.1's contract on every version: unhandled means "takes no damage", which is
-        // also what every consumer of this class already does.
+        // Not delegated to super: 26.1 makes Entity.hurtServer abstract, so there is no inherited behaviour.
+        // Older versions inherit damage handling, so this models 26.1's contract everywhere: unhandled
+        // means "takes no damage".
         return false;
     }
 
@@ -155,8 +151,8 @@ public abstract class CompatEntity extends Entity {
 
     /**
      * Handles a player right-clicking this entity. 26.1 passes the hit position; older versions do not.
-     * The position is dropped rather than synthesised — no consumer has needed it, and inventing one
-     * would be a behavioural difference disguised as compatibility.
+     * The position is dropped rather than synthesised: no consumer needs it, and an invented one would be a
+     * behaviour difference.
      */
     protected net.minecraft.world.InteractionResult onInteract(net.minecraft.world.entity.player.Player player,
                                                                net.minecraft.world.InteractionHand hand) {

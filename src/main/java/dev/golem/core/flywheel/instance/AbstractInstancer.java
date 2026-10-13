@@ -20,48 +20,43 @@ import java.util.concurrent.ForkJoinPool;
 // Per-bucket persistent CPU staging shared by both backends. Subclasses (InstancedInstancer
 // for UBO, IndirectInstancer for SSBO) own the GPU-side specifics: where the bytes go on
 // flush, how growth is handled, when the GPU buffer gets created. Visuals only see the
-// Instancer interface — the public allocate() returns an Instance handle.
+// Instancer interface. The public allocate() returns an Instance handle.
 //
 // std140 layout per instance (112 bytes):
 //   ivec2 OverlayCoords  (offset 0)
 //   ivec2 LightCoords    (offset 8)
 //   vec4  Color          (offset 16)
 //   mat4  ModelMat       (offset 32, ends at 96)
-//   vec4  UVTransform    (offset 96, ends at 112) — (offsetU, offsetV, scaleU, scaleV)
+//   vec4  UVTransform    (offset 96, ends at 112): (offsetU, offsetV, scaleU, scaleV)
 //
-// UVTransform applies in the vertex shader as `texCoord0 = UV0 * scale + offset`. Identity
-// is (0, 0, 1, 1) so visuals that don't animate UVs see no behavior change. Sprite-strip
-// animations (rad fog frame cycle, RBMK fire/steam/mush, MukeCloud) use this to pick a
-// single sub-rect of an N×M frame sheet per frame.
+// UVTransform applies in the vertex shader as `texCoord0 = UV0 * scale + offset`; identity is
+// (0, 0, 1, 1). Sprite-strip animations (rad fog frame cycle, RBMK fire/steam/mush, MukeCloud)
+// use it to pick one sub-rect of an N×M frame sheet.
 //
-// Storage: a single persistent-mapped GL buffer of `capacity * 112` bytes in std140 layout is
-// the source of truth. Setters use absolute writes into the mapped ByteBuffer; the indirect
+// Storage: one persistent-mapped GL buffer of `capacity * 112` bytes in std140 layout is the
+// source of truth. Setters write absolute positions into the mapped ByteBuffer; the indirect
 // backend uploads dirty pages with one glFlushMappedNamedBufferRange + glCopyNamedBufferSubData
-// into the shared object SSBO — no CPU staging ring, no scatter compute. The slab is created
-// by SlabBuffer in the constructor (render thread) and freed in close(); ensureCapacity
-// reallocates via SlabBuffer's retired-frame pattern and zeros the new tail. Two heap-side
-// caches survive only because they cross-influence each other:
-//   - colors[] is needed so setVisible(true) can restore the prior color into the slab,
-//     since the slab's color slot is zeroed when invisible (the GPU cull pass uses an
-//     all-zero color as the dead-instance sentinel).
-//   - visible[] is needed so setColor knows whether to overwrite the slab's color slot
-//     (only when visible) or just update the cache and leave the sentinel in place.
+// into the shared object SSBO (no staging ring, no scatter compute). SlabBuffer creates the
+// slab in the constructor (render thread); close() frees it; ensureCapacity reallocates via
+// SlabBuffer's retired-frame pattern and zeros the new tail. Two heap-side caches exist
+// because they depend on each other:
+//   - colors[] lets setVisible(true) restore the prior color; the slab's color slot is zeroed
+//     while invisible (the GPU cull pass reads an all-zero color as the dead-instance sentinel).
+//   - visible[] tells setColor whether to overwrite the slab's color slot (only when visible)
+//     or just update the cache and leave the sentinel.
 //
 // Threading: the per-slot writers (writeTransform / writeLight / writeOverlay / writeColor /
-// writeVisible / writeUV) are lock-free. Each Instance handle owns a unique slot index, so
-// concurrent calls from worker threads target disjoint slab regions and disjoint cache
-// slots. Two pieces of state are shared and need explicit synchronization:
-//   - The dirty range is sharded across SHARD_COUNT cache-line-padded (min, max) cells.
-//     Each markDirty hashes the calling thread to a shard, so K worker threads contend only
-//     when they collide on a shard (~K/SHARD_COUNT chance per pair). dirtyMin/Max reduce all
-//     shards on the render thread at flush time.
-//   - visiblePageMasks packs 32 slots into one int word, so two workers updating different
-//     slots in the same word would race a plain |=/&=. Bit set/clear go through
-//     VarHandle.compareAndSet, mirroring upstream Flywheel's per-page AtomicInteger
-//     validity bitset without the AtomicIntegerArray pointer indirection.
-// The remaining structural methods (allocate, free, ensureCapacity, flush, writeStd140,
-// close) run outside visual writer tasks. Backend parallelUpdate may reshuffle slots only
-// after the visual frame plans have completed.
+// writeVisible / writeUV) are lock-free because each Instance handle owns a unique slot, so
+// workers touch disjoint slab regions and cache slots. Two pieces of state are shared:
+//   - The dirty range is sharded across SHARD_COUNT cache-line-padded (min, max) cells. Each
+//     markDirty hashes the calling thread to a shard; dirtyMin/Max reduce all shards on the
+//     render thread at flush time.
+//   - visiblePageMasks packs 32 slots into one int word, so bit set/clear go through
+//     VarHandle.compareAndSet (as upstream Flywheel's per-page AtomicInteger validity bitset,
+//     without the AtomicIntegerArray indirection).
+// The structural methods (allocate, free, ensureCapacity, flush, writeStd140, close) run
+// outside visual writer tasks. Backend parallelUpdate may reshuffle slots only after the
+// visual frame plans have completed.
 public abstract class AbstractInstancer implements Instancer {
 
     public static final int FLOATS_PER_MAT4 = 16;
@@ -87,7 +82,7 @@ public abstract class AbstractInstancer implements Instancer {
     private final byte[] swapOther = new byte[STD140_BYTES];
     protected int capacity;
 
-    // Side caches — only the two fields whose semantics depend on each other (see class doc).
+    // Side caches: only the two fields whose semantics depend on each other (see class doc).
     protected int[] colors;
     protected boolean[] visible;
     // Packed 32-slot visibility masks for backends that batch work per fixed-size page.
@@ -220,7 +215,7 @@ public abstract class AbstractInstancer implements Instancer {
 
     void writeColor(int index, int color) {
         colors[index] = color;
-        // Only blast over the slab color when visible — otherwise the dead-instance
+        // Only blast over the slab color when visible. Otherwise the dead-instance
         // sentinel (all-zero color) must remain in place.
         if (visible[index]) {
             int base = index * STD140_BYTES + OFF_COLOR;
@@ -233,8 +228,8 @@ public abstract class AbstractInstancer implements Instancer {
     }
 
     // Raw-float writer for materials that hijack InstanceColor as per-instance numerical data
-    // (slide offsets for CUTOUT_CLIP_SLAB / CUTOUT_CLIP_HALFSPACE, etc.). Bypasses the ARGB→byte→float round-trip
-    // so the values land in the slab with full float precision. Skips the colors[] cache —
+    // (slide offsets for CUTOUT_CLIP_SLAB / CUTOUT_CLIP_HALFSPACE, etc.). Bypasses the ARGB-to-byte-to-float round-trip
+    // so the values land in the slab with full float precision. Skips the colors[] cache.
     // setVisible(true) would restore the cached int form (lossy), so callers using rawColor
     // must re-write each frame or avoid setVisible toggles. Visibility check is the same as
     // writeColor: silently ignored on invisible slots so the dead-instance sentinel stays.
@@ -303,12 +298,10 @@ public abstract class AbstractInstancer implements Instancer {
         return slabBuffer;
     }
 
-    // Lock-free CAS loop. Workers from the parallel frame phase concurrently mark slots
-    // dirty; each call lowers its shard's min to `index` if smaller, raises its shard's
-    // max if larger. Shard chosen by hashing the calling thread, so K workers spread
-    // across SHARD_COUNT cells with low collision probability. getLongOpaque inside the
-    // loop is sufficient — compareAndSetLong re-validates the value and carries volatile
-    // (release+acquire) semantics on success.
+    // Lock-free CAS loop. Parallel frame workers mark slots dirty; each call lowers its shard's
+    // min to `index` if smaller and raises its max if larger. The shard is picked by hashing the
+    // calling thread. getLongOpaque inside the loop is sufficient: compareAndSetLong
+    // re-validates the value and carries volatile (release+acquire) semantics on success.
     protected final void markDirty(int index) {
         int base = (Thread.currentThread().hashCode() & SHARD_MASK) * SHARD_STRIDE;
         int minIndex = base + MIN_OFF_IN_SHARD;
@@ -325,11 +318,11 @@ public abstract class AbstractInstancer implements Instancer {
         } while (!LONG_ARRAY.compareAndSet(dirtyShards, maxIndex, cur, v));
     }
 
-    // Render-thread reads — reduce all shards into a global (min, max). Acquire ensures we
+    // Render-thread reads: reduce all shards into a global (min, max). Acquire ensures we
     // observe every per-slot store published by the workers before they entered the
     // dirty-range CAS. (In practice the frame future's join already gives us this
     // happens-before; getLongAcquire just makes it explicit and free.) O(SHARD_COUNT)
-    // acquire-loads at flush time — ~16 ns total.
+    // acquire-loads at flush time, roughly 16 ns total.
     public final int dirtyMin() {
         long min = Integer.MAX_VALUE;
         for (int s = 0; s < SHARD_COUNT; s++) {
@@ -349,7 +342,7 @@ public abstract class AbstractInstancer implements Instancer {
     }
 
     // Force the entire live range to be dirty. Subclasses call this after growing GPU
-    // capacity, since the new buffer needs every slot re-uploaded. Render-thread only —
+    // capacity, since the new buffer needs every slot re-uploaded. Render-thread only:
     // writes the full range into shard 0; the dirtyMin/Max reduce will pick it up.
     protected final void markFullyDirty() {
         if (liveCount > 0) {
@@ -398,7 +391,7 @@ public abstract class AbstractInstancer implements Instancer {
     }
 
     // Protected so backend-specific instancers can react when CPU capacity grows (e.g. stage-
-    // local page-mapping growth on the INDIRECT path). Render-thread only — slabBuffer.grow
+    // local page-mapping growth on the INDIRECT path). Render-thread only: slabBuffer.grow
     // creates a new GL buffer and remaps; workers writing to the slab during this call would
     // race. The existing call sites (allocate) run from visual construction at frame
     // boundaries, so this constraint already holds.
@@ -412,14 +405,14 @@ public abstract class AbstractInstancer implements Instancer {
         boolean grew = slabBuffer.ensureCapacity(newSize);
         if (grew) {
             slab = slabBuffer.mapped();
-            // The new GPU handle has no contents — slabBuffer's grow CPU-memcpys old-mapped
+            // The new GPU handle has no contents. slabBuffer's grow CPU-memcpys old-mapped
             // into new-mapped for CPU continuity, but the destination object buffer the
             // indirect backend copies into doesn't yet have a glCopyNamedBufferSubData from
             // the new handle. Re-flag the live range so the next upload pushes everything.
             markFullyDirty();
         }
         // Zero the tail so unallocated slots stay zero (dead-instance sentinel). Always
-        // runs — even if the buffer didn't physically grow we still expanded the slot range.
+        // runs. Even if the buffer didn't physically grow, we still expanded the slot range.
         zero((int) oldSize, (int) (newSize - oldSize));
         colors = copyAndFill(colors, next, 0xFFFFFFFF);
         visible = Arrays.copyOf(visible, next);

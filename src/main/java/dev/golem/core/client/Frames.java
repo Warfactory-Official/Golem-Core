@@ -5,10 +5,9 @@ import net.minecraft.client.Minecraft;
 /**
  * How far the current frame sits between two ticks.
  *
- * <p>1.21 introduced {@code DeltaTracker} and split the value in two — one that pauses with the game and
- * one that does not; before that it was the single {@code Minecraft.getFrameTime()}. Anything
- * interpolating a render (a swaying weapon, a spinning part) wants the game-time flavour, which is what
- * this returns.
+ * <p>Returns the game-time flavour (the one that pauses with the game), which is what anything
+ * interpolating a render wants. 1.21 split it from the real-time value in {@code DeltaTracker}; before that
+ * there was the single {@code Minecraft.getFrameTime()}.
  *
  * <p>Client-only.
  */

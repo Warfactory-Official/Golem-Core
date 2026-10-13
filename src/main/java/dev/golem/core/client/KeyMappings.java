@@ -9,20 +9,17 @@ import java.util.Map;
 /**
  * Registers a mod's key mappings and hands back the vanilla object to poll.
  *
- * <p>Two things differ across the matrix. The <b>category</b> became a type: through 1.21.1 a mapping
- * takes a bare translation key {@code String}, while 26.1 takes a {@code KeyMapping.Category} record
- * that must itself be registered exactly once (its registrar throws on a duplicate). And the
- * <b>registration moment</b> differs by loader — fabric-api takes the mapping immediately through a
- * helper whose name changed at 26.1 ({@code KeyBindingHelper} to {@code KeyMappingHelper}), whereas
- * NeoForge and Forge only accept mappings inside a mod-bus event, so registration has to be deferred.
+ * <p>Two things differ across the matrix. Through 1.21.1 a mapping takes a bare translation key
+ * {@code String} as its category; 26.1 takes a {@code KeyMapping.Category} record that must be registered
+ * exactly once (its registrar throws on a duplicate). And fabric-api takes the mapping immediately (through a
+ * helper renamed at 26.1, {@code KeyBindingHelper} to {@code KeyMappingHelper}), whereas NeoForge and Forge only
+ * accept mappings inside a mod-bus event, so registration is deferred there.
  *
  * <p>The category is named by path and built into {@code key.category.<namespace>.<path>} on every
- * version, which is exactly the key 26.1 derives from the category id — so one lang entry covers the
- * whole matrix.
+ * version, which is the key 26.1 derives from the category id, so one lang entry covers the matrix.
  *
- * <p>What comes back is the vanilla {@link KeyMapping}: {@code isDown()} for held state and
- * {@code consumeClick()} for buffered presses both mean the same thing everywhere, so there is nothing
- * left to abstract.
+ * <p>What comes back is the vanilla {@link KeyMapping}; {@code isDown()} and {@code consumeClick()} mean the
+ * same thing everywhere.
  *
  * <p>Client-only: never call this from common initialization.
  */
@@ -33,7 +30,7 @@ public final class KeyMappings {
     //? if >=26.1 {
     /**
      * Categories already built, by id. 26.1's registrar throws outright on a second registration of the
-     * same id, so several mappings sharing one category — the normal case — must share one instance.
+     * same id, so several mappings sharing one category, the normal case, must share one instance.
      */
     private static final Map<String, KeyMapping.Category> CATEGORIES = new HashMap<>();
     //?}
@@ -74,15 +71,10 @@ public final class KeyMappings {
         *///?} elif fabric {
         /*net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper.registerKeyBinding(mapping);
         *///?} elif neoforge && >=26.1 {
-        // Deferred: this loader only accepts mappings inside its own mod-bus event. Constructing the
-        // mapping eagerly above is fine — that is what vanilla's own field initializers do. The category
-        // goes over the same event, or the controls screen has nowhere to file the mapping.
-        //
-        // The category is registered by the FIRST mapping in it and no other: this loader's
-        // registerCategory throws outright on a repeat ("KeyMapping.Category 'ns:path' is already
-        // registered"), and every mapping doing it meant any category holding two mappings crashed the
-        // client during Options construction — before the window opens, and therefore before anything
-        // that looks like a mod error.
+        // Deferred: this loader only accepts mappings inside its own mod-bus event. The category goes over
+        // the same event, or the controls screen has nowhere to file the mapping.
+        // Only the first mapping of a category registers it: registerCategory throws on a repeat, which
+        // crashes the client during Options construction, before anything that looks like a mod error.
         dev.golem.core.platform.NeoForgeEntrypoint.modBus().addListener(
                 (net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent event) -> {
                     if (firstOfCategory) event.registerCategory(category);
@@ -146,18 +138,15 @@ public final class KeyMappings {
     }
 
     /**
-     * A mapping that can report its own held state reliably, even when it shares a key with a vanilla bind.
+     * A mapping that reports its own held state even when it shares a key with a vanilla bind.
      *
-     * <p>26.1 vanilla keeps {@code Map<Key, List<KeyMapping>>} and pushes state to every mapping on a
-     * key, so two binds may share one button happily. <b>1.20.1 and 1.21.1 keep {@code Map<Key, KeyMapping>}</b>
-     * — one mapping per key — so on Fabric (Forge/NeoForge patch in a multi-valued lookup) a mod bind sharing
-     * a key with Sneak, Pick Block or Use never receives any state at all and reads as permanently
-     * unpressed. That is not a conflict the user can see in the controls screen; the bind simply does
-     * nothing until it is moved to a free key.
+     * <p>26.1 vanilla keeps {@code Map<Key, List<KeyMapping>>} and pushes state to every mapping on a key.
+     * 1.20.1 and 1.21.1 keep {@code Map<Key, KeyMapping>}, one mapping per key, so on Fabric (Forge/NeoForge
+     * patch in a multi-valued lookup) a mod bind sharing a key with Sneak, Pick Block or Use never receives
+     * state and reads as permanently unpressed. The controls screen shows no conflict.
      *
-     * <p>{@link #isHeld()} therefore also reads the mapping that won the shared key and, below 26.1, polls the device for this mapping's own bound key
-     * instead of trusting the shared dispatch. Reading {@code key} needs no reflection or access widener:
-     * it is {@code protected} on {@link KeyMapping}, and Golem constructs these itself.
+     * <p>{@link #isHeld()} therefore also reads the mapping that won the shared key and, below 26.1, polls the
+     * device for this mapping's own bound key.
      */
     public static final class Mapping extends KeyMapping {
 
@@ -174,28 +163,16 @@ public final class KeyMappings {
         *///?}
 
         /**
-         * Whether this mapping's key is held right now.
-         *
-         * <p>On 26.1 vanilla keeps {@code Map<Key, List<KeyMapping>>} and pushes state to every mapping
-         * sharing a key, so two binds may share a button happily.
-         *
-         * <p><b>1.20.1 and 1.21.1 keep {@code Map<Key, KeyMapping>}</b> (checked against the 1.21.1 jar) —
-         * one mapping per key — so on Fabric a mod bind sharing a key with Sneak, Use or Pick Block never
-         * receives state at all and reads as permanently unpressed. (Forge and NeoForge replace that map with
-         * a multi-valued lookup.) There is no conflict shown in the controls screen; the bind simply does
-         * nothing. So this also reads any other mapping bound to the same key, and below 26.1 polls the
-         * device for the bound key or mouse button directly.
-         *
-         * <p>The fallback resolves {@link #saveString()} back through {@code InputConstants}, which exposes
-         * the current controls-screen binding without reflection or an access widener.
+         * Whether this mapping's key is held right now: its own state, any other mapping bound to the same
+         * key, and below 26.1 a direct device poll of the bound key or mouse button (resolved from
+         * {@link #saveString()}).
          */
         public boolean isHeld() {
             if (isDown()) return true;
-            // Through 1.21.1 vanilla's single-valued dispatch map hands a shared key's state to whichever
-            // mapping won it (on Fabric, e.g. Sneak over a mod bind on left Shift). That mapping's own state
-            // is the key's state, so read it: this also covers input injected through KeyboardHandler or
-            // MouseHandler, which the device poll below cannot see. Forge/NeoForge dispatch to every
-            // mapping on a key, so there the loop never finds anything isDown() did not.
+            // Through 1.21.1 the single-valued dispatch map hands a shared key's state to whichever mapping
+            // won it (on Fabric, e.g. Sneak over a mod bind on left Shift). Reading that mapping also covers
+            // input injected through KeyboardHandler or MouseHandler, which the device poll cannot see.
+            // Forge/NeoForge dispatch to every mapping on a key, so there the loop finds nothing new.
             for (KeyMapping other : net.minecraft.client.Minecraft.getInstance().options.keyMappings) {
                 if (other != this && !other.isUnbound() && other.same(this) && other.isDown()) return true;
             }

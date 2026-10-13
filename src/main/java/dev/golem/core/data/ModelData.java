@@ -16,16 +16,13 @@ import java.util.List;
 /**
  * The {@code custom_model_data} component, which changed shape completely between versions.
  *
- * <p>Pre-26.1 it is a single {@code int} — a model index, nothing more. 26.1 turned it into four
- * parallel lists (floats, flags, strings, colours) so a model can be selected on several independent
- * axes at once. HBM uses two of those axes: a tint colour for fluid icons, and a boolean flag that
- * switches scrap items to their molten appearance.
+ * <p>Pre-26.1 it is a single {@code int}, a model index. 26.1 turned it into four parallel lists (floats,
+ * flags, strings, colours). HBM uses two axes: a tint colour for fluid icons and a boolean flag that switches
+ * scrap items to their molten appearance.
  *
- * <p>Below 26.1 the single int is spent on the flag (a resource pack selects on it through a model
- * {@code overrides} predicate, which is how that era switches models at all), so the colour needs its
- * own home. It goes in {@code minecraft:dyed_color} — a vanilla component that stores exactly one RGB
- * int, is read by nothing except dyeable armour's own colour handler, and shows no tooltip when asked
- * not to. {@link dev.golem.core.client.Tints} turns it back into a tint at render time, reproducing what
+ * <p>Below 26.1 the single int is spent on the flag (a model {@code overrides} predicate selects on it), so the
+ * colour goes in {@code minecraft:dyed_color}: one RGB int, read only by dyeable armour's colour handler, with no
+ * tooltip when asked not to. {@link dev.golem.core.client.Tints} turns it back into a tint at render time, as
  * 26.1 does natively through the item definition's {@code tints} array.
  */
 public final class ModelData {

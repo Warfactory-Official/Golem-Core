@@ -17,11 +17,10 @@ import net.minecraft.world.phys.Vec3;
  *
  * <p>The quads are drawn with 1.7's weather state as hbm-space's {@code WeatherProviderCelestial} set it: the texture's
  * own colour is <b>not</b> used ({@code GL_COMBINE} with {@code GL_REPLACE} from the vertex colour), so a quad's colour is
- * its vertex colour times the light map at its light value, and its alpha is the texture's alpha times the vertex alpha;
- * fragments at alpha 0.1 or below are discarded ({@code glAlphaFunc(GL_GREATER, 0.1)}); alpha blended
- * ({@code SRC_ALPHA, ONE_MINUS_SRC_ALPHA}), both faces, depth tested without writing depth (with depth writes under
- * Fabulous, as vanilla's weather), fogged like the world. Batches draw in submission order, as 1.7's
- * {@code tessellator.draw()} runs did.
+ * its vertex colour times the light map at its light value, and its alpha is the texture's alpha times the vertex alpha.
+ * Fragments at alpha 0.1 or below are discarded; blending is {@code SRC_ALPHA, ONE_MINUS_SRC_ALPHA}, both faces, depth
+ * tested without writing depth (with depth writes under Fabulous, as vanilla's weather), fogged like the world. Batches
+ * draw in submission order, as 1.7's {@code tessellator.draw()} runs did.
  *
  * <p>How each node is hooked ({@code dev.golem.core.render.PrecipitationRendering}):
  * <ul>

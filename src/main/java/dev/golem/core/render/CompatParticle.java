@@ -19,23 +19,18 @@ import net.minecraft.client.renderer.texture.TextureAtlas;
 /**
  * The base class for a mod's own textured, camera-facing particle.
  *
- * <p>26.1 merged the old {@code TextureSheetParticle} into {@code SingleQuadParticle} and replaced
- * per-particle GL state with an immutable {@code Layer} record; below 26.1 the two classes are
- * separate and the render type still sets GL state by hand. Both eras still give a subclass the same
- * three things — a sprite, a camera-facing quad, and a roll angle — so this shim reconciles the
- * spelling and lets particle subclasses be written once.
- *
- * <p>Two things worth knowing when porting 1.12 particles onto this:
+ * <p>26.1 merged {@code TextureSheetParticle} into {@code SingleQuadParticle} and replaced per-particle
+ * GL state with an immutable {@code Layer} record; below 26.1 the two classes are separate and the render
+ * type sets GL state by hand. Both eras give a subclass a sprite, a camera-facing quad and a roll angle,
+ * so this shim reconciles the spelling and subclasses are written once.
  *
  * <ul>
  *   <li><b>Do not hand-roll the billboard.</b> 1.12 particles overrode {@code renderParticle} and
- *       built the quad themselves (HBM's {@code ParticleFXRotating} does, complete with a
- *       {@code //FIXME: doesnt spin, jitters around}). Modern {@code SingleQuadParticle.extract}
- *       already does camera-facing plus a {@code roll} rotation correctly — set {@link #oRoll}/
- *       {@link #roll} and delete the maths.
+ *       built the quad themselves. {@code SingleQuadParticle.extract} already does camera-facing plus
+ *       a {@code roll} rotation: set {@link #oRoll}/{@link #roll}.
  *   <li><b>Fullbright is a lighting override, not a blend mode.</b> The 1.12 idiom of
  *       {@code getBrightnessForRender() -> 0xF000F0} maps onto {@link ParticleLayer#EMISSIVE}, which
- *       is handled here — subclasses should not override the light method themselves.
+ *       is handled here, so subclasses should not override the light method.
  * </ul>
  *
  * <p>Client-only.
@@ -115,7 +110,7 @@ public abstract class CompatParticle extends
     //? if fabric && <26.1 {
     /*static {
         // Vanilla's ParticleEngine draws only the render types listed in its RENDER_ORDER (NeoForge and Forge patch it
-        // to draw every type that holds particles), so on Fabric a particle in one of Core's own layers was ticked and
+        // to draw every type that holds particles), so on Fabric a particle in one of Core's own layers would be ticked and
         // never drawn. They are appended once, after vanilla's; the field is widened by golemcore.legacy*.accesswidener.
         java.util.List<net.minecraft.client.particle.ParticleRenderType> order =
                 new java.util.ArrayList<>(net.minecraft.client.particle.ParticleEngine.RENDER_ORDER);
@@ -190,14 +185,12 @@ public abstract class CompatParticle extends
     /**
      * Whether the quad should lie flat on the ground instead of facing the camera.
      *
-     * <p>Ash that has settled, scorch decals and similar want a horizontal quad. 1.12 particles did
-     * this by writing their own vertices from a hand-built basis; 1.21+ expresses it as a
-     * {@code FacingCameraMode} — a rotation the engine applies instead of the camera's, so "flat" is
-     * a quarter turn about X, and a subclass's {@code roll} still spins it in place because roll is
-     * applied afterwards.
+     * <p>Settled ash and scorch decals want a horizontal quad. 1.21+ expresses it as a
+     * {@code FacingCameraMode}, a rotation the engine applies instead of the camera's, so "flat" is
+     * a quarter turn about X, and {@code roll}, applied afterwards, still spins it in place.
      *
-     * <p>The Core-owned plane orientation seam is honoured on both eras. The older flat-particle
-     * convenience remains intentionally limited to 1.21+, where vanilla exposes a facing-mode hook.
+     * <p>The Core-owned plane orientation seam works on both eras. This flat-particle convenience is
+     * limited to 1.21+, where vanilla exposes a facing-mode hook.
      */
     protected boolean isFlatOnGround() {
         return false;
@@ -219,15 +212,13 @@ public abstract class CompatParticle extends
     /**
      * Called once per frame, just before the quad is built, with the frame's partial tick.
      *
-     * <p>This is the seam for 1.12 particles that animated inside {@code renderParticle} — colour
-     * ramps, alpha fades and size curves all lived there because it was the only place with a
-     * partial-tick value. Modern particles have no such method: the engine reads {@code rCol}/
-     * {@code gCol}/{@code bCol}/{@code alpha} straight off the fields and calls
-     * {@code getQuadSize(partialTick)}. So set the colour fields here, and override
+     * <p>The seam for 1.12 particles that animated colour ramps, alpha fades and size curves inside
+     * {@code renderParticle}. The engine reads {@code rCol}/{@code gCol}/{@code bCol}/{@code alpha} off
+     * the fields and calls {@code getQuadSize(partialTick)}, so set the colour fields here and override
      * {@code getQuadSize} for the size curve.
      *
-     * <p>Do <b>not</b> put GL state changes here — there is nowhere for them to go on 26.1. A
-     * particle that needs a different blend mode wants a {@link ParticleLayer}.
+     * <p>Do <b>not</b> put GL state changes here: there is nowhere for them to go on 26.1. A particle
+     * that needs a different blend mode wants a {@link ParticleLayer}.
      */
     protected void updateForFrame(float partialTick) {}
 
@@ -243,9 +234,8 @@ public abstract class CompatParticle extends
     /**
      * Emits this particle's quads. The default emits the single camera-facing quad vanilla draws.
      *
-     * <p>Override to draw a <b>cluster</b>. Several 1.12 HBM particles are not one quad at all
-     * ({@code ParticleRocketFlame} is ten), which 1.12 allowed because a particle wrote its own
-     * vertices; modern {@code SingleQuadParticle} emits exactly one and offers no seam for more.
+     * <p>Override to draw a <b>cluster</b>. Some HBM particles are more than one quad
+     * ({@code ParticleRocketFlame} is ten); {@code SingleQuadParticle} emits exactly one.
      *
      * <p>The quads share this particle's position, rotation, sprite and light, but <b>not</b>
      * necessarily its colour: {@code setColor}/{@code setAlpha} may be called between emissions.
@@ -350,7 +340,7 @@ public abstract class CompatParticle extends
 
     // The light hook is named getLightCoords on 26.1 and getLightColor below it. Both have the same
     // contract (packed sky/block light for this particle at partialTick), so the override is
-    // duplicated rather than facaded — there is nothing to translate beyond the name.
+    // duplicated rather than facaded: there is nothing to translate beyond the name.
     //? if >=26.1 {
     @Override
     protected int getLightCoords(float partialTick) {

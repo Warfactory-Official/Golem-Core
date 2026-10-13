@@ -1,6 +1,7 @@
 package dev.golem.core.world;
 
 import dev.golem.core.Ids;
+import dev.golem.core.hook.Hook;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -24,19 +25,17 @@ import net.minecraft.world.level.storage.loot.providers.number.UniformGenerator;
 import net.minecraft.world.phys.Vec3;
 
 /**
- * Adding a mod's items to another table's chest loot — a vanilla dungeon, a mineshaft — the same way on
+ * Adding a mod's items to another table's chest loot (a vanilla dungeon, a mineshaft) the same way on
  * every loader and version, and rolling a table to see what it gives.
  *
- * <p>Each injection is one extra pool appended to the named table when it loads: {@code rolls} draws,
- * each picking one of the entries or, with weight {@code emptyWeight}, nothing. The empty weight is what
- * lets a mod reproduce an older "add to the shared weighted list" model: an item of weight {@code w}
- * added to a list of total weight {@code W} came out of each draw with probability {@code w / (W + w)},
- * which is exactly what a pool of that item plus {@code W} of nothing gives.
+ * <p>Each injection is one extra pool appended to the named table when it loads: {@code rolls} draws, each
+ * picking one of the entries or, with weight {@code emptyWeight}, nothing. The empty weight reproduces 1.7's
+ * "add to the shared weighted list": an item of weight {@code w} added to a list of total weight {@code W} comes
+ * out of each draw with probability {@code w / (W + w)}, which a pool of that item plus {@code W} of nothing gives.
  *
- * <p>The hook moved between loaders, not between versions of the idea: NeoForge and Forge fire a
- * {@code LootTableLoadEvent} carrying the built table, which takes a named pool; Fabric's
- * {@code LootTableEvents.MODIFY} hands over the table's builder instead, and changed its callback shape
- * at 1.20.5 when loot tables became a registry.
+ * <p>NeoForge and Forge fire a {@code LootTableLoadEvent} carrying the built table, which takes a named pool;
+ * Fabric's {@code LootTableEvents.MODIFY} hands over the table's builder, with a different callback shape from
+ * 1.20.5 on.
  */
 public final class ChestLoot {
 
@@ -54,7 +53,7 @@ public final class ChestLoot {
                              List<Entry> entries) {}
 
     /** Every listener, in phase order; register through the {@code on...} method or directly, with a phase. */
-    public static final dev.golem.core.hook.Hook<Injection> INJECTIONS = dev.golem.core.hook.Hook.notifying();
+    public static final Hook<Injection> INJECTIONS = Hook.notifying();
     private static boolean hooked;
 
     /**

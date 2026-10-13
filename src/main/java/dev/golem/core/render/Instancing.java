@@ -19,10 +19,10 @@ public final class Instancing {
     /**
      * What the engine is holding right now.
      *
-     * <p>A correct instanced draw and a correct vanilla draw are pixel-identical, so nothing on screen
-     * can tell a working backend from a backend that quietly never received anything. {@code visuals}
-     * is the number that settles it — and {@code owning} is the narrower claim that those visuals drew
-     * the current frame, which is exactly the question {@link Visuals#owns} asks per block.
+     * <p>An instanced draw and a vanilla draw are pixel-identical, so the screen cannot tell a working
+     * backend from one that never received anything. {@code visuals} settles that, and {@code owning}
+     * is the narrower claim that those visuals drew the current frame, which {@link Visuals#owns} asks
+     * per block.
      *
      * @param backend the chosen backend's name, or {@code off} / {@code failed} / {@code absent} /
      *                {@code starting}
@@ -31,7 +31,7 @@ public final class Instancing {
      * @param instances GPU rows written across them
      * @param owning visuals that drew the current frame, so their vanilla renderer stood down
      * @param draws GPU draw calls the last complete frame cost
-     * @param buckets instancer buckets those draws covered — equal to {@code draws} without batching
+     * @param buckets instancer buckets those draws covered, equal to {@code draws} without batching
      * @param animated models whose declaration reads state, so their transforms are rewritten each frame
      * @param moving of those, the ones whose transforms actually differed from the previous frame
      */

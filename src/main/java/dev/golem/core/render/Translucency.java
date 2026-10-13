@@ -13,9 +13,9 @@ import net.minecraft.client.Minecraft;
  * covers, so a {@link SceneWarp} effect behind water can be drawn under it after the fact.
  *
  * <p>A scene-warp effect is drawn in the late {@link WorldEffects} pass, over the finished scene. Tested against
- * the world's depth there, everything behind water fails (the water's surface is nearer), so an effect seen
- * through water vanished. With this capture it is tested against the depth from before translucency, and where a
- * translucent surface lies in front of it the shader puts that surface back over it: translucent blending is
+ * the world's depth there, everything behind water fails (the water's surface is nearer). With this capture it is
+ * tested against the depth from before translucency, and where a translucent surface lies in front of it the
+ * shader puts that surface back over it: translucent blending is
  * {@code C = W·a + A·(1 - a)} over the scene {@code A} it was drawn on, so over the effect {@code H} it would
  * have been {@code C + (H - A)·(1 - a)}. For several surfaces {@code 1 - a} is their combined transmission,
  * which is exactly what the target's alpha accumulates under vanilla's translucent blend

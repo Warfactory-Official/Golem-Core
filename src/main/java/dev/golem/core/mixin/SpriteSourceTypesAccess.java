@@ -7,8 +7,8 @@ import org.spongepowered.asm.mixin.gen.Accessor;
  * The sprite source type registry, which vanilla keeps private and only NeoForge publishes an event
  * for. Fabric and Forge register through this instead; see {@code Sprites.install()}.
  *
- * <p>26.1 replaced the {@code BiMap} of types with a late-bound id mapper of codecs, which is why the
- * accessor changes shape rather than just its name.
+ * <p>On 26.1 the types are a late-bound id mapper of codecs instead of a {@code BiMap}, so the accessor's shape
+ * differs.
  */
 //? if >=26.1 {
 @Mixin(net.minecraft.client.renderer.texture.atlas.SpriteSources.class)

@@ -13,8 +13,8 @@ import java.util.List;
  * Item-list persistence in vanilla's {@code "Items"} format.
  *
  * <p>This is the escape hatch pattern for the whole {@code data} package. {@link DataIn}/{@link DataOut}
- * deliberately hide their backend, but vanilla helpers like {@link ContainerHelper} take the raw
- * {@code ValueOutput} or {@code CompoundTag} — so something has to bridge them. Rather than exposing the
+ * hide their backend, but vanilla helpers like {@link ContainerHelper} take the raw
+ * {@code ValueOutput} or {@code CompoundTag}, so something has to bridge them. Rather than exposing the
  * backend on the interface (which would let version-specific types leak into every caller), the bridge
  * lives here, unwrapping the known implementation in one place.
  *
@@ -69,7 +69,7 @@ public final class Inventories {
 
     /**
      * Copies every slot owned by a player, including armor and offhand, plus the selected hotbar slot.
-     * This is deliberately an in-memory snapshot: player NBT is not a legal write surface for restoring
+     * This is an in-memory snapshot: player NBT is not a legal write surface for restoring
      * a live player and would also lose component values on some supported versions.
      */
     public static PlayerSnapshot snapshot(Player player) {

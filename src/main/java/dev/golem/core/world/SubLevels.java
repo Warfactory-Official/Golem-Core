@@ -1,5 +1,6 @@
 package dev.golem.core.world;
 
+import java.util.concurrent.CopyOnWriteArrayList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
@@ -12,6 +13,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.UnaryOperator;
+import org.joml.Quaterniondc;
 
 /**
  * Moving block structures ("sub-levels"): blocks that live at one position in the level's block grid but are
@@ -75,7 +77,7 @@ public final class SubLevels {
      * {@code orientation * (scale * (p - rotationPoint)) + position}. {@code dev.golem.core.render.SubLevelPoses} turns it
      * into a {@code PoseStack} transform.
      */
-    public record RenderPose(Vec3 position, org.joml.Quaterniondc orientation, Vec3 rotationPoint, Vec3 scale) {}
+    public record RenderPose(Vec3 position, Quaterniondc orientation, Vec3 rotationPoint, Vec3 scale) {}
 
     /**
      * Names the blocks that must stay together with {@code pos} whenever a sub-level system splits or carries
@@ -139,7 +141,7 @@ public final class SubLevels {
     private static final List<StructureResolver> RESOLVERS = new ArrayList<>();
     private static final List<MoveListener> MOVE_LISTENERS = new ArrayList<>();
     /** Levels a move is under way in (from and to), innermost last; a move can start inside another. */
-    private static final List<Level> MOVING = new java.util.concurrent.CopyOnWriteArrayList<>();
+    private static final List<Level> MOVING = new CopyOnWriteArrayList<>();
 
     /** Installs the sub-level system's backend. Called once, by the integration, during setup. */
     public static void install(Backend system) {

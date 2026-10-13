@@ -13,16 +13,12 @@ import net.minecraft.client.renderer.rendertype.RenderType;
 /**
  * What a {@linkplain Gem.Part part} is drawn with: one texture and one blending rule.
  *
- * <p>The two backends want that pair in different currencies — the vanilla pass wants a
- * {@code RenderType}, the instanced backend wants a material plus a texture id — so the declaration
- * states the rule and each backend converts. Textures are passed as strings and parsed through
- * {@link Ids}, the same shape {@code Billboards.Layer} uses, so this class needs no version-split in
- * its public API.
+ * <p>The vanilla pass wants a {@code RenderType} and the instanced backend a material plus a texture id, so the
+ * declaration states the rule and each backend converts. Textures are strings parsed through {@link Ids}, as in
+ * {@code Billboards.Layer}, so the public API has no version split.
  *
- * <p>The {@code RenderType} is resolved lazily rather than in the factory. Vanilla's render-type
- * factories reach into pipeline state that a dedicated server has no business touching, and a
- * declaration is inspected headlessly by the coverage tests; deferring the lookup to the first draw
- * keeps those tests able to read a model without a client.
+ * <p>The {@code RenderType} is resolved lazily: vanilla's factories reach into pipeline state a dedicated server
+ * must not touch, and the coverage tests inspect declarations headlessly.
  */
 public final class Surface {
 
@@ -75,28 +71,27 @@ public final class Surface {
     }
 
     /**
-     * Blended, and deliberately not the outline-affecting translucent type.
+     * Blended, and not the outline-affecting translucent type.
      *
-     * <p>Vanilla's one-argument factory asks for {@code AFFECTS_OUTLINE}, which is only ever read while
-     * something is drawing into the glowing-outline target — nothing a block entity or its instanced
-     * twin ever does. Asking for it anyway would buy a second buffer per texture and a second place for
-     * draw order to differ between the two backends.
+     * <p>Vanilla's one-argument factory asks for {@code AFFECTS_OUTLINE}, which is read only while drawing into the
+     * glowing-outline target, which a block entity or its instanced twin never does. It would cost a second buffer
+     * per texture and a second place for draw order to differ between the backends.
      */
     public static Surface translucent(String texture) {
         return new Surface(texture, Blend.TRANSLUCENT);
     }
 
     /**
-     * Blended, lit by nothing, and not depth-writing — molten metal and glowing rods, which upstream
-     * drew through vanilla's {@code entityTranslucentEmissive}.
+     * Blended, lit by nothing, and not depth-writing: molten metal and glowing rods, drawn through vanilla's
+     * {@code entityTranslucentEmissive}.
      */
     public static Surface emissive(String texture) {
         return new Surface(texture, Blend.TRANSLUCENT_EMISSIVE);
     }
 
     /**
-     * Alpha-weighted additive over solid geometry, depth-tested but not depth-writing and unculled —
-     * 1.7's {@code SRC_ALPHA/ONE} glow. See {@code PlasmaGlowRenderType} for why no stock type fits.
+     * Alpha-weighted additive over solid geometry, depth-tested but not depth-writing and unculled (1.7's
+     * {@code SRC_ALPHA/ONE} glow). See {@code PlasmaGlowRenderType} for why no stock type fits.
      */
     public static Surface glow(String texture) {
         return new Surface(texture, Blend.PLASMA_GLOW);
@@ -117,9 +112,9 @@ public final class Surface {
             resolved = switch (blend) {
                 case SOLID -> CompatRenderTypes.entitySolid(Ids.parse(texture));
                 // Culled on every node. 26.1's entityCutout is the NO-cull pipeline, while every older
-                // entityCutout and both instanced backends cull, so naming it here made a CUTOUT surface draw
-                // its back faces on 26.1 only (icon audit 2026-10-01: difurnace_ext's floor, the colored duct's
-                // far end, armor interiors). The old GL default the factory documents is culled.
+                // entityCutout and both instanced backends cull, so using it would draw a CUTOUT
+                // surface's back faces on 26.1 only (difurnace_ext's floor, the colored duct's far end,
+                // armor interiors).
                 case CUTOUT -> CompatRenderTypes.entityCutoutCull(Ids.parse(texture));
                 case CUTOUT_CULL -> CompatRenderTypes.entityCutoutCull(Ids.parse(texture));
                 case CUTOUT_NO_CULL -> CompatRenderTypes.entityCutoutNoCull(Ids.parse(texture));

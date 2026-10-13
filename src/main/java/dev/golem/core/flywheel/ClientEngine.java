@@ -28,7 +28,7 @@ import org.joml.Vector4f;
 // dynamicTransforms slice) and the backend-agnostic crumbling group list, then hands them to
 // the active backend's DrawManager. The actual draw paths (UBO + Mojang RenderPass for
 // INSTANCING; SSBO + multidraw + raw GL for INDIRECT) live in the per-backend DrawManager
-// implementations — Engine no longer touches GL.
+// implementations; the engine itself never touches GL.
 public final class ClientEngine {
 
     static {
@@ -63,31 +63,21 @@ public final class ClientEngine {
         EngineState.guard("opaque draw", () -> drawStage(modelView, Material.Stage.OPAQUE));
     }
 
-    // Normal (Fancy/Fast) transparency path: AfterWeather fires inside the weather framegraph
-    // pass, after main/clouds/weather. Main's depth at this point holds terrain + water/glass
-    // (translucent terrain writes depth) + clouds, so our particles depth-test correctly
-    // against everything. Vanilla translucent particles already drew at AfterTranslucentParticles
-    // and didn't write depth, so we always overdraw them — fine, our particles are the focal
-    // effect by design. Trade-off: weather (rain/snow) drew before us at AfterWeather, so Golem
-    // composites on top — acceptable for explosion/fog clusters.
+    // Fancy/Fast transparency: AfterWeather fires inside the weather framegraph pass. Main's depth
+    // holds terrain, water/glass and clouds there, so our particles depth-test against everything.
+    // Vanilla translucent particles already drew without writing depth, so we overdraw them, and
+    // weather drew before us, so Golem composites on top of it.
     public static void drawTranslucent(Matrix4fc modelView) {
         if (Minecraft.useShaderTransparency()) return;
         EngineState.guard("translucent draw", () -> drawStage(modelView, Material.Stage.TRANSLUCENT));
     }
 
-    // Fabulous transparency path: each translucent layer (translucent blocks, item-entities,
-    // particles, clouds, weather) renders into its own framebuffer with its own depth. The
-    // post-chain (assets/minecraft/post_effect/transparency.json) reads all layer color+depth
-    // textures and per-pixel-sorts them into main. Drawing into main at AfterWeather/AfterLevel
-    // gets us either overwritten (the post-chain's blit clobbers our color) or sorted incorrectly
-    // (main's depth doesn't include water — we'd draw on top of water regardless of distance).
-    //
-    // Correct fix: render into the translucent layer target during AfterTranslucentBlocks. At
-    // that point vanilla just finished drawing translucent terrain (water/glass) into the
-    // translucent target — its depth has terrain (copied from main earlier) + water + glass.
-    // Our depth-test correctly z-fails behind water in the same target. Cross-layer sort uses
-    // the translucent layer's depth as proxy, same approximation vanilla makes for its own
-    // particles.
+    // Fabulous transparency: each translucent layer renders into its own framebuffer, and the
+    // post-chain (assets/minecraft/post_effect/transparency.json) sorts them per pixel into main.
+    // Drawing into main at AfterWeather/AfterLevel is either overwritten by the chain's blit or
+    // sorted wrongly (main's depth has no water). So this draws into the translucent layer target
+    // during AfterTranslucentBlocks, whose depth holds terrain, water and glass. The cross-layer
+    // sort uses that layer's depth as a proxy, the same approximation vanilla makes for particles.
     public static void drawTranslucentFabulous(Matrix4fc modelView) {
         if (!Minecraft.useShaderTransparency()) return;
         EngineState.guard("fabulous translucent draw", () -> drawStage(modelView, Material.Stage.TRANSLUCENT));
@@ -112,8 +102,8 @@ public final class ClientEngine {
         if (breakingStates.isEmpty()) return;
 
         // Group by (meshHandle, progress). A multiblock's dummies point at a separate core block
-        // that owns the BE — the mined block is usually one of the 8 dummies, so a direct lookup
-        // misses; fall back to whatever core resolver the content layer installed.
+        // that owns the BE. The mined block is usually one of the 8 dummies, so a direct lookup
+        // misses; fall back to the core resolver the content layer installed.
         Int2ObjectOpenHashMap<Int2ObjectOpenHashMap<List<Instance>>> groupTree = new Int2ObjectOpenHashMap<>();
         for (BlockBreakingRenderState breakState : breakingStates) {
             BlockPos pos = breakState.blockPos();

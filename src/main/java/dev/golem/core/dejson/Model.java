@@ -8,25 +8,23 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * A model spelled out in full: the parent, texture slots and flags of {@link Models}' presets, plus
  * the hand-built {@code elements} geometry, raw {@code display} transforms and legacy
- * {@code overrides} that the presets deliberately leave out.
+ * {@code overrides} that the presets leave out.
  *
  * <pre>{@code
  * Model.parent("minecraft:block/block")
- *      .textures(Slots.of("all", "hbm:blocks/pipe_anchor", "particle", "hbm:blocks/pipe_anchor"))
- *      .elements(Element.box(6, 0, 6, 10, 16, 10)
- *              .face(Face.of("north", "#all").uv(6, 0, 10, 16))
- *              .face(Face.of("up", "#all").cullface("up")))
+ *     .textures(Slots.of("all", "hbm:blocks/pipe_anchor", "particle", "hbm:blocks/pipe_anchor"))
+ *     .elements(Element.box(6, 0, 6, 10, 16, 10)
+ *             .face(Face.of("north", "#all").uv(6, 0, 10, 16))
+ *             .face(Face.of("up", "#all").cullface("up")))
  * }</pre>
  *
- * <p>The presets stay the way to say the common thing. This is the way to say the uncommon one in
- * the same place, so that a block whose geometry is its own is declared like every other block
- * instead of being the one file under {@code models/} someone has to remember is hand-written.
- * Numbers keep the Java type they are written with: {@code 8} stays an integer, {@code 8.5} a
- * decimal, exactly as the file would have had them.
+ * <p>The presets cover the common case; this declares the uncommon one in the same place. Numbers keep the
+ * Java type they are written with: {@code 8} stays an integer, {@code 8.5} a decimal.
  */
 public final class Model implements Shape {
 
@@ -250,8 +248,8 @@ public final class Model implements Shape {
     /** One face of an {@link Element}: its texture slot, and optionally uv, cull side, rotation and tint. */
     public static final class Face {
 
-        private static final java.util.Set<String> DIRECTIONS =
-                java.util.Set.of("down", "up", "north", "south", "west", "east");
+        private static final Set<String> DIRECTIONS =
+                Set.of("down", "up", "north", "south", "west", "east");
 
         private final String direction;
         private final String texture;

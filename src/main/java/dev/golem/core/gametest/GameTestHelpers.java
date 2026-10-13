@@ -43,9 +43,9 @@ public final class GameTestHelpers {
     /**
      * The block entity at a relative position, asserted to be of the given type.
      *
-     * <p>26.1 takes the expected class and does the assertion itself. Older versions return a bare
-     * {@code BlockEntity}, so the check is done here — and it must fail the test rather than throw a
-     * {@code ClassCastException}, which the framework would report as an error instead of a failure.
+     * <p>26.1 takes the expected class and asserts itself. Older versions return a bare {@code BlockEntity}, so the
+     * check is done here and fails the test instead of throwing a {@code ClassCastException}, which the framework
+     * would report as an error.
      */
     public static <T extends BlockEntity> T blockEntity(GameTestHelper helper, BlockPos pos, Class<T> type) {
         //? if >=26.1 {
@@ -112,11 +112,9 @@ public final class GameTestHelpers {
     /**
      * How many of these packets are Golem play payloads on the named channel.
      *
-     * <p>The channel a payload travels on is not the same question on every loader. Where the vanilla
-     * payload registry exists the packet names the payload's own id, so this counts exactly that
-     * payload. Forge 1.20.1 has no such registry and every Golem payload rides one {@code SimpleChannel}
-     * whose own id is on the wire instead, so there the count is of Golem payloads in general — a test
-     * that needs to tell two of them apart has to provoke only one at a time.
+     * <p>Where the vanilla payload registry exists the packet names the payload's own id, so this counts exactly
+     * that payload. Forge 1.20.1 has no such registry and every Golem payload rides one {@code SimpleChannel},
+     * so there the count is of Golem payloads in general: a test that must tell two apart provokes one at a time.
      */
     public static int golemPayloads(List<Packet<?>> packets, String channelId) {
         int count = 0;
@@ -159,8 +157,8 @@ public final class GameTestHelpers {
     }
 
     /**
-     * The body of a finished wire buffer, decoded by the same codec that wrote it — which is what the
-     * client does with these bytes, so a frame that decodes here is one the client can read.
+     * The body of a finished wire buffer, decoded by the same codec that wrote it. The client does the same,
+     * so a frame that decodes here is one the client can read.
      */
     public static <P extends dev.golem.core.net.GolemPayload> P decodeWire(byte[] wire,
             dev.golem.core.net.GolemCodec<P> codec) {
@@ -207,10 +205,10 @@ public final class GameTestHelpers {
     public record Outbound(List<Packet<?>> packets, List<byte[]> wires) {}
 
     /**
-     * Whether a packed resource exists, spelled the 26.1 way. Below 1.21 the datapack folders carry their
-     * old plural names ({@code recipes}, {@code loot_tables}, {@code advancements}, {@code structures},
-     * {@code tags/items}...), which {@code legacy-recipes.gradle.kts} renames at build time; this maps the
-     * asked-for path the same way so an asset test states one path for every node.
+     * Whether a packed resource exists, spelled the 26.1 way. Below 1.21 the datapack folders have plural names
+     * ({@code recipes}, {@code loot_tables}, {@code advancements}, {@code structures}, {@code tags/items}), which
+     * {@code legacy-recipes.gradle.kts} renames at build time; this maps the path the same way so a test states
+     * one path for every node.
      */
     public static boolean resourceExists(Class<?> owner, String path) {
         String resolved = path;
@@ -235,11 +233,10 @@ public final class GameTestHelpers {
     }
 
     /**
-     * Vanilla's {@code makeMockServerPlayerInLevel}, made to survive Forge 1.20.1: that loader's login
-     * hooks read {@code connection.channel()} inside {@code placeNewPlayer}, and the vanilla mock hands it a
-     * {@link Connection} that never had a channel, so the helper itself throws before any test code runs.
-     * Binding an {@link EmbeddedChannel} first gives the hooks a channel (with no FML attributes, so the
-     * player counts as a vanilla client, which is what a mock should be). Every other era uses the helper.
+     * Vanilla's {@code makeMockServerPlayerInLevel} for Forge 1.20.1: that loader's login hooks read
+     * {@code connection.channel()} inside {@code placeNewPlayer}, and the vanilla mock's {@link Connection} has no
+     * channel, so the helper throws. Binding an {@link EmbeddedChannel} first gives the hooks one (without FML
+     * attributes, so the player counts as a vanilla client). Every other era uses the vanilla helper.
      */
     public static ServerPlayer mockServerPlayerInLevel(GameTestHelper helper) {
         //? if forge && <1.20.5 {
@@ -369,7 +366,7 @@ public final class GameTestHelpers {
             //? if neoforge {
             net.neoforged.neoforge.network.registration.NetworkRegistry.configureMockConnection(connection);
             //?}
-            // There is deliberately no send override: Connection writes the actual outbound packet to
+            // No send override: Connection writes the actual outbound packet to
             // EmbeddedChannel, including NeoForge's advanced_open_screen payload.
             //? if >=1.21 {
             player.connection = new ServerGamePacketListenerImpl(helper.getLevel().getServer(), connection, player,
@@ -391,15 +388,13 @@ public final class GameTestHelpers {
         /**
          * Drains everything sent since the previous call.
          *
-         * <p>Both forms have to be caught because the two transports do not put the same kind of
-         * object on the channel: the safe one writes an encoded {@code Packet}, and the accelerated
-         * one writes the finished bytes. Raw buffers are copied out and released here so a test never
-         * holds a Netty reference.
+         * <p>The safe transport writes an encoded {@code Packet}, the accelerated one the finished bytes; both are
+         * collected. Raw buffers are copied out and released so a test never holds a Netty reference.
          */
         public Outbound drainOutbound() {
             // A live connection's event loop runs continuously; an EmbeddedChannel's runs only when
             // asked. The accelerated transport batches its writes onto that loop, so without this the
-            // queued bytes are real and simply never leave.
+            // queued bytes are real but never leave.
             channel.runPendingTasks();
             List<Packet<?>> packets = new ArrayList<>();
             List<byte[]> wires = new ArrayList<>();

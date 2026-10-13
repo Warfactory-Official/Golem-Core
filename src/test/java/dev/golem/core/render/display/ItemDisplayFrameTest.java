@@ -69,8 +69,8 @@ class ItemDisplayFrameTest {
     }
 
     /**
-     * The defect this whole path exists to prevent. {@code ItemRenderBaseLegacy}'s GUI chain ends in
-     * {@code translate(0, 11.3, -11.3)} — after the scale, so in the model's own rotated frame. A
+     * The defect this path prevents. {@code ItemRenderBaseLegacy}'s GUI chain ends in
+     * {@code translate(0, 11.3, -11.3)}, after the scale, so in the model's own rotated frame. A
      * {@code display{}} block applies its translation first, in slot space, so copying those three
      * numbers into the translation field is not the same transform. It is most of a slot out.
      */

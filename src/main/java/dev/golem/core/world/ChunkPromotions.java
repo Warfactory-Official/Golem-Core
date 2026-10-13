@@ -14,21 +14,18 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.LevelChunk;
 
 /**
- * A chunk has become fully accessible — announced on the rising edge, and only there.
+ * A chunk has become fully accessible, announced on the rising edge, and only there.
  *
- * <p>A loader's chunk-load event is not this, and the difference stays invisible until it bites.
- * That event fires once, when the chunk enters the level. A chunk whose ticket level falls below
- * {@code FULL} and recovers before the chunk unloads is never announced again, so anything holding
- * per-chunk state built from a load event silently misses the re-promotion. A player walking to the
- * edge of a network and back is enough to produce one.
+ * <p>A loader's chunk-load event is not this: it fires once, when the chunk enters the level. A chunk
+ * whose ticket level falls below {@code FULL} and recovers before it unloads is never announced again,
+ * so per-chunk state built from a load event misses the re-promotion (walking to the edge of a network
+ * and back is enough).
  *
- * <p>The edge is computed here rather than read off vanilla's argument, because the argument does
- * not carry it. {@code ChunkMap.onFullChunkStatusChange} reports the new status on a promotion into
- * that status and on <em>any</em> demotion, so a chunk dropping from {@code BLOCK_TICKING} to
- * {@code FULL} — which happens whenever a player crosses the simulation boundary — reports
- * {@code FULL} in exactly the shape a genuine promotion does. Recording which chunks are up
- * separates the two for one set operation, and means this does not depend on which edges a given
- * version chooses to report.
+ * <p>The edge is computed here because vanilla's argument does not carry it.
+ * {@code ChunkMap.onFullChunkStatusChange} reports the new status on a promotion into that status and on
+ * <em>any</em> demotion, so a chunk dropping from {@code BLOCK_TICKING} to {@code FULL} (whenever a
+ * player crosses the simulation boundary) reports {@code FULL} exactly as a genuine promotion does.
+ * Recording which chunks are up separates the two, independent of which edges a version reports.
  */
 public final class ChunkPromotions {
 
@@ -38,8 +35,8 @@ public final class ChunkPromotions {
     /**
      * Chunks whose edge has been recorded but whose chunk object was not yet obtainable, retried at the
      * end of each tick. Vanilla announces the promotion from a callback scheduled on the main thread,
-     * and the chunk is not necessarily in the visible map by the time that callback runs — so the edge
-     * and the delivery cannot be the same moment, and only the edge can be trusted to the callback.
+     * and the chunk is not necessarily in the visible map when it runs, so the edge and the delivery
+     * cannot be the same moment.
      */
     private static final Map<ServerLevel, LongArrayList> WAITING = new IdentityHashMap<>();
 

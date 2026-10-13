@@ -21,16 +21,15 @@ import net.minecraft.resources.Identifier;
  * at {@code 7.5/16}, and a one-pixel wall along every edge between an opaque texel and a clear one or the border,
  * as {@code ItemModelGenerator} builds it, over the unit square of an item's own space.
  *
- * <p>For a custom item renderer that draws on top of its item's sprite (a glow sheet, a coloured glint). Vanilla's
- * own sprite cannot be the surface for that on any version. 26.1 batches item quads in a fixed buffer that is drawn
- * after custom geometry, so an overlay testing against the sprite's depth runs before the sprite exists; below it
- * a custom renderer is only reached when the item's model is a {@code builtin/entity} marker, which has no sprite
- * at all. Drawing the sprite through the same sink, just before the overlay, gives every version the same surface
- * in the same order.
+ * <p>For a custom item renderer that draws on top of its item's sprite (a glow sheet, a coloured glint).
+ * Vanilla's own sprite cannot be the surface on any version: 26.1 batches item quads in a fixed buffer drawn
+ * after custom geometry, so an overlay testing against the sprite's depth runs before the sprite exists, and
+ * below 26.1 a custom renderer is only reached for a {@code builtin/entity} model, which has no sprite.
+ * Drawing the sprite through the same sink just before the overlay gives every version the same surface in
+ * the same order.
  *
  * <p>The texture is a plain {@code textures/...png} location, drawn unculled and alpha-tested. Its alpha is read
- * once (through {@code ImageIO}, which reads the same on every version) and kept until {@link #clear}; an animated
- * strip contributes its first frame.
+ * once (through {@code ImageIO}) and kept until {@link #clear}; an animated strip contributes its first frame.
  */
 public final class ItemSprites {
 

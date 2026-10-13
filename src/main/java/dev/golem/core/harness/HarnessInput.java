@@ -5,6 +5,7 @@ import dev.golem.core.mixin.HarnessKeyboardHandlerAccessor;
 import dev.golem.core.mixin.HarnessMouseHandlerAccessor;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -144,7 +145,7 @@ final class HarnessInput {
     static void tick(Minecraft minecraft) {
         if (scheduledReleases.isEmpty()) return;
         long now = Harness.tick();
-        for (java.util.Iterator<long[]> it = scheduledReleases.iterator(); it.hasNext(); ) {
+        for (Iterator<long[]> it = scheduledReleases.iterator(); it.hasNext(); ) {
             long[] entry = it.next();
             if (now >= entry[0]) {
                 it.remove();

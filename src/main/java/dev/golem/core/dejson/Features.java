@@ -8,21 +8,19 @@ import com.google.gson.JsonObject;
  * {@code worldgen/placed_feature} files, plus the placement-modifier and configuration vocabulary they are
  * written in.
  *
- * <p>Everything here is spelled the way 1.20.1, 1.21.1 and 26.1 all read it — {@code count},
- * {@code rarity_filter}, {@code in_square}, {@code height_range} over a {@code uniform} height provider,
- * {@code heightmap}, {@code biome}, and the {@code ore} configuration's rule tests — so one declaration is
- * valid data on every node. A shape that changed between versions (26.1 dissolved {@code random_patch} into
- * placement modifiers, for instance) does not belong in this vocabulary until it has a per-version spelling
- * here.
+ * <p>Everything here is spelled the way 1.20.1, 1.21.1 and 26.1 all read it ({@code count},
+ * {@code rarity_filter}, {@code in_square}, {@code height_range}, {@code heightmap}, {@code biome}, the
+ * {@code ore} rule tests), so one declaration is valid data on every node. A shape that differs between
+ * versions (26.1 dissolved {@code random_patch} into placement modifiers) needs a per-version spelling
+ * before it belongs here.
  *
- * <p>Like the rest of {@code dejson}, nothing in this class touches a Minecraft class, so the declarations can
- * be written out by a plain JVM at build time.
+ * <p>Nothing in this class touches a Minecraft class, so a plain JVM can write the declarations at build time.
  */
 public final class Features {
 
     private Features() {}
 
-    // ------------------------------------------------------------------------------------------------ files
+    // Files
 
     /** {@code data/<namespace>/worldgen/configured_feature/<name>.json}. */
     public static JsonObject configured(String namespace, String name, String type, JsonObject config) {
@@ -55,7 +53,7 @@ public final class Features {
         }
     }
 
-    // ------------------------------------------------------------------------------------------------ placement
+    // Placement
 
     /** {@code count}: the position repeated {@code n} times. */
     public static JsonObject count(int n) {
@@ -123,7 +121,7 @@ public final class Features {
         return json;
     }
 
-    // ------------------------------------------------------------------------------------------------ configuration
+    // Configuration
 
     /** A block state, {@code properties} given as name/value pairs. */
     public static JsonObject state(String block, String... properties) {
@@ -178,7 +176,7 @@ public final class Features {
         return json;
     }
 
-    // ------------------------------------------------------------------------------------------------ biome tags
+    // Biome tags
 
     /**
      * {@code data/<namespace>/tags/worldgen/biome/<path>.json}. {@code optional} members are written as

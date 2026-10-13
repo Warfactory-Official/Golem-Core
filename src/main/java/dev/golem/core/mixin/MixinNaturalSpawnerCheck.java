@@ -3,11 +3,17 @@ package dev.golem.core.mixin;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import dev.golem.core.world.Spawns;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.NaturalSpawner;
 import net.minecraft.world.level.ServerLevelAccessor;
+import net.minecraft.world.level.StructureManager;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.chunk.ChunkGenerator;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -35,10 +41,10 @@ public abstract class MixinNaturalSpawnerCheck {
      * serves all three Fabric nodes. Same justification as the class: no vanilla or Fabric hook, nothing to widen.
      */
     @Inject(method = "mobsAt", at = @At("HEAD"))
-    private static void golem$potentialSpawns(ServerLevel level, net.minecraft.world.level.StructureManager structureManager,
-                                              net.minecraft.world.level.chunk.ChunkGenerator generator,
-                                              net.minecraft.world.entity.MobCategory category, net.minecraft.core.BlockPos pos,
-                                              net.minecraft.core.Holder<net.minecraft.world.level.biome.Biome> biome,
+    private static void golem$potentialSpawns(ServerLevel level, StructureManager structureManager,
+                                              ChunkGenerator generator,
+                                              MobCategory category, BlockPos pos,
+                                              Holder<Biome> biome,
                                               CallbackInfoReturnable<?> cir) {
         Spawns.potentialSpawns(level, category, pos);
     }

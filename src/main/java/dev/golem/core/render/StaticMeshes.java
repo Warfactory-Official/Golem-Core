@@ -5,6 +5,8 @@ import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.golem.core.GolemCore;
+import dev.golem.core.client.ClientResourceReloads;
+import dev.golem.core.harness.HarnessQueryRegistry;
 import dev.golem.core.platform.Platform;
 import dev.golem.core.render.gem.Geometry;
 import dev.golem.core.render.gem.Surface;
@@ -23,25 +25,21 @@ import org.jspecify.annotations.Nullable;
  *
  * <p><b>The output is the immediate draw's.</b> The geometry still goes through {@link SubmitSink#submitCustomGeometry}
  * with the same render type, so it is drawn at the same point of the frame, into the same target, with the same
- * projection, model-view, lights, fog and textures as the batch it would have joined. What changes is only where the
- * per-vertex arithmetic happens: the vertex shader does what {@code VertexConsumer.addVertex(pose, ...)},
- * {@code setNormal(pose, ...)} and {@code BufferBuilder.setNormal} do (the pose, the normal matrix, the normalisation
- * the pose asks for, the byte quantisation of the normal), then runs the vanilla entity shader body on the result.
- * The fragment stage is vanilla's own. The mesh is captured from the geometry's own {@link Geometry#draw} with an
- * identity pose, so the GPU draws exactly the quads, in exactly the order, that the immediate path would.
+ * projection, model-view, lights, fog and textures as the batch it would have joined. Only the per-vertex arithmetic
+ * moves: the vertex shader does what {@code VertexConsumer.addVertex(pose, ...)}, {@code setNormal(pose, ...)} and
+ * {@code BufferBuilder.setNormal} do (the pose, the normal matrix, the normalisation, the byte quantisation of the
+ * normal), then runs the vanilla entity shader body. The fragment stage is vanilla's own. The mesh is captured from the
+ * geometry's own {@link Geometry#draw} with an identity pose, so the GPU draws the same quads in the same order.
  *
  * <p>Floating point is matched too. The shaders spell out JOML's operation order and mark it {@code precise}, so the
  * GPU neither fuses a multiply and an add nor reorders them, and they take the normal's root and quotient in doubles
  * where the GPU has them, because the JVM rounds those exactly and a GPU's float sqrt and divide do not. Without
- * that a few edge pixels per frame came out different (a fused multiply-add moved a vertex across a pixel centre);
- * with it every pinned frame measured so far is identical, pixel for pixel, on 26.1 and 1.20.1, NeoForge, Forge and
- * Fabric (History §19ei-gpu-models).
+ * that, edge pixels differ (a fused multiply-add moves a vertex across a pixel centre).
  *
  * <p>It falls back to the immediate path, per draw, whenever it cannot be equivalent: a surface other than an
  * alpha-tested entity surface, a geometry whose colour, light or overlay does not pass straight through, a buffer
  * that is not a plain {@code BufferBuilder} or Embeddium's writer for one (the glowing outline wraps it), a
- * shader-pack pipeline (Iris, Oculus),
- * after any failure (one warning, then off for the session), and while switched off with
+ * shader-pack pipeline (Iris, Oculus), after any failure (one warning, then off for the session), and while switched off with
  * {@code -Dgolem.staticMeshes=false} or the harness query {@code golem_static_meshes mode=off}. It has nothing to do
  * with Flywheel and works the same whether the instancing engine is on, off or absent.
  *
@@ -83,8 +81,8 @@ public final class StaticMeshes {
     public static void init() {
         if (initialised) return;
         initialised = true;
-        dev.golem.core.client.ClientResourceReloads.register("golemcore", "static_meshes", StaticMeshes::close);
-        dev.golem.core.harness.HarnessQueryRegistry.register("golem_static_meshes", (mc, params) -> query(params));
+        ClientResourceReloads.register("golemcore", "static_meshes", StaticMeshes::close);
+        HarnessQueryRegistry.register("golem_static_meshes", (mc, params) -> query(params));
     }
 
     /** Whether resident drawing is in use now; while it is not, {@link #submit} is exactly the immediate submission. */
@@ -180,7 +178,7 @@ public final class StaticMeshes {
         Backend.reload();
     }
 
-    // ------------------------------------------------------------------ capture
+    // Capture
 
     /**
      * Records the geometry's own vertex stream twice with an identity pose: once untinted, once with a tint. It
@@ -324,7 +322,7 @@ public final class StaticMeshes {
         *///?}
     }
 
-    // ------------------------------------------------------------------ harness
+    // Harness
 
     private static JsonObject query(JsonObject params) {
         if (params.has("mode")) {
@@ -357,7 +355,7 @@ public final class StaticMeshes {
         return json;
     }
 
-    // ------------------------------------------------------------------ backends
+    // Backends
 
     /** One uploaded lump. */
     static final class Mesh {

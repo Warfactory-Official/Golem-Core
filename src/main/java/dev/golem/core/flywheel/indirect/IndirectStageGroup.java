@@ -225,7 +225,7 @@ public final class IndirectStageGroup {
         indirectBuffer.ensureCapacity(indirectBytes);
         staging.enqueueCopy(indirectBytes, indirectBuffer.handle(), 0L, ptr -> writeIndirect(ptr, indirectBytes));
 
-        // visList / scratch / histogram are GPU-only — no CPU upload, only ensureCapacity.
+        // visList / scratch / histogram are GPU-only: no CPU upload, only ensureCapacity.
         if (totalInstanceCount > 0) {
             long visListBytes = (long) totalInstanceCount * VIS_LIST_ENTRY_BYTES;
             visListBuffer.ensureCapacity(visListBytes);

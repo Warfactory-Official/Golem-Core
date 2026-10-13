@@ -34,17 +34,15 @@ import java.util.function.Function;
  * Keeps animated block textures on Sable sub-levels animating under Sodium.
  *
  * <p>Sodium's "animate only visible textures" (on by default) advances an animated sprite only when a renderer marked
- * it drawn that frame; its own chunk renderer does that for the sections it draws, and its item/GUI hooks for what
- * they draw. Sable draws a sub-level from meshes it compiled itself, so nothing marks the sprites on it: a ship's
- * conveyor belts (or any animated block on it) froze unless the same sprite happened to be drawn elsewhere too, such
- * as a held conveyor or a belt in the world. Measured before this class: 0 changed pixels between two frames of a
- * ship's belts, 54,594 with a conveyor held (harness {@code SableShipAnimation}).
+ * it drawn that frame; its chunk renderer does that for the sections it draws, its item/GUI hooks for what they draw.
+ * Sable draws a sub-level from meshes it compiled itself, so nothing marks the sprites on it, and a ship's animated
+ * blocks (conveyor belts) freeze unless the same sprite is drawn elsewhere too (harness {@code SableShipAnimation}).
  *
  * <p>Each frame this marks, through Sodium's public {@link SpriteUtil}, the animated sprites of every sub-level Sable
  * reports visible sections for. A sub-level's sprites are read from the block states in its plot (section palettes,
- * block models and fluid textures) and re-read about once a second, so blocks added or removed on a ship are picked
- * up. Only loaded with both Sable and Sodium present; without Sodium vanilla ticks every animation anyway. The loader
- * roots call {@link #enable} at client setup and {@link #frame} once per frame ({@link SableIntegration}).
+ * block models and fluid textures) and re-read about once a second, so added or removed blocks are picked up. Only
+ * loaded with both Sable and Sodium present; without Sodium vanilla ticks every animation anyway. The loader roots
+ * call {@link #enable} at client setup and {@link #frame} once per frame ({@link SableIntegration}).
  */
 final class SableSpriteActivity {
 

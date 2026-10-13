@@ -31,21 +31,19 @@ import java.util.function.Function;
  * HBM 1.12's bloom: geometry drawn into a full-size layer during the hand pass, then blurred through a four-level
  * chain and added over the frame by {@link ScreenEffects#afterHand()}.
  *
- * <p>The chain is {@code HbmShaderManager2.bloom()} pass for pass, with one deliberate change: level 0 is half the
- * screen size (user decision 2026-10-03, for the GPU cost; 1.12 ran it at full size). Level sizes are {@code W/2},
+ * <p>The chain is {@code HbmShaderManager2.bloom()} pass for pass, with one change: level 0 is half the
+ * screen size (for the GPU cost; 1.12 ran it at full size). Level sizes are {@code W/2},
  * {@code W/4}, {@code W/16}, {@code W/32} (levels 1..3 are 1.12's: it multiplied by 0.25 twice, then 0.5). The layer
  * is box-downsampled into level 0 and each level from the previous one; then from the smallest level up, each level
  * is blurred horizontally and vertically, the vertical result combined into the next-larger level by maximum, and
  * level 0's result added (ONE / ONE, alpha untouched) over the frame.
  *
- * <p>The half-size level 0 keeps 1.12's on-screen kernel: its blurs step half a texel (one screen pixel, as at full
- * size), and level 1 is taken from it with a 2x2 average, so level 1 keeps its 4x4 screen-pixel footprint. Level 0 is
- * blurred both ways at half size and the composite samples it once, bilinearly, per screen pixel. What is lost is
- * detail finer than two screen pixels in the innermost glow; brightness is conserved (every kernel sums to 1).
+ * <p>The half-size level 0 keeps 1.12's on-screen kernel: its blurs step half a texel (one screen pixel), and level 1
+ * is taken from it with a 2x2 average, so level 1 keeps its 4x4 screen-pixel footprint. What is lost is detail finer
+ * than two screen pixels in the innermost glow; brightness is conserved (every kernel sums to 1).
  *
- * <p>The other restatement is the maximum: 1.12 blended it with {@code GL_MAX} into the destination level; 26.1 has
- * no blend-equation control, so every era reads the destination in the shader and writes the maximum into that
- * level's spare target, swapping the two.
+ * <p>1.12 blended the maximum with {@code GL_MAX}; 26.1 has no blend-equation control, so every era reads the
+ * destination in the shader and writes the maximum into that level's spare target, swapping the two.
  */
 public final class Bloom {
 

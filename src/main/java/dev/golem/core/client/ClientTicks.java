@@ -3,13 +3,10 @@ package dev.golem.core.client;
 /**
  * A callback at the end of every client tick.
  *
- * <p>Each loader spells this differently and none of them agree on where it lives: fabric-api has a
- * dedicated lifecycle event, NeoForge splits the tick into {@code Pre}/{@code Post} subclasses on the
- * game bus, and Forge has one event carrying a {@code phase} field that fires twice. A consumer only
- * ever wants "after the client has ticked", so that is the whole surface here.
- *
- * <p>End rather than start deliberately: input state (key/mouse down flags) is settled by then, which
- * is what a per-tick input poll needs to read.
+ * <p>Fabric API has a dedicated lifecycle event, NeoForge splits the tick into {@code Pre}/{@code Post}
+ * subclasses, and Forge has one event with a {@code phase} field that fires twice. This is the end-of-tick
+ * form only: input state (key/mouse down flags) is settled by then, which is what a per-tick input poll
+ * needs to read.
  *
  * <p>Client-only: never call this from common initialization.
  */

@@ -21,7 +21,7 @@ import java.util.function.LongConsumer;
 //   2. flush() emits one glFlushMappedNamedBufferRange over [start, pos), then dispatches
 //      the scatter compute shader once per dst-VBO span (records covering different VBOs are
 //      sorted by dstVbo at push time via TransferList's coalescing). One GlFence per flush
-//      gates ring reclamation against in-flight GPU reads — matches CrankShaft / upstream.
+//      gates ring reclamation against in-flight GPU reads, matching CrankShaft and upstream.
 //   3. reclaim() is called the next frame *before* writes; signaled fences return their
 //      capacity to the available pool, which is the only thing keeping CPU writes from
 //      racing GPU reads.
@@ -225,7 +225,7 @@ public final class StagingBuffer {
 
     private void flushUsedRegion() {
         if (pos < start) {
-            // Wrapped — flush the tail half then the head half.
+            // Wrapped: flush the tail half, then the head half.
             GL45.glFlushMappedNamedBufferRange(vbo, start, capacity - start);
             GL45.glFlushMappedNamedBufferRange(vbo, 0L, pos);
         } else {

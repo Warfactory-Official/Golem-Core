@@ -38,19 +38,17 @@ public final class ClientFlywheel {
     /**
      * Whether the backend setting asked for no engine at all when the game started.
      *
-     * <p>The published Flywheel is a mod with a backend the player can switch off, and every consumer
-     * is written to survive that. The vendored engine now has the same switch —
-     * {@code config/golemcore-flywheel.json} or {@code /flywheel backend off} (see
-     * {@link FlywheelConfig}) — which also puts a scene side by side with itself: an instanced draw that
-     * is subtly wrong looks like a correct one until you have that comparison.
+     * <p>The published Flywheel has a backend the player can switch off, and every consumer must work
+     * with it off. The vendored engine has the same switch: {@code config/golemcore-flywheel.json} or
+     * {@code /flywheel backend off} (see {@link FlywheelConfig}). It also allows comparing an instanced
+     * draw against the conventional one.
      */
     private static final boolean DISABLED = Flywheel.disabled();
 
     /**
      * The requested backend, normalised, or an empty string. Delegates to {@link Flywheel}, which reads
-     * the JVM switch, then the environment — a dev client launched through Loom takes its JVM arguments
-     * from the buildscript, so the property alone would be unreachable from the one place it is most
-     * wanted — then the player's config file.
+     * the JVM switch, then the environment (a Loom dev client takes its JVM arguments from the
+     * buildscript, so the property alone is unreachable there), then the player's config file.
      */
     public static String backendSetting() {
         return Flywheel.backendSetting();
@@ -74,8 +72,8 @@ public final class ClientFlywheel {
      * <p>Narrower than {@link #isAvailable} and the one to ask before choosing an instanced path over a
      * vanilla renderer. It is false for a server level and false before a client level has loaded.
      *
-     * <p>False as well whenever {@link EngineState} has the engine off — switched off by the player at
-     * runtime, or stopped by a failure — because no manager exists for any level then.
+     * <p>Also false whenever {@link EngineState} has the engine off (switched off by the player at
+     * runtime, or stopped by a failure), because no manager exists for any level then.
      */
     public static boolean isVisualizing(@Nullable LevelAccessor level) {
         //? if >=26.1 {
@@ -91,8 +89,8 @@ public final class ClientFlywheel {
     }
 
     /**
-     * Subscribes the engine to the events that drive it. Safe to call on any node — where there is no
-     * engine this does nothing.
+     * Subscribes the engine to the events that drive it. Safe to call on any node; where there is no
+     * engine it does nothing.
      */
     public static void init() {
         //? if neoforge && >=26.1 {
@@ -166,8 +164,7 @@ public final class ClientFlywheel {
         // Deviation: NeoForge draws the non-Fabulous translucent pass after weather, and Fabric
         // offers no hook inside the weather pass at all. The end of the main pass is the last one
         // it does offer, so on Fabric clouds and weather composite over these particles instead of
-        // under them. Everything else about the pass — depth state, what has already drawn into
-        // main — is the same at both points.
+        // under them. Depth state and what has already drawn into main are the same at both points.
         net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.END_MAIN.register(
                 context -> Engine.drawTranslucent(Engine.cameraModelView()));
         net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.AFTER_TRANSLUCENT_TERRAIN.register(

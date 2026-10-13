@@ -23,8 +23,8 @@ import org.jetbrains.annotations.Nullable;
 /**
  * One visualization manager per client level, created and destroyed from the loader's events.
  *
- * <p>Every entry point here is guarded by {@link EngineState}: while the engine is off — switched off
- * by the player, or stopped by a failure — {@link #current} and {@link #get} answer {@code null}, which
+ * <p>Every entry point here is guarded by {@link EngineState}: while the engine is off, switched off
+ * by the player, or stopped by a failure, {@link #current} and {@link #get} answer {@code null}, which
  * is what makes {@code Visuals.owns} and {@code Billboards.owns} answer no and every vanilla renderer
  * draw its machine. The managers themselves are torn down at the next safe point, never from inside a
  * frame walk that is still using them.
@@ -113,8 +113,8 @@ public final class VisualizationLifecycle {
     }
 
     /**
-     * Builds the current level's manager again and hands it everything already loaded — the path
-     * {@code /flywheel backend DEFAULT} takes after {@code off}, since the chunk events that normally
+     * Builds the current level's manager again and hands it everything already loaded.
+     * Used by {@code /flywheel backend DEFAULT} after {@code off}, because the chunk events that normally
      * feed a manager fired long ago.
      */
     public static void rebuildCurrent() {

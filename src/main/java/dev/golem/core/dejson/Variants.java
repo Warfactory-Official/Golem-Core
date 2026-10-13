@@ -11,14 +11,12 @@ import java.util.Set;
 /**
  * The blockstate half of the declaration vocabulary.
  *
- * <p>Every table here is transcribed from a file this mod already ships, not from memory, because
- * a rotation table that is wrong by one quarter turn is not a crash — it is a machine facing the
- * wrong way that nobody notices until someone plays with it.
+ * <p>Every table is transcribed from a shipped file, not from memory: a rotation table wrong by one
+ * quarter turn is not a crash, it is a machine facing the wrong way.
  *
- * <p>The set is smaller than the shapes it covers, because the interesting cases are products:
- * a machine with {@code facing}, {@code lit} and {@code ext} is {@link #facing()} crossed with two
- * {@link #select} dispatches, and the sixteen-entry file that describes it today is one line here.
- * {@link #stairs()} and {@link #slab()} are the two that are genuinely irregular and stay tables.
+ * <p>Most shapes are products: a machine with {@code facing}, {@code lit} and {@code ext} is
+ * {@link #facing()} crossed with two {@link #select} dispatches. {@link #stairs()} and {@link #slab()}
+ * are genuinely irregular and stay tables.
  */
 public final class Variants {
 
@@ -85,10 +83,8 @@ public final class Variants {
      * unrotated, {@code down} is flipped, and a side is pitched a quarter turn and then yawed.
      * Transcribed from {@code blockstates/radio_torch_controller.json}.
      *
-     * <p>This is a different table from {@link #facingAll()}, not a different spelling of it. Both
-     * conventions are in vanilla and both are on disk here, and the only thing that distinguishes
-     * them is which way the model was drawn — which the blockstate cannot see. Picking the wrong
-     * one produces a block that is the right shape and pointing somewhere else.
+     * <p>A different table from {@link #facingAll()}: which one applies depends on which way the model
+     * was drawn, which the blockstate cannot see. The wrong one gives the right shape pointing elsewhere.
      */
     public static Dispatch facingUp() {
         return facingUp("facing");
@@ -138,12 +134,10 @@ public final class Variants {
      * The forty-entry stair table over {@code facing}, {@code half} and {@code shape}, transcribed
      * from {@code blockstates/brick_compound_stairs.json}.
      *
-     * <p>The rule the file encodes, with {@code i} the index of the facing in
-     * {@link #STAIR_FACING}: a straight or right-handed corner is {@code y = 90i} on the bottom
-     * half; a left-handed corner is a further quarter turn back. The top half adds {@code x = 180},
-     * which flips handedness, so there the right-handed corner gains the extra quarter turn and the
-     * left-handed one loses it. {@code uvlock} follows rotation, which is what keeps the top and
-     * side textures upright on a rotated stair.
+     * <p>With {@code i} the index of the facing in {@link #STAIR_FACING}: a straight or right-handed
+     * corner is {@code y = 90i} on the bottom half; a left-handed corner is a further quarter turn back.
+     * The top half adds {@code x = 180}, which flips handedness, so the right-handed corner gains the
+     * extra quarter turn and the left-handed one loses it. {@code uvlock} keeps textures upright.
      */
     public static Dispatch stairs() {
         return stairs("facing", "half", "shape");

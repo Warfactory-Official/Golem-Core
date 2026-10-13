@@ -14,22 +14,20 @@ import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.network.Connection;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.world.level.Level;
 
 /**
  * Serialises a payload once and writes those same bytes to every recipient's channel.
  *
- * <p>The transport a loader hands you encodes per recipient: a payload going to eight players is
- * built eight times, and each send wakes its event loop and flushes on its own. This builds the
- * clientbound custom-payload packet's bytes once — the packet id, the channel, and the body — and
- * then hands each channel a duplicate that shares the same memory. Writing a raw buffer at the
- * channel level is safe because the packet encoder only claims {@code Packet} instances and passes
- * anything else through, so the length prefix, compression and encryption still run exactly as they
- * would for an encoded packet.
+ * <p>A loader's transport encodes per recipient: a payload going to eight players is built eight times, and
+ * each send wakes its event loop and flushes on its own. This builds the clientbound custom-payload packet's
+ * bytes once (packet id, channel, body) and hands each channel a duplicate sharing the same memory. Writing a
+ * raw buffer at the channel level is safe because the packet encoder only claims {@code Packet} instances and
+ * passes anything else through, so length prefix, compression and encryption still run.
  *
- * <p>Everything here degrades. {@link #available()} is false when the packet id could not be probed
- * or a player's channel cannot be reached, and {@link GolemTransport} falls back to the loader's own
- * transport in that case rather than sending nothing.
+ * <p>{@link #available()} is false when the packet id could not be probed or a player's channel cannot be
+ * reached, and {@link GolemTransport} then falls back to the loader's own transport.
  */
 public final class GolemWire {
 
@@ -43,7 +41,7 @@ public final class GolemWire {
 
     /**
      * Whether the accelerated path can be used at all. Probes on the first ask and remembers the
-     * answer, including a failure — the id is fixed by the protocol, not by anything a server does,
+     * answer, including a failure. The id is fixed by the protocol, not by anything a server does,
      * so there is no moment this has to wait for.
      */
     public static synchronized boolean available() {
@@ -67,15 +65,13 @@ public final class GolemWire {
     /**
      * Whether both channel accessors actually landed on their vanilla targets.
      *
-     * <p>Mixins apply when their target class loads, so "the server started without complaining" is
-     * not evidence that these two did: the listener class may not have loaded yet. Asking the class
-     * itself both forces the load and answers the question, which is the check worth running at
-     * startup on a loader whose tests cannot reach a real connection.
+     * <p>Mixins apply when their target class loads, so a quiet startup does not show these two applied: the
+     * listener class may not have loaded yet. Asking the class forces the load and answers the question.
      */
     public static boolean mixinsApplied() {
         return ChannelAccess.HasChannel.class.isAssignableFrom(Connection.class)
                 && ChannelAccess.HasConnection.class.isAssignableFrom(
-                        net.minecraft.server.network.ServerGamePacketListenerImpl.class);
+                        ServerGamePacketListenerImpl.class);
     }
 
     /** The clientbound custom-payload packet's network id, or -1 if it could not be read. */
@@ -157,7 +153,7 @@ public final class GolemWire {
 
     /**
      * Writes one compiled buffer to every recipient now, and consumes the caller's reference. False
-     * means nothing was written and the caller should send by the safe path — the check covers every
+     * means nothing was written and the caller should send by the safe path. The check covers every
      * recipient before the first write, so a fallback cannot double-send to some of them.
      */
     public static boolean sendNow(ByteBuf wire, Collection<ServerPlayer> recipients) {
@@ -174,8 +170,8 @@ public final class GolemWire {
 
     /**
      * Queues one compiled buffer for each recipient, to go out when the tick ends. Consumes the
-     * caller's reference. Only for traffic that may wait a tick — a heartbeat, or a replay to someone
-     * who has just come into view.
+     * caller's reference. Only for traffic that may wait a tick (a heartbeat, or a replay to someone
+     * who has just come into view).
      */
     public static boolean sendBatched(ByteBuf wire, Collection<ServerPlayer> recipients) {
         try {

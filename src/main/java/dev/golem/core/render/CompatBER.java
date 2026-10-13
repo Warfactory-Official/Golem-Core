@@ -19,15 +19,15 @@ import org.jspecify.annotations.Nullable;
  * the renderer needs out of the block entity, and a submit step that turns that state into geometry.
  *
  * <p>On <b>26.1</b> this extends the vanilla interface directly, so implementations <i>are</i> vanilla
- * renderers — no wrapper, no indirection. The default methods below bridge vanilla's signatures to the
+ * renderers, with no wrapper or indirection. The default methods below bridge vanilla's signatures to the
  * Golem ones.
  *
  * <p>On <b>older versions</b> vanilla has a single {@code render} method taking the block entity and a
  * {@code MultiBufferSource}, so there is nothing to extend; {@code CompatRenderers} wraps the
- * implementation in an adapter that runs extract and submit back to back. The programming model is
- * identical, but note the extract step runs on the render thread there rather than in a separate pass.
+ * implementation in an adapter that runs extract and submit back to back, so extract runs on the render
+ * thread there rather than in a separate pass.
  *
- * <p>Two pieces of 26.1's signature are deliberately dropped, because nothing consumes them: the
+ * <p>Two pieces of 26.1's signature are dropped, because nothing consumes them: the
  * {@code CrumblingOverlay} break-progress parameter (handled by the base extraction) and the
  * five-argument extract overload. Implementations override the four-argument {@link #extract} instead.
  */
@@ -63,7 +63,7 @@ public interface CompatBER<T extends BlockEntity, S extends CompatRenderState>
 
     //? if <26.1 {
     /*// On 26.1 these come from the vanilla interface this extends. Below it there is no such
-    // interface, so they are declared here — otherwise every renderer that overrides one fails with
+    // interface, so they are declared here, otherwise every renderer that overrides one fails with
     // "does not override or implement a method from a supertype". LegacyBERAdapter forwards vanilla's
     // calls to them, including mapping the no-arg shouldRenderOffScreen onto vanilla's 1-arg form.
     default int getViewDistance() {
@@ -104,14 +104,11 @@ public interface CompatBER<T extends BlockEntity, S extends CompatRenderState>
 
     //? if neoforge {
     /**
-     * Forwards the render bounding box NeoForge asks for. Vanilla culls a block-entity renderer
-     * against its own block's box; a renderer that draws outside that box is simply not called once
-     * the block itself leaves the frustum, which reads as the effect popping out of existence when
-     * the camera turns.
+     * Forwards the render bounding box NeoForge asks for. Vanilla culls a block-entity renderer against its
+     * own block's box, so a renderer that draws outside it vanishes once the block leaves the frustum.
      *
-     * <p>A renderer declaring {@link #shouldRenderOffScreen} has already said it draws outside its
-     * own block, so it gets NeoForge's documented "never cull me" value; anything else keeps the
-     * default single-block box.
+     * <p>A renderer declaring {@link #shouldRenderOffScreen} gets NeoForge's "never cull me" value; anything
+     * else keeps the single-block box.
      */
     @Override
     default net.minecraft.world.phys.AABB getRenderBoundingBox(T blockEntity) {

@@ -1,5 +1,6 @@
 package dev.golem.core.dejson;
 
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
@@ -12,11 +13,9 @@ import java.util.Map;
 /**
  * The bridge between a real block and the Minecraft-free half of {@link Dejson}.
  *
- * <p>Reading a state's properties by name is the one thing the declaration vocabulary needs from the
- * game and cannot express itself. It is done here through {@code getProperties} and
- * {@code getValue}, which are spelled the same on every target — {@code StateHolder.getValues}
- * is not, having become a {@code Stream} of property-value pairs on 26.1 where it was a {@code Map}
- * before.
+ * <p>Reads a state's properties by name through {@code getProperties} and {@code getValue}, which are spelled the
+ * same on every target. {@code StateHolder.getValues} is not: on 26.1 it is a {@code Stream} of property-value
+ * pairs, before that a {@code Map}.
  */
 public final class BlockStates {
 
@@ -26,25 +25,18 @@ public final class BlockStates {
      * The registered block a declaration's id names, or {@code null} when nothing is registered
      * under it.
      *
-     * <p>Two separate differences meet in this one call. The lookup was renamed — 26.1 spells it
-     * {@code getValue} where older targets spell it {@code get} — and the block registry is
-     * <em>defaulted</em>, so on the older spelling an unregistered id is answered with air instead
-     * of with null. Both are normalised here, because "this declaration names a block that does not
-     * exist" has to read the same way on every node for a test to assert it. The cost is that
-     * {@code minecraft:air} itself cannot be looked up, which is not a block anything declares a
-     * model for.
+     * <p>26.1 spells the lookup {@code getValue}, older targets {@code get}, and the defaulted block registry
+     * answers an unregistered id with air there. Both are normalised so a missing block reads as null on every
+     * node. {@code minecraft:air} itself cannot be looked up.
      */
     /**
      * Every registered block whose id sits in {@code namespace}, in registry order.
      *
-     * <p>Registry iteration itself reads the same on every target; what does not is reading a
-     * block's id back out, because the id type was renamed at 26.1. A consumer that wants to sweep
-     * its own blocks — to check that each states a rotation, or that each ticking one was given a
-     * ticker — should not need an era guard to do it.
+     * <p>The block id type is renamed at 26.1, so callers sweeping their own blocks use this instead of an era guard.
      */
-    public static java.util.List<Block> blocksIn(String namespace) {
-        java.util.List<Block> blocks = new java.util.ArrayList<>();
-        for (Block block : net.minecraft.core.registries.BuiltInRegistries.BLOCK) {
+    public static List<Block> blocksIn(String namespace) {
+        List<Block> blocks = new ArrayList<>();
+        for (Block block : BuiltInRegistries.BLOCK) {
             //? if >=26.1 {
             net.minecraft.resources.Identifier id = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(block);
             //?} else {
@@ -78,9 +70,8 @@ public final class BlockStates {
     /**
      * The states of {@code block} that no variant key selects.
      *
-     * <p>This is the failure a missing model actually is. Vanilla answers it at bake time on the
-     * client, by which point the report is a texture-less cube in a world; answered here it is a
-     * failing test that names the block and the states.
+     * <p>A missing model otherwise shows up at client bake time as a texture-less cube; this names the block and
+     * states in a failing test.
      */
     public static List<String> uncovered(Block block, Dispatch dispatch) {
         List<String> uncovered = new ArrayList<>();

@@ -9,18 +9,18 @@ import java.util.Map;
  * The frames 1.7's item renderers wrapped around a custom render body, one matrix per display slot.
  *
  * <p>A ported item icon is two halves. The <b>body</b> is the mod's own {@code renderInventory} /
- * {@code renderCommon} calls, transcribed verbatim wherever that item is drawn. The <b>frame</b> is what
- * the engine applied around it — {@code ItemRenderBase.renderItem}'s per-type preamble, Forge's
+ * {@code renderCommon} calls, transcribed as written wherever that item is drawn. The <b>frame</b> is what
+ * the engine applied around it: {@code ItemRenderBase.renderItem}'s per-type preamble, Forge's
  * else-pose, and the transform from 1.7's Y-down 16-pixel slot space into modern block space. The body
  * belongs to the item; the frame is shared by every item on the same 1.7 render class, and is what this
  * class holds.
  *
  * <p>The numbers are CE 1.12.2's, from {@code com/hbm/render/item/ItemRenderBase.java} and
  * {@code ItemRenderBaseLegacy.java}, op for op. They are not a derivation and not a fit: CE already did
- * the 1.7 → modern conversion once, and an independent port (NEXT, on 26.2) composes the same values
+ * the 1.7-to-modern conversion once, and an independent port (NEXT) composes the same values
  * from the 1.7 call chain.
  *
- * <p>Compose a pose by post-multiplying the body onto the frame — {@code frame(klass, slot).mul(body)} —
+ * <p>Compose a pose by post-multiplying the body onto the frame: {@code frame(klass, slot).mul(body)},
  * and hand the result to {@link DisplayFrame}, which turns it into the triple vanilla stores. Nothing
  * here mutates: every call builds a fresh matrix.
  */
@@ -31,10 +31,10 @@ public final class Pose17 {
     /**
      * Which 1.7 render class an item's frames come from.
      *
-     * <p>The distinction is not cosmetic. {@link #ITEM_RENDER_BASE} is the 1.7-exact set; CE's own
-     * comment on {@link #ITEM_RENDER_BASE_LEGACY} says it is "reserved for items that does not have a 1.7
-     * counterpart to copy transform from", so its numbers are invented framing for new content. Putting a
-     * 1.7 item on the Legacy frames moves its icon about 13 GUI pixels up a 16-pixel slot.
+     * <p>{@link #ITEM_RENDER_BASE} is the 1.7-exact set. CE's own comment on {@link #ITEM_RENDER_BASE_LEGACY}
+     * says it is "reserved for items that does not have a 1.7 counterpart to copy transform from", so its
+     * numbers are invented framing for new content. A 1.7 item on the Legacy frames has its icon moved
+     * by about 13 GUI pixels in a 16-pixel slot.
      */
     public enum Klass {
 
@@ -56,12 +56,12 @@ public final class Pose17 {
          * {@code ItemRenderBase} at all.
          *
          * <p>It implements {@code IItemRenderer} directly and wraps the body in nothing: no slot-centre
-         * translate, no {@code -1} flip, no {@code rotate(90, Y)} on the non-equipped types. So GUI here is
-         * the bare 1.7 pixel slot — origin top left, y down, sixteen units wide — and the hand, head, ground
-         * and item-frame slots are the same engine poses {@link #ITEM_RENDER_BASE} ends on with that class's
-         * own equipped preamble swapped for the missile renderer's
-         * ({@code translate(0.5, -0.25, 0) scale(0.15)} equipped, {@code translate(0.5, 0.25, 0) scale(0.1)}
-         * first person, {@code scale(0.15)} as a dropped entity).
+         * translate, no {@code -1} flip, no {@code rotate(90, Y)} on the non-equipped types. GUI is the bare
+         * 1.7 pixel slot (origin top left, y down, sixteen units wide); the hand, head, ground and
+         * item-frame slots are the engine poses {@link #ITEM_RENDER_BASE} ends on, with its equipped
+         * preamble swapped for the missile renderer's ({@code translate(0.5, -0.25, 0) scale(0.15)}
+         * equipped, {@code translate(0.5, 0.25, 0) scale(0.1)} first person, {@code scale(0.15)} as a
+         * dropped entity).
          */
         ITEM_RENDER_MISSILE,
 
@@ -69,17 +69,15 @@ public final class Pose17 {
          * {@code ItemRenderWeaponBase}: the Sedna guns, and the one class here that stops at the engine.
          *
          * <p>The other classes fold a fixed preamble into the frame because every item on them shares it.
-         * This one cannot: {@code setupInv}, {@code setupThirdPerson} and {@code setupEntity} are ordinary
-         * overridable methods, every gun overrides the first two, and eight of the fifty-two replace
-         * {@code setupInv} outright rather than building on it. So the shared part of a weapon icon ends
-         * at the engine slot — the per-context matrix 1.7 had already applied when it called
-         * {@code renderItem} — and the whole setup chain, the base class's own included, belongs to the
+         * Here {@code setupInv}, {@code setupThirdPerson} and {@code setupEntity} are overridable, every
+         * gun overrides the first two, and eight of the fifty-two replace {@code setupInv} outright. So
+         * the shared part ends at the engine slot (the per-context matrix 1.7 had applied when it called
+         * {@code renderItem}) and the whole setup chain, the base class's own included, belongs to the
          * gun's body.
          *
-         * <p>The slots are therefore {@link #ITEM_RENDER_BASE}'s chains with that class's preamble
-         * removed, which is the same wrapper {@link #ITEM_RENDER_MISSILE} is built on: dividing either
-         * class's frame by its own preamble recovers the identical eight matrices, and that agreement is
-         * what says these are the engine's and not a fit.
+         * <p>The slots are {@link #ITEM_RENDER_BASE}'s chains with that class's preamble removed, the
+         * same wrapper {@link #ITEM_RENDER_MISSILE} is built on: dividing either class's frame by its own
+         * preamble recovers the identical eight matrices.
          */
         ITEM_RENDER_WEAPON,
 
@@ -190,8 +188,8 @@ public final class Pose17 {
     }
 
     /**
-     * The missile frames. GUI is the 1.7 slot itself — {@code scale(1/16) translate(0, 16, 0) scale(1, -1, 1)}
-     * carries a pixel coordinate with y running down into block space — because the renderer poses its body
+     * The missile frames. GUI is the 1.7 slot itself: {@code scale(1/16) translate(0, 16, 0) scale(1, -1, 1)}
+     * carries a pixel coordinate with y running down into block space, because the renderer poses its body
      * from the slot origin rather than from its centre. The other slots keep {@link #ITEM_RENDER_BASE}'s
      * engine poses and end on the missile renderer's own equipped preamble; GROUND and FIXED are that
      * class's {@code ENTITY} mapping (half size on the floor, turned about for a frame) applied to
@@ -242,11 +240,10 @@ public final class Pose17 {
      * The bare engine slot, with no renderer preamble on it.
      *
      * <p>Each of these is the matching {@link #ITEM_RENDER_BASE} chain with that class's own preamble
-     * dropped from the end — GUI loses {@code translate(8, 10, 0) rotate(-30, X) rotate(45, Y)
+     * dropped from the end. GUI loses {@code translate(8, 10, 0) rotate(-30, X) rotate(45, Y)
      * scale(-1)}, the hands and head lose {@code translate(0.5, 0.25, 0) scale(0.25)} and, off the
      * equipped slot, {@code rotate(90, Y)}, and the floor and frame lose {@code scale(1.5) scale(0.25)
-     * rotate(90, Y)}. GUI is consequently 1.7's pixel slot itself, sixteen units wide with y running
-     * down, which is why a weapon body is written in whole pixels.
+     * rotate(90, Y)}. GUI is 1.7's pixel slot itself, so a weapon body is written in whole pixels.
      */
     private static Matrix4f itemRenderWeapon(DisplaySlot slot) {
         return switch (slot) {

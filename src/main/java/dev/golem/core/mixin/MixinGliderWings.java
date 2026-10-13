@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.At;
  * {@link Gliders#wingsFor}: vanilla's wings layer draws the wings of an elytra stored in the chest item (an elytra
  * installed in a chestplate), exactly as for a worn elytra - same model, animation, cape/elytra skin and glint.
  *
- * <p>Why a mixin (§7). Rung 1, vanilla: the wings layer reads the chest stack itself (26.1 {@code WingsLayer}:
+ * <p>Why a mixin. Rung 1, vanilla: the wings layer reads the chest stack itself (26.1 {@code WingsLayer}:
  * {@code state.chestEquipment}'s equippable asset; before: {@code ElytraLayer}: {@code getItemBySlot(CHEST)}), with no
  * way to name another stack. Rung 2, loaders: Forge/NeoForge's {@code ElytraLayer.shouldRender} and fabric-api's
  * {@code FabricElytraItem} only serve a mod's own chest item; NeoForge 26.1 and Fabric have no wings hook. Rung 3:

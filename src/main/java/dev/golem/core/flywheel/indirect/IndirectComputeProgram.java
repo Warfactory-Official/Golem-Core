@@ -21,8 +21,8 @@ import java.nio.FloatBuffer;
 // vertex/fragment programs; compute shaders need their own compile + link path.
 //
 // Loaded once per game session via load() (called lazily on first cull dispatch). The shader
-// source has no #moj_import directives, so we don't run Mojang's GlslPreprocessor — just feed
-// the raw text to glShaderSource. Uniform locations are resolved at link time and cached.
+// source has no #moj_import directives, so Mojang's GlslPreprocessor is skipped and the
+// raw text goes to glShaderSource. Uniform locations are resolved at link time and cached.
 public final class IndirectComputeProgram {
 
     private static final Identifier CULL_SHADER = Identifier.fromNamespaceAndPath(GolemCore.MOD_ID, "shaders/core/golem_cull.csh");

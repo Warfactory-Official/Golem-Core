@@ -9,20 +9,19 @@ import org.jspecify.annotations.Nullable;
  * Whether the vendored engine is drawing right now, and the one place that stops it.
  *
  * <p>The engine is an acceleration beside a vanilla renderer that already draws every machine, so no
- * failure inside it is worth a crash or a hole in the world. Every entry point the loader calls into —
- * level load, frame start, the draw stages, a block entity arriving — runs through {@link #guard}. The
- * first throw switches the engine off for the session, logs one warning, and from that moment every
- * ownership question ({@code Visuals.owns}, {@code Billboards.owns}) answers no, so the vanilla renderers
- * take every machine back on the very next submit. The engine's own state is torn down at the next safe
- * point ({@link #takeTeardown}) rather than from inside the walk that failed.
+ * failure inside it is worth a crash. Every entry point the loader calls into (level load, frame start,
+ * the draw stages, a block entity arriving) runs through {@link #guard}. The first throw switches the
+ * engine off for the session and logs one warning; every ownership question
+ * ({@code Visuals.owns}, {@code Billboards.owns}) then answers no and the vanilla renderers take every
+ * machine back on the next submit. The engine's state is torn down at the next safe point
+ * ({@link #takeTeardown}), not from inside the walk that failed.
  *
- * <p>The same switch serves the player: {@code /flywheel backend off} lands here too, as a reason
- * rather than a failure, and can be reversed.
+ * <p>{@code /flywheel backend off} uses the same switch, as a reversible reason rather than a failure.
  */
 public final class EngineState {
 
     /**
-     * Thrown where the engine finds the device cannot do what it needs — a non-OpenGL backend, a buffer
+     * Thrown where the engine finds the device cannot do what it needs (a non-OpenGL backend, a buffer
      * that cannot be persistently mapped. That is a property of the machine, not of one visual, so it
      * switches the whole engine off instead of retiring visuals one at a time.
      */
@@ -79,11 +78,10 @@ public final class EngineState {
     /**
      * Lets the engine run again. False, and nothing changes, once it has failed.
      *
-     * <p>Also drops a teardown that no safe point has claimed yet: left pending, the next tick's
-     * {@code teardownIfPending} would tear down the manager the caller is about to build, and the engine
-     * would report itself running while drawing nothing. A caller therefore performs the teardown itself
-     * first ({@code VisualizationLifecycle.teardownIfPending()}, as {@code FlywheelCommands.apply} does), so
-     * the old managers and buffers are released before this clears the flag.
+     * <p>Also drops a teardown no safe point has claimed yet: left pending, the next tick's
+     * {@code teardownIfPending} would tear down the manager the caller is about to build, leaving the engine
+     * running and drawing nothing. A caller performs the teardown first
+     * ({@code VisualizationLifecycle.teardownIfPending()}, as {@code FlywheelCommands.apply} does).
      */
     public static boolean switchOn() {
         synchronized (EngineState.class) {
@@ -101,14 +99,13 @@ public final class EngineState {
      * Keeps the engine off for as long as Iris or Oculus has a shader pack enabled, and back on once it has not.
      *
      * <p>The published engine does the same: its backends report themselves unsupported while
-     * {@code ShadersModHelper.isShaderPackInUse()} and it falls back to its off backend. A pack replaces the world
-     * pipeline with its own G-buffers and composite passes; the engine's raw GL draws land in vanilla's main target,
-     * which the pack's final pass paints over, so an engine left on draws every machine into nothing while each
-     * machine's vanilla renderer stands down for it — every instanced machine invisible. Off, the vanilla renderers
-     * draw, and those the pack does shade.
+     * {@code ShadersModHelper.isShaderPackInUse()}. A pack replaces the world pipeline with its own G-buffers;
+     * the engine's raw GL draws land in vanilla's main target, which the pack's final pass paints over, while
+     * each machine's vanilla renderer stands down for the engine, so every instanced machine is invisible.
+     * Off, the vanilla renderers draw and the pack shades them.
      *
-     * <p>Only the shader-pack reason is undone here: an engine the player switched off, or one that failed, stays
-     * off. Call once per frame on the render thread, before anything asks whether the engine is running.
+     * <p>Only the shader-pack reason is undone here; an engine the player switched off, or one that failed,
+     * stays off. Call once per frame on the render thread, before anything asks whether the engine is running.
      */
     public static void followShaderPack() {
         boolean pack = dev.golem.core.client.ShaderPacks.inUse();

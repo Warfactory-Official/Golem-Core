@@ -13,7 +13,7 @@ import net.minecraft.world.item.Item;
  * Version-neutral armour material declaration.
  *
  * <p>Consumers declare the material's stable data once. The native material and its asset/layer
- * representation are deliberately built here so vanilla armour APIs do not escape this facade.
+ * representation are built here so vanilla armour APIs do not escape this facade.
  */
 public final class GolemArmorMaterial {
     private final String namespace;
@@ -57,7 +57,7 @@ public final class GolemArmorMaterial {
      * <p>Read by {@link CompatArmorItem}, which has to special-case that zero: from 26.1 the enchantable
      * data component <b>rejects</b> a value of 0 outright ({@code Enchantment value must be positive}),
      * so an unenchantable armour must omit the component rather than declare it as zero. Below 26.1 the
-     * same zero is simply the material's answer and needs no special handling.
+     * same zero is the material's answer and needs no special handling.
      */
     int enchantmentValue() {
         return enchantmentValue;
@@ -68,7 +68,7 @@ public final class GolemArmorMaterial {
      *
      * <p>Read by {@link CompatArmorItem} on 1.21.x only. 26.1's {@code ArmorMaterial} carries durability
      * itself and 1.20.1's interface answers {@code getDurabilityForType}, but 1.21.x's {@code
-     * ArmorMaterial} record has no durability at all — there it is the item's own {@code
+     * ArmorMaterial} record has no durability at all; there it is the item's own {@code
      * Properties.durability}, and nothing applies it on the consumer's behalf.
      */
     int durability() {

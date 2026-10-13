@@ -8,16 +8,15 @@ import net.minecraft.world.entity.player.Player;
  * The posed skeleton of the humanoid a layer is drawing on, for renderers that supply their own
  * geometry rather than a vanilla model.
  *
- * <p>1.12's armour models solved this by <i>copying</i> angles out of the live {@code ModelBiped}
- * every frame ({@code ModelArmorBase.copyPropertiesFromBiped}). That copy is unnecessary here:
- * {@link ModelPart} is the same class on every version in the matrix, with the same public
- * {@code x/y/z}, {@code xRot/yRot/zRot} and {@code visible} fields and the same
- * {@link ModelPart#translateAndRotate(com.mojang.blaze3d.vertex.PoseStack) translateAndRotate}, so a
- * layer can pose against the parent model's parts directly and inherit every animation vanilla applies
- * — walking, swimming, riding, the zombie arms-raised pose — with nothing to keep in sync.
+ * <p>1.12's armour models copied angles out of the live {@code ModelBiped} every frame
+ * ({@code ModelArmorBase.copyPropertiesFromBiped}). That is unnecessary here: {@link ModelPart} has the same
+ * public {@code x/y/z}, {@code xRot/yRot/zRot} and {@code visible} fields and the same
+ * {@link ModelPart#translateAndRotate(com.mojang.blaze3d.vertex.PoseStack) translateAndRotate} on every version,
+ * so a layer poses against the parent model's parts directly and inherits every vanilla animation
+ * (walking, swimming, riding, the zombie arms-raised pose) with nothing to keep in sync.
  *
- * <p>The three flags are the pieces of that state which do <em>not</em> live on the model, and which
- * the two eras read from different places: above 26.1 from the render state, below it from the entity.
+ * <p>The three flags are the state that does <em>not</em> live on the model. From 26.1 they come from the
+ * render state, below it from the entity.
  *
  * <p>Client-only.
  */
@@ -56,7 +55,7 @@ public final class HumanoidPose {
         return model.head;
     }
 
-    /** The hat/headwear overlay — the part a full helmet usually hides. */
+    /** The hat/headwear overlay: the part a full helmet usually hides. */
     public ModelPart hat() {
         return model.hat;
     }

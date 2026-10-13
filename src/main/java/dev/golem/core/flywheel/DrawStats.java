@@ -7,15 +7,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * What the last frame actually cost the GPU, in draw calls.
  *
- * <p>The whole claim instancing makes is that N copies of a machine become one draw rather than N, and
- * that claim is invisible from inside the game: a frame drawn well and a frame drawn badly look the
- * same until something counts. Draws are counted rather than derived because the two backends reach
- * the GPU differently — INSTANCING issues one {@code drawIndexed} per bucket chunk, INDIRECT one
- * {@code glMultiDrawElementsIndirect} per group covering every bucket in it — and only the call site
- * knows which it just made.
+ * <p>Instancing turns N copies of a machine into one draw, which is invisible from inside the game until
+ * something counts. Draws are counted at the call site because the backends differ: INSTANCING issues one
+ * {@code drawIndexed} per bucket chunk, INDIRECT one {@code glMultiDrawElementsIndirect} per group.
  *
- * <p>Counted into the frame in progress and rolled over at the frame boundary, so a reader always sees
- * a whole frame rather than however much of one had been issued when it looked.
+ * <p>Counted into the frame in progress and rolled over at the frame boundary, so a reader always sees a
+ * whole frame.
  */
 public final class DrawStats {
 
@@ -40,10 +37,8 @@ public final class DrawStats {
     /**
      * One instance transform actually sent to the GPU.
      *
-     * <p>Separate from the draw count because they answer different questions. Draws are what the
-     * frame costs to issue; this is what it costs to <em>prepare</em>, and a model that is animated
-     * but standing still costs nothing here while still costing a draw. The pair is the only way to
-     * see the difference between a world that is busy and one that is merely populated.
+     * <p>Separate from the draw count: draws are what the frame costs to issue, this is what it costs to
+     * <em>prepare</em>. A standing-still animated model costs a draw but nothing here.
      */
     public static void wrote() {
         WRITES.incrementAndGet();

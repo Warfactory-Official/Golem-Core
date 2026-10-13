@@ -38,14 +38,13 @@ public final class ItemStacks {
 
     /**
      * A copy of {@code template} carrying the data components named in {@code components}, written in
-     * the 1.20.5+ item-stack JSON spelling ({@code {"hbm:item_variant": 3, "minecraft:damage": 60}}), or
+     * the 1.20.5+ item-stack JSON spelling ({@code {"hbm:fluid": {...}, "minecraft:damage": 60}}), or
      * empty when they do not decode.
      *
      * <p>Below 1.20.5 there are no components: each non-vanilla key becomes the root NBT key that
      * {@link GolemComponent} stores it under, {@code minecraft:damage} becomes the damage value, and any
-     * other {@code minecraft:} component (which has no NBT counterpart there) is skipped. Parsing the
-     * modern spelling with the old {@code ItemStack.CODEC} instead fails on the missing {@code Count}
-     * field, so every component silently fell away on 1.20.1.
+     * other {@code minecraft:} component (which has no NBT counterpart there) is skipped. The old
+     * {@code ItemStack.CODEC} cannot parse this spelling: it fails on the missing {@code Count} field.
      */
     public static java.util.Optional<ItemStack> withComponents(ItemStack template, com.google.gson.JsonObject components,
             com.mojang.serialization.DynamicOps<com.google.gson.JsonElement> ops) {
@@ -745,7 +744,7 @@ public final class ItemStacks {
     }
 
     /**
-     * Gives this one stack its own maximum stack size — 1.20.5's {@code minecraft:max_stack_size} component,
+     * Gives this one stack its own maximum stack size: 1.20.5's {@code minecraft:max_stack_size} component,
      * the modern spelling of a 1.7 {@code getItemStackLimit(ItemStack)} that answered per stack.
      *
      * <p>Below 1.20.5 there are no components and the vanilla limit is per item, so the size rides on the

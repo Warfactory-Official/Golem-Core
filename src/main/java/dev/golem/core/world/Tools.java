@@ -13,7 +13,7 @@ import net.minecraft.world.level.block.state.BlockState;
  * {@link CompatHoeItem}.
  *
  * <p>The three supported eras spell a tool's material three ways (see {@link ToolTier}); everything a
- * consumer asks of it — how fast does it dig this block, may it drop it — is answered here from the
+ * consumer asks of it (how fast does it dig this block, may it drop it) is answered here from the
  * legacy harvest level, so the answer is the same on every target.
  */
 public final class Tools {

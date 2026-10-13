@@ -6,7 +6,7 @@ import net.minecraft.world.entity.Entity;
 /**
  * Moving an entity to a position, possibly in another level, keeping its rotation.
  *
- * <p>Vanilla has had one method for this since 1.19.4 — the one {@code /tp} calls — but 1.21.2 added a
+ * <p>Vanilla has had one method for this since 1.19.4, the one {@code /tp} calls, but 1.21.2 added a
  * trailing "reset the camera" flag and renamed the relative-movement set's element type. Passing an
  * empty set keeps the element type out of this signature, so the only difference left is the flag.
  */

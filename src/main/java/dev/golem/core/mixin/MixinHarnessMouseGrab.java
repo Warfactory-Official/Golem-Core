@@ -1,5 +1,6 @@
 package dev.golem.core.mixin;
 
+import dev.golem.core.harness.HarnessWindowHints;
 import net.minecraft.client.MouseHandler;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -15,6 +16,6 @@ public class MixinHarnessMouseGrab {
 
     @Inject(method = "grabMouse", at = @At("HEAD"), cancellable = true)
     private void golem$harnessNoGrab(CallbackInfo callback) {
-        if (dev.golem.core.harness.HarnessWindowHints.blockMouseGrab()) callback.cancel();
+        if (HarnessWindowHints.blockMouseGrab()) callback.cancel();
     }
 }

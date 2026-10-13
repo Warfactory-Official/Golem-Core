@@ -12,13 +12,12 @@ import net.minecraft.world.level.Level;
 /**
  * Assorted vanilla operations whose spelling or shape changed between 1.21.1 and 26.1.
  *
- * <p>These are grouped rather than split into one class each because they share a property: the
- * difference is small, mechanical, and used from a handful of call sites. Anything that needs real
- * translation logic gets its own type (see {@code dev.golem.core.data}).
+ * <p>Each difference here is small, mechanical and used from a handful of call sites. Anything that needs
+ * real translation logic gets its own type (see {@code dev.golem.core.data}).
  *
- * <p>None of these are Stonecutter string replacements, because a replacement must be reversible 1:1
- * and none of these names are — {@code hurt} already exists on both eras with a different meaning,
- * and the fuel lookup is a different call graph entirely, not a rename.
+ * <p>None of these are Stonecutter string replacements, because a replacement must be reversible 1:1 and
+ * none of these is a plain rename: {@code hurt} already exists on both eras with a different meaning, and
+ * the fuel lookup is a different call graph.
  */
 public final class Compat {
 
@@ -124,7 +123,7 @@ public final class Compat {
      * exactly (18px pitch, hotbar 58px below the grid's top row) so existing screen textures line up.
      *
      * <p>Takes a slot sink rather than the menu itself because {@code AbstractContainerMenu.addSlot}
-     * is protected — only the menu subclass can hand it over, as {@code this::addSlot}. 26.1's own
+     * is protected, so only the menu subclass can hand it over, as {@code this::addSlot}. 26.1's own
      * {@code addStandardInventorySlots} is likewise protected, so the call site picks between them.
      */
     public static void addPlayerInventory(java.util.function.Consumer<Slot> addSlot, Inventory inventory, int x, int y) {
@@ -167,9 +166,10 @@ public final class Compat {
      *
      * <p>Before 26.1 {@code BlockItem.getDescriptionId} defers to its block instead, which is the same key only while the
      * item is named like its block. An item of a block family (one block, several named items, such as
-     * {@code concrete_ext_bronze} of {@code concrete_ext}) had its block's key there and the 26.1 key on 26.1 (and code
-     * reading the key, such as 1.7's metal-name Faraday rule, disagreed). So below 26.1 the properties are marked and a
-     * {@link CompatBlockItem} built from them answers 26.1's key; another {@code BlockItem} keeps its block's.
+     * {@code concrete_ext_bronze} of {@code concrete_ext}) would get its block's key below 26.1 and its own key on
+     * 26.1, and code reading the key (1.7's metal-name Faraday rule) would disagree. So below 26.1 the properties are
+     * marked and a {@link CompatBlockItem} built from them answers 26.1's key; another {@code BlockItem} keeps its
+     * block's.
      */
     public static Item.Properties blockDescription(Item.Properties properties) {
         //? if >=26.1 {
@@ -192,7 +192,7 @@ public final class Compat {
     /**
      * Chunk coordinates. 26.1 made {@code ChunkPos} a record with {@code x()}/{@code z()} accessors;
      * before that they were public fields. Helpers rather than a replacement, because {@code .x()} is
-     * far too common a spelling to rewrite blindly — {@code Vec3}, {@code Vector3f} and others have it.
+     * too common a spelling to rewrite blindly: {@code Vec3}, {@code Vector3f} and others have it too.
      */
     public static int chunkX(net.minecraft.world.level.ChunkPos pos) {
         //? if >=26.1 {
@@ -215,11 +215,10 @@ public final class Compat {
      * Whether a block state renders as a full opaque cube.
      *
      * <p>26.1's {@code isSolidRender()} takes no arguments; before that it required a
-     * {@code (BlockGetter, BlockPos)} pair. Several call sites — notably fallout's block predicates —
-     * only have the state, with no level or position in scope, so the older branch approximates with
-     * {@code canOcclude()}. That is the state's own occlusion flag rather than a position-aware
-     * result: it agrees for every ordinary full block, and differs only for states whose occlusion
-     * depends on neighbours. Documented approximation, not an exact port.
+     * {@code (BlockGetter, BlockPos)} pair. Several call sites, notably fallout's block predicates,
+     * only have the state, so the older branch approximates with {@code canOcclude()}, the state's own
+     * occlusion flag. It agrees for every ordinary full block and differs only for states whose
+     * occlusion depends on neighbours.
      */
     public static boolean isSolidRender(net.minecraft.world.level.block.state.BlockState state) {
         //? if >=26.1 {
@@ -230,7 +229,7 @@ public final class Compat {
     }
 
     /**
-     * Whether a block state renders as a full opaque cube <em>at a position</em> — the exact form,
+     * Whether a block state renders as a full opaque cube <em>at a position</em>: the exact form,
      * for the call sites that have a level and a position in scope (an explosion deciding whether the
      * block under a cleared space can hold fire, for instance).
      *
@@ -269,8 +268,8 @@ public final class Compat {
      * Every item tag currently registered, as tag keys.
      *
      * <p>26.1's {@code getTags()} streams the {@code HolderSet.Named} itself (with {@code key()});
-     * older versions stream a {@code Pair} of key and set. Callers that only want the keys — matching
-     * tag paths against a naming convention, say — should not have to know which.
+     * older versions stream a {@code Pair} of key and set. Callers that only want the keys (to match tag
+     * paths against a naming convention, say) need not know which.
      */
     public static java.util.List<net.minecraft.tags.TagKey<Item>> itemTagKeys() {
         java.util.List<net.minecraft.tags.TagKey<Item>> keys = new java.util.ArrayList<>();
@@ -286,7 +285,7 @@ public final class Compat {
      * Raytraces against blocks. Wraps the whole call rather than just the trailing argument because the
      * argument's <em>type</em> changed, not only its value: 26.1's {@code ClipContext} takes a
      * {@code CollisionContext}, older versions take a nullable {@code Entity}. A helper returning "the
-     * right context" therefore cannot exist — only a helper that performs the clip.
+     * right context" therefore cannot exist; only a helper that performs the clip.
      */
     public static net.minecraft.world.phys.BlockHitResult clip(Level level,
             net.minecraft.world.phys.Vec3 from, net.minecraft.world.phys.Vec3 to,
@@ -302,15 +301,15 @@ public final class Compat {
     }
 
     /**
-     * The leftover stack for a fuel or crafting input — an empty bucket for lava, and so on.
+     * The leftover stack for a fuel or crafting input: an empty bucket for lava, and so on.
      *
      * <p>26.1 models the remainder as an item instance that must be instantiated; older versions hand
      * back the {@code Item} itself. Returns {@link ItemStack#EMPTY} when there is no remainder.
      */
     public static ItemStack craftingRemainder(ItemStack stack) {
         // The accessor itself was renamed (getCraftingRemainder / getCraftingRemainingItem), so the
-        // whole call sits inside the guard. Deliberately not leaning on a Stonecutter replacement:
-        // those live in the consuming project's config, and this library has to compile on its own.
+        // whole call sits inside the guard. A Stonecutter replacement would live in the consuming
+        // project's config, and this library has to compile on its own.
         //? if >=26.1 {
         net.minecraft.world.item.component.UseRemainder component =
                 stack.get(net.minecraft.core.component.DataComponents.USE_REMAINDER);
@@ -350,7 +349,7 @@ public final class Compat {
     }
 
     /**
-     * Runs a block entity's removal side effects — dropping its inventory, normally.
+     * Runs a block entity's removal side effects: dropping its inventory, normally.
      *
      * <p>26.1 calls {@code BlockEntity.preRemoveSideEffects} itself whenever a block entity is removed,
      * and its default drops the contents of any {@code Container}. No such hook or default exists below
@@ -376,11 +375,11 @@ public final class Compat {
 
     /**
      * Runs {@link CompatBlock#onBlockRemoved} for a block that has already left {@code pos} by a path that never
-     * reports it — a write straight into a chunk section. Does nothing for a block that is not a
+     * reports it: a write straight into a chunk section. Does nothing for a block that is not a
      * {@link CompatBlock}, so it is cheap to call for every cell of a bulk clear.
      *
-     * <p>A multiblock tearing itself down, a light rebuilding its beam: those live in the removal hook, and a
-     * section write skips it on every node.
+     * <p>A multiblock tearing itself down or a light rebuilding its beam lives in the removal hook, which a
+     * section write skips on every node.
      */
     public static void blockRemoved(ServerLevel level, net.minecraft.core.BlockPos pos,
                                     net.minecraft.world.level.block.state.BlockState old) {
@@ -395,8 +394,8 @@ public final class Compat {
      *
      * <p>Below 26.1 vanilla calls the removal hook ({@code onRemove}) on every block change. 26.1 calls its
      * replacement ({@code affectNeighborsAfterRemoval}) only when the flags ask for neighbour updates or a piston
-     * move, so a caller that suppresses neighbour updates for speed (a nuke clearing millions of blocks) silently
-     * loses every multiblock teardown on 26.1 alone. This restores the older contract on 26.1 and is a plain
+     * move, so a caller that suppresses neighbour updates for speed (a nuke clearing millions of blocks) would
+     * lose every multiblock teardown on 26.1 alone. This gives 26.1 the older contract and is a plain
      * {@code setBlock} below it. Returns what {@code setBlock} returned.
      */
     public static boolean setBlockWithRemoval(ServerLevel level, net.minecraft.core.BlockPos pos,
@@ -419,7 +418,7 @@ public final class Compat {
      *
      * <p>26.1 replaced the {@code setUnsaved(boolean)} setter with {@code markUnsaved()}; there is no
      * "mark saved" direction on 26.1, so only the one useful direction is exposed here. Callers that
-     * write into a chunk's sections behind vanilla's back have to do this themselves — nothing else
+     * write into a chunk's sections behind vanilla's back have to do this themselves, since nothing else
      * will.
      */
     public static void markUnsaved(net.minecraft.world.level.chunk.ChunkAccess chunk) {
@@ -434,8 +433,8 @@ public final class Compat {
      * Tells the chunk source that a section flipped between "has blocks" and "is all air".
      *
      * <p>26.1 added this call to {@code LevelChunk.setBlockState}; below it there is no such hook and
-     * nothing to do. Only callers that write into a chunk's sections behind vanilla's back need it —
-     * vanilla makes the call itself on the normal path.
+     * nothing to do. Only callers that write into a chunk's sections behind vanilla's back need it.
+     * Vanilla makes the call itself on the normal path.
      */
     public static void onSectionEmptinessChanged(net.minecraft.server.level.ServerLevel level,
                                                  int chunkX, int sectionY, int chunkZ, boolean empty) {
@@ -447,7 +446,7 @@ public final class Compat {
     /**
      * Notifies the six blocks around {@code pos} that the block there changed.
      *
-     * <p>26.1 added a redstone {@code Orientation} argument, used to give wire updates a direction;
+     * <p>26.1 added a redstone {@code Orientation} argument that gives wire updates a direction;
      * null is the "no particular direction" case and is what vanilla itself passes from most call sites.
      */
     public static void updateNeighborsAt(Level level, net.minecraft.core.BlockPos pos,
@@ -462,15 +461,11 @@ public final class Compat {
     /**
      * Registers or clears a chunk's forced-loading ticket <b>without waiting for the chunk</b>.
      *
-     * <p>{@code ServerLevel.setChunkForced} is this call followed by {@code getChunk(x, z)} — a
-     * synchronous load that <b>generates</b> when nobody has the chunk. That trailing wait is the whole
-     * difference, and it is not wanted by anything that forces chunks in bulk: a caller claiming a wide
-     * area pays a full chunk generation, on the server thread, per chunk, before it does any work. The
-     * ticket alone is a registration; the chunk system then produces the chunk on its own workers and
-     * the caller picks it up with {@code getChunkNow} on a later tick.
-     *
-     * <p>The state change is identical either way — {@code setChunkForced} delegates the whole of it
-     * here and only adds the wait.
+     * <p>{@code ServerLevel.setChunkForced} is this call followed by {@code getChunk(x, z)}, a
+     * synchronous load that <b>generates</b> when nobody has the chunk. A caller claiming a wide area
+     * would pay a full chunk generation on the server thread per chunk before doing any work. The ticket
+     * alone is a registration; the chunk system produces the chunk on its own workers and the caller
+     * picks it up with {@code getChunkNow} on a later tick. The state change is identical either way.
      */
     public static void updateChunkForced(ServerLevel level, int chunkX, int chunkZ, boolean forced) {
         level.getChunkSource().updateChunkForced(new net.minecraft.world.level.ChunkPos(chunkX, chunkZ), forced);
@@ -498,8 +493,7 @@ public final class Compat {
      * and have to dispatch it themselves, or containers never drop and rails never re-link.
      *
      * <p>26.1 renamed it from {@code onRemove(state, level, pos, newState, moved)} to
-     * {@code affectNeighborsAfterRemoval(level, pos, moved)} and dropped the new state, which it no
-     * longer needs.
+     * {@code affectNeighborsAfterRemoval(level, pos, moved)} and drops the new state.
      */
     public static void affectNeighborsAfterRemoval(ServerLevel level, net.minecraft.core.BlockPos pos,
                                                    net.minecraft.world.level.block.state.BlockState oldState) {
@@ -510,7 +504,7 @@ public final class Compat {
         *///?}
     }
 
-    // --- game rules and entity world-mutation permissions ---
+    // Game rules and entity world-mutation permissions
 
     /**
      * Whether {@code entity} may alter the world, the {@code mobGriefing} rule. NeoForge additionally

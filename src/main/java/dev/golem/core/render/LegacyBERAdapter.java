@@ -16,10 +16,9 @@ import net.minecraft.world.phys.Vec3;
  * runs both back to back: fill the base state, extract, submit into a {@link RecordingSubmitSink},
  * then flush that sink into the {@code MultiBufferSource} the engine handed us.
  *
- * <p>The state and sink are allocated once per renderer instance and reused, matching how 26.1 reuses
- * a single render state per renderer. That is safe here because pre-26.1 block-entity rendering is
- * single-threaded on the render thread — unlike 26.1, where the extract pass is what makes the split
- * worthwhile in the first place.
+ * <p>The state and sink are allocated once per renderer instance and reused, as 26.1 reuses a single
+ * render state per renderer. That is safe because pre-26.1 block-entity rendering is single-threaded on
+ * the render thread.
  *
  * <p>The camera comes from the global render state rather than being passed in, since old versions do
  * not thread it through the renderer contract.
@@ -75,15 +74,14 @@ public final class LegacyBERAdapter<T extends BlockEntity, S extends CompatRende
 
     //? if neoforge {
     /^*
-     * NeoForge culls each block-entity renderer against this box —
-     * {@code frustum.isVisible(renderer.getRenderBoundingBox(be))} in {@code ClientHooks} — and the
+     * NeoForge culls each block-entity renderer against this box:
+     * {@code frustum.isVisible(renderer.getRenderBoundingBox(be))} in {@code ClientHooks}, and the
      * default is the unit cube at the block's position. A machine whose model spans several blocks
-     * therefore vanishes as soon as its origin block leaves the frustum, which is what makes big
-     * machines pop out at the screen edges on NeoForge while Fabric (which has no such hook) is fine.
+     * therefore vanishes as soon as its origin block leaves the frustum (big machines pop out at the
+     * screen edges on NeoForge; Fabric has no such hook).
      *
-     * <p>A renderer that declares {@code shouldRenderOffScreen()} has already said it draws outside its
-     * own block, so it gets {@code AABB.INFINITE} — NeoForge's documented "never cull me" value. Anything
-     * else keeps the default, so this cannot quietly disable culling for ordinary renderers.
+     * <p>A renderer that declares {@code shouldRenderOffScreen()} draws outside its own block, so it gets
+     * {@code AABB.INFINITE}, NeoForge's "never cull me" value. Any other renderer keeps the default.
      ^/
     @Override
     public net.minecraft.world.phys.AABB getRenderBoundingBox(T blockEntity) {

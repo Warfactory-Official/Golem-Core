@@ -1,6 +1,7 @@
 package dev.golem.core.dejson;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import java.util.ArrayList;
@@ -16,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <p>{@link Dejson.Declaration} covers the regular case, where every state is the block's own model
  * with a suffix and a rotation. A pipe that assembles itself from an arm per connected side, or a
- * machine whose lit and unlit states point at two unrelated models, does not fit that — it is a list
+ * machine whose lit and unlit states point at two unrelated models, does not fit that. It is a list
  * of "when these properties hold, add this model", and that is what this says.
  *
  * <pre>{@code
@@ -128,7 +129,7 @@ public final class States {
         }
     }
 
-    private static com.google.gson.JsonElement pool(List<Variant> pool) {
+    private static JsonElement pool(List<Variant> pool) {
         if (pool.size() == 1) {
             return pool.get(0).toJson();
         }

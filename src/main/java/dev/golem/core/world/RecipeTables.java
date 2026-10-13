@@ -51,10 +51,10 @@ import net.minecraft.world.item.crafting.RecipeInput;
  * mod's config branches, e.g. a recipe that exists only in an easy mode).
  *
  * <p>The mod states the row format once, as a {@link MapCodec} built from plain codecs (ids, tags, numbers); Golem
- * Core registers the type and its serializer on every node (the recipe interfaces changed twice between the
- * targets), never shows the rows in a recipe book, and keeps one snapshot of the rows per table, sorted by recipe id:
- * on the server from the current recipe set (rebuilt after every reload), on a client from Golem Core's own sync
- * packet, sent on join and after every reload (26.1 sends no custom recipe type to clients by itself).
+ * Core registers the type and its serializer on every node, never shows the rows in a recipe book, and keeps one
+ * snapshot of the rows per table, sorted by recipe id: on the server from the current recipe set (rebuilt after
+ * every reload), on a client from Golem Core's own sync packet, sent on join and after every reload (26.1 sends no
+ * custom recipe type to clients by itself).
  *
  * <p>Machines read {@link Table#entries()} and rebuild their own lookup indexes when {@link Table#changed} fires.
  */
@@ -378,7 +378,7 @@ public final class RecipeTables {
             else kept.add(holder);
         }
         if (dropped == 0) return;
-        // 26.1 has no public setter (the client no longer holds recipes); the field is widened by Core's AT/AW. The
+        // 26.1 has no public setter (the client holds no recipes); the field is widened by Core's AT/AW. The
         // derived views (recipe book displays, stonecutter list, property sets, NeoForge priorities) are rebuilt as
         // the server's own load does.
         manager.recipes = net.minecraft.world.item.crafting.RecipeMap.create(kept);

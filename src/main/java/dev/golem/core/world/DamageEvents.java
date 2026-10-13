@@ -1,5 +1,6 @@
 package dev.golem.core.world;
 
+import dev.golem.core.hook.Hook;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
@@ -18,9 +19,9 @@ public final class DamageEvents {
     private DamageEvents() {}
 
     /** Every listener, in phase order; register through the {@code on...} method or directly, with a phase. */
-    public static final dev.golem.core.hook.Hook<Consumer<DamageEvent>> ATTACK = dev.golem.core.hook.Hook.notifying();
+    public static final Hook<Consumer<DamageEvent>> ATTACK = Hook.notifying();
     /** Every listener, in phase order; register through the {@code on...} method or directly, with a phase. */
-    public static final dev.golem.core.hook.Hook<Consumer<DamageEvent>> HURT = dev.golem.core.hook.Hook.notifying();
+    public static final Hook<Consumer<DamageEvent>> HURT = Hook.notifying();
     private static final ThreadLocal<Piercing> PIERCING = new ThreadLocal<>();
     private static boolean installed;
 

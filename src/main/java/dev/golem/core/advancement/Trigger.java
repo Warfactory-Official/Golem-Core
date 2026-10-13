@@ -1,5 +1,6 @@
 package dev.golem.core.advancement;
 
+import dev.golem.core.Ids;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -10,13 +11,10 @@ import net.minecraft.world.item.ItemStack;
 /**
  * A custom advancement criterion trigger, declared once and fired from gameplay code on every node.
  *
- * <p>A modded trigger is three moving parts that all changed between 1.20.1 and 1.21: the instance
- * (a {@code JsonObject} parsed by {@code createInstance} on 1.20.1, a {@code Codec}-backed
- * {@code SimpleInstance} since), its registration ({@code CriteriaTriggers.register} on 1.20.1, the
- * {@code TRIGGER_TYPES} registry since) and the predicate classes' own parsers (the {@code fromJson}
- * statics on 1.20.1, codecs since, in the {@code critereon} package until 26.1 renamed it
- * {@code criterion}). None of that is about what a mod's event means, so a consumer names its trigger
- * here and fires it; the per-version machinery stays inside.
+ * <p>The instance type, the registration call and the predicate parsers all differ between 1.20.1 and 1.21+
+ * (JSON {@code createInstance} versus codecs, {@code CriteriaTriggers.register} versus the
+ * {@code TRIGGER_TYPES} registry, {@code critereon} versus {@code criterion}). A consumer names its trigger
+ * here and fires it; that machinery stays inside.
  *
  * <p>Every trigger made here accepts the same JSON conditions, all optional, on every node:
  *
@@ -52,7 +50,7 @@ public final class Trigger {
         String id = namespace + ":" + path;
         Trigger existing = BY_ID.get(id);
         if (existing != null) return existing;
-        Impl impl = new Impl(dev.golem.core.Ids.of(namespace, path));
+        Impl impl = new Impl(Ids.of(namespace, path));
         // 1.20.1: CriteriaTriggers' table is a plain HashMap, and Forge constructs mods in parallel.
         //? if >=1.20.5 {
         TYPES.computeIfAbsent(namespace, ns -> dev.golem.core.registry.DeferredRegister.create(

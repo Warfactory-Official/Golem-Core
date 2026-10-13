@@ -19,14 +19,11 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
 
 // INDIRECT-side pipelines. Same vertex format / depth / blend / cull config as the matching
-// INSTANCING pipeline, but without the "Instances" UBO declaration — INDIRECT binds an SSBO
-// raw via glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, group.ssbo) instead. The shader pair
-// (golem_indirect.vsh / .fsh) reads ntmInstances[gl_BaseInstanceARB + gl_InstanceID] from that
-// SSBO.
+// INSTANCING pipeline, but without the "Instances" UBO declaration: INDIRECT binds an SSBO
+// raw via glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, group.ssbo). The shader pair
+// (golem_indirect.vsh / .fsh) reads ntmInstances[gl_BaseInstanceARB + gl_InstanceID] from it.
 //
-// CRUMBLING is omitted: the assembly-machine crumbling pass remains on the INSTANCING path
-// for now (slice 2c-3 ships the opaque/translucent draw only). When INDIRECT adds crumbling,
-// we'll add the matching CRUMBLING pipeline here.
+// CRUMBLING is omitted: the assembly-machine crumbling pass runs on the INSTANCING path.
 public final class IndirectPipelines {
 
     private static final Identifier SHADER = Identifier.fromNamespaceAndPath(GolemCore.MOD_ID, "core/golem_indirect");
@@ -157,22 +154,17 @@ public final class IndirectPipelines {
         return builder.build();
     }
 
-    // Depth-only sibling of buildPipeline(material). Uses a purpose-built shader pair
-    // (golem_indirect_depth.vsh/.fsh) that emits only gl_Position + texCoord0 in the vertex
-    // stage and only does an alpha discard in the fragment stage — saves the lighting,
-    // overlay, lightmap, and fog work the color pipeline does, all of which is masked away
-    // by ColorTargetState.WRITE_NONE anyway. ALPHA_CUTOUT discards fully-transparent quad
-    // corners so we don't write phantom particle depth where the layer's color is alpha=0.
+    // Depth-only sibling of buildPipeline(material). Its shader pair (golem_indirect_depth.vsh/.fsh)
+    // emits only gl_Position + texCoord0 and does only an alpha discard, skipping the lighting,
+    // overlay, lightmap and fog work that WRITE_NONE would mask away. ALPHA_CUTOUT discards
+    // fully-transparent quad corners so no phantom particle depth is written where alpha=0.
     //
-    // Only declares Sampler0 (alpha texture); Sampler1/Sampler2 (overlay/lightmap) aren't
-    // sampled by the minimal fsh, so they don't need to be declared on this pipeline. The
-    // bind calls for them in IndirectDrawManager.drawStage live above the loop and are no-ops
-    // for this pipeline at draw-validation time (extra bindings are tolerated; only missing
-    // ones error).
+    // Only Sampler0 (alpha texture) is declared. The Sampler1/Sampler2 binds in
+    // IndirectDrawManager.drawStage are harmless: extra bindings are tolerated, missing ones error.
     //
-    // Only invoked for materials with requiresFabulousDepth=true. The depth pass is a Fabulous-
-    // mode add-on to inform the transparency post-chain's per-pixel layer sort; in Fancy/Fast
-    // and shader-pack pipelines IndirectDrawManager doesn't run it at all.
+    // Only used for materials with requiresFabulousDepth=true: the depth pass feeds the
+    // transparency post-chain's per-pixel layer sort in Fabulous mode and is not run in Fancy/Fast
+    // or shader-pack pipelines.
     private static RenderPipeline buildDepthOnlyPipeline(Material material) {
         String materialName = material.name().toLowerCase();
         return RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET)

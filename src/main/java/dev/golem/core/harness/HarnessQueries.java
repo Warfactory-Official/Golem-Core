@@ -219,7 +219,7 @@ final class HarnessQueries {
      * instanced visual owns it and how many vanilla submits replayed or skipped its declared model.
      *
      * <p>{@code trace:true} (re)starts the per-position counts; {@code positions} is an array of
-     * {@code [x,y,z]}. This is the positive signal a fallback test needs — pixels cannot tell an
+     * {@code [x,y,z]}. This is the positive signal a fallback test needs. Pixels cannot tell an
      * instanced draw from a vanilla one, but a replay count that rises while {@code owned} is false
      * says the vanilla renderer is the one drawing.
      */

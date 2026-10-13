@@ -14,8 +14,8 @@ import java.util.function.Supplier;
  * written by hand.
  *
  * <p>{@link Dejson} covers the client's assets, where a declaration has to know what a model and a
- * blockstate are. A data file has no such vocabulary in common — a loot table and an item tag share
- * nothing but their encoding — so this holds the plain path-to-content registry and the shapes are
+ * blockstate are. A data file has no such vocabulary in common: a loot table and an item tag share
+ * nothing but their encoding, so this holds the plain path-to-content registry and the shapes are
  * built on top of it by {@link Drops} and {@link Tags}.
  *
  * <p>The rules are the assets' rules. A path that already exists as a file is left to the file; the

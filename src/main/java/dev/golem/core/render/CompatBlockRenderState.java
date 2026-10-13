@@ -10,8 +10,8 @@ import net.minecraft.client.renderer.block.model.BlockDisplayContext;
 //?}
 
 /**
- * A block state prepared for drawing as a free-standing model — a mob's disguise, a cart's display
- * block — through {@link SubmitSink#submitBlock}.
+ * A block state prepared for drawing as a free-standing model (a mob's disguise, a cart's display
+ * block) through {@link SubmitSink#submitBlock}.
  *
  * <p>The block-side twin of {@link CompatItemRenderState}: 26.1 resolves the state's model during
  * extraction into a {@code BlockModelRenderState} and submits it later, while older versions hand the
@@ -36,7 +36,7 @@ public final class CompatBlockRenderState {
         return empty;
     }
 
-    /** Forgets any previously extracted block. */
+    /** Forgets any extracted block. */
     public void clear() {
         empty = true;
         //? if >=26.1 {

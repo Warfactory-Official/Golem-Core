@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -59,7 +60,7 @@ public final class Substitutions {
      */
     @SuppressWarnings("unchecked")
     public static <T> void entry(String owner, String registry, String id,
-                                 Function<net.minecraft.resources.ResourceKey<T>, ? extends T> factory) {
+                                 Function<ResourceKey<T>, ? extends T> factory) {
         put(ENTRY + registry, owner, id, (Function<Object, ?>) (Function<?, ?>) factory);
     }
 

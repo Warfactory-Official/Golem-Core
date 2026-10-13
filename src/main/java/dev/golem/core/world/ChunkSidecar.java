@@ -13,31 +13,31 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.storage.IOWorker;
+import net.minecraft.world.level.chunk.storage.RegionFileStorage;
 import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.level.storage.LevelResource;
 
 /**
  * A mod's own bytes, stored per chunk in their own region files beside vanilla's.
  *
- * <p>The alternative is a per-level {@code SavedData} blob keyed by chunk, and it degrades badly: the
- * whole map is read at level load and rewritten in full at every autosave, so the cost of saving one
- * chunk's worth of change grows with the number of chunks that have ever been written. A region file
- * pays per chunk, which is what the data actually is.
+ * <p>A per-level {@code SavedData} blob keyed by chunk would be read whole at level load and rewritten in
+ * full at every autosave, so the cost of saving one chunk's change grows with the number of chunks ever
+ * written. A region file pays per chunk.
  *
- * <p>Vanilla stores entities and points of interest exactly this way and the machinery is reused rather
- * than reimplemented: {@link IOWorker} owns the region cache, the write coalescing and the io-pool
- * thread, and is subclassed because its constructor is {@code protected} on every supported version —
- * the region storage underneath it is package-private, so this is the narrowest public door in.
+ * <p>Vanilla stores entities and points of interest this way and the machinery is reused: {@link IOWorker}
+ * owns the region cache, the write coalescing and the io-pool thread. It is subclassed because its
+ * constructor is {@code protected} on every supported version and the region storage underneath it is
+ * package-private.
  *
- * <p>Reads are futures on purpose. The caller is expected to start one when it learns a chunk is
- * arriving and take the value at first use, so the read overlaps a tick of other work instead of
- * stalling the server thread inside the chunk-load callback.
+ * <p>Reads are futures: the caller starts one when it learns a chunk is arriving and takes the value at
+ * first use, so the read overlaps a tick of other work instead of stalling the server thread inside the
+ * chunk-load callback.
  *
  * <p>Payloads are opaque. What a chunk's bytes mean, and how they survive a format change, belongs to
  * whoever wrote them.
  *
  * <p>A store nothing has written does not exist on disk, and reading from one does not create it.
- * Opening a region file creates it — an empty header and a file handle — so a read is answered from the
+ * Opening a region file creates it (an empty header and a file handle), so a read is answered from the
  * region's absence instead, and a world that never produces this data never grows a folder for it.
  * Reads and writes are expected on the server thread, which is where chunks arrive and leave.
  */
@@ -58,7 +58,7 @@ public final class ChunkSidecar implements AutoCloseable {
     /**
      * Opens (creating on first write) the store named {@code name} for one level. The folder sits beside
      * the dimension's {@code region}, {@code entities} and {@code poi} directories, so a world's extra
-     * data travels with it — including through a dimension folder being copied or deleted wholesale.
+     * data travels with it, including through a dimension folder being copied or deleted wholesale.
      */
     public static ChunkSidecar open(ServerLevel level, String name) {
         MinecraftServer server = level.getServer();
@@ -113,7 +113,7 @@ public final class ChunkSidecar implements AutoCloseable {
         if (regionsAbsent.contains(region)) return false;
         boolean exists = Files.isRegularFile(root.resolve(
                 "r." + pos.getRegionX() + "." + pos.getRegionZ()
-                        + net.minecraft.world.level.chunk.storage.RegionFileStorage.ANVIL_EXTENSION));
+                        + RegionFileStorage.ANVIL_EXTENSION));
         (exists ? regionsPresent : regionsAbsent).add(region);
         return exists;
     }

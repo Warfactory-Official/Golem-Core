@@ -1,6 +1,9 @@
 package dev.golem.core.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import dev.golem.core.render.HumanoidPose;
+import java.util.function.Consumer;
+import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.world.entity.player.Player;
 
 import java.util.Map;
@@ -26,15 +29,15 @@ public final class PlayerRenderHooks {
      * previous one's parts (HBM: the glider's flight freeze, then the gun arm pose). A list, not a slot: a second mod's
      * listener joins the first's instead of replacing it.
      */
-    public static final dev.golem.core.hook.Hook<java.util.function.Consumer<dev.golem.core.render.HumanoidPose>> MODEL =
+    public static final dev.golem.core.hook.Hook<Consumer<HumanoidPose>> MODEL =
             dev.golem.core.hook.Hook.notifying();
 
-    public static void applyModel(Player player, net.minecraft.client.model.HumanoidModel<?> model) {
+    public static void applyModel(Player player, HumanoidModel<?> model) {
         if (player == null) return;
         if (!MODEL.isEmpty()) {
-            dev.golem.core.render.HumanoidPose parts = new dev.golem.core.render.HumanoidPose(model, player.isCrouching(),
+            HumanoidPose parts = new HumanoidPose(model, player.isCrouching(),
                     player.isBaby(), player.isInvisible(), player);
-            for (java.util.function.Consumer<dev.golem.core.render.HumanoidPose> listener : MODEL) listener.accept(parts);
+            for (Consumer<HumanoidPose> listener : MODEL) listener.accept(parts);
         }
         // Below 26.1 the hat is a sibling, not a child of the head. PlayerModel copies the other
         // skin layers after HumanoidModel.setupAnim returns.

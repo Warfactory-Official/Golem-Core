@@ -24,12 +24,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * daylight factor as {@code (level - 4) / 11}: 4 is the overworld's darkest sky light, 11 its range, which is the
  * pre-26.1 {@code skyDarken = (1 - daylight) * 11}.
  *
- * <p>The same TAIL also serves {@link dev.golem.core.client.Clouds} (a dimension's own cloud layers): a cloud-colour
- * layer that opens or closes vanilla's cloud pass for a registered level, and on NeoForge a
- * {@code neoforge:visual/custom_clouds} layer that selects Golem's {@code CustomCloudsRenderer} there. NeoForge reads that
- * attribute only from data or a layer; a shared dimension type cannot carry a NeoForge-only attribute (Fabric rejects the
- * file), so the layer is the only place to set it. Both answer their input for every other level. The same goes for
- * {@link dev.golem.core.client.Precipitation} and {@code neoforge:visual/custom_weather_effects}.
+ * <p>The same TAIL also serves {@link dev.golem.core.client.Clouds}: a cloud-colour layer that opens or closes
+ * vanilla's cloud pass for a registered level, and on NeoForge a {@code neoforge:visual/custom_clouds} layer that
+ * selects Golem's {@code CustomCloudsRenderer}. A shared dimension type cannot carry that NeoForge-only attribute
+ * (Fabric rejects the file), so a layer is the only place to set it. Both return their input for every other level.
+ * {@link dev.golem.core.client.Precipitation} and {@code neoforge:visual/custom_weather_effects} work the same way.
  */
 @Mixin(EnvironmentAttributeSystem.class)
 public abstract class MixinEnvironmentSkyLayers {

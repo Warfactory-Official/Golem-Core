@@ -1,5 +1,6 @@
 package dev.golem.core.world;
 
+import java.util.function.Function;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
@@ -23,11 +24,11 @@ public abstract class CompatFireBlock extends BaseFireBlock {
      * the codec is built with {@code simpleCodec}, which is {@code protected static} on
      * {@code BlockBehaviour} and therefore only reachable from a subclass like this one.
      *
-     * <p>Safe for leaf classes only — the codec is built from the factory it is handed, so a subclass
+     * <p>Safe for leaf classes only: the codec is built from the factory it is handed, so a subclass
      * that passes its parent's constructor would round-trip to the wrong type.
      */
     protected <B extends CompatFireBlock> CompatFireBlock(BlockBehaviour.Properties properties, float fireDamage,
-                                                          java.util.function.Function<BlockBehaviour.Properties, B> factory) {
+                                                          Function<BlockBehaviour.Properties, B> factory) {
         super(properties, fireDamage);
         //? if >=1.21.1 {
         this.blockCodec = simpleCodec(factory);

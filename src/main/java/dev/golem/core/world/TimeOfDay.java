@@ -35,9 +35,8 @@ import net.minecraft.world.level.Level;
  * dimension, on every node alike: saved per level ({@code golemcore:time_of_day}), advanced at the end of each server
  * tick while the daylight game rule ({@code advance_time} on 26.1) is on, and sent to the level's players when they
  * arrive, once a second, and whenever it is {@link #set}. A client derives the time between updates from its own game
- * time. 26.1's data-driven world clocks were not used for this: a body dimension would need its own
- * {@code world_clock} entry and dimension-type reference that the older nodes have no registry for, and its timelines,
- * bed rule and environment attributes would follow that clock too, so the nodes would no longer agree.
+ * time. 26.1's world clocks are not used: the older nodes have no registry for a {@code world_clock} entry, and
+ * timelines, the bed rule and environment attributes would follow that clock too, so the nodes would disagree.
  */
 public final class TimeOfDay {
 

@@ -11,19 +11,16 @@ import net.minecraft.resources.ResourceKey;
 /**
  * Construction and access for namespaced ids.
  *
- * <p>26.1 renamed {@code ResourceLocation} to {@code Identifier} and {@code ResourceKey#location()} to
- * {@code identifier()}. The rename itself is handled by a Stonecutter string replacement across the
- * shared source, so consumers keep writing {@code Identifier}; what a replacement cannot fix is the
- * <i>construction</i> call, which also differs by version:
+ * <p>A Stonecutter string replacement maps the 26.1 name {@code Identifier} to {@code ResourceLocation}, but it
+ * cannot fix the <i>construction</i> call, which differs by version:
  *
  * <ul>
- *   <li>1.20.1: {@code new ResourceLocation(ns, path)} — the constructor is public.</li>
+ *   <li>1.20.1: {@code new ResourceLocation(ns, path)}. The constructor is public.</li>
  *   <li>1.21.1: the constructor is private; {@code ResourceLocation.fromNamespaceAndPath(ns, path)}.</li>
  *   <li>26.1: {@code Identifier.fromNamespaceAndPath(ns, path)}.</li>
  * </ul>
  *
- * <p>Routing every construction through {@link #of} means the mass rename stays a pure text
- * substitution and this is the single place that knows about the three spellings.
+ * <p>Every construction goes through {@link #of}, the only place that knows the three spellings.
  */
 public final class Ids {
 
@@ -63,12 +60,10 @@ public final class Ids {
     }
 
     /**
-     * Whether a vanilla item tag exists on older versions but not in the newest API. Such a tag can hold a mod's
-     * items on an old node through vanilla's own nesting, yet no id roster generated against the newest version
-     * can name it. {@code minecraft:tools} is 1.19.4–1.20.4's aggregate of the per-tool tags; 26.1 ships only
-     * the per-tool tags ({@code swords}, {@code axes}, ...). {@code minecraft:enchantable/sword} is 1.21.0–1.21.1's
-     * Sweeping Edge gate ({@code ["#minecraft:swords"]}); 26.1 split it into {@code enchantable/sweeping} and
-     * friends, so a sword's membership there is correct on 1.21.1 yet unnameable from a 26.1 roster.
+     * Whether a vanilla item tag exists on older versions but not in the newest API, so no id roster generated
+     * against the newest version can name it. {@code minecraft:tools} (1.19.4–1.20.4) aggregates the per-tool tags;
+     * {@code minecraft:enchantable/sword} (1.21.0–1.21.1) is the Sweeping Edge gate, which 26.1 split into
+     * {@code enchantable/sweeping} and others.
      */
     public static boolean isRetiredVanillaItemTag(String id) {
         return switch (id) {

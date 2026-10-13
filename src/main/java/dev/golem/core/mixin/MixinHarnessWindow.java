@@ -1,6 +1,7 @@
 package dev.golem.core.mixin;
 
 import com.mojang.blaze3d.platform.Window;
+import dev.golem.core.harness.HarnessWindowHints;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -22,14 +23,14 @@ public class MixinHarnessWindow {
      */
     @Inject(method = "getScreenWidth", at = @At("RETURN"), cancellable = true)
     private void golem$harnessScreenWidth(CallbackInfoReturnable<Integer> callback) {
-        if (callback.getReturnValueI() == 0 && dev.golem.core.harness.HarnessWindowHints.blockMouseGrab()) {
+        if (callback.getReturnValueI() == 0 && HarnessWindowHints.blockMouseGrab()) {
             callback.setReturnValue(((Window) (Object) this).getWidth());
         }
     }
 
     @Inject(method = "getScreenHeight", at = @At("RETURN"), cancellable = true)
     private void golem$harnessScreenHeight(CallbackInfoReturnable<Integer> callback) {
-        if (callback.getReturnValueI() == 0 && dev.golem.core.harness.HarnessWindowHints.blockMouseGrab()) {
+        if (callback.getReturnValueI() == 0 && HarnessWindowHints.blockMouseGrab()) {
             callback.setReturnValue(((Window) (Object) this).getHeight());
         }
     }

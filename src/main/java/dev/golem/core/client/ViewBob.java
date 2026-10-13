@@ -17,7 +17,7 @@ public final class ViewBob {
 
     private ViewBob() {}
 
-    /** How far the player has walked, interpolated and negated — the phase input for the sway. */
+    /** How far the player has walked, interpolated and negated. This is the phase input for the sway. */
     public static float walkDistance(AbstractClientPlayer player, float partialTick) {
         //? if >=26.1 {
         return player.avatarState().getBackwardsInterpolatedWalkDistance(partialTick);

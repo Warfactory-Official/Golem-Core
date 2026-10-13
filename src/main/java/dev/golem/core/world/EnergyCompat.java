@@ -9,8 +9,8 @@ import org.jspecify.annotations.Nullable;
  * Foreign energy at a block face, across the three capability systems this mod builds against.
  *
  * <p>26.1 NeoForge answers {@code Capabilities.Energy.BLOCK} with a
- * {@code transfer.energy.EnergyHandler} whose insert and extract are transactional — a simulation is
- * a transaction that is never committed. 1.21.1 NeoForge answers
+ * {@code transfer.energy.EnergyHandler} whose insert and extract are transactional (a simulation is
+ * a transaction that is never committed). 1.21.1 NeoForge answers
  * {@code Capabilities.EnergyStorage.BLOCK} and 1.20.1 Forge answers {@code ForgeCapabilities.ENERGY}
  * through the block entity, both with an {@code IEnergyStorage} that takes a simulate flag instead.
  *
@@ -52,7 +52,7 @@ public final class EnergyCompat {
 
     /**
      * Tells the loader that what is exposed at {@code pos} may have changed. A block with no block
-     * entity whose answer appears or disappears — a multiblock's dummy cell — has to say so itself,
+     * entity whose answer appears or disappears, a multiblock's dummy cell, has to say so itself,
      * because nothing else will.
      */
     public static void invalidate(Level level, BlockPos pos) {
@@ -63,9 +63,8 @@ public final class EnergyCompat {
 
     //? if neoforge && >=26.1 {
     /**
-     * A simulation is a transaction that is opened and never committed; a real move is the same
-     * transaction committed. The amounts saturate at {@code int} because that is the width the
-     * handler's insert and extract take.
+     * A simulation is a transaction that is never committed; a real move commits it. Amounts saturate at
+     * {@code int}, the width the handler's insert and extract take.
      */
     private static EnergyView view(net.neoforged.neoforge.transfer.energy.EnergyHandler handler) {
         return new EnergyView() {

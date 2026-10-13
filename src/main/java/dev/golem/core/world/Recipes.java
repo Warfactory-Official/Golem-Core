@@ -18,7 +18,7 @@ import net.minecraft.world.inventory.TransientCraftingContainer;
 import net.minecraft.world.item.crafting.RecipeType;
 *///?}
 
-/** Recipe lookups that deliberately hide vanilla recipe input and holder types. */
+/** Recipe lookups that hide vanilla recipe input and holder types. */
 public final class Recipes {
 
     private Recipes() {}
@@ -200,7 +200,7 @@ public final class Recipes {
     }
 
     /**
-     * Assembles {@code match} against a grid, or {@link Optional#empty()} when the grid no longer
+     * Assembles {@code match} against a grid, or {@link Optional#empty()} when the grid
      * satisfies that recipe (or the level is a client).
      */
     public static Optional<ItemStack> craftingResult(Level level, CraftingMatch match, int width, int height,

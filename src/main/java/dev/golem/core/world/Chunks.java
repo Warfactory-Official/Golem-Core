@@ -22,21 +22,17 @@ public final class Chunks {
     /**
      * A ticket that <b>loads a chunk without simulating it</b>.
      *
-     * <p>This is the distinction that matters for bulk world work. Vanilla's {@code FORCED} ticket —
-     * what {@code ServerLevel.setChunkForced} uses — grants loading <em>and</em> simulation, so every
-     * chunk held starts ticking: mob spawning, random ticks, block ticks, entity ticks. A fallout sweep
-     * holding three hundred freshly generated chunks was therefore running tens of thousands of random
-     * ticks a tick for terrain nobody was standing in. It only ever wanted to read and write blocks.
+     * <p>Vanilla's {@code FORCED} ticket (what {@code ServerLevel.setChunkForced} uses) grants loading <em>and</em>
+     * simulation, so every chunk held ticks: mob spawning, random ticks, block ticks, entity ticks. Bulk world work
+     * such as a fallout sweep over hundreds of generated chunks only reads and writes blocks.
      *
-     * <p>Both references use a loading-only ticket for exactly this: {@code ntm-next} registers
-     * {@code BLAST_LOAD} with {@code FLAG_LOADING} and deliberately without {@code FLAG_SIMULATION},
-     * and {@code old-hbm} uses a Forge loading ticket.
+     * <p>{@code ntm-next} registers {@code BLAST_LOAD} with {@code FLAG_LOADING} and without
+     * {@code FLAG_SIMULATION}; {@code 1.12.2} uses a Forge loading ticket.
      *
-     * <p>The two eras express it differently and both are spelled out below. 26.1 made {@code TicketType}
-     * a record of {@code (timeout, flags)}; before that it is a named type and the <em>level</em> carries
-     * the meaning, where 33 is "full chunk, not ticking" and {@code addRegionTicket} computes
-     * {@code 33 - radius}. Neither is persisted — no {@code FLAG_PERSIST}, no {@code forceLoad} flag — so
-     * a claim that outlives a crash simply disappears, which is the right failure mode for one.
+     * <p>26.1 made {@code TicketType} a record of {@code (timeout, flags)}. Before that it is a named type and the
+     * <em>level</em> carries the meaning: 33 is "full chunk, not ticking" and {@code addRegionTicket} computes
+     * {@code 33 - radius}. Neither form is persisted (no {@code FLAG_PERSIST}, no {@code forceLoad} flag), so a
+     * claim that outlives a crash disappears, which is the right failure mode for one.
      */
     //? if >=26.1 {
     private static final net.minecraft.server.level.TicketType LOAD_ONLY =
@@ -111,10 +107,9 @@ public final class Chunks {
     /**
      * A chunk's identity as one long, in Golem's own layout rather than vanilla's.
      *
-     * <p>Vanilla's spelling moved — {@code ChunkPos.asLong}/{@code toLong} became
-     * {@code ChunkPos.pack}/{@code pack()} at 26.1 — so a key derived from it would need a version
-     * branch at every site that builds one. This packing is ours and therefore has no version, which
-     * is worth more than matching vanilla's bit order for a value that is only ever a map key.
+     * <p>Vanilla's spelling differs by version ({@code ChunkPos.asLong}/{@code toLong} before 26.1,
+     * {@code ChunkPos.pack}/{@code pack()} from it), so a key derived from it would need a version branch at every
+     * site. This packing has no version, which is worth more than matching vanilla's bit order for a map key.
      */
     public static long key(int chunkX, int chunkZ) {
         return (chunkX & 0xFFFFFFFFL) | ((long) chunkZ << 32);

@@ -86,7 +86,7 @@ final class ColorRampTest {
      *
      * <p>26.1 converts each pixel with {@code ARGB.fromABGR} before handing it to the operator and
      * {@code ARGB.toABGR} after; every version below hands over the raw int, which is ABGR in memory.
-     * Both must end up writing the same bytes — feeding one version's operator to the other swaps red
+     * Both must end up writing the same bytes. Feeding one version's operator to the other swaps red
      * and blue, which is a gold plate coming out blue and nothing in the build noticing.
      */
     @Test

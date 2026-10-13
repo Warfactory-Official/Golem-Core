@@ -7,6 +7,7 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.golem.core.GolemCore;
 import dev.golem.core.Ids;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -24,10 +25,8 @@ import net.minecraft.server.packs.resources.ResourceManager;
  *
  * <p>Each named permutation gives a light and a dark colour; the source texture's band (white down to
  * {@code #505050} by default) is mapped onto them per channel by a {@link ColorRamp}, and the result is
- * stitched under the source id plus {@code _<permutation>}. One 16×16 greyscale plate plus a hundred
- * declared colours is a hundred sprites the mod never ships as files, recomputed on every resource
- * reload — the same thing 1.7's {@code TextureAtlasSpriteMutatable} did before the atlas stopped being
- * built from mutable icons.
+ * stitched under the source id plus {@code _<permutation>}. The sprites are never shipped as files;
+ * they are recomputed on every resource reload, as 1.7's {@code TextureAtlasSpriteMutatable} did.
  *
  * <p>Declare it in code through {@link Sprites}; the JSON form exists so a resource pack can write the
  * same thing by hand:
@@ -41,12 +40,11 @@ import net.minecraft.server.packs.resources.ResourceManager;
  * }
  * }</pre>
  *
- * <p>Sources run in the order the atlas lists them and a later one wins, which is why Core puts its
- * code-declared sources <em>first</em>: a pack dropping a real PNG at the generated sprite's path is
- * picked up by the directory listing afterwards and replaces it, so overriding one recoloured sprite
- * stays as simple as shipping the file it would have generated.
+ * <p>Sources run in the order the atlas lists them and a later one wins, so Core puts its
+ * code-declared sources <em>first</em>: a PNG a pack ships at the generated sprite's path is picked
+ * up by the directory listing afterwards and replaces it.
  *
- * <p>Metadata on the source texture is not carried over — a remapped sprite is a still frame, as it is
+ * <p>Metadata on the source texture is not carried over. A remapped sprite is a still frame, as it is
  * for vanilla's own palette source.
  */
 public final class InterpolatedRemapSource implements SpriteSource {
@@ -91,7 +89,7 @@ public final class InterpolatedRemapSource implements SpriteSource {
         this.textures = List.copyOf(textures);
         this.separator = separator;
         this.band = band;
-        this.permutations = java.util.Collections.unmodifiableMap(new LinkedHashMap<>(permutations));
+        this.permutations = Collections.unmodifiableMap(new LinkedHashMap<>(permutations));
     }
 
     private static DataResult<Integer> parseColour(String value) {
@@ -180,7 +178,7 @@ public final class InterpolatedRemapSource implements SpriteSource {
                 // What mappedCopy hands the operator is not the same on both sides of 26.1. 26.1
                 // converts each pixel with ARGB.fromABGR before the call and ARGB.toABGR after it;
                 // every version below hands over the raw int, which is ABGR in memory. Feeding one
-                // version's operator to the other swaps red and blue — gold comes out blue.
+                // version's operator to the other swaps red and blue, so gold comes out blue.
                 //? if >=26.1 {
                 var mapped = image.get().mappedCopy(ramp::applyArgb);
                 //?} else {

@@ -22,9 +22,9 @@ import net.minecraft.client.renderer.rendertype.RenderTypes;
  * frames: the cells are tesselated each time, which is what 1.7 did and what keeps a jar free to be
  * mutated after it is cut.
  *
- * <p>Everything goes into one cutout pass. A jar of terrain is opaque or nearly so, and giving it a
- * layer per block state would cost a submission apiece to sort geometry that is all inside one
- * tumbling cube — 1.7 drew the whole scoop in a single pass with blending off, and this is that.
+ * <p>Everything goes into one cutout pass, as 1.7 drew the whole scoop in a single pass with blending off. A jar
+ * of terrain is opaque or nearly so, and a layer per block state would cost a submission apiece to sort geometry
+ * that all sits inside one tumbling cube.
  */
 public final class Jars {
 
@@ -38,8 +38,8 @@ public final class Jars {
     /**
      * Submits every filled cell, with the jar's own corner at the pose's origin.
      *
-     * <p>Callers centre it themselves — translate by half the jar's size negated, as a falling block
-     * translates by {@code (-0.5, 0, -0.5)} — so the pose is free to carry a tumble about the middle.
+     * <p>Callers centre it themselves (translate by half the jar's size negated, as a falling block translates by
+     * {@code (-0.5, 0, -0.5)}), so the pose is free to carry a tumble about the middle.
      */
     public static void submit(WorldInAJar jar, PoseStack pose, int order) {
         if (jar.isEmpty()) return;

@@ -1,5 +1,6 @@
 package dev.golem.core.world;
 
+import dev.golem.core.Ids;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.EntityType;
@@ -24,7 +25,7 @@ public final class CreatureTypes {
     private CreatureTypes() {}
 
     private static TagKey<EntityType<?>> tag(String name) {
-        return TagKey.create(Registries.ENTITY_TYPE, dev.golem.core.Ids.of("minecraft", name));
+        return TagKey.create(Registries.ENTITY_TYPE, Ids.of("minecraft", name));
     }
 
     //? if <1.21.1 {

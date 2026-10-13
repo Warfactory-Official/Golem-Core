@@ -40,13 +40,12 @@ public final class IndirectBackend implements Backend {
     // GL feature check matching upstream Flywheel's GlCompat.SUPPORTS_INDIRECT (cull shader,
     // DSA, multi-draw indirect, gl_BaseInstance, SSBO, multi-bind, std140 layout qualifier).
     // Mojang creates a GL 3.3 core context (see com.mojang.blaze3d.opengl.GlBackend.setWindowHints),
-    // so we can't gate on OpenGL43/46 — those flags are always false here. The ARB extensions are
+    // so we can't gate on OpenGL43/46, those flags are always false here. The ARB extensions are
     // still exposed by drivers in a 3.3 context if the hardware supports them, which is the
     // load-bearing assumption.
     //
     // Cached because GLCapabilities is invariant for the lifetime of the GL context. The
-    // missing-extension log fires once on first check so we can diagnose support failures
-    // without flooding the log.
+    // missing-extension log fires once, on the first check.
     public boolean capabilitiesPresent() {
         Boolean cached = cachedCapsPresent;
         if (cached != null) return cached;

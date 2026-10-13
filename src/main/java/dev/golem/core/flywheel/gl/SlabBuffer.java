@@ -13,25 +13,19 @@ import java.util.function.Supplier;
 
 // Persistent-mapped Mojang GpuBuffer that doubles as the instancer's CPU slab. Setters write
 // directly into the mapped ByteBuffer; the instanced backend binds the buffer as a
-// UBO via pass.setUniform("Instances", slabBuffer.gpuBuffer().slice(...)) without a CPU→GPU
+// UBO via pass.setUniform("Instances", slabBuffer.gpuBuffer().slice(...)) without a CPU-to-GPU
 // memcpy, and the indirect backend issues raw glCopyNamedBufferSubData from the slab handle
 // into the shared object SSBO.
 //
 // The active device is OpenGL, so the AT-widened GlBuffer handle/persistentBuffer fields expose
 // the native storage without a runtime interface injection.
 //
-// USAGE flags:
-//   USAGE_UNIFORM              — bound as UBO at draw time (instanced backend)
-//   USAGE_COPY_SRC             — glCopyNamedBufferSubData source (indirect backend)
-//   USAGE_MAP_WRITE            — persistent MAP_WRITE | MAP_PERSISTENT | MAP_FLUSH_EXPLICIT
-//   USAGE_MAP_READ             — persistent MAP_READ; needed for swapSlots / writeStd140
-//   USAGE_HINT_CLIENT_STORAGE  — driver hint to keep the buffer in system RAM so reads stay
-//                                RAM-speed; without it, the driver may park the map in slow
-//                                mapped-VRAM
+// USAGE_HINT_CLIENT_STORAGE keeps the buffer in system RAM so reads stay RAM-speed; without it
+// the driver may park the map in slow mapped VRAM. USAGE_MAP_READ is needed for swapSlots and
+// writeStd140.
 //
-// ensureCapacity allocates a new buffer at the requested byte size, CPU-memcpys the old
-// mapped region into the new one (both client-storage RAM), and retires the old GpuBuffer for
-// two frames before close() unmaps and deletes. CPU memcpy avoids any GPU sync barrier — the
+// ensureCapacity allocates a new buffer, CPU-memcpys the old mapped region into it (no GPU sync
+// barrier) and retires the old GpuBuffer for two frames before close() unmaps and deletes. The
 // caller markFullyDirty's the live range and re-uploads through the new handle.
 public final class SlabBuffer {
 
@@ -74,7 +68,7 @@ public final class SlabBuffer {
 
     // Grow to at least requiredBytes. Returns true if the underlying buffer was replaced
     // (handle, GpuBuffer, and mapped pointer changed); callers must refresh any cached slab
-    // address and re-upload the live range — prior GPU writes don't carry forward to the new
+    // address and re-upload the live range, prior GPU writes don't carry forward to the new
     // handle since the new buffer is a fresh allocation.
     public boolean ensureCapacity(long requiredBytes) {
         if (requiredBytes <= capacityBytes) return false;
@@ -89,7 +83,7 @@ public final class SlabBuffer {
     }
 
     // Called once per frame on the render thread before any writes/uploads. Closes the
-    // GpuBuffer retired two frames ago — by then the GPU has finished any reads from it (one
+    // GpuBuffer retired two frames ago, by then the GPU has finished any reads from it (one
     // frame of in-flight commands, plus one frame of margin).
     public void releaseRetired() {
         if (retiredLastFrame != null) {
@@ -129,7 +123,7 @@ public final class SlabBuffer {
         Allocation allocation = create(newBytes);
         try {
             if (capacityBytes > 0L) {
-                // Both mappings are CLIENT_STORAGE so this is RAM→RAM. The old buffer stays
+                // Both mappings are CLIENT_STORAGE so this is RAM to RAM. The old buffer stays
                 // alive for two more frames; the GPU and CPU only read it during this copy.
                 ByteBuffer source = mapped.duplicate().order(ByteOrder.nativeOrder());
                 source.position(0).limit((int) capacityBytes);

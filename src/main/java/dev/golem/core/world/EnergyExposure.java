@@ -12,17 +12,17 @@ import java.util.function.Supplier;
  * Publishes an {@link EnergySource} to whatever foreign energy system this node has, so other mods'
  * machines can read and drive one of ours.
  *
- * <p>The three systems want three different things, and the difference is not cosmetic. 26.1 NeoForge
- * takes a {@code transfer.energy.EnergyHandler} whose insert and extract run inside a transaction that
- * the caller may roll back after the call returned, so the handler has to be able to put back what it
- * changed — which is why {@link EnergySource} carries a snapshot pair. 1.21.1 NeoForge and 1.20.1
- * Forge take an {@code IEnergyStorage}, whose simulate flag asks the same question without changing
- * anything, and the snapshot pair is never used there.
+ * <p>The three systems want different things. 26.1 NeoForge takes a
+ * {@code transfer.energy.EnergyHandler} whose insert and extract run inside a transaction the caller may
+ * roll back after the call returned, so the handler must be able to put back what it changed; that is why
+ * {@link EnergySource} carries a snapshot pair. 1.21.1 NeoForge and 1.20.1 Forge take an
+ * {@code IEnergyStorage}, whose simulate flag asks the same question without changing anything, so the
+ * snapshot pair is unused there.
  *
  * <p>Fabric ships no standard energy capability; there {@link #expose} registers with Team Reborn Energy
  * when that optional mod is loaded ({@link RebornEnergy}) and does nothing otherwise.
  *
- * <p>Call this once, while the mod bus is still accepting listeners — the loaders that have a
+ * <p>Call this once, while the mod bus is still accepting listeners: the loaders that have a
  * registration event subscribe to it here.
  */
 public final class EnergyExposure {
@@ -83,7 +83,7 @@ public final class EnergyExposure {
     //? if neoforge && >=26.1 {
     /**
      * A handler whose every mutation is journalled, because 26.1 lets a caller open a transaction,
-     * take energy, and then abort — at which point what we handed over has to come back.
+     * take energy, and then abort, at which point what we handed over has to come back.
      */
     private static final class Journalled
             extends net.neoforged.neoforge.transfer.transaction.SnapshotJournal<Object>

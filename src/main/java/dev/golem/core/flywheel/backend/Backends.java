@@ -51,13 +51,10 @@ public final class Backends {
      * What every backend here needs from the device, because both allocate their instance rows in a
      * {@code SlabBuffer}: vanilla's render device must be the OpenGL one (the slab reads the
      * access-widened {@code GlBuffer} handle and mapping), vanilla must have chosen immutable buffer
-     * storage (only that path maps a buffer persistently — the mutable fallback leaves
+     * storage (only that path maps a buffer persistently; the mutable fallback leaves
      * {@code persistentBuffer} null), and the driver must expose {@code glFlushMappedNamedBufferRange},
-     * which the slab calls directly for its explicit flushes.
-     *
-     * <p>Upstream's instancing backend needs no more than GL 3.3, which vanilla already requires, so the
-     * old hard-coded {@code true} was right for upstream and wrong for this port: the slab is the port's
-     * own addition. Cached, because the device and its capabilities live as long as the window.
+     * which the slab calls directly for its explicit flushes. Upstream's backend needs only GL 3.3; the slab is
+     * this port's addition. Cached for the life of the window.
      */
     public static synchronized boolean slabsSupported() {
         Boolean cached = slabs;

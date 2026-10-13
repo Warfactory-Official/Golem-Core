@@ -17,7 +17,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  *
  * <p>Neither loader raises an event for it: both fire on the chunk entering the level, which is a
  * different moment and a strictly rarer one. Nothing can be access-widened into existence here
- * either — the notification simply is not published — so this is the smallest bridge available.
+ * either, because the notification is not published; this is the smallest bridge available.
  */
 @Mixin(ChunkMap.class)
 public abstract class MixinChunkMapPromotion {

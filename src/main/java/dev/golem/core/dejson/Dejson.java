@@ -25,28 +25,22 @@ import java.util.concurrent.ConcurrentHashMap;
  *       .register();
  * }</pre>
  *
- * <p>What comes out is ordinary vanilla model and blockstate JSON, which is the whole point. It
- * goes through the same parser, bakes on the same pipeline, and is seen by connected-texture
- * engines exactly as a file-loaded model is — the texture-keyed ones because they sit beside the
- * sprite rather than the model, the post-bake wrapping ones because they wrap whatever was baked.
- * The one connected-texture mode a generated model cannot support is the model-keyed one, where a
- * model JSON declares a custom loader: there is no file to carry the key. That mode is not used
- * here and should not be adopted.
+ * <p>What comes out is ordinary vanilla model and blockstate JSON: it goes through the same parser and bake
+ * pipeline, and connected-texture engines see it as they see a file-loaded model. The one mode a generated model
+ * cannot support is the model-keyed one, where a model JSON declares a custom loader; there is no file to carry
+ * the key.
  *
  * <h2>File wins</h2>
  *
- * <p>The delivery layer consults this registry only where no resource exists at the path. A real
- * file always overrides a declaration, which keeps resource packs working, keeps a hand-authored
- * exception possible, and makes adoption incremental: deleting the JSON file <i>is</i> the
- * migration step, and putting it back is the way out.
+ * <p>The delivery layer consults this registry only where no resource exists at the path. A real file always
+ * overrides a declaration, so resource packs and hand-authored exceptions keep working.
  *
  * <h2>What is checked, and when</h2>
  *
- * <p>Everything answerable from the declaration alone is answered at {@link Declaration#register()}
- * — malformed ids, duplicate slots, a rotation that is not a quarter turn, a dispatch pointing at a
- * model its shape never emits. Whether a named texture actually exists cannot be answered until
- * there is a resource manager, so {@link #sprites()} hands the delivery layer the full set to check
- * at reload.
+ * <p>Everything answerable from the declaration alone is checked at {@link Declaration#register()}: malformed
+ * ids, duplicate slots, a rotation that is not a quarter turn, a dispatch pointing at a model its shape never
+ * emits. Whether a named texture exists needs a resource manager, so {@link #sprites()} hands the delivery layer
+ * the full set to check at reload.
  */
 public final class Dejson {
 
@@ -68,13 +62,11 @@ public final class Dejson {
     /**
      * Begins a declaration for a plain item, matching the item's registry id.
      *
-     * <p>An item is the smaller half of the same idea and by far the larger half of the corpus: it
-     * has no blockstate, so a declaration is one shape and nothing else. Almost all of them are a
-     * sprite or three stacked on {@code item/generated}.
+     * <p>An item has no blockstate, so a declaration is one shape; most are a sprite or three stacked on
+     * {@code item/generated}.
      *
-     * <p>A block's own item is not declared this way — {@link Declaration#blockItem()} attaches it
-     * to the block, so the two cannot drift apart. This is for items that are only items, and for
-     * the block items whose block still loads its model from a file.
+     * <p>A block's own item is attached with {@link Declaration#blockItem()}. This is for items that are only
+     * items, and for block items whose block loads its model from a file.
      */
     public static ItemDeclaration item(String namespace, String path) {
         return new ItemDeclaration(namespace, path);
@@ -84,9 +76,8 @@ public final class Dejson {
      * Declares a model no one block or item owns: a part a multipart blockstate assembles, a model a
      * renderer loads by id, a parent other models inherit from.
      *
-     * <p>A block's or item's own models belong in its {@link #block} or {@link #item} declaration, where
-     * the blockstate or definition that points at them is checked against them. This is for the rest,
-     * which otherwise stay loose files nobody's declaration mentions.
+     * <p>A block's or item's own models belong in its {@link #block} or {@link #item} declaration, where the
+     * blockstate or definition pointing at them is checked against them.
      *
      * @param modelId the full model id, e.g. {@code hbm:block/pipe_anchor_down}
      */
@@ -151,11 +142,8 @@ public final class Dejson {
      * Declares that {@code source} is recoloured into one sprite per permutation while the atlas is
      * stitched, so those sprites are never files.
      *
-     * <p>The existence check would otherwise report every one of them missing, which is the right
-     * answer for a typo and the wrong one for a sprite that is computed. Naming the source here keeps
-     * the check strict in the way that still matters: the greyscale art the permutations are derived
-     * from has to be on disk, and a permutation of a source that is not gets reported against the
-     * source.
+     * <p>The texture existence check would otherwise report each permutation missing. It still requires the
+     * greyscale source art to be on disk and reports a permutation of a missing source against the source.
      *
      * @param source       the sprite id the art is shipped under, e.g. {@code hbm:items/plate_cast}
      * @param separator    what joins the source id and the permutation name
@@ -236,15 +224,11 @@ public final class Dejson {
          * Declares a block drawn by a renderer: the blockstate points at a shared model this block
          * does not own, and the block emits no models of its own.
          *
-         * <p>An OBJ machine has no block model to speak of — what vanilla bakes for it is an empty
-         * placeholder carrying a particle texture, and every one of them points at the same one.
-         * The blockstate still has to exist, and still has to name every state, which is why 150
-         * near-identical files are on disk. This says that in one line, and says the true thing
-         * while it is at it: this block's appearance is not in a model file.
+         * <p>An OBJ machine has no block model of its own: vanilla bakes an empty placeholder carrying a particle
+         * texture, and every machine points at the same one. The blockstate must still exist and name every state.
          *
-         * <p>The blockstate is built on {@code sharedModel} rather than on this block's own id, so
-         * a dispatch that rotates or selects by suffix still works — it just does so against
-         * somebody else's model, which is the caller's business to get right.
+         * <p>The blockstate is built on {@code sharedModel} rather than this block's own id, so a dispatch that
+         * rotates or selects by suffix runs against the shared model.
          */
         public Declaration rendered(String sharedModel) {
             Models.requireId(sharedModel, "shared model");
@@ -269,8 +253,8 @@ public final class Dejson {
          * The block's item: a model that is a bare parent pointing at the block's own model, and a
          * 26.1 item definition naming that item model.
          *
-         * <p>See {@link #blockItemDirect()} for the other spelling. The two bake identically; they
-         * differ only in which model id the definition names, and both are on disk here.
+         * <p>See {@link #blockItemDirect()} for the other spelling; the two bake identically and differ only in
+         * the model id the definition names.
          */
         public Declaration blockItem() {
             definitionModel = itemId;
@@ -281,14 +265,9 @@ public final class Dejson {
          * The same block item, with the 26.1 definition naming the <i>block</i> model directly
          * instead of going through the item model.
          *
-         * <p>This is not a different-looking item. A definition naming {@code hbm:block/foo} and
-         * one naming an item model whose only content is {@code parent: hbm:block/foo} bake to the
-         * same thing, and 245 of the definitions here take the short way while 141 take the long
-         * one. The item model is emitted either way, because below 26.1 there is no definition
-         * layer and {@code models/item/<path>.json} is the only thing the renderer looks for. The
-         * short-way block items ship no such file; a consumer that has been deriving one from the
-         * definition at build time can stop, because the declaration emits it from the same place
-         * the block model comes from.
+         * <p>A definition naming {@code hbm:block/foo} and one naming an item model whose only content is
+         * {@code parent: hbm:block/foo} bake to the same thing. The item model is emitted either way, because
+         * below 26.1 there is no definition layer and {@code models/item/<path>.json} is all the renderer reads.
          */
         public Declaration blockItemDirect() {
             definitionModel = baseModel;
@@ -296,13 +275,11 @@ public final class Dejson {
         }
 
         /**
-         * A block whose blockstate is regular but whose model is not: the states are a facing or a
-         * single variant, and the geometry is hand-built {@code elements} that {@link Models}
-         * deliberately refuses to express. The blockstate names the block's own model id and the
-         * declaration emits nothing for it, so the file stays and the boilerplate around it goes.
+         * A block whose blockstate is regular but whose model is not: the states are a facing or a single
+         * variant, and the geometry is hand-built {@code elements} that {@link Models} does not express. The
+         * blockstate names the block's own model id and the declaration emits no model for it.
          *
-         * <p>{@link #rendered} is the other half of the same idea — there the model belongs to
-         * somebody else; here it belongs to this block and is simply written by hand.
+         * <p>{@link #rendered} is the counterpart where the model belongs to another block.
          */
         public Declaration statesOnly() {
             return statesOnly(baseModel);
@@ -430,11 +407,8 @@ public final class Dejson {
     /**
      * One item's declaration: a shape, and the two files it stands in for.
      *
-     * <p>There are two files because the eras disagree about what an item model <i>is</i>. Up to
-     * 1.21.x an item is a model at {@code models/item/<path>.json} and nothing else. From 26.1 it
-     * is a <i>definition</i> at {@code items/<path>.json} that names a model, and the model stays
-     * where it was. Both are emitted from the one declaration, so neither target has to be thought
-     * about at the call site.
+     * <p>Up to 1.21.x an item is a model at {@code models/item/<path>.json}. From 26.1 it is also a definition
+     * at {@code items/<path>.json} that names a model. Both are emitted from the one declaration.
      */
     public static final class ItemDeclaration {
 
@@ -467,13 +441,11 @@ public final class Dejson {
         }
 
         /**
-         * An item that shows a model somebody else owns, and emits none itself. The block analogue
-         * is {@link Declaration#rendered}: ten kinds of reactor waste look identical and share one
-         * sprite, and a block item whose definition names the block model directly is the same idea.
+         * An item that shows a model somebody else owns, and emits none itself (the block analogue is
+         * {@link Declaration#rendered}).
          *
-         * <p>Below 26.1 there is no definition layer, so {@code legacy-assets} derives
-         * {@code models/item/<path>.json} as a bare parent pointing at whatever the definition
-         * names. That is why this emits nothing here and still renders there.
+         * <p>Below 26.1 {@code legacy-assets} derives {@code models/item/<path>.json} as a bare parent pointing
+         * at whatever the definition names.
          */
         public ItemDeclaration shares(String modelId) {
             Models.requireId(modelId, "shared model");
@@ -486,10 +458,9 @@ public final class Dejson {
          * family does: the models this declaration emits <i>are</i> the cases, in the order the shape
          * emits them, and variant <i>n</i> takes the <i>n</i>th.
          *
-         * <p>The order is the enum's, so a {@link Models#group} whose entries are listed in constant
-         * order is the whole declaration. Case zero is also the fallback, which is what a stack carrying
-         * no such property gets — and what the family's own model id has to be, since that is the model
-         * every other target loads by path.
+         * <p>The order is the enum's, so a {@link Models#group} listed in constant order is the whole declaration.
+         * Case zero is the fallback for a stack without the property, and must be the family's own model id,
+         * since that is the model other targets load by path.
          *
          * <pre>{@code Dejson.item("hbm", "ammo_arty")
          *         .models(Models.group().and("", Models.generated("hbm:items/ammo_arty"))
@@ -519,8 +490,8 @@ public final class Dejson {
          * The 26.1 definition's model tree, stated in full: a {@code special} renderer, a
          * {@code select} whose cases are not all this item's own models, a type the mod defines.
          *
-         * <p>The shape, if one is given, still emits the item's own model, which the tree may or may
-         * not name. With no shape the declaration emits the definition alone.
+         * <p>A given shape still emits the item's own model, which the tree may or may not name; with no shape
+         * only the definition is emitted.
          */
         public ItemDeclaration definition(ItemModel definition) {
             if (definition == null) {

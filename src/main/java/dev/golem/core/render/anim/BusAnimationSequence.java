@@ -7,9 +7,9 @@ import java.util.List;
 /**
  * One bus's timeline: nine independent keyframe tracks (translate/rotate/scale × XYZ).
  *
- * <p>Ported from 1.12.2 {@code BusAnimationSequenceSedna}. The tracks are deliberately independent so a
- * part can, say, finish moving on Z while still rotating on X — upstream calls this "staggering", and
- * the revolver's reload leans on it heavily.
+ * <p>Ported from 1.12.2 {@code BusAnimationSequenceSedna}. The tracks are independent so a
+ * part can, say, finish moving on Z while still rotating on X. Upstream calls this "staggering", and
+ * the revolver's reload uses it heavily.
  *
  * <p>All values are absolute, not additive.
  */
@@ -27,7 +27,7 @@ public class BusAnimationSequence {
     /** Pivot subtracted after rotating, so a part can turn about a point other than the origin. */
     public double[] offset = new double[3];
 
-    /** Axis order for the three rotations — "swizzle me timbers", as upstream puts it. */
+    /** Axis order for the three rotations, "swizzle me timbers", as upstream puts it. */
     public double[] rotMode = new double[] {0, 1, 2};
 
     public BusAnimationSequence() {
@@ -67,7 +67,7 @@ public class BusAnimationSequence {
         return this;
     }
 
-    /** Repeats the last position for {@code duration} ms — a pause. */
+    /** Repeats the last position for {@code duration} ms, a pause. */
     public BusAnimationSequence hold(int duration) {
         addKeyframe(Dimension.TX, new BusAnimationKeyframe(getLast(Dimension.TX), duration));
         addKeyframe(Dimension.TY, new BusAnimationKeyframe(getLast(Dimension.TY), duration));
@@ -97,7 +97,7 @@ public class BusAnimationSequence {
     /**
      * The full 15-slot transform at {@code millis}: 3 translate, 3 rotate, 3 scale, 3 pivot, 3 axis order.
      *
-     * <p>Past the end of a track the last value simply holds, which is what lets a shorter bus stay put
+     * <p>Past the end of a track the last value holds, which is what lets a shorter bus stay put
      * while a longer one finishes.
      */
     public double[] getTransformation(int millis) {

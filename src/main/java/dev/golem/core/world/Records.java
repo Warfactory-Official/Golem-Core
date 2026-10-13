@@ -9,13 +9,12 @@ import net.minecraft.world.item.Item;
  *
  * <p>1.21 moved a disc's song out of the item: the item only carries a {@code jukebox_playable}
  * reference to a data-driven {@code jukebox_song} entry, which holds the sound, the description,
- * the length and the comparator output. Before that the disc <em>was</em> the song — a
+ * the length and the comparator output. Before that the disc <em>was</em> the song: a
  * {@code RecordItem} constructed with all four. A caller declares both halves once: the item through
  * {@link #disc}, and the {@code data/<ns>/jukebox_song/<song>.json} file through
- * {@link dev.golem.core.dejson.JukeboxSongs}, which older versions simply never read.
+ * {@link dev.golem.core.dejson.JukeboxSongs}, which older versions never read.
  *
- * <p>The older disc resolves its sound lazily: Forge registers items before sound events, so a
- * constructor that needs the event instance would run before the event exists.
+ * <p>The older disc resolves its sound lazily: Forge registers items before sound events.
  */
 public final class Records {
 
@@ -24,7 +23,7 @@ public final class Records {
     /**
      * A music disc item.
      *
-     * @param properties    the item's properties (rarity, stack size — a disc stacks to one either way)
+     * @param properties    the item's properties (rarity, stack size: a disc stacks to one either way)
      * @param namespace     the song's namespace
      * @param song          the song's path, the {@code jukebox_song} entry name on 1.21+
      * @param sound         the event the disc plays (read on 1.20.1 only; 1.21+ reads the data file)

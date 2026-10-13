@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * <p>Neither loader raises an event for a slot edit, and no amount of polling reproduces one: the
  * comparison that decides a slot has changed is vanilla's, against a copy only the menu holds. The
  * one place to be is where the menu is handed to the player, which is also the moment that makes the
- * listener see the initial contents — {@code addSlotListener} broadcasts the whole menu, and every
+ * listener see the initial contents: {@code addSlotListener} broadcasts the whole menu, and every
  * slot differs from an empty last-sent list.
  */
 @Mixin(ServerPlayer.class)

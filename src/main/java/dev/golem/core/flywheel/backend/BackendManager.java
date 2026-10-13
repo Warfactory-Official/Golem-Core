@@ -11,12 +11,10 @@ import org.jspecify.annotations.Nullable;
 /**
  * Chooses the backend, and never throws doing it.
  *
- * <p>This runs from the client level-load listener. A choice that threw there — an unknown name in the
- * config, a forced backend the driver cannot do — used to take the whole client down for a feature that
- * is only ever an acceleration. The published engine falls back instead (an unusable configured backend
- * resolves to the best supported one, and to its off backend when nothing is supported), and so does
- * this: a bad setting is a warning and the automatic choice, and "nothing supported" is {@code null},
- * which the caller treats as "draw everything through the vanilla renderers".
+ * <p>This runs from the client level-load listener, where a throw (an unknown name in the config, a
+ * forced backend the driver cannot do) would take the whole client down for a mere acceleration. Like
+ * the published engine, a bad setting is a warning and the automatic choice, and "nothing supported" is
+ * {@code null}, which the caller treats as "draw everything through the vanilla renderers".
  */
 public final class BackendManager {
 

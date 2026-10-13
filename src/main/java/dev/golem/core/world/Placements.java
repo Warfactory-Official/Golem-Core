@@ -7,8 +7,8 @@ import net.minecraft.world.level.levelgen.placement.PlacementModifierType;
 /**
  * Placement-modifier type registration across the supported versions.
  *
- * <p>Like {@link Structures}: a {@link PlacementModifierType} only holds its modifier's codec, and 1.20.5 made
- * {@code PlacementModifierType.codec()} a {@link MapCodec} where it used to be a plain {@code Codec}. A mod declares the
+ * <p>Like {@link Structures}: a {@link PlacementModifierType} only holds its modifier's codec, and since 1.20.5
+ * {@code PlacementModifierType.codec()} is a {@link MapCodec}, not a plain {@code Codec}. A mod declares the
  * codec once as a {@code MapCodec} ({@code RecordCodecBuilder.mapCodec} on every version) and gets the type from here,
  * to register under {@code Registries.PLACEMENT_MODIFIER_TYPE}.
  */

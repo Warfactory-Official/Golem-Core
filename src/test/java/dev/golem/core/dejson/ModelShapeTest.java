@@ -1,6 +1,8 @@
 package dev.golem.core.dejson;
 
 import com.google.gson.JsonObject;
+import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -17,7 +19,7 @@ class ModelShapeTest {
     void cubeAllEmitsOneParentedModel() {
         Map<String, JsonObject> models = Models.cubeAll("hbm:blocks/example").models(BASE);
 
-        assertEquals(java.util.Set.of(BASE), models.keySet());
+        assertEquals(Set.of(BASE), models.keySet());
         assertEquals(Fixtures.json("{'parent':'minecraft:block/cube_all',"
                 + "'textures':{'all':'hbm:blocks/example'}}"), models.get(BASE));
     }
@@ -27,10 +29,10 @@ class ModelShapeTest {
         Map<String, JsonObject> models = Models.slabAll("hbm:blocks/brick_compound")
                 .models("hbm:block/brick_compound_slab");
 
-        assertEquals(java.util.List.of("hbm:block/brick_compound_slab",
+        assertEquals(List.of("hbm:block/brick_compound_slab",
                         "hbm:block/brick_compound_slab_top",
                         "hbm:block/brick_compound_slab_double"),
-                java.util.List.copyOf(models.keySet()));
+                List.copyOf(models.keySet()));
         Fixtures.assertSameModel(Fixtures.model("brick_compound_slab"),
                 models.get("hbm:block/brick_compound_slab"));
         Fixtures.assertSameModel(Fixtures.model("brick_compound_slab_top"),
@@ -102,7 +104,7 @@ class ModelShapeTest {
     void slotReferencesAreAccepted() {
         Slots slots = Slots.of("side", "hbm:blocks/a").and("particle", "#side");
 
-        assertEquals(java.util.Set.of("hbm:blocks/a"), slots.sprites());
+        assertEquals(Set.of("hbm:blocks/a"), slots.sprites());
     }
 
     @Test

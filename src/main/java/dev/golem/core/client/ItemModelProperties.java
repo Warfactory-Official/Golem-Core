@@ -1,6 +1,13 @@
 package dev.golem.core.client;
 
+import dev.golem.core.GolemCore;
 import dev.golem.core.Ids;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
 import net.minecraft.world.item.ItemStack;
 
 /**
@@ -26,11 +33,11 @@ public final class ItemModelProperties {
     /** One property: its value function and the item namespaces that carry it below 26.1. */
     private static final class Property {
         Value value;
-        final java.util.Set<String> namespaces = new java.util.LinkedHashSet<>();
-        final java.util.Set<String> installed = new java.util.HashSet<>();
+        final Set<String> namespaces = new LinkedHashSet<>();
+        final Set<String> installed = new HashSet<>();
     }
 
-    private static final java.util.Map<String, Property> PROPERTIES = new java.util.LinkedHashMap<>();
+    private static final Map<String, Property> PROPERTIES = new LinkedHashMap<>();
 
     /** Registers {@code namespace:name} for the items of {@code namespace}. */
     public static void register(String namespace, String name, Value value) {
@@ -45,9 +52,9 @@ public final class ItemModelProperties {
     public static synchronized void register(String namespace, String name, Value value, String... itemNamespaces) {
         String key = namespace + ":" + name;
         Property property = PROPERTIES.computeIfAbsent(key, k -> new Property());
-        java.util.Collections.addAll(property.namespaces, itemNamespaces);
+        Collections.addAll(property.namespaces, itemNamespaces);
         if (property.value != null) {
-            dev.golem.core.GolemCore.LOG.warn("Item model property {} registered twice; the first value is kept", key);
+            GolemCore.LOG.warn("Item model property {} registered twice; the first value is kept", key);
             schedule(namespace, name);
             return;
         }
@@ -118,7 +125,7 @@ public final class ItemModelProperties {
     /^*
      * Vanilla's public {@code ItemProperties.register} takes a {@code ClampedItemPropertyFunction}, whose default
      * {@code call} clamps to 0..1. Forge and NeoForge add an unclamped overload a lambda binds to; Fabric has only
-     * vanilla's, so every variant above 1 resolved to variant 1's override there (icon audit 2026-10-01:
+     * vanilla's, so every variant above 1 resolved to variant 1's override there (for example
      * satellite, weapon_mod_special, weapon_mod_caliber, part_barrel_heavy on 1.20.1-fabric). Overriding {@code call}
      * returns the raw integer on every loader, which is what the {@code >=} override thresholds need.
      ^/

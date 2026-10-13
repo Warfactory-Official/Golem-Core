@@ -15,13 +15,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * whole sky.
  *
  * <p>Why a mixin (AGENTS.md section 7): (1) vanilla has no extension point inside {@code SkyRenderer}; (2) Fabric 26.1
- * has no sky callback at all, and NeoForge 26.1's {@code CustomSkyboxRenderer} only replaces the entire sky before
- * vanilla runs (it cannot keep vanilla's disc and dark disc around a replaced sun and moon), selected through an
- * environment attribute; its {@code RenderLevelStageEvent.AfterSky} would serve the after-sky draw alone, but this
- * class is needed on both loaders for the replacement anyway, and one hook keeps the two loaders' draw order identical;
- * (3) widening cannot add a call. Three injects: HEAD (cancellable, only cancels when a registered skybox replaces the
- * celestial bodies this frame) and RETURN of {@code renderSunMoonAndStars}, RETURN of {@code renderDarkDisc}. With no
- * skybox registered they do nothing.
+ * has no sky callback, and NeoForge 26.1's {@code CustomSkyboxRenderer} replaces the entire sky, so it cannot keep
+ * vanilla's disc and dark disc around a replaced sun and moon. {@code RenderLevelStageEvent.AfterSky} could serve the
+ * after-sky draw alone, but one hook keeps both loaders' draw order identical; (3) widening cannot add a call.
+ * Three injects: HEAD of {@code renderSunMoonAndStars} (cancels only when a registered skybox replaces the celestial
+ * bodies this frame), its RETURN, and RETURN of {@code renderDarkDisc}. With no skybox registered they do nothing.
  */
 @Mixin(SkyRenderer.class)
 public abstract class MixinSkyRender {
@@ -71,13 +69,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  *
  * <p>Why a mixin (AGENTS.md section 7): (1) vanilla draws the whole sky in one {@code renderSky} method with no
  * extension point between its parts; (2) Forge/NeoForge's {@code DimensionSpecialEffects.renderSky} and Fabric's
- * {@code DimensionRenderingRegistry} sky renderer replace the entire sky (Fabric's cannot fall back to vanilla on frames
- * where nothing is replaced, and overriding the overworld's effects object on Forge-likes also takes over its fog, cloud
- * and sunrise behaviour); Forge-likes' {@code AFTER_SKY} stage would serve the after-sky draw alone, Fabric has no
- * after-sky event, and one hook keeps both loaders' draw order identical; (3) widening cannot add a call. Two injects:
- * at the first {@code blendFuncSeparate} (cancellable; only cancels when a registered skybox replaces the celestial
- * bodies this frame, and then repeats vanilla's tail - colour reset and dark disc - itself) and at the final
- * {@code depthMask(true)}, which only the overworld-type branch reaches. With no skybox registered they do nothing.
+ * {@code DimensionRenderingRegistry} sky renderer replace the entire sky. Fabric's cannot fall back to vanilla on
+ * frames where nothing is replaced, and overriding the overworld's effects object on Forge-likes also takes over its
+ * fog, cloud and sunrise behaviour. Fabric has no after-sky event, and one hook keeps both loaders' draw order
+ * identical; (3) widening cannot add a call. Two injects: at the first {@code blendFuncSeparate} (cancels only when a
+ * registered skybox replaces the celestial bodies this frame, then repeats vanilla's tail, the colour reset and dark
+ * disc, itself) and at the final {@code depthMask(true)}, which only the overworld-type branch reaches. With no
+ * skybox registered they do nothing.
  ^/
 @Mixin(LevelRenderer.class)
 public abstract class MixinSkyRender {

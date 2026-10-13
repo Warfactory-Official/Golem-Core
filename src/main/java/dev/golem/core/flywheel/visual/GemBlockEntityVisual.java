@@ -29,20 +29,17 @@ import org.joml.Matrix4f;
 /**
  * Engine adapter that draws a {@linkplain Gem declared model} with GPU instancing.
  *
- * <p>It reads the same declaration the vanilla pass reads and the same {@code extract} step the vanilla
- * pass uses, so the two backends cannot disagree about what a machine looks like — that is the whole
- * reason the renderer declares rather than draws. Every geometry lump becomes one resident mesh and
- * every part becomes one persistent {@link Instance}; what changes per frame is only the handful of
- * matrices whose parts read the render state.
+ * <p>It reads the same declaration and the same {@code extract} step as the vanilla pass, so the two
+ * backends cannot disagree about what a machine looks like. Every geometry lump becomes one resident
+ * mesh and every part one persistent {@link Instance}; per frame only the matrices of parts that read
+ * the render state change.
  *
- * <p>A model with no state-driven part at all is written once and then left alone until its light
- * changes. Most machines fall just short of that, because their facing is read from the render state
- * like anything else, so their per-frame cost is one extract and a handful of matrix multiplies — still
- * far less than the vanilla path, which re-submits every triangle every frame.
+ * <p>A model with no state-driven part is written once and left alone until its light changes. Most
+ * machines read their facing from the render state, so their per-frame cost is one extract and a few
+ * matrix multiplies, far less than the vanilla path, which re-submits every triangle.
  *
- * <p>Like every other visual here this is an <em>addition</em>. Any failure marks the visual unhealthy,
- * drops its instances and stops claiming frames, which hands the machine straight back to its vanilla
- * renderer rather than leaving a hole in the world.
+ * <p>Any failure marks the visual unhealthy, drops its instances and stops claiming frames, which hands
+ * the machine back to its vanilla renderer.
  */
 public final class GemBlockEntityVisual<T extends BlockEntity, S extends CompatRenderState>
         extends BlockEntityVisual<T> implements SynchronousDynamicVisual, LightUpdatedVisual {
@@ -52,9 +49,8 @@ public final class GemBlockEntityVisual<T extends BlockEntity, S extends CompatR
     /**
      * Every live gem visual, so the engine can be asked what it is actually holding.
      *
-     * <p>An instanced draw that works looks exactly like a vanilla draw that works, so without a count
-     * there is no way to tell the two apart from inside the game — which is how this engine ran for a
-     * whole release cycle with no block entity ever reaching it and nothing saying so.
+     * <p>A working instanced draw looks exactly like a working vanilla draw, so without a count nothing
+     * inside the game tells them apart.
      */
     private static final java.util.Set<GemBlockEntityVisual<?, ?>> LIVE =
             java.util.Collections.newSetFromMap(new java.util.concurrent.ConcurrentHashMap<>());
@@ -69,11 +65,9 @@ public final class GemBlockEntityVisual<T extends BlockEntity, S extends CompatR
     /**
      * Says once, per session, that a declared model actually reached the GPU.
      *
-     * <p>The engine is otherwise entirely silent when it works, which makes "it is instancing" and "it
-     * received nothing and every machine is drawing the slow way" indistinguishable from a log — and
-     * the second of those is what had been happening. One line at the moment the first gem model is
-     * written is the cheapest thing that tells them apart afterwards, from a report rather than a
-     * running game.
+     * <p>The engine is silent when it works, so "it is instancing" and "it received nothing and every
+     * machine is drawing the slow way" look the same in a log. One line when the first gem model is
+     * written tells them apart.
      */
     private static void announce() {
         announced = true;
@@ -88,10 +82,9 @@ public final class GemBlockEntityVisual<T extends BlockEntity, S extends CompatR
      * visuals the engine treats as animated.
      *
      * <p>Animated means the declaration reads its render state somewhere, so {@code Model.rigid()} is
-     * false and {@code beginFrame} rewrites its transforms every frame instead of writing once and
-     * leaving them. Moving is the stronger claim that those rewritten transforms actually differed
-     * from last frame's. A model that is animated but never moving is frozen on screen and correct
-     * everywhere else, which is the failure no screenshot and no exception will ever show.
+     * false and {@code beginFrame} rewrites its transforms every frame. Moving means those transforms
+     * actually differed from last frame's. A model that is animated but never moving is frozen on
+     * screen, a failure that raises no exception.
      */
     public static int[] census() {
         int frame = GolemRenderSystem.currentFrameId();
@@ -124,9 +117,9 @@ public final class GemBlockEntityVisual<T extends BlockEntity, S extends CompatR
      * The world transform this walk last gave each part, in visit order, and whether it drew.
      *
      * <p>A part is numbered rather than looked up because the tree is sealed: part <i>n</i> is the
-     * same part every frame, exactly as the slot list already relies on. Joints are numbered too —
-     * they carry no instance, but a joint is the most common thing a whole still subtree hangs from,
-     * so the walk has to be able to prove <em>its</em> transform unchanged to skip what is under it.
+     * same part every frame, as the slot list relies on. Joints are numbered too: they carry no
+     * instance, but a still subtree usually hangs from one, so the walk must prove <em>its</em>
+     * transform unchanged to skip what is under it.
      */
     private final Matrix4f[] poses;
     private final boolean[] drawn;
@@ -134,10 +127,10 @@ public final class GemBlockEntityVisual<T extends BlockEntity, S extends CompatR
     /**
      * The slot each part started at last walk.
      *
-     * <p>Slots are positional, so a part earlier in the walk that stops drawing — a mesh chooser is
-     * allowed to hand back nothing — shifts every slot after it by one. A subtree proved unchanged is
-     * still holding the right values, but no longer in the right slots, so the cursor has to agree
-     * before stepping over it.
+     * <p>Slots are positional, so a part earlier in the walk that stops drawing (a mesh chooser is
+     * allowed to hand back nothing) shifts every slot after it by one. A subtree proved unchanged still
+     * holds the right values but may sit in the wrong slots, so the cursor must agree before the walk
+     * steps over it.
      */
     private final int[] slotAt;
     private int walked;
@@ -148,9 +141,9 @@ public final class GemBlockEntityVisual<T extends BlockEntity, S extends CompatR
     /**
      * Whether {@link #poses} describes the frame that is actually on the GPU.
      *
-     * <p>Cleared by anything that makes last frame's answer no longer comparable to this one: the
-     * light moving, the render origin moving, or the instances being dropped. While it is false the
-     * walk visits every part and compares nothing, which is what makes it safe to trust afterwards.
+     * <p>Cleared when last frame's answer becomes incomparable to this one: the light or the render
+     * origin moves, or the instances are dropped. While false, the walk visits every part and compares
+     * nothing.
      */
     private boolean primed;
     private Vec3i writtenOrigin;
@@ -196,9 +189,9 @@ public final class GemBlockEntityVisual<T extends BlockEntity, S extends CompatR
         if (!healthy) return;
         try {
             // An instance holds its transform relative to the render origin, and Engine composes the
-            // matching Translate(renderOrigin - cameraPos) into the model-view. So the origin moving
-            // — which it does whenever the camera crosses a section boundary — invalidates every
-            // transform already written, however fixed the part that wrote it.
+            // matching Translate(renderOrigin - cameraPos) into the model-view. So when the origin moves
+            // (whenever the camera crosses a section boundary) every transform already written is
+            // invalid, however fixed the part that wrote it.
             Vec3i origin = frame.renderOrigin();
             if (!origin.equals(writtenOrigin)) primed = false;
 
@@ -225,8 +218,8 @@ public final class GemBlockEntityVisual<T extends BlockEntity, S extends CompatR
 
             // Whether anything this model draws actually moved since the last frame. A model that is
             // animated but frozen writes the same transforms forever and looks exactly like one that
-            // is working, so the comparison is the only thing that tells them apart. It is now the
-            // same comparison that decides whether to write at all, so it can no longer disagree
+            // is working, so the comparison is the only thing that tells them apart. It is the
+            // same comparison that decides whether to write at all, so it cannot disagree
             // with what the GPU was sent.
             moving = comparable && touched;
             primed = true;
@@ -245,14 +238,14 @@ public final class GemBlockEntityVisual<T extends BlockEntity, S extends CompatR
      * Writes one part and its children, depth first, and returns the next free slot.
      *
      * <p>Slots are keyed by position in that walk rather than by identity, because the walk is over a
-     * sealed tree: part <i>n</i> is the same part every frame, so its instance can simply be reused.
+     * sealed tree: part <i>n</i> is the same part every frame, so its instance can be reused.
      */
     private int write(Gem.Part<S> part, Matrix4f parent, int slot, boolean parentVisible,
                       boolean parentUnchanged) {
         int node = walked++;
 
         // Nothing above this part moved, nothing in it or under it reads the render state, and the
-        // model-wide channels every part falls back to are fixed too — so every transform, tint,
+        // model-wide channels every part falls back to are fixed too, so every transform, tint,
         // light and visibility in this subtree is already on the GPU with the value it would be
         // given again. Stepping over it is the whole point of declaring a model rather than drawing
         // one: a spinning blade costs a blade, not the machine it is bolted to.
@@ -301,14 +294,13 @@ public final class GemBlockEntityVisual<T extends BlockEntity, S extends CompatR
     /**
      * Sends one part's properties to its instance, and only the ones that differ.
      *
-     * <p>Every write marks a byte range dirty, and the backend uploads what is marked — so writing a
-     * value it already holds costs an upload to change nothing. Most machines in a loaded world are
-     * in this position on most frames: they read their facing from the render state, which makes them
-     * animated as far as the declaration is concerned, and then never turn.
+     * <p>Every write marks a byte range dirty and the backend uploads what is marked, so writing a value
+     * it already holds costs an upload for nothing. Most machines are in this position most frames: they
+     * read their facing from the render state, which makes them animated, and then never turn.
      *
-     * <p>A slot fresh from {@code allocate} has defined contents but not <em>these</em> contents, so
-     * the first write after one is unconditional and in the order the instancer documents — colour
-     * before visibility, because an invisible slot keeps its colour in the cache rather than the slab.
+     * <p>A slot fresh from {@code allocate} has defined contents but not <em>these</em> contents, so the
+     * first write after one is unconditional and in the instancer's documented order: colour before
+     * visibility, because an invisible slot keeps its colour in the cache rather than the slab.
      */
     private void apply(Slot target, Matrix4f transform, int light, int tint, boolean visible) {
         if (!target.written) {
@@ -349,7 +341,7 @@ public final class GemBlockEntityVisual<T extends BlockEntity, S extends CompatR
     /**
      * One instance in the bucket for this (mesh, surface) pair. A part that chooses its mesh or its skin
      * from the render state moves between buckets, which is a delete and a fresh allocation rather than
-     * a property on the instance — the bucket is what a draw call is.
+     * a property on the instance. The bucket is what a draw call is.
      */
     private Slot allocate(Geometry geometry, Surface surface) {
         Instancer instancer = context.drawManager()
@@ -361,9 +353,8 @@ public final class GemBlockEntityVisual<T extends BlockEntity, S extends CompatR
      * The resident mesh for one lump, uploaded once per distinct name.
      *
      * <p>A resource reload rebuilds the renderers, so the same OBJ comes back as a fresh
-     * {@link Geometry} under the same name — with different triangles if a pack replaced the file.
-     * Reusing the pool slot and replacing its contents keeps a pack swap honest without leaking a slot
-     * on every reload.
+     * {@link Geometry} under the same name, with different triangles if a pack replaced the file.
+     * The pool slot is reused and its contents replaced, so a pack swap shows and no slot leaks.
      */
     private static int mesh(Geometry geometry) {
         synchronized (MESHES) {
@@ -442,10 +433,9 @@ public final class GemBlockEntityVisual<T extends BlockEntity, S extends CompatR
     /**
      * One instance, the declaration it was allocated against, and the last values sent to it.
      *
-     * <p>The cache is what makes a redundant write detectable at all. The instancer keeps copies of
-     * its own — it has to, for the rule that an invisible slot holds its colour in the cache rather
-     * than the slab — but they are private to it and it has no way to answer "is this what you
-     * already hold".
+     * <p>The cache makes a redundant write detectable. The instancer keeps copies of its own (an
+     * invisible slot holds its colour there rather than in the slab), but they are private and it cannot
+     * answer "is this what you already hold".
      */
     private static final class Slot {
 

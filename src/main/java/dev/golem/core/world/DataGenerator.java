@@ -4,9 +4,13 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import dev.golem.core.GolemCore;
+import dev.golem.core.Ids;
 import dev.golem.core.platform.Lifecycle;
 import java.io.IOException;
+import java.io.Reader;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -81,16 +85,16 @@ public final class DataGenerator {
         String namespace = recipeId.substring(0, colon);
         String path = recipeId.substring(colon + 1);
         for (String folder : new String[] {"recipe", "recipes"}) { // the folder was plural before 1.21
-            var resource = server.getResourceManager().getResource(dev.golem.core.Ids.of(namespace, folder + "/" + path + ".json"));
+            var resource = server.getResourceManager().getResource(Ids.of(namespace, folder + "/" + path + ".json"));
             if (resource.isEmpty()) continue;
-            try (java.io.Reader reader = resource.get().openAsReader()) {
-                com.google.gson.JsonObject json = com.google.gson.JsonParser.parseReader(reader).getAsJsonObject();
+            try (Reader reader = resource.get().openAsReader()) {
+                JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
                 String type = json.has("type") ? json.get("type").getAsString() : "";
                 if (!table.id().equals(type)) throw new IllegalArgumentException(recipeId + " is a " + type + " row, not " + table.id());
                 json.remove("type");
                 return table.fromJson(json, server.registryAccess());
             } catch (IOException e) {
-                throw new java.io.UncheckedIOException(e);
+                throw new UncheckedIOException(e);
             }
         }
         throw new IllegalArgumentException("no " + table.id() + " row " + recipeId + " in the loaded datapacks");

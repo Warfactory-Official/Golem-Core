@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /^*
  * The pre-26.1 half of {@link Skies#daylight}: re-derives the level's sky darkening from the modified daylight
- * factor after vanilla computed it, on the server (mob spawning, plant light) and the client alike - 1.7's
+ * factor after vanilla computed it, on the server (mob spawning, plant light) and the client alike. Mirrors 1.7's
  * {@code WorldProvider.getSunBrightnessFactor} feeding {@code calculateSkylightSubtracted}.
  *
  * <p>Why a mixin (AGENTS.md section 7): (1) vanilla computes {@code skyDarken} from time and weather only;

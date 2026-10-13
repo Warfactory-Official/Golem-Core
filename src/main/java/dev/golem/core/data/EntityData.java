@@ -33,7 +33,7 @@ import org.jspecify.annotations.Nullable;
  * <li><b>Forge 1.20.1</b>, which has no attachments: a serializable capability provider attached in
  * {@code AttachCapabilitiesEvent} (saved under {@code ForgeCaps."golemcore:entity_data"}). The live value is
  * reached through an identity map rather than {@code getCapability}, because Forge invalidates a removed
- * entity's capabilities — the original player at a respawn copy among them — and the attachment loaders do
+ * entity's capabilities (the original player at a respawn copy among them) and the attachment loaders do
  * not. A value must therefore never hold a strong reference to its entity.</li>
  * </ul>
  *
@@ -45,7 +45,7 @@ import org.jspecify.annotations.Nullable;
  *
  * <p>{@link #migrateFrom} reads a mod's pre-attachment save format once: an entity that loads with that child
  * tag at the root of its save data and no stored value gets the child read into its value; the old child is
- * then simply not written again.
+ * then not written again.
  */
 public final class EntityData<T> {
 
@@ -157,7 +157,7 @@ public final class EntityData<T> {
         *///?}
     }
 
-    /** Whether the entity has a value yet — loaded from its save data, or created by {@link #get}. */
+    /** Whether the entity has a value yet: loaded from its save data, or created by {@link #get}. */
     public boolean has(Entity entity) {
         //? if neoforge {
         return entity.hasData(type);
@@ -196,7 +196,7 @@ public final class EntityData<T> {
         }
     }
 
-    // ---- CompoundTag bridge for the backends that store a plain compound (Fabric, Forge) ----
+    // CompoundTag bridge for the backends that store a plain compound (Fabric, Forge)
 
     //? if >=26.1 {
     private static DataIn dataIn(CompoundTag tag, HolderLookup.Provider registries) {
@@ -225,7 +225,7 @@ public final class EntityData<T> {
     }
     *///?}
 
-    // ---- NeoForge ----
+    // NeoForge
 
     //? if neoforge && >=26.1 {
     private net.neoforged.neoforge.attachment.IAttachmentSerializer<T> serializer() {
@@ -264,7 +264,7 @@ public final class EntityData<T> {
     }
     *///?}
 
-    // ---- Fabric ----
+    // Fabric
 
     //? if fabric {
     /*static final class Slot<T> {
@@ -317,8 +317,7 @@ public final class EntityData<T> {
      *   <li>AFTER_RESPAWN, phase {@code entity_data} (after the default phase): put the remembered values back,
      *       undoing the 1.4.x/2.x transfer (on 1.0.x a no-op).</li>
      * </ol>
-     * Before this, 1.21.1 and 26.1 Fabric kept the whole old value through an End return (the harness showed the
-     * radiation surviving there and not on NeoForge or Forge; History §19es-client).
+     * Without this, 1.21.1 and 26.1 Fabric would keep the whole old value through an End return.
      ^/
     private static synchronized void installFabric() {
         if (fabricInstalled) return;
@@ -366,7 +365,7 @@ public final class EntityData<T> {
     }
     *///?}
 
-    // ---- Forge ----
+    // Forge
 
     //? if forge {
     /*private static boolean forgeInstalled;

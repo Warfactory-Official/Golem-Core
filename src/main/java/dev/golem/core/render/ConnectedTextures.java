@@ -1,5 +1,6 @@
 package dev.golem.core.render;
 
+import java.util.function.Supplier;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -23,20 +24,18 @@ import java.util.concurrent.ConcurrentHashMap;
  * vertical ({@code v}) edge only. The neighbour table, the quarter types and the sheet layout are 1.7's
  * {@code CTContext}, {@code CT} and {@code IconCT}, the corner winding its {@code drawFace}.
  *
- * <p>Where it plugs in, per loader: the baked block-state model of each registered block is wrapped so it can see the
- * world - NeoForge 26.1 {@code DynamicBlockStateModel} ({@code ModelEvent.ModifyBakingResult}), Fabric 26.1
- * {@code FabricBlockStateModel.emitQuads} (model loading API), NeoForge 1.21.1 / Forge 1.20.1 {@code ModelData} on a
- * {@code BakedModelWrapper}, Fabric 1.20.1/1.21.1 {@code FabricBakedModel.emitBlockQuads}. Sodium and Embeddium honour
- * every one of those; the exception is Sodium 0.5 on 1.20.1 Fabric without Indium, which has no Fabric renderer at
- * all and draws the plain base model - documented, not silent. (HBM's 1.20.1 Fabric dev client carries Indium,
- * as any player running Sodium with a Fabric-renderer mod must.)
+ * <p>Per loader, each registered block's baked model is wrapped so it can see the world: NeoForge 26.1
+ * {@code DynamicBlockStateModel} ({@code ModelEvent.ModifyBakingResult}), Fabric 26.1
+ * {@code FabricBlockStateModel.emitQuads}, NeoForge 1.21.1 / Forge 1.20.1 {@code ModelData} on a
+ * {@code BakedModelWrapper}, Fabric 1.20.1/1.21.1 {@code FabricBakedModel.emitBlockQuads}. Sodium and Embeddium
+ * honour all of them, except Sodium 0.5 on 1.20.1 Fabric without Indium, which has no Fabric renderer and draws the
+ * plain base model.
  *
  * <p>Items are untouched: 1.7 drew a CT block's item with the plain base icons too.
  *
- * <p>Coexists with connected-texture mods (Chisel CTM, CTM Lib, Continuity, Fusion): it is code-registered per block
- * and reads none of their data - no {@code "ctm"} or {@code "fusion"} texture metadata, no {@code ctm:} model loader,
- * no OptiFine {@code .properties}. A mod that ships such data must not ship it for a block registered here; HBM
- * removed its 1.12 {@code "ctm"} metadata for that reason (otherwise Chisel CTM wraps the same models a second time).
+ * <p>Coexists with connected-texture mods (Chisel CTM, CTM Lib, Continuity, Fusion): blocks are registered in code and
+ * none of their data is read ({@code "ctm"} or {@code "fusion"} texture metadata, a {@code ctm:} model loader, OptiFine
+ * {@code .properties}). A block registered here must not carry such data, or Chisel CTM wraps its models a second time.
  *
  * <p>Client-only.
  */
@@ -67,7 +66,7 @@ public final class ConnectedTextures {
 
     private record Spec(FaceSheets sheets, Connector connector) {}
 
-    private record Pending(java.util.function.Supplier<? extends Block> block, Spec spec) {}
+    private record Pending(Supplier<? extends Block> block, Spec spec) {}
 
     private static final List<Pending> PENDING = new ArrayList<>();
     private static final Map<Block, Spec> SPECS = new ConcurrentHashMap<>();
@@ -77,13 +76,13 @@ public final class ConnectedTextures {
      * Gives the block connected textures. Call from client initialisation, before the first resource load; the block
      * is only resolved at the first model bake, so a registry supplier may be passed before registration.
      */
-    public static void register(java.util.function.Supplier<? extends Block> block, Sheets sheets,
+    public static void register(Supplier<? extends Block> block, Sheets sheets,
                                 Connector connector) {
         register(block, (FaceSheets) (state, face) -> sheets.sheets(state), connector);
     }
 
     /** As {@link #register(java.util.function.Supplier, Sheets, Connector)}, with a sheet pair per face. */
-    public static synchronized void register(java.util.function.Supplier<? extends Block> block, FaceSheets sheets,
+    public static synchronized void register(Supplier<? extends Block> block, FaceSheets sheets,
                                              Connector connector) {
         PENDING.add(new Pending(block, new Spec(sheets, connector)));
         install();
@@ -131,7 +130,7 @@ public final class ConnectedTextures {
 
     private static volatile int wrapped;
 
-    // ------------------------------------------------------------------ 1.7 CTContext / CT / IconCT
+    // 1.7 CTContext / CT / IconCT
 
     private static final int T = 0, L = 0, R = 1, B = 2;
     private static final int F = 0, C = 4, J = 8, H = 12, V = 16;
@@ -373,7 +372,7 @@ public final class ConnectedTextures {
         return SPECS.get(state.getBlock());
     }
 
-    // ================================================================== 26.1: shared BlockStateModel part
+    // 26.1: shared BlockStateModel part
     //? if >=26.1 {
     private static final QuadCache<net.minecraft.client.resources.model.geometry.BakedQuad> QUADS26 = new QuadCache<>(
             (quarter, sprite, face) -> {
@@ -459,7 +458,7 @@ public final class ConnectedTextures {
     }
     //?}
 
-    // ================================================================== 26.1 NeoForge
+    // 26.1 NeoForge
     //? if >=26.1 && neoforge {
     static final class Model26 extends net.neoforged.neoforge.client.model.DelegateBlockStateModel
             implements net.neoforged.neoforge.client.model.DynamicBlockStateModel {
@@ -504,7 +503,7 @@ public final class ConnectedTextures {
     }
     //?}
 
-    // ================================================================== 26.1 Fabric
+    // 26.1 Fabric
     //? if >=26.1 && fabric {
     /*static final class Model26 implements net.minecraft.client.renderer.block.dispatch.BlockStateModel {
         private final net.minecraft.client.renderer.block.dispatch.BlockStateModel delegate;
@@ -553,7 +552,7 @@ public final class ConnectedTextures {
     }
     *///?}
 
-    // ================================================================== legacy: shared quads
+    // legacy: shared quads
     //? if <26.1 {
     /*private static final QuadCache<net.minecraft.client.renderer.block.model.BakedQuad> LEGACY_QUADS = new QuadCache<>(
             (quarter, sprite, face) -> new net.minecraft.client.renderer.block.model.BakedQuad(legacyVertices(quarter), -1,
@@ -570,7 +569,7 @@ public final class ConnectedTextures {
     }
     *///?}
 
-    // ================================================================== 1.21.1 NeoForge / 1.20.1 Forge: ModelData
+    // 1.21.1 NeoForge / 1.20.1 Forge: ModelData
     //? if neoforge && <26.1 {
     /*private static final net.neoforged.neoforge.client.model.data.ModelProperty<int[]> TYPES =
             new net.neoforged.neoforge.client.model.data.ModelProperty<>();
@@ -669,7 +668,7 @@ public final class ConnectedTextures {
     }
     *///?}
 
-    // ================================================================== 1.20.1 / 1.21.1 Fabric: FabricBakedModel
+    // 1.20.1 / 1.21.1 Fabric: FabricBakedModel
     //? if fabric && <26.1 {
     /*static final class LegacyModel extends net.fabricmc.fabric.api.renderer.v1.model.ForwardingBakedModel {
         LegacyModel(net.minecraft.client.resources.model.BakedModel original) {

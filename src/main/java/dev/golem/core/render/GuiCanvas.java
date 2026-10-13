@@ -52,12 +52,12 @@ import org.lwjgl.opengl.GL11;
  *       {@link Sky#shaderQuads}; up to three plain images.</li>
  * </ul>
  *
- * <p>How each version draws it: 26.1 renders the record into a picture-in-picture texture through
- * {@link dev.golem.core.gui.GuiScenes} (one offscreen draw per call, each with its own pipeline and, for a shader, its own
- * parameter slice) and the GUI blits that texture in the screen's order. The draws use 1.7's colour blend factors and keep
- * the alpha as coverage ({@code SkyShaders.blend(.., true)}), so the premultiplied blit gives the result of drawing the
- * same sequence straight onto the screen. Before 26.1 the GUI is flushed and the record is drawn straight onto the
- * screen with 1.7's blend through {@code BufferUploader} ({@code ShaderInstance} programs for shaders).
+ * <p>26.1 renders the record into a picture-in-picture texture through {@link dev.golem.core.gui.GuiScenes} (one
+ * offscreen draw per call, with its own pipeline and, for a shader, its own parameter slice) and the GUI blits that
+ * texture in the screen's order. The draws use 1.7's colour blend factors and keep the alpha as coverage
+ * ({@code SkyShaders.blend(.., true)}), so the premultiplied blit matches drawing the sequence straight onto the
+ * screen. Before 26.1 the GUI is flushed and the record is drawn onto the screen with 1.7's blend through
+ * {@code BufferUploader} ({@code ShaderInstance} programs for shaders).
  *
  * <p>Client only.
  */

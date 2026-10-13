@@ -13,9 +13,8 @@ import net.minecraft.resources.ResourceLocation;
  * The render types block-entity renderers draw with.
  *
  * <p>26.1 moved these factories out of {@code RenderType} into a separate {@code RenderTypes} holder
- * and into the {@code ...renderer.rendertype} package. The factories themselves are unchanged, so this
- * is purely a naming shim — but it is a shim worth having as real code rather than a text replacement:
- * a substring rename of {@code RenderType} would also mangle every symbol that merely contains it.
+ * in the {@code ...renderer.rendertype} package. This is a naming shim kept as real code because a
+ * substring rename of {@code RenderType} would also mangle every symbol that contains it.
  */
 public final class CompatRenderTypes {
 
@@ -37,14 +36,13 @@ public final class CompatRenderTypes {
     }
 
     /**
-     * Alpha-tested entity geometry, <b>culled on every node</b> — the old GL default state a 1.7 renderer drew
+     * Alpha-tested entity geometry, <b>culled on every node</b>: the old GL default state a 1.7 renderer drew
      * in unless it disabled {@code GL_CULL_FACE} itself. Identical to {@link #entityCutoutCull}.
      *
-     * <p>Note the deliberate difference from vanilla 26.1, whose {@code RenderTypes.entityCutout} is the
-     * <i>no-cull</i> pipeline while every older {@code RenderType.entityCutout} culls. Mapping the name
-     * straight through made the same caller draw back faces on 26.1 only. A caller whose 1.7 renderer drew
-     * double-sided (every {@code RenderLiving}, or one that disabled culling) names
-     * {@link #entityCutoutNoCull} explicitly.
+     * <p>Vanilla 26.1's {@code RenderTypes.entityCutout} is the <i>no-cull</i> pipeline while every older
+     * {@code RenderType.entityCutout} culls; mapping the name straight through would draw back faces on 26.1
+     * only. A caller whose 1.7 renderer drew double-sided (every {@code RenderLiving}, or one that disabled
+     * culling) names {@link #entityCutoutNoCull}.
      */
     public static RenderType entityCutout(
             //? if >=26.1 {
@@ -162,7 +160,7 @@ public final class CompatRenderTypes {
     }
 
     /**
-     * A self-lit glow drawn over solid geometry — alpha-weighted additive, depth-tested but not
+     * A self-lit glow drawn over solid geometry, alpha-weighted additive, depth-tested but not
      * depth-writing, unculled. See {@link PlasmaGlowRenderType} for why no stock type fits.
      */
     public static RenderType plasmaGlow(
@@ -271,7 +269,7 @@ public final class CompatRenderTypes {
     }
 
     /**
-     * Alpha-tested, unculled, lightmapped geometry with no cardinal lighting — a 1.7 renderer's
+     * Alpha-tested, unculled, lightmapped geometry with no cardinal lighting, a 1.7 renderer's
      * {@code glDisable(GL_LIGHTING)} sheet. Emit an upward normal; see {@link FlatCutoutRenderType}
      * for why the stock cutout darkens the back side of a double-sided sheet on 26.1.
      */

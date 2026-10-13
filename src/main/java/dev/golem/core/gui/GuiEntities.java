@@ -23,20 +23,18 @@ import net.minecraft.client.gui.GuiGraphics;
  * living-entity restriction.
  *
  * <p><b>Why an {@code Entity} and not a model.</b> On 26.1 a screen's transform is a 2D
- * {@code Matrix3x2fStack} and there is no buffer source at extraction time — 3D inside a GUI goes
- * through a "picture in picture" render state, whose renderers are a fixed vanilla list. Rather than
- * add a renderer to that list (which needs a loader hook on NeoForge and a mixin on Fabric), this
- * routes through {@code GuiEntityRenderer}, which vanilla already registers: hand it an entity render
- * state and it dispatches to whatever renderer that entity type has. So the price of drawing a model
- * in a GUI is having an entity that draws it — usually a throwaway instance that is never added to a
- * level.
+ * {@code Matrix3x2fStack} and there is no buffer source at extraction time, so 3D inside a GUI goes
+ * through a "picture in picture" render state whose renderers are a fixed vanilla list. This routes
+ * through {@code GuiEntityRenderer}, which vanilla already registers: it takes an entity render state
+ * and dispatches to that entity type's renderer. Drawing a model in a GUI therefore needs an entity
+ * that draws it, usually a throwaway instance that is never added to a level.
  *
- * <p>Below 26.1 the screen transform is still a {@code PoseStack} and the entity is drawn directly,
- * exactly as {@code renderEntityInInventory} does.
+ * <p>Below 26.1 the screen transform is a {@code PoseStack} and the entity is drawn directly, as
+ * {@code renderEntityInInventory} does.
  *
  * <p>{@code translation} is applied <b>before</b> {@code rotation} and is therefore in scaled screen
  * space, where +Y is <em>down</em>. To centre a model that stands on its origin, pass half its height
- * — the same value vanilla passes for a player. {@code size} is pixels per block.
+ * (the value vanilla passes for a player). {@code size} is pixels per block.
  *
  * <p>Client only.
  */

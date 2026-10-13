@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -13,7 +14,7 @@ import java.util.Set;
  * The blockstate half of a declaration: which variant key selects which model.
  *
  * <p>Keys are vanilla's own {@code property=value,property=value} form and are matched the same
- * way — order-independent, and a property the key omits is a wildcard. A key mapping to more than
+ * way: order-independent, and a property the key omits is a wildcard. A key mapping to more than
  * one placement is a random pool, written as a JSON array exactly as a hand-written file would.
  */
 public interface Dispatch {
@@ -75,7 +76,7 @@ public interface Dispatch {
 
     /** The variant keys that no state of {@code states} selects; a declaration that drifted. */
     default Set<String> unusedKeys(Iterable<Map<String, String>> states) {
-        Set<String> unused = new java.util.LinkedHashSet<>(placements().keySet());
+        Set<String> unused = new LinkedHashSet<>(placements().keySet());
         for (Map<String, String> state : states) {
             unused.removeIf(key -> matches(key, state));
         }
@@ -101,7 +102,7 @@ public interface Dispatch {
 
     /** Every model id this dispatch points at, for the "declared but never emitted" check. */
     default Set<String> referencedModels(String base) {
-        Set<String> models = new java.util.LinkedHashSet<>();
+        Set<String> models = new LinkedHashSet<>();
         variants(base).values().forEach(entries -> entries.forEach(variant -> models.add(variant.model())));
         return models;
     }

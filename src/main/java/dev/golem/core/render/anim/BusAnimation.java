@@ -6,13 +6,12 @@ import java.util.Map;
 /**
  * A whole animation: several named buses playing at once.
  *
- * <p>Ported from 1.12.2 {@code BusAnimationSedna}. Upstream's own image is the clearest one — the buses
- * are film strips hanging side by side, and the player rolls down all of them at once, combining what it
- * picks up into a single movie. Each bus owns exactly one thing: the rotation of the hammer, the slide
- * of the drum, the recoil of the whole weapon.
+ * <p>Ported from 1.12.2 {@code BusAnimationSedna}. The buses are film strips hanging side by side, and the
+ * player rolls down all of them at once. Each bus owns one thing: the rotation of the hammer, the slide of
+ * the drum, the recoil of the whole weapon.
  *
- * <p>A bus is addressed by name from the renderer, so a model's parts and its animation never have to
- * agree on an index — only on a string.
+ * <p>A bus is addressed by name from the renderer, so a model's parts and its animation agree on a string,
+ * not an index.
  */
 public class BusAnimation {
 

@@ -10,20 +10,16 @@ import java.util.List;
 /**
  * Biome modifiers declared in code, for every loader.
  *
- * <p>A biome modifier is a Forge-family idea with no vanilla counterpart, and the two loaders that have
- * it spell it under different namespaces: {@code neoforge:add_features} against {@code forge:add_features}.
- * The file is otherwise the same, so it is written twice, in two directories, and a change to one of
- * them is silently not a change to the other. Fabric has no file at all: it adds features through
- * {@code BiomeModifications} in code, which used to be a third, hand-kept copy of the same list.
+ * <p>A biome modifier is a Forge-family idea with no vanilla counterpart. NeoForge and Forge spell it under
+ * different namespaces ({@code neoforge:add_features} against {@code forge:add_features}) with otherwise the
+ * same file. Fabric has no file: it adds features through {@code BiomeModifications} in code.
  *
- * <p>One declaration now serves all three. Both forge-family spellings are emitted as data, and each
- * target's own build drops the one it does not use; the same declaration is also recorded here at run
- * time, where {@link dev.golem.core.world.BiomeFeatures#install()} hands it to Fabric's API. The three
- * lists cannot drift apart because there is only one.
+ * <p>One declaration serves all three. Both forge-family spellings are emitted as data and each target's build
+ * drops the one it does not use; the same declaration is recorded here at run time, where
+ * {@link dev.golem.core.world.BiomeFeatures#install()} hands it to Fabric's API.
  *
- * <p>{@code features} is written as a list, in order: the game keeps a step's features in the order a
- * biome lists them, so a family whose members overwrite each other (a vein placed into another vein)
- * keeps the order it was declared in.
+ * <p>{@code features} is an ordered list: the game keeps a step's features in the order a biome lists them, so
+ * a family whose members overwrite each other (a vein placed into another vein) keeps its declared order.
  */
 public final class BiomeModifiers {
 

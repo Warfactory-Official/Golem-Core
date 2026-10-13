@@ -1,5 +1,6 @@
 package dev.golem.core.client;
 
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 
 /** Client decision seam for a player-specific camera offset. */
@@ -39,7 +40,7 @@ public final class CameraHooks {
     public static final dev.golem.core.hook.Hook<Distance> DISTANCE = dev.golem.core.hook.Hook.notifying();
 
     /** The detached camera distance after every {@link #DISTANCE} listener (vanilla's when there are none). */
-    public static float thirdPersonDistance(net.minecraft.world.entity.Entity entity, float distance) {
+    public static float thirdPersonDistance(Entity entity, float distance) {
         if (!(entity instanceof Player player) || DISTANCE.isEmpty()) return distance;
         for (Distance listener : DISTANCE) distance = listener.thirdPersonDistance(player, distance);
         return distance;

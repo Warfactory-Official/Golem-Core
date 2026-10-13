@@ -29,24 +29,21 @@ import java.util.Map;
  *
  * <p>From 1.21.4 an item definition declares its own tints, one entry per tint index:
  * {@code "tints": [{"type":"minecraft:constant","value":-1}, {"type":"minecraft:custom_model_data","index":0,"default":16777215}]}
- * — here layer 0 is left alone and layer 1 takes the colour {@code ModelData.setColor} stored. Below
- * that there is no item-definition layer and no tint-source concept, only the old per-item
- * {@code ItemColor} registry, reached differently on each loader. All of it lives here, so a mod calls
- * {@link #install(String)} once from shared code and never learns which era or loader it is on.
+ * Layer 0 is left alone and layer 1 takes the colour {@code ModelData.setColor} stored. Below that there is no
+ * item-definition layer, only the per-item {@code ItemColor} registry, reached differently on each loader. A mod calls
+ * {@link #install(String)} once from shared code.
  *
- * <p>The tint <em>array is read from the same item definitions 26.1 reads</em> rather than assumed.
- * Assuming index 0 is tinted inverts every two-layer item — the container gets the fluid's colour and
- * the fluid stays white — which is exactly what a container/overlay pair declares the other way round.
- * Vanilla never opens these files below 1.21.4, so parsing them here supplies the missing step rather
- * than duplicating vanilla's work, and keeps the framing data resource-pack-overridable.
+ * <p>The tint array is read from the same item definitions 26.1 reads. Assuming index 0 is tinted inverts every
+ * two-layer item: the container gets the fluid's colour and the fluid stays white. Vanilla never opens these files
+ * below 1.21.4, so they are parsed here.
  *
- * <p>On 26.1 everything here is a no-op: the engine already does all of it.
+ * <p>On 26.1 everything here is a no-op.
  */
 public final class Tints {
 
     private Tints() {}
 
-    /** 26.1's declared tint default — plain white RGB, i.e. "leave the texture alone". */
+    /** 26.1's declared tint default: plain white RGB, which leaves the texture alone. */
     public static final int UNTINTED = 0xFFFFFF;
 
     //? if <26.1 {
@@ -84,7 +81,7 @@ public final class Tints {
         //? if <26.1 {
         /*ItemColor color = (stack, tintIndex) -> {
             List<Tint> declared = tints.get(BuiltInRegistries.ITEM.getKey(stack.getItem()));
-            // Past the end of the declared array — or on an item that declares none — vanilla's own
+            // Past the end of the declared array, or on an item that declares none, vanilla's own
             // answer, which is bit-identical to having registered no handler at all.
             if (declared == null || tintIndex < 0 || tintIndex >= declared.size()) return NO_TINT;
             return declared.get(tintIndex).resolve(stack);
@@ -114,7 +111,7 @@ public final class Tints {
                     }
                 });
         ^///?} elif neoforge {
-        // NeoForge takes item colours through a mod-bus event, and this runs during mod construction —
+        // NeoForge takes item colours through a mod-bus event, and this runs during mod construction:
         // long before deferred registration has put anything in BuiltInRegistries. Collecting the items
         // here would silently find none, so the lookup happens inside the listener, by which time the
         // registries are populated and frozen.
@@ -149,13 +146,12 @@ public final class Tints {
      * Registers a {@link BlockTint} for the given blocks, on whichever colour API this node has.
      *
      * <p>26.1 registers a list of {@code BlockTintSource}s per block; older versions register a single
-     * {@code BlockColor} callback, which this adapts to by dropping the level, position and tint index
-     * that a state-keyed tint never used. Both go on the client's own {@code BlockColors}, so the only
-     * loader-specific part is <em>when</em> that is safe to touch — see {@link #whenColorsRegisterable}.
+     * {@code BlockColor} callback, which drops the level, position and tint index a state-keyed tint never uses.
+     * See {@link #whenColorsRegisterable} for when this is safe.
      *
-     * <p>Blocks are taken as suppliers and resolved inside that deferred action, not at the call site.
-     * NeoForge runs client init during mod construction, before deferred registration has created
-     * anything, so resolving eagerly throws {@code Missing key in ResourceKey[...]} on the first block.
+     * <p>Blocks are suppliers resolved inside the deferred action: NeoForge runs client init during mod
+     * construction, before deferred registration has created anything, so resolving eagerly throws
+     * {@code Missing key in ResourceKey[...]}.
      */
     @SafeVarargs
     public static void registerBlockTint(BlockTint tint,
@@ -187,9 +183,7 @@ public final class Tints {
 
     /**
      * Registers one state-keyed tint per tint index: {@code byIndex.get(n)} colours every quad whose model
-     * declared {@code tintindex n}. 26.1 takes the list directly (its per-block source list is indexed the
-     * same way); older versions get one callback that dispatches on the index it is handed. A quad whose
-     * index is outside the list keeps white, as vanilla does for an unregistered index.
+     * declared {@code tintindex n}. A quad whose index is outside the list keeps white, as in vanilla.
      */
     @SafeVarargs
     public static void registerBlockTints(java.util.List<BlockTint> byIndex,
@@ -228,10 +222,9 @@ public final class Tints {
     /**
      * Runs {@code action} at the first moment this loader allows colour handlers to be registered.
      *
-     * <p>Fabric's client initializer runs before the {@code Minecraft} instance exists, and NeoForge's
-     * mod construction runs earlier still, so neither can touch {@code BlockColors} directly. Both offer
-     * a hook that fires once the client is built; these two are the ones that exist unchanged across
-     * every version in the matrix, which is what keeps this free of era guards.
+     * <p>Fabric's client initializer and NeoForge's mod construction both run before the {@code Minecraft}
+     * instance exists, so neither can touch {@code BlockColors} directly. Each offers a hook that fires once the
+     * client is built.
      */
     private static void whenColorsRegisterable(Runnable action) {
         //? if fabric {
@@ -272,8 +265,8 @@ public final class Tints {
      * The tints an item definition declares, in tint-index order; empty if it declares none.
      *
      * <p>A `minecraft:condition` selects between two models that each carry their own tints. This era
-     * cannot switch tint arrays per condition, so the false branch wins — in practice both branches of
-     * such a pair declare the same tints, and they differ only in which texture they draw.
+     * cannot switch tint arrays per condition, so the false branch wins. Both branches of such a pair
+     * declare the same tints and differ only in the texture they draw.
      ^/
     private static List<Tint> tintsOf(JsonElement root) {
         if (!root.isJsonObject()) return List.of();

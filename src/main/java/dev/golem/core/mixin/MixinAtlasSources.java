@@ -58,7 +58,7 @@ public abstract class MixinAtlasSources implements AtlasSources {
             ((AtlasSources) (Object) callback.getReturnValue()).golem$prependSources(declared);
             // One line per atlas per reload, and the only place the hook is visible from outside: it
             // says the sources were declared, that this version's hook found them, and which atlas
-            // they landed in — which is not the same id on every version.
+            // they landed in, which is not the same id on every version.
             dev.golem.core.GolemCore.LOG.info("Added {} declared sprite source(s) to {}",
                     declared.size(), atlas);
         }

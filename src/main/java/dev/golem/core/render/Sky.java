@@ -44,8 +44,9 @@ import net.minecraft.resources.ResourceLocation;
  * {@code core/position_color} or {@code core/position_tex_color} shader and the chosen blend (no depth state, as
  * vanilla's {@code CELESTIAL}); before 26.1 the same two shaders through {@code BufferUploader} with the blend set on
  * {@code RenderSystem}, except that textured draws use {@code golemcore:sky_tex_color_legacy}, vanilla's program with
- * 26.1's discard at alpha 0 instead of 0.1 (1.7 drew the sky without the alpha test). Vanilla's sun and moon textures moved into the {@code celestials} atlas in 26.1;
- * {@link Texture#sun()} and {@link Texture#moon} hide that, so a quad's UVs are always 0..1 over the image.
+ * 26.1's discard at alpha 0 instead of 0.1 (1.7 drew the sky without the alpha test). Vanilla's sun and moon
+ * textures are in the {@code celestials} atlas on 26.1; {@link Texture#sun()} and {@link Texture#moon} hide
+ * that, so a quad's UVs are always 0..1 over the image.
  */
 public final class Sky {
 

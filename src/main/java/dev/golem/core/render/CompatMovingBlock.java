@@ -12,7 +12,7 @@ import net.minecraft.client.renderer.block.MovingBlockRenderState;
 //?}
 
 /**
- * A block in flight — a falling block, a thrown chunk of a structure — drawn with the world lighting
+ * A block in flight (a falling block, a thrown chunk of a structure), drawn with the world lighting
  * of the position it is passing through, the way vanilla's falling-block renderer draws sand.
  *
  * <p>26.1 extracts a {@code MovingBlockRenderState} carrying the biome, light engine and cardinal

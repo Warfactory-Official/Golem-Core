@@ -1,5 +1,6 @@
 package dev.golem.core.world;
 
+import dev.golem.core.hook.Hook;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiConsumer;
@@ -19,7 +20,7 @@ public final class Sleeps {
     private Sleeps() {}
 
     /** Every listener, in phase order; register through the {@code on...} method or directly, with a phase. */
-    public static final dev.golem.core.hook.Hook<BiConsumer<Player, BlockPos>> ATTEMPTS = dev.golem.core.hook.Hook.notifying();
+    public static final Hook<BiConsumer<Player, BlockPos>> ATTEMPTS = Hook.notifying();
     private static boolean hooked;
 
     /** Registers a handler for a server-side bed attempt: (player, bed position). */

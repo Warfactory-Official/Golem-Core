@@ -13,8 +13,7 @@ public final class Effects {
     /**
      * The strength effect, whatever this version calls it.
      *
-     * <p>Vanilla renamed the field from {@code DAMAGE_BOOST} to {@code STRENGTH} at 1.21.2 — a pure
-     * spelling change, so it belongs here rather than in a guard at every use site. Typed as
+     * <p>Vanilla renamed the field from {@code DAMAGE_BOOST} to {@code STRENGTH} at 1.21.2. Typed as
      * {@link Object} to match {@link #instance} and {@link #add}, which take the effect loosely because
      * it is a raw {@code MobEffect} below 1.21 and a {@code Holder} above it.
      */
@@ -58,7 +57,7 @@ public final class Effects {
         *///?}
     }
 
-    /** Instant health: {@code HEAL} until 1.21.2 renamed it {@code INSTANT_HEALTH}. */
+    /** Instant health: {@code INSTANT_HEALTH} on 1.21.2 and later, {@code HEAL} before. */
     public static Object instantHealth() {
         //? if >=1.21.2 {
         return net.minecraft.world.effect.MobEffects.INSTANT_HEALTH;
@@ -88,9 +87,8 @@ public final class Effects {
     /**
      * An effect instance with explicit ambient/visible flags.
      *
-     * <p>{@code visible = false} is the interesting one: it suppresses the swirling particles, which is
-     * what an effect re-applied every tick — a full-set armour bonus, say — needs if it is not to bury
-     * the wearer in them.
+     * <p>{@code visible = false} suppresses the swirling particles, which an effect re-applied every
+     * tick (a full-set armour bonus, say) needs.
      */
     /** {@link #instanceRegistered(MobEffect, int, int)} with the ambient/visible flags. */
     public static MobEffectInstance instanceRegistered(MobEffect effect, int duration, int amplifier,
@@ -111,12 +109,11 @@ public final class Effects {
     /**
      * An effect instance with explicit ambient/visible/icon flags.
      *
-     * <p><b>The {@code showIcon} split is a real porting hazard.</b> 1.12's five-argument
+     * <p><b>The {@code showIcon} split is a porting hazard.</b> 1.12's five-argument
      * {@code PotionEffect(potion, duration, amplifier, ambient, showParticles)} controlled
      * <i>particles only</i> and always showed the status icon. Modern Minecraft's five-argument
-     * constructor sets {@code showIcon = visible}, so the literal transcription of that call silently
-     * hides the icon too — and an effect with no particles and no icon looks, to a player, exactly like
-     * an effect that was never applied. Pass {@code visible = false, showIcon = true} to reproduce 1.12.
+     * constructor sets {@code showIcon = visible}, so a literal transcription hides the icon too, and
+     * the effect looks never applied. Pass {@code visible = false, showIcon = true} to reproduce 1.12.
      */
     public static MobEffectInstance instance(Object effect, int duration, int amplifier, boolean ambient,
             boolean visible, boolean showIcon) {
@@ -200,7 +197,7 @@ public final class Effects {
         *///?}
     }
 
-    /** Whether an active effect is a harmful one — legacy {@code Potion.isBadEffect}. */
+    /** Whether an active effect is harmful. Mirrors legacy {@code Potion.isBadEffect}. */
     public static boolean isHarmful(MobEffectInstance instance) {
         //? if >=1.21 {
         return instance.getEffect().value().getCategory() == net.minecraft.world.effect.MobEffectCategory.HARMFUL;

@@ -8,13 +8,10 @@ import net.minecraft.network.chat.Component;
 /**
  * Server and client command registration, declared once for every loader.
  *
- * <p>Each loader has its own registration hook: Fabric's {@code CommandRegistrationCallback} and
- * {@code ClientCommandRegistrationCallback}, and the NeoForge/Forge {@code RegisterCommandsEvent} and
- * {@code RegisterClientCommandsEvent} on two different event buses. The server half is the same Brigadier
- * dispatcher everywhere. The client half is not: Fabric hands out a dispatcher over its own
- * {@code FabricClientCommandSource}, NeoForge and Forge one over a client-side {@code CommandSourceStack}.
- * A client command is therefore written against Brigadier's generic source type and reports through
- * {@link ClientFeedback}, which hides which of the two it got.
+ * <p>The server half is the same Brigadier dispatcher everywhere. The client half is not: Fabric hands out a
+ * dispatcher over its own {@code FabricClientCommandSource}, NeoForge and Forge one over a client-side
+ * {@code CommandSourceStack}. A client command is therefore written against Brigadier's generic source type
+ * and reports through {@link ClientFeedback}.
  *
  * <pre>{@code
  * CompatCommands.server(dispatcher -> dispatcher.register(Commands.literal("ntmrad")...));

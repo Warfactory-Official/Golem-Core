@@ -1,6 +1,7 @@
 package dev.golem.core.hook;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -121,7 +122,7 @@ public final class Hook<T> implements Iterable<T> {
 
     /** Iterates {@link #listeners()}: owners that only notify loop over the hook. */
     @Override
-    public java.util.Iterator<T> iterator() {
+    public Iterator<T> iterator() {
         return ordered.iterator();
     }
 

@@ -22,7 +22,7 @@ import java.util.Optional;
  * <p>The {@code *Or} accessors are the interesting part. Pre-26.1 {@code CompoundTag.getInt} returns
  * {@code 0} for a missing <i>or</i> wrong-typed key, so a naive backport would silently substitute
  * zero where the caller asked for a different default. Each accessor therefore checks {@code contains}
- * with the expected tag type first and only then reads, falling back to the caller's default —
+ * with the expected tag type first and only then reads, falling back to the caller's default,
  * reproducing 26.1's semantics rather than the old API's.
  ^/
 public final class TagDataIn implements DataIn {

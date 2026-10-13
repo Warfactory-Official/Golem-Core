@@ -3,6 +3,7 @@ package dev.golem.core.render.gem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import dev.golem.core.render.Poses;
+import dev.golem.core.render.StaticMeshes;
 import dev.golem.core.render.SubmitSink;
 import dev.golem.core.render.anim.BusAnimationSequence;
 import java.util.ArrayList;
@@ -19,34 +20,28 @@ import org.jspecify.annotations.Nullable;
 /**
  * A model a renderer declares instead of drawing.
  *
- * <p>A renderer that writes its own {@code submit} can only ever feed the vanilla pass: the geometry
- * exists for the length of one call and the transforms live in a {@code PoseStack} that is gone by the
- * next frame. The instanced backend needs the opposite — every bucket of (mesh, surface) known before
- * the first frame, rigid transforms written once, and only the moving ones touched again. Those two
- * demands cannot both be met by imperative drawing code, so the renderer states its model once and
- * each backend reads that same statement.
+ * <p>A renderer that writes its own {@code submit} can only feed the vanilla pass: the geometry exists for one
+ * call and the transforms live in a {@code PoseStack} that is gone by the next frame. The instanced backend
+ * needs every bucket of (mesh, surface) known before the first frame, rigid transforms written once, and only
+ * the moving ones touched again. So the renderer states its model once and each backend reads that statement.
  *
- * <p>A model is a tree of {@linkplain Part parts}. Each part carries an ordered list of transform
- * operations and, usually, one lump of {@link Geometry} drawn with one {@link Surface}; a part with no
- * geometry is a joint that exists only to place its children. <b>Operations apply in declaration
- * order, and that order is exactly a {@code PoseStack}'s call order</b> — {@code translate} then
- * {@code rotate} here does what {@code poseStack.translate} then {@code poseStack.mulPose} did — so
- * transcribing an existing renderer is mechanical and the result is comparable line by line.
+ * <p>A model is a tree of {@linkplain Part parts}. Each part carries an ordered list of transform operations
+ * and, usually, one lump of {@link Geometry} drawn with one {@link Surface}; a part with no geometry is a joint
+ * that only places its children. <b>Operations apply in declaration order, which is a {@code PoseStack}'s call
+ * order</b>: {@code translate} then {@code rotate} does what {@code poseStack.translate} then
+ * {@code poseStack.mulPose} did, so an existing renderer transcribes line by line.
  *
- * <p>An operation is either fixed or read from the render state. A part with no state-driven operation
- * is <em>rigid</em>, and a rigid part under rigid parents never has its transform recomputed; that is
- * the whole reason a static machine is cheap to instance. Animation is declared three ways, because
- * this mod's animations arrive in three shapes:
+ * <p>An operation is either fixed or read from the render state. A part with no state-driven operation is
+ * <em>rigid</em>, and a rigid part under rigid parents never has its transform recomputed, which is why a
+ * static machine is cheap to instance. Animation is declared three ways:
  *
  * <ul>
  *   <li>{@link Part#angle} / {@link Part#slide} / {@link Part#spin} bind one float from the render
  *       state straight to one axis. Most machines animate on exactly one float.</li>
  *   <li>{@link Part#keys} plays a {@link BusAnimationSequence} whose playhead is driven by the render
- *       state rather than by the clock — which is what lets a keyframed pose describe a machine whose
- *       progress is a number rather than an elapsed time.</li>
- *   <li>Genuinely procedural motion — an arm that picks random targets and speed-limits toward them —
- *       binds its joint angles through {@link Part#angle} and stays procedural. Nothing here tries to
- *       turn it into keyframes.</li>
+ *       state rather than by the clock, for a machine whose progress is a number, not an elapsed time.</li>
+ *   <li>Procedural motion (an arm that picks random targets and speed-limits toward them) binds its joint
+ *       angles through {@link Part#angle} and stays procedural.</li>
  * </ul>
  */
 public final class Gem {
@@ -105,12 +100,11 @@ public final class Gem {
     /**
      * One step of a part's local transform.
      *
-     * <p>Both halves describe the same step: the matrix form is what the instanced backend and the
-     * tests evaluate, the pose-stack form is what the vanilla pass replays. They are written as a pair
-     * rather than deriving one from the other because {@code PoseStack} also maintains a normal matrix,
-     * and the two eras do not agree on how a raw matrix multiplied into it updates that. Keeping the
-     * vanilla path on real {@code PoseStack} calls means its output is unchanged from the hand-written
-     * renderer it replaces; {@code GemOpAgreementTest} holds the pair honest.
+     * <p>The matrix form is what the instanced backend and the tests evaluate; the pose-stack form is what
+     * the vanilla pass replays. They are a pair rather than derived from each other because
+     * {@code PoseStack} also maintains a normal matrix, and the eras differ on how a raw matrix multiplied
+     * into it updates that. Real {@code PoseStack} calls keep the vanilla output equal to the hand-written
+     * renderer; {@code GemOpAgreementTest} checks the pair agree.
      */
     interface Op<S> {
         void apply(Matrix4f matrix, S state);
@@ -206,9 +200,8 @@ public final class Gem {
     /**
      * Plays one animation bus, with the render state supplying the playhead in milliseconds.
      *
-     * <p>The order below is the one the weapon renderers already apply to a bus — translate, the three
-     * rotations in the bus's own axis order, the pivot subtracted, then scale — and it is reproduced
-     * here rather than reinvented so a machine and a gun read the same keyframe table identically.
+     * <p>The order is the weapon renderers': translate, the three rotations in the bus's own axis order, the
+     * pivot subtracted, then scale, so a machine and a gun read the same keyframe table identically.
      */
     private static void applyBus(Matrix4f matrix, double[] t) {
         matrix.translate((float) t[0], (float) t[1], (float) t[2]);
@@ -327,10 +320,8 @@ public final class Gem {
         /**
          * The overlay texel every part samples. Defaults to none.
          *
-         * <p>A block entity and a free entity are both drawn without one, so this exists for the one
-         * caller that is handed a real overlay and must pass it on: an item model. Vanilla gives an item
-         * the hurt flash of whoever is holding it, and dropping it would leave a machine's icon the only
-         * thing in a struck mob's hand that does not redden.
+         * <p>Block entities and free entities are drawn without one. An item model is handed a real overlay
+         * (the hurt flash of whoever holds it) and must pass it on.
          */
         public Model<S> overlay(IntOf<S> overlay) {
             requireOpen();
@@ -341,9 +332,8 @@ public final class Gem {
         /**
          * This model's top-level parts.
          *
-         * <p>Frozen at {@link #seal}, for the same reason {@link Part#children} is: the instanced
-         * walk starts here every frame, and handing it a fresh copy each time is a per-frame
-         * allocation to hand back a list that cannot have changed.
+         * <p>Frozen at {@link #seal}, like {@link Part#children}: the instanced walk starts here every frame,
+         * and a fresh copy each time would be a per-frame allocation.
          */
         public List<Part<S>> roots() {
             return frozenRoots == null ? List.copyOf(roots) : frozenRoots;
@@ -370,11 +360,10 @@ public final class Gem {
         /**
          * Whether nothing anywhere in the model reads the render state.
          *
-         * <p>The model's own channels count. A tree of fixed parts under a model that chooses its
-         * overlay from the state is not rigid: the instanced backend writes a rigid model once and then
-         * leaves it alone, so a chooser above the parts would be sampled on the first frame and never
-         * again. Light is the exception it looks like but is not — a light change re-writes the visual
-         * through {@code updateLight} rather than through the rigidity check.
+         * <p>The model's own channels count. Fixed parts under a model that chooses its overlay from the
+         * state are not rigid: the instanced backend writes a rigid model once, so the chooser would be
+         * sampled on the first frame only. Light is the exception: a light change re-writes the visual
+         * through {@code updateLight}, not through the rigidity check.
          */
         public boolean rigid() {
             if (overlay != null) return false;
@@ -385,22 +374,19 @@ public final class Gem {
         /**
          * Whether the model-wide light and overlay channels are both fixed.
          *
-         * <p>Every part falls back to these, so a chooser here is render state that looking at a part
-         * alone cannot see. No part is fixed under one, which is why the instanced walk asks this once
-         * before it trusts any part's own answer.
+         * <p>Every part falls back to these, so a chooser here is render state a part alone does not show.
+         * No part is fixed under one, so the instanced walk asks this once before trusting any part.
          */
         public boolean channelsFixed() {
             return light == null && overlay == null;
         }
 
         /**
-         * Closes the model to further declaration. A renderer's setup step runs once and the instanced
-         * backend allocates against the tree it produced, so a part added later would exist on the
-         * vanilla path and be invisible on the instanced one.
+         * Closes the model to further declaration. The instanced backend allocates against the sealed tree,
+         * so a part added later would exist on the vanilla path and be invisible on the instanced one.
          *
-         * <p>A model with no parts at all is allowed: a machine whose whole appearance is built rather
-         * than placed — a pool of melt, a beam — has nothing to declare and draws entirely through
-         * {@code submitUndeclared}.
+         * <p>A model with no parts is allowed: a machine whose appearance is built rather than placed (a
+         * pool of melt, a beam) draws entirely through {@code submitUndeclared}.
          */
         public Model<S> seal() {
             sealed = true;
@@ -477,7 +463,7 @@ public final class Gem {
         }
 
         /**
-         * Scales along one axis by a factor the render state supplies — a tank's contents standing as
+         * Scales along one axis by a factor the render state supplies: a tank's contents standing as
          * tall as they are full, a beam as long as the distance it crosses.
          */
         public Part<S> stretch(Axes axis, FloatOf<S> factor) {
@@ -496,7 +482,7 @@ public final class Gem {
         }
 
         /**
-         * Rotates about one axis through a pivot other than this part's origin — the shape a spinning
+         * Rotates about one axis through a pivot other than this part's origin, the shape a spinning
          * fan or rotor mounted away from the model centre needs.
          */
         public Part<S> spin(Axes axis, float pivotX, float pivotY, float pivotZ, FloatOf<S> degrees) {
@@ -506,14 +492,13 @@ public final class Gem {
         }
 
         /**
-         * Applies a transform the render state has already composed — for a renderer that builds its
+         * Applies a transform the render state has already composed, for a renderer that builds its
          * bones as matrices rather than as a sequence of named steps.
          *
-         * <p>This is the one op whose two forms are not the same call twice: the pose-stack side
-         * multiplies a raw matrix in, which updates the stack's normal matrix by its own rule rather
-         * than by the axis-by-axis one the other ops use. It is here because a renderer that already
-         * hands out matrices was drawing exactly this way before it was declared, and matching it keeps
-         * the vanilla output unchanged.
+         * <p>This is the one op whose two forms are not the same call twice: the pose-stack side multiplies a
+         * raw matrix in, which updates the stack's normal matrix by its own rule rather than the axis-by-axis
+         * one of the other ops. A renderer that hands out matrices drew this way, and matching it keeps the
+         * vanilla output equal.
          */
         public Part<S> pose(PoseOf<S> pose) {
             return op(new Posed<>(Objects.requireNonNull(pose, "pose")));
@@ -522,10 +507,9 @@ public final class Gem {
         /**
          * Applies one animation bus the render state hands over whole.
          *
-         * <p>{@link #keys} samples a bus out of a keyframe table; this takes one that is already live,
-         * which is what a held weapon's joints read. The transform is the same either way, down to the
-         * rotations being applied in the order the bus itself names — the axis order is data, not a
-         * fixed X-Y-Z, which is exactly why this cannot be spelled as three {@link #angle} calls.
+         * <p>{@link #keys} samples a bus out of a keyframe table; this takes one that is already live, as a
+         * held weapon's joints do. The rotations apply in the order the bus names; the axis order is data,
+         * not a fixed X-Y-Z, so this cannot be spelled as three {@link #angle} calls.
          */
         public Part<S> bus(BusOf<S> bus) {
             return op(new Bussed<>(Objects.requireNonNull(bus, "bus")));
@@ -538,13 +522,13 @@ public final class Gem {
         }
 
         /**
-         * Chooses this part's mesh from the render state: one slot in the model that holds whichever of
-         * several shapes this block turns out to be — the twelve anvils, the satellite dishes, a boiler
-         * before and after it bursts.
+         * Chooses this part's mesh from the render state: one slot that holds whichever of several shapes
+         * the block turns out to be (the twelve anvils, the satellite dishes, a boiler before and after it
+         * bursts).
          *
          * <p>The chooser must always name a mesh. A part that sometimes draws nothing says so with
-         * {@link #visibleIf}: whether a part occupies a slot at all is settled when the model is sealed,
-         * and a part that came and went would shift every slot after it.
+         * {@link #visibleIf}: slot occupancy is settled when the model is sealed, and a part that came and
+         * went would shift every later slot.
          */
         public Part<S> mesh(GeometryOf<S> geometry) {
             requireOpen();
@@ -556,13 +540,11 @@ public final class Gem {
         }
 
         /**
-         * Chooses this part's surface from the render state: one mesh with several skins, which is how
-         * this mod spells a machine tier, a dyed casing or an inserted battery.
+         * Chooses this part's surface from the render state: one mesh with several skins (a machine tier, a
+         * dyed casing, an inserted battery).
          *
-         * <p>Declaring the mesh once and letting the skin move is not the same as declaring it once per
-         * skin. A part exists as one instance either way, and an instance that changes texture moves to
-         * the bucket for that texture; a part per skin would allocate every bucket for every machine and
-         * leave all but one of them hidden.
+         * <p>An instance that changes texture moves to the bucket for that texture; a part per skin would
+         * allocate every bucket for every machine and hide all but one.
          */
         public Part<S> skin(SurfaceOf<S> surface) {
             requireOpen();
@@ -598,15 +580,13 @@ public final class Gem {
          * Draws this part after everything declared at a lower order, the way
          * {@link dev.golem.core.render.SubmitSink#order} does.
          *
-         * <p>Declaration order alone settles nothing in the vanilla pass: geometry is batched by render
-         * type, and two parts on different types come out in whatever order the batcher chose. A blended
-         * shell over an opaque body needs the body drawn first to blend against, and this is how a
-         * declaration says so.
+         * <p>Declaration order alone settles nothing in the vanilla pass: geometry is batched by render type,
+         * and parts on different types come out in the batcher's order. A blended shell over an opaque body
+         * needs the body drawn first, and this says so.
          *
-         * <p>The instanced backend has no equivalent lever and needs none — it draws by material, and a
-         * blended surface already belongs to a later pass there than a cutout one. The order is
-         * therefore the vanilla pass's tie-break, not a second scene graph, and a part that relies on it
-         * for anything but blending against what is underneath is declaring the wrong thing.
+         * <p>The instanced backend needs no such lever: it draws by material, and a blended surface already
+         * belongs to a later pass than a cutout one. The order is the vanilla pass's tie-break, for blending
+         * against what is underneath, not a second scene graph.
          */
         public Part<S> order(int order) {
             requireOpen();
@@ -642,10 +622,8 @@ public final class Gem {
         /**
          * This part's children.
          *
-         * <p>Frozen once at {@link Model#seal}, so the instanced walk — which asks every part every
-         * frame — gets the same immutable list back rather than a fresh copy of it. Before sealing
-         * the list is still growing, and a caller holding a copy of a half-built tree is the reason
-         * this defends itself at all.
+         * <p>Frozen once at {@link Model#seal}, so the instanced walk, which asks every part every frame, gets
+         * the same immutable list instead of a copy. Before sealing the list is still growing.
          */
         public List<Part<S>> children() {
             return frozen == null ? List.copyOf(children) : frozen;
@@ -659,9 +637,9 @@ public final class Gem {
         /**
          * Whether this part's own contribution is fixed, whatever its children do.
          *
-         * <p>{@link #rigidTree} asks the same question downwards, and that is what a whole model is
-         * judged on. This is the upward one the instanced walk needs: a part is only safe to leave
-         * alone when every ancestor is fixed too, and a fixed part under a spinning one moves.
+         * <p>{@link #rigidTree} asks the same question downwards. The instanced walk needs this upward one: a
+         * part is only safe to leave alone when every ancestor is fixed too, since a fixed part under a
+         * spinning one moves.
          */
         public boolean fixed() {
             return !dynamic && visible == null && mesh == null && skin == null && tint == null
@@ -678,9 +656,8 @@ public final class Gem {
         /**
          * How many parts this subtree walks, this one included.
          *
-         * <p>Sealed models only. The instanced walk numbers its cached poses by visit order, so
-         * stepping over a subtree it has proved unchanged means advancing that counter by exactly this
-         * many without visiting anything.
+         * <p>Sealed models only. The instanced walk numbers its cached poses by visit order, so skipping an
+         * unchanged subtree advances that counter by exactly this many.
          */
         public int subtreeNodes() {
             return subtreeNodes;
@@ -689,10 +666,9 @@ public final class Gem {
         /**
          * How many instance slots this subtree occupies.
          *
-         * <p>Sealed models only, and only meaningful where {@link #rigidTree} holds: a part that
-         * chooses its mesh from the render state can draw or not draw from one frame to the next, so
-         * its subtree has no settled slot count. Such a part is never rigid, and rigidity is the only
-         * thing that lets the walk step over a subtree without counting its slots one at a time.
+         * <p>Sealed models only, and only meaningful where {@link #rigidTree} holds: a part that chooses its
+         * mesh from the render state can draw or not draw from frame to frame, so its subtree has no settled
+         * slot count and is never rigid.
          */
         public int subtreeSlots() {
             return subtreeSlots;
@@ -755,13 +731,12 @@ public final class Gem {
      * The corners of every part a model draws in one state, carried through the same walk the draw uses
      * and into {@code start}'s frame.
      *
-     * <p>This is the box a model is framed on, and it is the declaration's box rather than the mesh's.
-     * A rest pose that turns or offsets what it holds — which is most of them — displaces the drawing
-     * from the mesh's own bounds by exactly that transform, and a consumer that frames on the mesh
-     * instead sizes and places its picture around geometry nobody draws there.
+     * <p>This is the box a model is framed on: the declaration's box, not the mesh's. A rest pose that turns
+     * or offsets what it holds (most of them) displaces the drawing from the mesh's bounds by that
+     * transform, so framing on the mesh would place the picture around geometry nobody draws there.
      *
-     * <p>Nothing here reads a clock: the state is the caller's, so a model that moves is framed by
-     * sampling this over the phases it moves through, not by taking it at the current instant.
+     * <p>Nothing here reads a clock: the state is the caller's, so a moving model is framed by sampling
+     * this over the phases it moves through.
      */
     public static <S> void extents(Model<S> model, S state, Matrix4fc start, Consumer<Vector3fc> output) {
         for (Part<S> root : model.roots) corners(root, state, new Matrix4f(start), output);
@@ -832,7 +807,7 @@ public final class Gem {
             int tint = part.tintOf(state);
             SubmitSink target = part.order() == 0 ? sink : sink.order(part.order());
             if (model.resident) {
-                dev.golem.core.render.StaticMeshes.submit(target, poseStack, part.surfaceOf(state), geometry, light,
+                StaticMeshes.submit(target, poseStack, part.surfaceOf(state), geometry, light,
                         overlay, tint);
             } else {
                 target.submitCustomGeometry(poseStack, part.surfaceOf(state).renderType(),

@@ -20,7 +20,7 @@ public interface AtlasSources {
      *
      * <p>In front, not behind: a later source overwrites an earlier one's sprite of the same id, so
      * running first is what lets a resource pack override a generated sprite by shipping the PNG it
-     * would have generated — the atlas's own directory listing picks that file up afterwards.
+     * would have generated. The atlas's own directory listing picks that file up afterwards.
      */
     void golem$prependSources(List<SpriteSource> sources);
 }

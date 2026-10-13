@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Moves third-person flight view down by the old 1.22 blocks.
+ * Moves third-person flight view down by 1.7's 1.22 blocks.
  *
  * <p>Rungs 1 and 2 have no cross-loader camera-position event, and an access widener cannot expose a
  * callback. The smallest remaining hook is an invoker for vanilla's protected {@code Camera.move} plus a

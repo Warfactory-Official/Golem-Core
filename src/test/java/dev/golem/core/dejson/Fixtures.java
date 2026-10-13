@@ -3,6 +3,7 @@ package dev.golem.core.dejson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
@@ -53,7 +54,7 @@ final class Fixtures {
             }
             return JsonParser.parseReader(new InputStreamReader(stream, StandardCharsets.UTF_8))
                     .getAsJsonObject();
-        } catch (java.io.IOException failure) {
+        } catch (IOException failure) {
             throw new IllegalStateException("could not read fixture " + path, failure);
         }
     }

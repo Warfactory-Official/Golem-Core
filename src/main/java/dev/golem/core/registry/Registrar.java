@@ -1,7 +1,12 @@
 package dev.golem.core.registry;
 
+import dev.golem.core.Ids;
 import dev.golem.core.dejson.Dejson;
 import dev.golem.core.dejson.Tags;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.Locale;
+import java.util.Set;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
@@ -85,13 +90,13 @@ public class Registrar {
     }
 
     /** {@code "<ns>:<block> -> #<tag>"} for every item tag declared on a BLOCK handle; see {@link Handle#tag(ItemTag)}. */
-    private static final java.util.Set<String> BLOCK_ITEM_TAG_MEMBERS =
-            java.util.Collections.synchronizedSet(new java.util.LinkedHashSet<>());
+    private static final Set<String> BLOCK_ITEM_TAG_MEMBERS =
+            Collections.synchronizedSet(new LinkedHashSet<>());
 
     /** The item-tag memberships declared on block handles, each assuming a same-id block item exists. */
-    public static java.util.Set<String> blockItemTagMembers() {
+    public static Set<String> blockItemTagMembers() {
         synchronized (BLOCK_ITEM_TAG_MEMBERS) {
-            return java.util.Set.copyOf(BLOCK_ITEM_TAG_MEMBERS);
+            return Set.copyOf(BLOCK_ITEM_TAG_MEMBERS);
         }
     }
 
@@ -184,7 +189,7 @@ public class Registrar {
     /** A sound event {@code <ns>:<name>} with variable range. */
     public Handle<SoundEvent> sound(String name) {
         return registerOn(find(DeferredRegister.Sounds.class, () -> Registries.SOUND_EVENT), name,
-                () -> SoundEvent.createVariableRangeEvent(dev.golem.core.Ids.of(namespace, name)));
+                () -> SoundEvent.createVariableRangeEvent(Ids.of(namespace, name)));
     }
 
     /** Any other registry this registrar holds a register for (effects, features, particle types, ...). */
@@ -369,8 +374,8 @@ public class Registrar {
 
         private void require(Kind expected, String what) {
             if (kind != expected) {
-                throw new IllegalStateException(id() + " is a " + kind.name().toLowerCase(java.util.Locale.ROOT)
-                        + " registration; " + what + " belongs on a " + expected.name().toLowerCase(java.util.Locale.ROOT));
+                throw new IllegalStateException(id() + " is a " + kind.name().toLowerCase(Locale.ROOT)
+                        + " registration; " + what + " belongs on a " + expected.name().toLowerCase(Locale.ROOT));
             }
         }
     }

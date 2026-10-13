@@ -16,7 +16,7 @@ import net.minecraft.client.renderer.rendertype.RenderType;
  *
  * <p>A part renders against a {@code PoseStack}, but a sink's geometry callback hands back only the
  * one {@code Pose} it was submitted under. Rebuilding a single-entry stack from that pose is the
- * bridge, and it is the same on every node — the part API itself has not moved since 1.17.
+ * bridge, and it is the same on every node. The part API itself has not moved since 1.17.
  */
 public final class ModelParts {
 

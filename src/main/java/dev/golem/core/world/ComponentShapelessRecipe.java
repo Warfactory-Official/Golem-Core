@@ -1,6 +1,7 @@
 package dev.golem.core.world;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import net.minecraft.core.NonNullList;
 import net.minecraft.world.item.ItemStack;
@@ -82,7 +83,7 @@ public class ComponentShapelessRecipe extends CompatCustomRecipe {
         }
         if (occupied.size() != ingredients.size()) return null;
         int[] owner = new int[ingredients.size()];
-        java.util.Arrays.fill(owner, -1);
+        Arrays.fill(owner, -1);
         for (int i = 0; i < occupied.size(); i++) {
             if (!augment(i, input, occupied, owner, new boolean[ingredients.size()])) return null;
         }

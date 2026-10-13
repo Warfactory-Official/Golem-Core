@@ -1,6 +1,7 @@
 package dev.golem.core.world;
 
 import com.mojang.serialization.Dynamic;
+import dev.golem.core.data.Tags;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
@@ -44,7 +45,7 @@ public final class LegacyBlockStates {
         Dynamic<?> flattened = BlockStateData.getTag(id << 4 | meta);
         Tag tag = fix(flattened).convert(NbtOps.INSTANCE).getValue();
         if (!(tag instanceof CompoundTag compound)) return null;
-        String name = dev.golem.core.data.Tags.getStringOr(compound, "Name", "");
+        String name = Tags.getStringOr(compound, "Name", "");
         if (!name.matches("[a-z0-9_.-]+:[a-z0-9/._-]+")) return null;
         return read(compound);
     }

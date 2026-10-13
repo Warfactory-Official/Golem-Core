@@ -10,7 +10,7 @@ public class NeoForgeEntrypoint {
 
     /**
      * Golem Core's own mod event bus. Kept because some of what this library emulates is delivered by
-     * NeoForge as a mod-bus event rather than a callable registry — item colours, for one — and the
+     * NeoForge as a mod-bus event rather than a callable registry (item colours, for one) and the
      * emulation has to be able to subscribe from shared code that knows nothing about buses.
      */
     private static IEventBus modBus;

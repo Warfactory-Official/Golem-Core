@@ -15,7 +15,7 @@ import java.util.BitSet;
 // SSBO-backed Instancer for the INDIRECT backend. Bytes live in a per-instancer persistent-
 // mapped SlabBuffer (CPU setters write directly into the mapped pointer); the parent stage
 // group's shared ObjectStorage owns the global page table that cull reads against. Upload is
-// one glFlushMappedNamedBufferRange + glCopyNamedBufferSubData per dirty page run — no CPU
+// one glFlushMappedNamedBufferRange + glCopyNamedBufferSubData per dirty page run, with no CPU
 // staging ring, no scatter compute.
 public final class IndirectInstancer extends AbstractInstancer {
 

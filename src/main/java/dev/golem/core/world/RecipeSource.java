@@ -2,6 +2,7 @@ package dev.golem.core.world;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -60,7 +61,7 @@ public abstract class RecipeSource<R> extends DataSource<R> {
     /** The recipe ids this source removes (after {@link #rows()}). */
     public final Set<String> removals() {
         rows();
-        return java.util.Collections.unmodifiableSet(removals);
+        return Collections.unmodifiableSet(removals);
     }
 
     /**

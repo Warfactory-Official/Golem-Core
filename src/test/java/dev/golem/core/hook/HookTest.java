@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
 
 class HookTest {
@@ -61,8 +62,8 @@ class HookTest {
 
     @Test
     void verdictFirstNonPassWins() {
-        Hook<java.util.function.Supplier<Verdict>> hook =
-                Hook.of(listeners -> () -> Verdict.first(listeners, java.util.function.Supplier::get));
+        Hook<Supplier<Verdict>> hook =
+                Hook.of(listeners -> () -> Verdict.first(listeners, Supplier::get));
         assertEquals(Verdict.PASS, hook.invoker().get());
         hook.register(() -> Verdict.PASS);
         hook.register(() -> Verdict.DENY);

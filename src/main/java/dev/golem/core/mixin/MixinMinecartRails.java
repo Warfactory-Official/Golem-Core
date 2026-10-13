@@ -15,16 +15,17 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * Calls {@link CompatRailBlock#getRailMaxSpeed} and {@link CompatRailBlock#onMinecartPass} on the nodes whose
- * loader no longer (NeoForge 26.1) or never (Fabric) routes a cart through them.
+ * loader does not route a cart through them: NeoForge 26.1 (which declares the hooks but never calls them) and
+ * Fabric (which has none).
  *
- * <p>Why a mixin: (1) vanilla has no per-rail speed or pass hook at all — the cart's cap is a constant in
+ * <p>Why a mixin: (1) vanilla has no per-rail speed or pass hook at all: the cart's cap is a constant in
  * {@code getMaxSpeed}; (2) NeoForge 26.1 declares {@code IBaseRailBlockExtension.getRailMaxSpeed/onMinecartPass}
- * but nothing calls them any more, and Fabric API has no minecart events; (3) widening does not help, the value
- * has to change inside the cart's own tick. The injections are the smallest that do it: one return-value
- * modifier on the speed query (a MixinExtras {@code @ModifyReturnValue}, which chains with other cart-speed mods
- * where a cancellable RETURN inject could return past them) and one call after the cart's rail step. Forge 1.20.1 and NeoForge 1.21.1 still
- * call both methods themselves (Forge {@code moveMinecartOnRail}/{@code moveAlongTrack}), so there this class
- * is empty, is not listed in the mixin config, and the loader does the work.
+ * but nothing calls them, and Fabric API has no minecart events; (3) widening does not help, the value has to
+ * change inside the cart's own tick. The injections are the smallest that do it: one return-value modifier on
+ * the speed query (a MixinExtras {@code @ModifyReturnValue}, which chains with other cart-speed mods where a
+ * cancellable RETURN inject could return past them) and one call after the cart's rail step. Forge 1.20.1 and
+ * NeoForge 1.21.1 call both methods themselves (Forge {@code moveMinecartOnRail}/{@code moveAlongTrack}), so
+ * there this class is empty and not listed in the mixin config.
  *
  * <p>The pass is the loader's, placed as the loader placed it: once per server tick, for the rail (and state)
  * the cart stood on when its rail step began, even if the step carries it off that rail. On 26.1 it runs right

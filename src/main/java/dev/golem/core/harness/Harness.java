@@ -4,6 +4,7 @@ import dev.golem.core.GolemCore;
 import dev.golem.core.client.ClientTicks;
 import dev.golem.core.client.Hud;
 import dev.golem.core.platform.Platform;
+import java.util.Locale;
 import net.minecraft.client.Minecraft;
 
 /**
@@ -41,7 +42,7 @@ public final class Harness {
     public static boolean flag(String key, boolean fallback) {
         String value = System.getProperty("golem.harness." + key);
         if (value == null || value.isBlank()) {
-            value = System.getenv("GOLEM_HARNESS_" + key.toUpperCase(java.util.Locale.ROOT));
+            value = System.getenv("GOLEM_HARNESS_" + key.toUpperCase(Locale.ROOT));
         }
         if (value == null || value.isBlank()) return fallback;
         return !value.equalsIgnoreCase("false") && !value.equals("0");

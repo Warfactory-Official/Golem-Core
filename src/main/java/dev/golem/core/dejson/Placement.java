@@ -7,9 +7,9 @@ package dev.golem.core.dejson;
  * crosses a rotation dispatch with a model-selecting one, and that only works while the model is
  * still a suffix to concatenate rather than a finished id.
  *
- * <p>{@code uvlock} is carried rather than derived. It is not a function of the rotation — a facing
- * machine is rotated without it and a stair is rotated with it — so the dispatch that knows which
- * kind of shape it is must be the one that says.
+ * <p>{@code uvlock} is carried rather than derived. It is not a function of the rotation: a facing
+ * machine is rotated without it and a stair with it. The dispatch that knows which kind of shape
+ * it is must say.
  */
 public record Placement(String suffix, int x, int y, boolean uvlock) {
 

@@ -1,5 +1,6 @@
 package dev.golem.core.client;
 
+import dev.golem.core.hook.Hook;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BooleanSupplier;
@@ -10,26 +11,22 @@ import net.minecraft.world.InteractionHand;
 /**
  * Takes the attack key away from vanilla while a mod needs the click for itself.
  *
- * <p>While any registered guard answers {@code true}, a click of the attack key neither attacks the entity under the
- * crosshair (no attack packet is sent, so no damage and no knockback), nor starts or continues breaking a block, nor
- * resets the attack cooldown: it only swings the main hand, exactly once per click, which is what vanilla's
- * {@code startAttack} would also have done ({@code LocalPlayer.swing} sends the swing packet, so the server and other
- * players still see a swing and an item's swing hook still runs on both sides).
+ * <p>While any registered guard answers {@code true}, a click of the attack key does not attack the entity under the
+ * crosshair (no attack packet), does not start or continue breaking a block and does not reset the attack cooldown.
+ * It only swings the main hand once per click, through {@code LocalPlayer.swing}, so the server, other players and the
+ * item's swing hook still see a swing.
  *
- * <p>How: before each client tick the buffered clicks are consumed here (vanilla API: {@code KeyMapping.consumeClick},
- * read by {@code handleKeybinds} later in the same tick), so vanilla's {@code startAttack} never sees them. A held key
- * still reaches {@code continueAttack}, which only the loader can stop: NeoForge and Forge cancel it through
- * {@code InputEvent.InteractionKeyMappingTriggered} (no swing, as vanilla does not swing a cancelled hold either),
- * Fabric through {@code ClientPreAttackCallback}. No mixin.
- *
- * <p>Client-only.
+ * <p>Before each client tick the buffered clicks are consumed with {@code KeyMapping.consumeClick}, so vanilla's
+ * {@code startAttack} never sees them. A held key still reaches {@code continueAttack}, which only the loader can
+ * stop: NeoForge and Forge cancel {@code InputEvent.InteractionKeyMappingTriggered}, Fabric uses
+ * {@code ClientPreAttackCallback}. No mixin. Client-only.
  */
 public final class AttackInput {
 
     private AttackInput() {}
 
     /** Every listener, in phase order; register through the {@code on...} method or directly, with a phase. */
-    public static final dev.golem.core.hook.Hook<BooleanSupplier> GUARDS = dev.golem.core.hook.Hook.notifying();
+    public static final Hook<BooleanSupplier> GUARDS = Hook.notifying();
     private static boolean installed;
     /** Clicks this class consumed so far (harness and tests read it as the positive signal). */
     private static long consumed;

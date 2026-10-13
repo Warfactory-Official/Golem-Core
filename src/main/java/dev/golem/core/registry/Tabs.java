@@ -10,9 +10,9 @@ import net.minecraft.world.item.ItemStack;
  * Adds entries to a creative tab without naming the loader's event.
  *
  * <p>Vanilla makes {@code CreativeModeTab.Output} and {@code TabVisibility} protected, so tab contents
- * cannot be written from loader-neutral code at all — every consumer ends up with a per-loader lambda.
- * On top of that, fabric-api renamed its own hook: {@code ItemGroupEvents.modifyEntriesEvent} became
- * {@code CreativeModeTabEvents.modifyOutputEvent} in the 26.1 line, same event, same accept overloads.
+ * cannot be written from loader-neutral code at all: every consumer would need a per-loader lambda.
+ * fabric-api's hook is also named differently in the 26.1 line ({@code ItemGroupEvents.modifyEntriesEvent}
+ * below, {@code CreativeModeTabEvents.modifyOutputEvent} from 26.1); same event, same accept overloads.
  *
  * <p>{@link Entries} is the neutral seam: consumers accept stacks through it and never touch vanilla's
  * protected types.

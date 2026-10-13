@@ -38,22 +38,22 @@ import java.util.List;
  * <p>The two frameworks share only {@code GameTestHelper}, which is why the test bodies port unchanged
  * and everything around them does not. 26.1 is data-driven: a body is a registry entry in
  * {@code Registries.TEST_FUNCTION}, and a test is a {@code FunctionGameTestInstance} built from a
- * {@code TestData} naming an environment and a structure. 1.21.1 predates all of that — tests are static
- * methods annotated {@code @GameTest}, discovered by class — and has no test-function registry at all.
+ * {@code TestData} naming an environment and a structure. 1.21.1 predates all of that: tests are static
+ * methods annotated {@code @GameTest}, discovered by class, and has no test-function registry at all.
  *
  * <p>The bridge below 26.1 is {@code @GameTestGenerator}: a method that returns {@code TestFunction}s
-     * built at runtime, which is the one place that era accepts programmatically-defined tests. So a mod
-     * declares its bodies and budgets together, and neither declaration mentions an era.
+ * built at runtime, the one place that era accepts programmatically defined tests. A mod declares its
+ * bodies and budgets together, and neither declaration mentions an era.
  *
  * <h2>Two traps this hides</h2>
  * <ul>
- *   <li><b>Namespace filtering.</b> With {@code neoforge.enabledGameTestNamespaces} set — which the
- *       {@code runGameTestServer} task does — 1.21.1 filters generated tests by the namespace of their
+ *   <li><b>Namespace filtering.</b> With {@code neoforge.enabledGameTestNamespaces} set (as the
+ *       {@code runGameTestServer} task does), 1.21.1 filters generated tests by the namespace of their
  *       <em>structure</em>, not their name. The structure is therefore {@code <namespace>:empty}, and the
  *       mod must ship it; a structure in this library's namespace would see every test silently dropped.</li>
  *   <li><b>The structure must exist.</b> 26.1 has {@code minecraft:empty} built in; 1.21.1 does not, and a
- *       missing template fails the run with "Missing test structure". A 1×1×1 air template is enough — the
- *       tests build their own scenery — and is what {@code minecraft:empty} is on 26.1.</li>
+ *       missing template fails the run with "Missing test structure". A 1×1×1 air template is enough: the
+ *       tests build their own scenery. It is what {@code minecraft:empty} is on 26.1.</li>
  * </ul>
  */
 public final class GameTests {
@@ -103,10 +103,9 @@ public final class GameTests {
 
         /**
          * Declares a test that needs elbow room. The empty template every test starts from is 1×1×1, so
-         * the runner packs test plots tightly; a test that builds a large structure around itself will
-         * otherwise write straight into its neighbour's plot — which shows up as the <i>neighbour</i>
-         * failing, not this one. {@code padding} is the free space (in blocks) reserved around this
-         * test's plot.
+         * the runner packs test plots tightly; a large structure would otherwise write into the neighbour's
+         * plot and fail the <i>neighbour</i>. {@code padding} is the free space (in blocks) reserved
+         * around this test's plot.
          */
         public Function function(String name, int timeoutTicks, int padding,
                                  Supplier<Consumer<GameTestHelper>> body) {
@@ -131,16 +130,13 @@ public final class GameTests {
     private static final java.util.Set<String> DECLARED = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     /**
-     * Environments, one per namespace <b>per registry load</b> — keyed by the event, not held statically.
+     * Environments, one per namespace <b>per registry load</b>, keyed by the event, not held statically.
      *
-     * <p>This map used to be keyed by namespace alone, and that was a real bug with a confusing symptom.
-     * {@code RegisterGameTestsEvent} fires on every {@code RegistryDataLoader.load}, and each load builds
-     * <i>fresh</i> test-environment and test-instance registries. A namespace-keyed cache hands the
-     * second load a {@link Holder} belonging to the first load's registry, so that load's test instances
-     * reference an environment that is not in its own registry set — and the failure surfaces nowhere
-     * near here: joining a world throws
-     * {@code Failed to serialize ResourceKey[minecraft:test_instance / …]: Element … is not valid in
-     * current registry set} while the server packs registries for the client.
+     * <p>{@code RegisterGameTestsEvent} fires on every {@code RegistryDataLoader.load}, and each load builds
+     * <i>fresh</i> test-environment and test-instance registries. A namespace-keyed cache would hand the
+     * second load a {@link Holder} from the first load's registry; the failure then surfaces far from here,
+     * when joining a world throws {@code Failed to serialize ResourceKey[minecraft:test_instance / …]:
+     * Element … is not valid in current registry set} while the server packs registries for the client.
      *
      * <p>Weak keys so a finished load's entry goes away with the event.
      */
@@ -156,7 +152,7 @@ public final class GameTests {
 
     /**
      * Declares a test body. Call from a static initialiser, exactly as a registry entry would be
-     * declared — on 26.1 this really is one.
+     * declared; on 26.1 this really is one.
      */
     public static Suite suite(String namespace) {
         return new Suite(namespace);
@@ -194,8 +190,8 @@ public final class GameTests {
      *
      * <p>26.1 reserves {@code padding} blocks on every side of its 1×1×1 template, so the centre is the origin.
      * Below 26.1 the room is the padded empty template itself (24, 80, 152 or 184 wide; see {@code addLegacy}),
-     * which starts at the origin and grows in +x/+z, so the centre is half its width. Using one era's centre on
-     * the other puts the test in a neighbour's plot (26.1's free space ends {@code padding} blocks out).
+     * which starts at the origin and grows in +x/+z, so the centre is half its width. One era's centre on
+     * the other puts the test in a neighbour's plot.
      */
     public static net.minecraft.core.BlockPos paddedCentre(int padding, int y) {
         //? if >=26.1 {
@@ -209,8 +205,7 @@ public final class GameTests {
     /**
      * The helper-relative position of an absolute one: the exact inverse of {@code helper.absolutePos}, as 26.1's
      * {@code GameTestHelper.relativePos} is. Below 26.1 vanilla's {@code relativePos} rotates the offset by the test's
-     * rotation turned another 180 degrees, so on an unrotated test it negates x and z: a block entity placed at
-     * {@code absolutePos(12, 2, 12)} was looked up at relative {@code (-12, 2, -12)}. Here the inverse is built from
+     * rotation turned another 180 degrees, so on an unrotated test it negates x and z. Here the inverse is built from
      * {@code absolutePos} itself (origin plus a quarter-turn multiple, whose inverse is the same turn applied three
      * times), so it holds for every rotation.
      */
@@ -227,7 +222,7 @@ public final class GameTests {
 
     /**
      * Holds the chunks under {@code origin + (minX..maxX, minZ..maxZ)} (blocks, relative to the test's origin)
-     * entity-ticking, generating them and the ring around them now, until the returned action runs. For a test whose
+     * entity-ticking, generating them and the ring around them, until the returned action runs. For a test whose
      * entity leaves its plot (a rocket's flight corridor): every test's own plot is already held before it starts (26.1)
      * or covered by its padded template (older versions). Holds are counted per chunk, so tests that share a chunk never
      * release it from under each other; on 26.1 a hold also ends with its test.
@@ -387,7 +382,7 @@ public final class GameTests {
         else if (function.padding > 8) structure = function.namespace + ":" + EMPTY_STRUCTURE + "_80";
         // The short TestFunction constructor hard-codes skyAccess=false. That is harmless for 26.1's
         // 1x1x1 minecraft:empty (its enclosure is outside the test body), but 1.21.1's legacy padding
-        // templates are deliberately large so their synthetic roof/walls would land inside the test
+        // templates are large so their synthetic roof/walls would land inside the test
         // scenery. Use the full constructor there to keep the fixture open. 1.20.1 has no sky-access
         // field; retain its original constructor and enclosure behavior for that node.
         if (function.padding > 8) {

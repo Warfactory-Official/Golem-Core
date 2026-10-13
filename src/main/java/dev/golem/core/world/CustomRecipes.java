@@ -38,7 +38,7 @@ public final class CustomRecipes {
 
     /**
      * Builds the one serializer shape shared by component-era codecs and the 1.20.1 serializer API.
-     * The recipe's fields deliberately remain ordinary crafting fields; {@code copy_from} is the only
+     * The recipe's fields remain ordinary crafting fields; {@code copy_from} is the only
      * additional field.
      */
     public static <T extends ComponentCopyShapelessRecipe> RecipeSerializer<T> componentCopyShapeless(

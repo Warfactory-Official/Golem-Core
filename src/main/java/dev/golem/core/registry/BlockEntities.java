@@ -21,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>Vanilla asks the <em>block</em> for a ticker and hands it the block entity's type, which leaves
  * every block re-deriving a fact that belongs to the block entity: whether it ticks, on which side,
  * and through which method. Done per block that is an override, a side test, a type identity check
- * and a private unchecked cast — and it was written 142 times here, with the cast copied 114 times.
+ * and a private unchecked cast.
  *
  * <p>The ticker is declared where the type is built instead:
  *
@@ -32,10 +32,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * }</pre>
  *
  * <p>and the block says only that it is a {@link TickingBlock}, whose default {@code getTicker}
- * answers from the type it was handed. That makes the identity check vanish rather than move: a
- * block backing more than one block-entity type — a pump that is steam or electric, a base class
- * shared by six radio torches — used to need a branch to pick which type it was looking at, and now
- * gets the right ticker because the lookup is keyed on the type vanilla already resolved.
+ * answers from the type it was handed. A block backing more than one block-entity type (a pump that
+ * is steam or electric, a base class shared by six radio torches) gets the right ticker because the
+ * lookup is keyed on the type vanilla already resolved.
  */
 public final class BlockEntities {
 
@@ -78,7 +77,7 @@ public final class BlockEntities {
 
     /**
      * A type with a ticker on each side. Either may be null, and both being null is
-     * {@link #type(Factory, Block...)} — a block entity that holds state and never ticks.
+     * {@link #type(Factory, Block...)}: a block entity that holds state and never ticks.
      */
     public static <T extends BlockEntity> BlockEntityType<T> ticking(
             Factory<T> factory, BlockEntityTicker<? super T> clientTick,
@@ -96,8 +95,8 @@ public final class BlockEntities {
     /**
      * The ticker declared for this type on this side, or null.
      *
-     * <p>The cast is the one {@code createTickerHelper} used to make in every block that had a
-     * ticker. It is sound for the same reason it was there: the only way into the map is
+     * <p>The cast is the one {@code createTickerHelper} makes for every block that has a
+     * ticker. It is sound because the only way into the map is
      * {@link #ticking}, which binds a {@code BlockEntityTicker<? super T>} to the
      * {@code BlockEntityType<T>} built in the same call.
      */

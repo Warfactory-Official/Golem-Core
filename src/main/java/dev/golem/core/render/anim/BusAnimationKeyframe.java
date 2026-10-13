@@ -5,7 +5,7 @@ package dev.golem.core.render.anim;
  * travels.
  *
  * <p>Ported from 1.12.2 {@code BusAnimationKeyframeSedna}. LINEAR, the three sine curves, and BEZIER
- * are implemented. The remaining Blender easing families are declared for parity and fall back to
+ * are implemented. The remaining Blender easing families are declared to match upstream and fall back to
  * linear, so an imported animation degrades instead of failing.
  */
 public class BusAnimationKeyframe {
@@ -16,14 +16,14 @@ public class BusAnimationKeyframe {
         CONSTANT,
         /** Straight line. */
         LINEAR,
-        /** Quarter sine, neutral into rising — starts slow. */
+        /** Quarter sine, neutral into rising, starts slow. */
         SIN_UP,
-        /** Quarter sine, rising back to neutral — ends slow. */
+        /** Quarter sine, rising back to neutral, ends slow. */
         SIN_DOWN,
         /** Half sine: accelerate then decelerate. The smooth one. */
         SIN_FULL,
 
-        // Declared for parity with upstream's Blender import path; only these remaining families fall back.
+        // Declared to match upstream's Blender import path; these fall back to linear.
         BEZIER, SINE, QUAD, CUBIC, QUART, QUINT, EXPO, CIRC, BOUNCE, ELASTIC, BACK
     }
 
@@ -55,8 +55,8 @@ public class BusAnimationKeyframe {
     /**
      * The value at {@code currentTime}, easing out of {@code previous}.
      *
-     * <p>Note which frame owns the curve: the <em>previous</em> frame's type decides how the gap is
-     * crossed (that is what makes {@code CONSTANT} a hold-then-snap), while this frame owns the duration.
+     * <p>The <em>previous</em> frame's type decides how the gap is crossed (that is what makes
+     * {@code CONSTANT} a hold-then-snap), while this frame owns the duration.
      */
     public double interpolate(double startTime, double currentTime, BusAnimationKeyframe previous) {
         if (previous == null) previous = new BusAnimationKeyframe();

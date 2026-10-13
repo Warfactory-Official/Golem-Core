@@ -7,7 +7,7 @@ import net.minecraft.world.entity.Mob;
  * Mob spawning across the eras: running a freshly constructed mob's spawn initialisation, and refusing natural
  * spawns at runtime ({@link #onSpawnCheck}).
  *
- * <p>Running a freshly constructed mob's spawn initialisation — 1.7 {@code onSpawnWithEgg(null)} — from outside
+ * <p>Running a freshly constructed mob's spawn initialisation (1.7 {@code onSpawnWithEgg(null)}) from outside
  * the mob, across the {@code finalizeSpawn} signature changes: 1.20.1 took a trailing NBT argument, 1.21.1
  * dropped it, 26.1 renamed the spawn-reason type.
  */

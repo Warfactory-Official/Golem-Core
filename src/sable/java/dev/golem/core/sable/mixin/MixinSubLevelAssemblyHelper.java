@@ -24,7 +24,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  *       its interface (a block class naming it would fail to load without Sable), and the hook is per block,
  *       while carrying a structure or a network over needs the whole batch's old-to-new map. Sable's split
  *       listener covers splits only, not assembly or disassembly.</li>
- *   <li>Access widening does not apply: nothing is hidden, there is simply no batch callback.</li>
+ *   <li>Access widening does not apply: nothing is hidden, there is no batch callback.</li>
  * </ol>
  * Two {@code @Inject}s at HEAD and RETURN of a public static API method, no redirect or overwrite. The config
  * applies only when Sable is loaded ({@link SableMixinPlugin}).

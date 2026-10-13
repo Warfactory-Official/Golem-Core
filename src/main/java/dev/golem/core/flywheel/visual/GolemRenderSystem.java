@@ -21,9 +21,8 @@ public final class GolemRenderSystem {
     /**
      * How often to write the engine's own census to the log, or zero for never.
      *
-     * <p>An instanced frame and a vanilla frame are indistinguishable on screen, so when the engine
-     * draws nothing there is no symptom at all — the machines simply keep rendering the slow way. This
-     * is the switch that makes that state visible from a log file rather than from a running game:
+     * <p>An instanced frame and a vanilla frame look the same on screen, so an engine that draws nothing
+     * shows no symptom. This switch makes that visible in the log:
      * {@code -Dgolem.flywheel.trace} or {@code GOLEM_FLYWHEEL_TRACE}.
      */
     private static final long TRACE_NANOS = traceInterval();
@@ -57,7 +56,7 @@ public final class GolemRenderSystem {
     }
 
     /**
-     * Waits out the frame plan still in flight and forgets it, swallowing whatever it threw — the
+     * Waits out the frame plan still in flight and forgets it, swallowing whatever it threw: the
      * teardown that calls this is already the answer to that failure.
      */
     static void settle() {
@@ -125,10 +124,8 @@ public final class GolemRenderSystem {
         int[] census = GemBlockEntityVisual.census();
         long now = System.nanoTime();
 
-        // The peak matters as much as the last frame. Most of what forces a full rewrite — the render
-        // origin moving, a light update — lands on a single frame out of hundreds between two trace
-        // lines, so sampling the last frame alone reports a world at rest and says nothing about
-        // whether the rewrite ever happened.
+        // Track the peak, not just the last frame: a full rewrite (render origin moving, a light update)
+        // lands on one frame out of hundreds between two trace lines.
         int frameWrites = DrawStats.writes();
         if (frameWrites > peakWrites) peakWrites = frameWrites;
         if (TRACE_NANOS > 0 && now - lastTrace >= TRACE_NANOS) {

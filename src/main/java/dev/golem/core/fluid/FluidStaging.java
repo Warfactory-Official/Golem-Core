@@ -3,6 +3,8 @@ package dev.golem.core.fluid;
 import java.lang.ref.WeakReference;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.function.IntFunction;
+import java.util.function.ToIntFunction;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
 import org.jspecify.annotations.Nullable;
@@ -38,7 +40,7 @@ final class FluidStaging {
      * type), rebuilt when the owner's tank count changed.
      */
     static <J> J perOwner(Map<Object, WeakReference<J>> all, FluidMachine face,
-                          java.util.function.ToIntFunction<J> tanksOf, java.util.function.IntFunction<J> create) {
+                          ToIntFunction<J> tanksOf, IntFunction<J> create) {
         synchronized (all) {
             Object owner = face.owner();
             WeakReference<J> ref = all.get(owner);

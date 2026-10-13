@@ -13,22 +13,19 @@ import java.util.Map;
 /**
  * One display slot's transform in the form vanilla stores it, decomposed from the matrix it stands for.
  *
- * <p>A {@code display{}} block cannot hold a matrix. It holds a translate/rotate/scale triple, applies it as
- * {@code T . Rxyz . S}, and applies it whatever it says — a pose that is not of that form ships wrong
- * rather than failing. Three more traps sit beside that: {@code ItemTransform.Deserializer} clamps
- * translation and scale <em>silently</em>, {@code apply} negates x, ry and rz for the left hands whatever
- * the file says, and a hand slot left out inherits its partner's transform rather than staying unposed.
+ * <p>A {@code display{}} block cannot hold a matrix. It holds a translate/rotate/scale triple and applies it as
+ * {@code T . Rxyz . S}; a pose not of that form ships wrong instead of failing. Three more traps:
+ * {@code ItemTransform.Deserializer} clamps translation and scale <em>silently</em>, {@code apply} negates x, ry
+ * and rz for the left hands whatever the file says, and a hand slot left out inherits its partner's transform.
  *
- * <p>So this type exists to make all four loud. {@link #of(String, Map)} decomposes, rounds to what will
- * actually be written, rebuilds the triple, and throws if the result misses the pose it came from or
- * trips a clamp. What survives is a frame that vanilla will reproduce exactly.
+ * <p>This type makes all four loud. {@link #of(String, Map)} decomposes, rounds to what will be written, rebuilds
+ * the triple, and throws if the result misses the pose it came from or trips a clamp.
  *
- * <p>The three triples are doubles because that is what a JSON number is, and they are already rounded
- * to what will be written: the residual is measured against the shipped decimals, not against the full
- * precision the decomposition happened to reach.
+ * <p>The triples are doubles (JSON numbers) already rounded to what will be written: the residual is measured
+ * against the shipped decimals, not the full precision the decomposition reached.
  *
  * @param slot        the display context this transform belongs to
- * @param rotation    XYZ Euler angles in degrees, as shipped — pre-negated in y and z for a left hand
+ * @param rotation    XYZ Euler angles in degrees, as shipped, pre-negated in y and z for a left hand
  * @param translation in <b>pixels</b>, the unit the JSON uses, pre-negated in x for a left hand
  * @param scale       the scale factor per axis, signed together when the pose mirrors
  * @param residual    the worst element by which {@link #applied()} misses the pose, over the pose's scale
@@ -46,10 +43,9 @@ public record DisplayFrame(DisplaySlot slot, Vector3d rotation, Vector3d transla
     public static final float MAX_RESIDUAL = 1.0E-3F;
 
     /**
-     * The factor the shipped decimals are rounded on — six places. A triple is gated on what it will be
-     * written as, not on what it was. Six rather than five because a chain of fifteen float ops lands a
-     * uniform scale a few ulps off, and at five the axes round to different decimals, so a uniform scale
-     * ships looking non-uniform.
+     * The factor the shipped decimals are rounded on: six places. A triple is gated on what it will be written
+     * as. At five places a chain of fifteen float ops lands a uniform scale a few ulps off and the axes round to
+     * different decimals, so the scale ships looking non-uniform.
      */
     private static final double ROUNDING = 1000000D;
 
@@ -59,7 +55,7 @@ public record DisplayFrame(DisplaySlot slot, Vector3d rotation, Vector3d transla
     /**
      * The frames a set of poses ships as, checked against each other as well as individually.
      *
-     * @param id    what to name in a failure — the model or item these poses belong to
+     * @param id    what to name in a failure: the model or item these poses belong to
      * @param poses the model-to-slot matrix wanted in each display context
      */
     public static Map<DisplaySlot, DisplayFrame> of(String id, Map<DisplaySlot, Matrix4f> poses) {
@@ -83,8 +79,8 @@ public record DisplayFrame(DisplaySlot slot, Vector3d rotation, Vector3d transla
     /**
      * One pose's frame.
      *
-     * <p>The engine leaves the pose at {@code A . T(-0.5)} before the model draws — vanilla's own
-     * recentring of a model authored in the 0..1 box — so the triple that reproduces a frame {@code F} is
+     * <p>The engine leaves the pose at {@code A . T(-0.5)} before the model draws, which is vanilla's own
+     * recentring of a model authored in the 0..1 box, so the triple that reproduces a frame {@code F} is
      * {@code A = T(-0.5) . F . T(+0.5)}.
      */
     public static DisplayFrame of(String id, DisplaySlot slot, Matrix4f pose) {

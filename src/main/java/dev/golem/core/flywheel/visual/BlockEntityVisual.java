@@ -29,7 +29,7 @@ public abstract class BlockEntityVisual<T extends BlockEntity> implements Visual
     }
 
     // Hand out instances that should be re-rendered with the crumbling material when the block
-    // is being broken. Default: no participation. Mirrors upstream Flywheel's API verbatim.
+    // is being broken. Default: no participation. Mirrors upstream Flywheel's API.
     public void collectCrumblingInstances(Consumer<Instance> consumer) {
     }
 }

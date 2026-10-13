@@ -1,8 +1,13 @@
 package dev.golem.core.net;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -43,24 +48,24 @@ public final class GolemNetwork {
             BiConsumer<P, ServerPlayer> handler) {}
 
     // Synchronized: NeoForge and Forge may construct mods, and so declare their payloads, in parallel.
-    private static final List<GolemCodec<?>> CLIENT_DECLARATIONS = java.util.Collections.synchronizedList(new ArrayList<>());
-    private static final List<ClientRegistration<?>> CLIENT_REGISTRATIONS = java.util.Collections.synchronizedList(new ArrayList<>());
-    private static final List<ServerRegistration<?>> SERVER_REGISTRATIONS = java.util.Collections.synchronizedList(new ArrayList<>());
+    private static final List<GolemCodec<?>> CLIENT_DECLARATIONS = Collections.synchronizedList(new ArrayList<>());
+    private static final List<ClientRegistration<?>> CLIENT_REGISTRATIONS = Collections.synchronizedList(new ArrayList<>());
+    private static final List<ServerRegistration<?>> SERVER_REGISTRATIONS = Collections.synchronizedList(new ArrayList<>());
     private static Supplier<ClientContext> clientContextSupplier;
 
     /**
      * Channels whose handler runs on the network thread rather than being handed to the game thread.
      *
-     * <p>Every loader decodes on the network thread already and then defers the handler, which is the
-     * right default: a handler that touches the level, an entity, an item stack or a renderer must run
-     * where those are safe to touch. Skipping the hand-off is worth it only for a handler that touches
-     * none of them — recording a timestamp, answering a probe, pushing into a concurrent queue — and
-     * for those it removes a tick of latency and a scheduled task per packet.
+     * <p>Every loader decodes on the network thread and then defers the handler, which is the right
+     * default: a handler that touches the level, an entity, an item stack or a renderer must run where
+     * those are safe to touch. Skipping the hand-off suits a handler that touches none of them
+     * (recording a timestamp, answering a probe, pushing into a concurrent queue); it saves a tick of
+     * latency and a scheduled task per packet.
      *
      * <p>The off-thread registration methods hand the handler the payload and nothing else, so the
-     * things it must not touch are not reachable from it rather than merely discouraged.
+     * things it must not touch are unreachable.
      */
-    private static final java.util.Set<String> OFF_THREAD = new java.util.HashSet<>();
+    private static final Set<String> OFF_THREAD = new HashSet<>();
 
     static boolean isOffThread(GolemCodec<?> codec) {
         return OFF_THREAD.contains(codec.id().toString());
@@ -93,7 +98,7 @@ public final class GolemNetwork {
      *
      * <p>Refuses a channel declared off-thread. That pairing is the one mistake this API can make
      * quietly: an off-thread dispatch has no context to give, so a handler expecting one would be
-     * called with null, be dropped by the null guard below, and simply never run.
+     * called with null, be dropped by the null guard below, and never run.
      */
     public static <P extends GolemPayload> void registerPlayToClient(GolemCodec<P> codec,
             BiConsumer<P, ClientContext> handler) {
@@ -109,7 +114,7 @@ public final class GolemNetwork {
      * there is no level and no player, because neither may be touched from here.
      */
     public static <P extends GolemPayload> void registerPlayToClientOffThread(GolemCodec<P> codec,
-            java.util.function.Consumer<P> handler) {
+            Consumer<P> handler) {
         if (!isOffThread(codec)) {
             throw new IllegalArgumentException(codec.id()
                     + " is not declared off-thread; declare it with declarePlayToClientOffThread");
@@ -157,7 +162,7 @@ public final class GolemNetwork {
      * rather than the sender: reading the identity is safe from here, and the player object is not.
      */
     public static <P extends GolemPayload> void registerPlayToServerOffThread(GolemCodec<P> codec,
-            BiConsumer<P, java.util.UUID> handler) {
+            BiConsumer<P, UUID> handler) {
         OFF_THREAD.add(codec.id().toString());
         SERVER_REGISTRATIONS.add(new ServerRegistration<>(codec,
                 (payload, sender) -> handler.accept(payload, sender.getUUID())));

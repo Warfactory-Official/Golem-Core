@@ -17,19 +17,18 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * Keeps an item that rewrites its own state raised in the hand.
  *
  * <p>The hand renderer decides whether the item it is showing is still the one being held, and every
- * version and loader asks that question differently — vanilla's {@code ItemStack.matches} before 26.1,
+ * version and loader asks that question differently: vanilla's {@code ItemStack.matches} before 26.1,
  * its {@code shouldInstantlyReplaceVisibleItem} on 26.1, Forge's and NeoForge's own re-equip hook in
- * between. Answering it here instead, before any of them run, needs none of that: the stack the
- * renderer is showing is replaced with the one now held, so whatever the version asks next it is
- * comparing a stack with itself.
+ * between. The head answers it first by replacing the stack the renderer is showing with the one now
+ * held, so whatever the version asks next compares a stack with itself.
  *
  * <p>The tail answers {@link HeldItemState#compatHoldsRaised}: the raise of a 1.7 item, recomputed after vanilla's
  * update so the frames after this tick already draw it. Ladder (AGENTS.md §7): vanilla has no say in the raise target
  * (1); NeoForge's/Forge's {@code shouldCauseReequipAnimation} and Fabric's {@code allowComponentsUpdateAnimation} only
- * answer the re-equip question, which the head already does for every loader (2); the widened fields (3) were the
- * previous answer, written from the item renderer, and that is always one tick late: the frame reads the raise before
- * any item renderer runs, and the next tick lowered it again, so the hand dipped on the first frame of every tick
- * (the chainsaw stutter, 2026-10-02). This class was already the hand renderer's tick hook; the tail adds no target.
+ * answer the re-equip question, which the head already does for every loader (2); the widened fields (3) are
+ * written from the item renderer, which is always one tick late: the frame reads the raise before any item
+ * renderer runs and the next tick lowers it again, so the hand dips on the first frame of every tick. This
+ * class is the hand renderer's tick hook; the tail adds no target.
  */
 @Mixin(ItemInHandRenderer.class)
 public abstract class MixinHeldItemState {

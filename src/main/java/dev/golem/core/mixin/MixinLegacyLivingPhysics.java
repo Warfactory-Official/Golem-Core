@@ -17,7 +17,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * {@code calculateFallDamage} does. With both at their defaults (3 and 1) the result is 1.20.1's own, to the float:
  * {@code ceil((distance - 3 - jumpBoost) * multiplier)}.
  *
- * <p>Why a mixin (§7). Rung 1: the formula is a protected vanilla method with the 3 written in. Rung 2: Forge's
+ * <p>Why a mixin (AGENTS.md section 7). Rung 1: the formula is a protected vanilla method with the 3 written in. Rung 2: Forge's
  * {@code LivingFallEvent} can scale the distance but not express a safe distance and a multiplier that compose with other
  * mods, and Fabric has no fall event. Rung 3: not a visibility problem. The smallest mixin computes the 1.20.5 formula at
  * the head of {@code calculateFallDamage}.

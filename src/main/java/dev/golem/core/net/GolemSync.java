@@ -1,5 +1,6 @@
 package dev.golem.core.net;
 
+import dev.golem.core.GolemCore;
 import dev.golem.core.platform.Lifecycle;
 import dev.golem.core.world.Chunks;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -19,18 +20,14 @@ import net.minecraft.world.level.chunk.LevelChunk;
  * Replication for per-position state that a block entity pushes to whoever is watching it.
  *
  * <p>A sender asks {@link #isWatched} before it does any work, and {@link #publish}es only when the
- * state it would send has actually changed. The table keeps the last wire published at each position
- * and replays it to players who arrive afterwards, so "publish only on change" does not strand a
- * player who was not connected when the change happened. Neither half is safe alone: the gate without
- * the table silently desynchronises late arrivals, and the table without the gate keeps paying to
- * serialise state nobody is looking at.
+ * state it would send has changed. The table keeps the last wire published at each position and replays
+ * it to players who arrive afterwards. Neither half is safe alone: the gate without the table
+ * desynchronises late arrivals, and the table without the gate keeps serialising state nobody is looking at.
  *
  * <p><b>Deviations from the system this is modelled on.</b> Scope is the chunk-tracking set rather
- * than a radius, because that is what the underlying transport already targets and it needs no second
- * distance rule. Departed players are dropped by reconciling each entry against the live tracking list
- * rather than by a logout callback, which removes the accumulation an unhooked disconnect would
- * otherwise leave behind. Tracking lists are resolved once per chunk per tick and shared by every
- * entry in that chunk.
+ * than a radius, because that is what the transport already targets. Departed players are dropped by
+ * reconciling each entry against the live tracking list rather than by a logout callback. Tracking lists
+ * are resolved once per chunk per tick and shared by every entry in that chunk.
  *
  * <p>A position whose state changes while nobody watches keeps its last published wire until its next
  * publish. A player arriving in that window is healed with the older wire first and corrected on the
@@ -55,11 +52,9 @@ public final class GolemSync {
     /**
      * Watcher sets stated by a test, per level and chunk, consulted ahead of live chunk tracking.
      *
-     * <p>Production never writes to this. It exists because a headless test server cannot produce
-     * live chunk tracking — a mock player is in the level but never passes through the chunk map, so
-     * {@code getPlayers} never names it — and the replication logic above the lookup is where the
-     * subtle failure modes are. Keying by chunk rather than replacing the lookup wholesale keeps
-     * concurrently running tests from overwriting one another's answer.
+     * <p>Production never writes to this. A headless test server cannot produce live chunk tracking: a
+     * mock player is in the level but never passes through the chunk map, so {@code getPlayers} never
+     * names it. Keying by chunk keeps concurrently running tests from overwriting one another's answer.
      */
     private static final Map<ServerLevel, Long2ObjectOpenHashMap<List<ServerPlayer>>> STATED =
             new IdentityHashMap<>();
@@ -95,7 +90,7 @@ public final class GolemSync {
     public static void install() {
         if (installed) return;
         installed = true;
-        dev.golem.core.GolemCore.LOG.info("Payload transport: requested {}, channel accessors {}",
+        GolemCore.LOG.info("Payload transport: requested {}, channel accessors {}",
                 GolemTransport.requested(),
                 GolemWire.mixinsApplied() ? "present" : "ABSENT (will use the safe transport)");
         Lifecycle.onServerTick(server -> {

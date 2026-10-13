@@ -1,6 +1,8 @@
 package dev.golem.core.mixin;
 
 import com.mojang.serialization.Lifecycle;
+import dev.golem.core.world.Dimensions;
+import dev.golem.core.world.WorldTypes;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.dimension.LevelStem;
 import net.minecraft.world.level.levelgen.WorldDimensions;
@@ -14,11 +16,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * no "experimental settings" confirmation on create or open.
  *
  * <p>Why a mixin (§7). Rung 1, vanilla: {@code WorldDimensions.checkStability} calls every dimension that is not one of
- * the three vanilla ones experimental, and nothing a datapack or a mod registers changes that answer. Rung 2, loaders:
- * Fabric API has this rule (its own {@code WorldDimensionsMixin}); NeoForge and Forge have no event or option for it.
- * Rung 3, wideners: visibility is not the problem. The smallest mixin is one cancellable {@code @Inject} at the head
- * of that one static method, answering only for declared dimensions; every other dimension keeps vanilla's answer.
- * The method has the same signature on 1.20.1, 1.21.1 and 26.1.
+ * the three vanilla ones experimental, and nothing a datapack or a mod registers changes that. Rung 2, loaders:
+ * Fabric API has this rule; NeoForge and Forge have no event or option for it. Rung 3, wideners: visibility is not the
+ * problem. The smallest mixin is one cancellable {@code @Inject} at the head of that static method, answering only for
+ * declared dimensions. The method has the same signature on 1.20.1, 1.21.1 and 26.1.
  *
  * <p>The same injection calls a declared world type's overworld ({@link dev.golem.core.world.WorldTypes}: vanilla's but
  * for its biome source's parameter list name) stable.
@@ -33,7 +34,7 @@ public abstract class MixinWorldDimensionsStability {
     @Inject(method = "checkStability", at = @At("HEAD"), cancellable = true)
     private static void golem$declaredStable(ResourceKey<LevelStem> key, LevelStem stem,
                                              CallbackInfoReturnable<Lifecycle> cir) {
-        if (dev.golem.core.world.Dimensions.isDeclared(key) || dev.golem.core.world.WorldTypes.isStableOverworld(key, stem)) {
+        if (Dimensions.isDeclared(key) || WorldTypes.isStableOverworld(key, stem)) {
             cir.setReturnValue(Lifecycle.stable());
         }
     }

@@ -7,12 +7,12 @@ import net.minecraft.world.item.ItemStack;
  * The four armour stacks an entity is wearing, as a render layer sees them.
  *
  * <p>This exists because the two eras hand a layer a different <em>subject</em>. From 26.1 a layer is
- * given a render state — a snapshot taken during extraction — and the worn stacks are already on it as
+ * given a render state (a snapshot taken during extraction) with the worn stacks already on it as
  * {@code headEquipment}/{@code chestEquipment}/{@code legsEquipment}/{@code feetEquipment}. Below 26.1
  * a layer is given the live entity and reads {@code getItemBySlot}. Both produce these four stacks, so
  * that is what the neutral layer contract passes along; nothing else about the subject is portable.
  *
- * <p>Entries are never null — an empty slot is {@link ItemStack#EMPTY}.
+ * <p>Entries are never null; an empty slot is {@link ItemStack#EMPTY}.
  *
  * <p>Client-only.
  */

@@ -97,13 +97,10 @@ public class CompatItem extends Item implements HeldItemState {
     /**
      * Receives server-side inventory ticks with the optional equipped slot when vanilla provides it.
      *
-     * <p>{@code held} is supplied separately because the two eras express it differently and neither
-     * spelling survives the other: 26.1 reports the {@link EquipmentSlot} an item occupies (null for a
-     * plain inventory slot), while older versions report a slot index plus a {@code selected} flag that
-     * is only ever true for the main hand. Held-item logic needs the answer, not the spelling.
-     *
-     * <p>One consequence worth knowing: on 26.1 an offhand item counts as held, below it does not,
-     * because the old callback has no way to say so.
+     * <p>{@code held} is supplied separately because the eras express it differently: 26.1 reports the
+     * {@link EquipmentSlot} an item occupies (null for a plain inventory slot), while older versions report a
+     * slot index plus a {@code selected} flag that is only true for the main hand. So on 26.1 an offhand item
+     * counts as held, and below it does not.
      */
     protected void compatInventoryTick(ItemStack stack, net.minecraft.server.level.ServerLevel level,
                                        Entity owner, EquipmentSlot slot, boolean held) {
@@ -118,7 +115,7 @@ public class CompatItem extends Item implements HeldItemState {
 
     /**
      * Whether this item may break a block at all. Returning false leaves the block untouched, which is
-     * what an item bound to the attack button — a gun — needs.
+     * what an item bound to the attack button, a gun, needs.
      *
      * <p>26.1 renamed the hook to {@code canDestroyBlock} and widened the user to {@code LivingEntity};
      * before that it was {@code canAttackBlock} taking a {@code Player}.

@@ -1,5 +1,8 @@
 package dev.golem.core.dejson;
 
+import com.google.gson.JsonObject;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -79,7 +82,7 @@ class DejsonRegistryTest {
                 .models(Models.cubeAll("hbm:blocks/a")).states(Variants.simple()).register());
         DejsonException collision = assertThrows(DejsonException.class, () -> Dejson.block("hbm", "b")
                 .models(base -> {
-                    java.util.Map<String, com.google.gson.JsonObject> models = new java.util.LinkedHashMap<>();
+                    Map<String, JsonObject> models = new LinkedHashMap<>();
                     models.put(base, Models.json(Models.CUBE_ALL, Slots.of("all", "hbm:blocks/b")));
                     models.put("hbm:block/a", Models.json(Models.CUBE_ALL, Slots.of("all", "hbm:blocks/a")));
                     return models;
@@ -136,7 +139,7 @@ class DejsonRegistryTest {
 
         assertEquals(Set.of("facing", "half", "shape"), declaration.properties());
         assertEquals(40, declaration.variantKeys().size());
-        assertTrue(declaration.dispatch().covers(java.util.Map.of(
+        assertTrue(declaration.dispatch().covers(Map.of(
                 "facing", "north", "half", "top", "shape", "outer_left", "waterlogged", "false")));
     }
 }

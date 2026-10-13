@@ -32,7 +32,7 @@ public final class GolemFrameContext implements DynamicVisual.Context {
 
     public static GolemFrameContext create(Camera camera, float partialTick, int frameId, Vec3i renderOrigin, DistanceUpdateLimiter limiter) {
         // Compose ProjMat * cameraRotation with Translate(renderOrigin - cameraPos) so the
-        // FrustumIntersection lives in render-origin space — the same space inst.ModelMat
+        // FrustumIntersection lives in render-origin space, the same space inst.ModelMat
         // translations and visuals' interp dx/dy/dz live in. Without the translate the
         // frustum would be camera-local and rejecting visuals against it would be off by
         // (renderOrigin - cameraPos).

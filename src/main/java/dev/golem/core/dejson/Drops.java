@@ -6,21 +6,13 @@ import com.google.gson.JsonObject;
 /**
  * Block loot tables declared in code.
  *
- * <p>A loot table is a small program, and a handful of them here really are — a destroyed reactor
- * scattering four different kinds of rubble is a thing somebody decided. The other five hundred are
- * one of six sentences repeated: this block drops itself, this block drops nothing, this slab drops
- * two when it is a double, this ore drops its mineral unless you used silk touch. Writing those out
- * as files buys nothing and costs the usual: six spellings of "drops itself" drifted into the
- * corpus because there was no single place to say it.
+ * <p>Almost every table is one of a few shapes: drops itself, drops nothing, a slab's double, an ore's mineral
+ * unless silk touch. Each method emits the shape vanilla's own generator emits: a {@code bonus_rolls} of zero, a
+ * {@code rolls} of one, and a {@code random_sequence} naming the table's own id, which makes a drop reproducible
+ * from a world seed.
  *
- * <p>Each method here emits the shape vanilla's own generator emits, which is also the shape the
- * majority of the files already have: a {@code bonus_rolls} of zero, a {@code rolls} of one, and a
- * {@code random_sequence} naming the table's own id. The last is what makes a drop reproducible
- * from a world seed rather than from whatever else had drawn from the level's generator that tick.
- *
- * <p>What is <i>not</i> normalised is {@code survives_explosion}. Whether a block that is blown up
- * leaves its item behind is a decision about the block, not a spelling, so {@link #self} and
- * {@link #selfAlways} are two verbs and the caller has to pick one.
+ * <p>{@code survives_explosion} is not normalised: whether a blown-up block leaves its item is a decision about
+ * the block, so {@link #self} and {@link #selfAlways} are two methods and the caller picks one.
  */
 public final class Drops {
 
@@ -38,7 +30,7 @@ public final class Drops {
         return table(namespace, block, pool(null, entry(item(namespace, block))));
     }
 
-    /** The block drops nothing at all — a multiblock's filler, a machine that is only ever broken by its core. */
+    /** The block drops nothing at all: a multiblock's filler, or a machine that is only ever broken by its core. */
     public static JsonObject nothing(String namespace, String block) {
         JsonObject loot = new JsonObject();
         loot.addProperty("type", "minecraft:block");
@@ -101,7 +93,7 @@ public final class Drops {
         return silkOr(namespace, block, drop, functions(count(min, max), fortuneBonus(), explosionDecay()));
     }
 
-    /** An ore whose yield fortune does not raise — the drop is already a stack of fragments. */
+    /** An ore whose yield fortune does not raise, because the drop is already a stack of fragments. */
     public static JsonObject oreNoFortune(String namespace, String block, String drop, int min, int max) {
         return silkOr(namespace, block, drop, functions(count(min, max), explosionDecay()));
     }
@@ -121,7 +113,7 @@ public final class Drops {
     /**
      * An ore on the multiplying fortune curve: silk touch drops the ore block; anything else drops
      * between {@code min} and {@code max} of {@code drop}, then fortune multiplies that count by
-     * {@code ore_drops} ({@code count * (max(0, rand(fortune + 2) - 1) + 1)}). This is the old
+     * {@code ore_drops} ({@code count * (max(0, rand(fortune + 2) - 1) + 1)}). Matches 1.7's
      * {@code BlockOre.quantityDroppedWithBonus}, which rolled its base quantity and then multiplied it.
      */
     public static JsonObject oreMultiplied(String namespace, String block, String drop, int min, int max) {
@@ -170,7 +162,7 @@ public final class Drops {
 
     /** The path a block's loot table lives at. */
     /**
-     * The block itself, but only from the state where {@code property} is {@code value} — the lower
+     * The block itself, but only from the state where {@code property} is {@code value}. The lower
      * half of a door, which is the half that carries the item. The other half drops nothing.
      */
     public static JsonObject selfWhen(String namespace, String block, String property, String value) {

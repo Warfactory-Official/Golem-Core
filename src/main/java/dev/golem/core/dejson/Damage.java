@@ -12,16 +12,12 @@ import java.util.Set;
 /**
  * Damage types declared in code, together with the vanilla tags they belong to.
  *
- * <p>A damage type is three fields and a list of tags it is in, and the two halves are written in
- * different files under different namespaces — the type under {@code data/<ns>/damage_type/}, its
- * membership under {@code data/minecraft/tags/damage_type/}. Nothing connects them, so adding a
- * damage type and forgetting the tag is a one-line omission with no symptom at the point of the
- * mistake: armour quietly starts protecting against radiation, and the only way to find out is to
- * put a hazmat suit on and watch the health bar.
+ * <p>The type lives under {@code data/<ns>/damage_type/} and its tag membership under
+ * {@code data/minecraft/tags/damage_type/}. Nothing connects the two files, and a forgotten tag has no
+ * symptom at the point of the mistake (armour quietly protects against radiation).
  *
- * <p>{@link #declare} takes every type at once and writes both halves from the one table, which is
- * what makes the omission impossible rather than merely unlikely. It has to be one call because the
- * tag files are the transpose of the types: each is assembled from every type that named it.
+ * <p>{@link #declare} takes every type at once and writes both halves from one table. It is one call
+ * because each tag file is assembled from every type that named it.
  *
  * <pre>{@code
  * Damage.declare("hbm",
@@ -55,9 +51,7 @@ public final class Damage {
     /**
      * Writes every type and the tag files they imply.
      *
-     * <p>A tag is emitted only if some type named it, and lists its members in declaration order.
-     * Order is not meaningful in a damage-type tag: nothing iterates one, they are asked only
-     * whether a given type is in them.
+     * <p>A tag is emitted only if some type named it, with members in declaration order.
      */
     public static void declare(String namespace, Type... types) {
         if (namespace == null || namespace.isEmpty()) {
@@ -103,8 +97,7 @@ public final class Damage {
         /**
          * The death-message key, where it is not the type's own name.
          *
-         * <p>Two types can share one: a piercing bullet and an ordinary bullet kill you the same
-         * way and say so the same way, but only one of them ignores armour.
+         * <p>Two types can share one (a piercing and an ordinary bullet), differing only in armour handling.
          */
         public Type message(String message) {
             this.message = message;

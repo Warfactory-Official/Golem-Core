@@ -32,23 +32,21 @@ import net.minecraft.client.resources.model.BakedModel;
 *///?}
 
 /**
- * A block state's model drawn as a free-standing ghost — a placement preview — in one flat colour.
+ * A block state's model drawn as a free-standing ghost (a placement preview) in one flat colour.
  *
  * <p>This is the state a 1.7 {@code RenderWorldLastEvent} preview drew under: {@code disableColor()}
- * plus one {@code glColor}, alpha test at 0.1, the lightmap unit off. No ambient occlusion, no face
- * shade, no tint, no world light: every vertex carries the same colour and the texture's own alpha
- * decides what is cut out. Both halves live here because both are era-specific:
+ * plus one {@code glColor}, alpha test at 0.1, the lightmap unit off. No ambient occlusion, face
+ * shade, tint or world light: every vertex carries the same colour and the texture's own alpha
+ * decides what is cut out. Both halves are era-specific:
  *
  * <ul>
- *   <li>{@link #renderType()} — 26.1 declares a pipeline on the entity shader with the defines that
+ *   <li>{@link #renderType()}: 26.1 declares a pipeline on the entity shader with the defines that
  *       switch its directional and per-face lighting off; older versions reach the same flat,
  *       depth-writing, culled state through the emissive entity shader in a {@code CompositeState}.
- *       Neither era has a stock type with that combination (26.1's entity types all shade, its
- *       emissive one does not write depth).</li>
- *   <li>{@link #bake} — 26.1 collects {@code BlockStateModelPart}s from the {@code BlockStateModelSet}
+ *       No stock type has that combination on either era.</li>
+ *   <li>{@link #bake}: 26.1 collects {@code BlockStateModelPart}s from the {@code BlockStateModelSet}
  *       and writes them through a {@code QuadInstance}; older versions read the {@code BakedModel}'s
- *       packed {@code BakedQuad} ints directly, because their {@code putBulkData} hard-codes alpha 1
- *       and the vertex-emission chain differs per version.</li>
+ *       packed {@code BakedQuad} ints directly, because their {@code putBulkData} hard-codes alpha 1.</li>
  * </ul>
  *
  * <p>The model is resolved from the state alone (its properties), not from neighbours: a preview's

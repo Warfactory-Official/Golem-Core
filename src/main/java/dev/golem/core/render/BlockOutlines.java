@@ -1,5 +1,6 @@
 package dev.golem.core.render;
 
+import dev.golem.core.hook.Hook;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BooleanSupplier;
@@ -16,7 +17,7 @@ import java.util.function.BooleanSupplier;
 public final class BlockOutlines {
 
     /** Every listener, in phase order; register through the {@code on...} method or directly, with a phase. */
-    public static final dev.golem.core.hook.Hook<BooleanSupplier> SUPPRESSORS = dev.golem.core.hook.Hook.notifying();
+    public static final Hook<BooleanSupplier> SUPPRESSORS = Hook.notifying();
     private static boolean registered;
 
     private BlockOutlines() {}

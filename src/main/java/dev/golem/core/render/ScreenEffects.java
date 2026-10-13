@@ -5,6 +5,8 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
+import dev.golem.core.client.ClientResourceReloads;
+import dev.golem.core.harness.HarnessQueryRegistry;
 import net.minecraft.client.Minecraft;
 
 /**
@@ -32,8 +34,8 @@ public final class ScreenEffects {
     public static void init() {
         if (initialized) return;
         initialized = true;
-        dev.golem.core.harness.HarnessQueryRegistry.register("golem_screen_effects", (mc, params) -> query());
-        dev.golem.core.client.ClientResourceReloads.register("golemcore", "screen_effects", () -> {
+        HarnessQueryRegistry.register("golem_screen_effects", (mc, params) -> query());
+        ClientResourceReloads.register("golemcore", "screen_effects", () -> {
             //? if <26.1 {
             /*Programs.reset();
             Bloom.resetShaders();

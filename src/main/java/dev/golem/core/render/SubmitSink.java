@@ -15,9 +15,9 @@ import net.minecraft.client.renderer.rendertype.RenderType;
  * Where a renderer sends its geometry.
  *
  * <p>This mirrors 26.1's {@code SubmitNodeCollector}: you hand it a pose, a {@link RenderType} and a
- * callback that writes vertices. The callback signature — {@code (PoseStack.Pose, VertexConsumer)} —
- * is the same shape older versions used for immediate-mode drawing, which is what makes this a
- * backport rather than a reimplementation.
+ * callback that writes vertices. The callback signature {@code (PoseStack.Pose, VertexConsumer)}
+ * is the shape older versions used for immediate-mode drawing, which makes this a backport rather than
+ * a reimplementation.
  *
  * <p>On 26.1 the implementation delegates to the vanilla collector, and the engine draws the geometry
  * later. On older versions {@code RecordingSubmitSink} records submissions and draws them into a
@@ -35,18 +35,16 @@ public interface SubmitSink {
     SubmitSink order(int order);
 
     /**
-     * Draws an item stack — a machine's output preview sitting on its model, say.
+     * Draws an item stack, such as a machine's output preview sitting on its model.
      *
-     * <p>This lives on the sink rather than being done by the caller because the two eras disagree
-     * about who owns item rendering: 26.1 submits a pre-baked render state, older versions call
-     * {@code ItemRenderer} at draw time. {@link CompatItemRenderState} holds whichever the target
-     * needs.
-     *
+     * <p>This lives on the sink because the two eras disagree about who owns item rendering: 26.1
+     * submits a pre-baked render state, older versions call {@code ItemRenderer} at draw time.
+     * {@link CompatItemRenderState} holds whichever the target needs.
      */
     void submitItem(PoseStack poseStack, CompatItemRenderState item, int light, int overlay, int seed);
 
     /**
-     * Draws a block state as a free-standing model at the pose — a disguise, a display block. The
+     * Draws a block state as a free-standing model at the pose: a disguise, a display block. The
      * block is lit by {@code light}, not by the world, exactly like an item.
      */
     void submitBlock(PoseStack poseStack, CompatBlockRenderState block, int light, int overlay);

@@ -25,23 +25,19 @@ import net.minecraft.world.entity.LivingEntity;
  * split: from 26.1 a layer is handed a <b>render state</b> and a {@code SubmitNodeCollector} the engine
  * draws from later, while older versions hand it the <b>live entity</b> and a {@code MultiBufferSource}
  * to draw into immediately. Below 26.1 the submissions are replayed through {@link RecordingSubmitSink}
- * so {@link SubmitSink#order} survives rather than being silently dropped — the same reason
- * {@code CompatEntityRenderer} does it, and it matters for exactly the same reason: 26.1 orders
- * translucent geometry by submission, older versions by depth buffer.
+ * so {@link SubmitSink#order} survives, as in {@code CompatEntityRenderer}: 26.1 orders translucent
+ * geometry by submission, older versions by depth buffer.
  *
- * <p><b>Why this rather than the loaders' armour hooks.</b> NeoForge's
- * {@code IClientItemExtensions#getHumanoidArmorModel}, Fabric's {@code ArmorRenderer} and 26.1's
- * asset-JSON {@code EquipmentLayerRenderer} pipeline are three unrelated designs, and the last of them
- * has no seam for arbitrary geometry at all. A render layer is the one mechanism every node in the
- * matrix expresses the same way, and it is also closer to what 1.12 actually did — {@code getArmorModel}
- * fed the vanilla armour layer.
+ * <p><b>Why not the loaders' armour hooks.</b> NeoForge's {@code IClientItemExtensions#getHumanoidArmorModel},
+ * Fabric's {@code ArmorRenderer} and 26.1's asset-JSON {@code EquipmentLayerRenderer} pipeline are three
+ * unrelated designs, and the last has no seam for arbitrary geometry. A render layer is the one mechanism
+ * every node expresses the same way, and it is close to what 1.12 did: {@code getArmorModel} fed the
+ * vanilla armour layer.
  *
  * <p><b>Why the supertype is raw.</b> {@code RenderLayer}'s first type parameter <i>is</i> the era
  * split: {@code <S extends EntityRenderState>} from 26.1, {@code <T extends Entity>} below it. Binding
- * it would force every subclass to name an era-specific type and put a version guard in consumer code,
- * which is precisely what this layer exists to prevent. Erasure is identical on both sides, so the
- * bridge methods below override cleanly; the unchecked-ness is contained to this one file and
- * {@link HumanoidLayers}.
+ * it would force every subclass to name an era-specific type. Erasure is identical on both sides, so the
+ * bridge methods below override cleanly; the unchecked-ness stays in this file and {@link HumanoidLayers}.
  *
  * <p>Client-only.
  */
@@ -59,7 +55,7 @@ public abstract class CompatHumanoidLayer extends RenderLayer {
      * @param pose  the entity's pose stack, already in body space
      * @param sink  where geometry goes
      * @param light the packed light coordinates for this entity
-     * @param parts the parent model's posed skeleton — see {@link HumanoidPose}
+     * @param parts the parent model's posed skeleton, see {@link HumanoidPose}
      */
     public abstract void submit(Worn worn, PoseStack pose, SubmitSink sink, int light, HumanoidPose parts,
             CameraInfo camera);
@@ -81,7 +77,7 @@ public abstract class CompatHumanoidLayer extends RenderLayer {
 
     //? if >=26.1 {
     /**
-     * Bridges vanilla's submit signature. The stacks come straight off the render state — 26.1 snapshots
+     * Bridges vanilla's submit signature. The stacks come straight off the render state. 26.1 snapshots
      * them during extraction, so there is no entity to consult and no attachment API needed.
      */
     @Override

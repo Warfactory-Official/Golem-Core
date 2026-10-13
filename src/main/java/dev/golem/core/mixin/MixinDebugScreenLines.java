@@ -15,11 +15,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * Appends Golem's debug-screen lines on Fabric.
  *
  * <p>26.1 made the debug screen a registry of {@code DebugScreenEntry}, but its registration method is
- * private and fabric-api publishes no way in — its {@code debug} module covers debug <em>renderers</em>
+ * private and fabric-api publishes no way in. Its {@code debug} module covers debug <em>renderers</em>
  * and entity subscriptions, not screen entries. NeoForge fires an event for exactly this, so only this
  * loader needs bytecode.
  *
- * <p>The left column, where vanilla already keeps its chunk and entity render statistics.
+ * <p>The lines go in the left column, where vanilla keeps its chunk and entity render statistics.
  ^/
 @Mixin(DebugScreenOverlay.class)
 public class MixinDebugScreenLines {

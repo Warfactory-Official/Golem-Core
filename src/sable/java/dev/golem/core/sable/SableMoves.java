@@ -1,5 +1,6 @@
 package dev.golem.core.sable;
 
+import dev.golem.core.GolemCore;
 import dev.golem.core.world.SubLevels;
 import dev.ryanhcode.sable.api.SubLevelAssemblyHelper;
 import net.minecraft.core.BlockPos;
@@ -42,7 +43,7 @@ public final class SableMoves {
      */
     static void closeAbandoned() {
         while (!BATCHES.isEmpty()) {
-            dev.golem.core.GolemCore.LOG.warn("A Sable block move did not complete; closing it ({} block(s))",
+            GolemCore.LOG.warn("A Sable block move did not complete; closing it ({} block(s))",
                     BATCHES.peek().moved().size());
             end();
         }

@@ -16,15 +16,12 @@ import java.util.Map;
  * The model half of the declaration vocabulary: the parented, texture-only models that make up
  * almost every block model shipped.
  *
- * <p>The vocabulary is deliberately closed. Anything carrying hand-built {@code elements} stays a
- * file, and anything with real geometry is an OBJ and belongs to the instanced renderer — neither
- * is a case this layer tries to express.
+ * <p>The vocabulary is closed. Hand-built {@code elements} stay a file, and real geometry is an
+ * OBJ drawn by the instanced renderer; this layer expresses neither.
  *
- * <p>The {@code *All} variants exist because the overwhelming majority of slabs and stairs repeat
- * one texture across {@code bottom}/{@code side}/{@code top}, and because their double-slab model
- * is then a {@code cube_all} rather than a {@code cube_bottom_top}. Both spellings bake the same,
- * but only one matches what is on disk today, and matching lets a hand-written file be deleted
- * without anyone having to look at the result.
+ * <p>The {@code *All} variants exist because most slabs and stairs repeat one texture across
+ * {@code bottom}/{@code side}/{@code top}, so their double-slab model is a {@code cube_all} rather
+ * than a {@code cube_bottom_top}. Both bake the same; only one matches the files on disk.
  */
 public final class Models {
 
@@ -108,18 +105,16 @@ public final class Models {
      * Several suffixed models under one declaration, for a block whose blockstate picks between
      * them: the on/off pair a machine switches, the numbered pool a shaded ore draws from.
      *
-     * <p>{@link Variants#slab} and {@link Variants#stairs} have their own presets because their
-     * suffixes are fixed and their parents are irregular. This is for everything else, where the
-     * suffix is the blockstate's business and each entry is an ordinary shape.
+     * <p>{@link Variants#slab} and {@link Variants#stairs} have their own presets (fixed suffixes,
+     * irregular parents). This is for everything else, where the suffix is the blockstate's business.
      *
      * <pre>{@code
      * Models.group().and("_off", Models.cubeAll("hbm:blocks/lamp_off"))
      *               .and("_on",  Models.cubeAll("hbm:blocks/lamp_on"))
      * }</pre>
      *
-     * <p>The empty suffix is allowed and means the base model itself, because a blockstate that
-     * picks between {@code <base>} and {@code <base>_cracked} is the same kind of thing as one
-     * picking between {@code _off} and {@code _on}.
+     * <p>The empty suffix means the base model itself, for a blockstate that picks between
+     * {@code <base>} and {@code <base>_cracked}.
      */
     public static Group group() {
         return new Group(Collections.emptyMap());
@@ -171,10 +166,9 @@ public final class Models {
     /**
      * The same shape, tagged with the render type its block needs.
      *
-     * <p>{@code render_type} is how a model asks for anything but the opaque solid layer — cutout
-     * for a block with holes in its texture, translucent for glass. It is a model field rather
-     * than a block property on every target here, and leaving it off does not fail the bake: it
-     * draws the block on the solid layer, where its transparent pixels come out black.
+     * <p>{@code render_type} is how a model asks for anything but the opaque solid layer: cutout
+     * for a block with holes in its texture, translucent for glass. Leaving it off does not fail
+     * the bake; the block draws on the solid layer and its transparent pixels come out black.
      *
      * <pre>{@code Models.renderType("minecraft:cutout", Models.cubeAll("hbm:blocks/gas_radon"))}</pre>
      */
@@ -200,9 +194,9 @@ public final class Models {
     /**
      * The same shape, wearing the {@code display{}} block a set of poses composes to.
      *
-     * <p>A {@code display{}} entry is not a matrix — it is a translate/rotate/scale triple vanilla
-     * applies whatever it says. {@link DisplayFrame} does the conversion and refuses the three shapes
-     * vanilla would corrupt in silence, so a pose either ships exactly or fails the run.
+     * <p>A {@code display{}} entry is a translate/rotate/scale triple, not a matrix, and vanilla
+     * applies it whatever it says. {@link DisplayFrame} converts and refuses the three shapes
+     * vanilla would corrupt silently.
      *
      * <pre>{@code Models.display(Pose17.frames(Pose17.Klass.ITEM_RENDER_BASE),
      *         Models.parented("minecraft:block/block", Slots.of("particle", "hbm:blocks/block_steel")))}</pre>
@@ -272,9 +266,8 @@ public final class Models {
      * A shape that emits nothing, for a block whose appearance comes from a renderer.
      *
      * <p>Paired with {@link Dejson.Declaration#rendered}, which points the blockstate at a shared
-     * model somebody else owns. 150 of the blockstates shipped here are exactly that: a machine
-     * drawn by a block-entity renderer, whose blockstate exists only because vanilla demands one
-     * and whose model is the same empty placeholder every time.
+     * model. Typical use is a machine drawn by a block-entity renderer, whose blockstate exists only
+     * because vanilla demands one.
      */
     public static Shape none() {
         return base -> Collections.emptyMap();
@@ -282,9 +275,8 @@ public final class Models {
 
     /**
      * The item model of a block: a bare parent pointing at the block's own model, with no textures
-     * of its own. This is the only item shape whose parent is not a vanilla one, so it takes the
-     * block model id rather than deriving it — a block whose item should show a different model
-     * than the block itself is common enough that guessing would be wrong.
+     * of its own. Its parent is not a vanilla one, so it takes the block model id rather than
+     * deriving it: an item may show a different model than its block.
      */
     public static Shape blockItem(String blockModel) {
         requireId(blockModel, "block model");
@@ -318,8 +310,8 @@ public final class Models {
     /**
      * The modern item-model <i>definition</i>, which is a different file from the item model: from
      * 26.1 an item is {@code assets/<ns>/items/<path>.json} naming a model, and the model itself
-     * stays at {@code models/item/<path>.json} for older targets to load directly. 1895 of the 2196
-     * definitions shipped are exactly this shape, which is why one declaration can emit both.
+     * stays at {@code models/item/<path>.json} for older targets to load directly. One declaration
+     * emits both.
      */
     public static JsonObject itemDefinition(String modelId) {
         return itemDefinition(modelId, List.of());
@@ -337,9 +329,8 @@ public final class Models {
      * <i>n</i>th model named, and the first is also the fallback.
      *
      * <p>Only 26.1 reads this file. Below it the same choice is an {@code overrides} list on the
-     * item's own model, which is why the first case has to <i>be</i> the item's own model: an
-     * override whose predicate the value does not clear leaves that file's own content standing, and
-     * that file is what every older target resolves the item to.
+     * item's own model, so the first case has to <i>be</i> the item's own model: when no override
+     * predicate matches, older targets resolve the item to that file's own content.
      */
     public static JsonObject itemSelection(String property, List<String> modelIds, List<Tint> tints) {
         requireId(property, "select property");

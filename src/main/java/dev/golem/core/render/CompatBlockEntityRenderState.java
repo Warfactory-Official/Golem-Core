@@ -9,7 +9,7 @@ import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
 //?}
 
 /**
- * A block entity that is not in the world — one carried by a falling structure, say — prepared for
+ * A block entity that is not in the world (one carried by a falling structure, say) prepared for
  * drawing through its own registered renderer via {@link SubmitSink#submitBlockEntity}.
  *
  * <p>26.1 must extract the block entity's render state in the extract pass and submit that state with

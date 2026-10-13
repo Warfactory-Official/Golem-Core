@@ -22,19 +22,17 @@ import java.util.List;
 // into two growable GpuBuffers:
 //
 // - visListBuffer: one uvec2 per crumbling instance, contiguous (.x=0 unused, .y=instIdx).
-//   Each draw's slice is at [visListBaseOffset, visListBaseOffset + instanceCount). The
-//   vertex shader reads instances[visList[gl_BaseInstanceARB + gl_InstanceID].y] — same
-//   indirection as the regular INDIRECT draw path, but the visList is built CPU-side (no
-//   compute culling — the breaking blocks are by definition in view).
+//   Each draw's slice is at [visListBaseOffset, visListBaseOffset + instanceCount). The vertex
+//   shader reads instances[visList[gl_BaseInstanceARB + gl_InstanceID].y] as in the regular
+//   INDIRECT path, but the visList is built CPU-side (breaking blocks are in view, so no culling).
 // - indirectBuffer: one 5-uint DrawElementsIndirectCommand per CrumblingDraw, packed in the
 //   same order as the bucket iteration in IndirectDrawManager.drawCrumbling.
 //
-// Bucketing: CrumblingDraws are grouped by (source stage-group, progress). All draws in a
-// bucket share the same global instance SSBO and the same destroy_stage texture, so one SSBO
-// bind + one texture bind covers the bucket's multidraw.
+// CrumblingDraws are bucketed by (source stage-group, progress); a bucket shares one instance
+// SSBO and one destroy_stage texture, so one bind of each covers its multidraw.
 public final class IndirectCrumblingScratch {
 
-    // uvec2 to match the regular indirect path's visList layout — vertex shader reads .y as
+    // uvec2 to match the regular indirect path's visList layout. The vertex shader reads .y as
     // the SSBO instance index. .x is unused for crumbling (no depth-sort) and written as 0.
     private static final int VIS_LIST_ENTRY_BYTES = 2 * Integer.BYTES;
 
@@ -46,12 +44,11 @@ public final class IndirectCrumblingScratch {
     public Plan build(List<CrumblingDraw> draws) {
         if (draws.isEmpty()) return Plan.EMPTY;
 
-        // Group by (sourceGroup, progress). sourceGroup identity comes from the first
-        // instance's parent IndirectInstancer; we trust visuals to keep all instances in a
-        // CrumblingDraw within one stage-group (true for AssemblyMachineVisual, where all 12
-        // meshes share the opaque stage-group). Fully invisible local pages are hole-punched
-        // out of the shared object storage, so crumbling only keeps instances whose current
-        // local slot still maps to a global SSBO slot.
+        // Group by (sourceGroup, progress). sourceGroup comes from the first instance's parent
+        // IndirectInstancer; visuals must keep all instances of a CrumblingDraw in one stage-group
+        // (true for AssemblyMachineVisual, whose 12 meshes share the opaque stage-group). Fully
+        // invisible local pages are hole-punched out of the shared object storage, so only instances
+        // whose local slot still maps to a global SSBO slot are kept.
         Long2ObjectOpenHashMap<Bucket> bucketsByKey = new Long2ObjectOpenHashMap<>();
         List<Bucket> bucketOrder = new ArrayList<>();
         long totalInstances = 0L;
@@ -120,7 +117,7 @@ public final class IndirectCrumblingScratch {
                     int visListBaseOffset = visOff / VIS_LIST_ENTRY_BYTES;
                     int[] globalIndices = entry.globalIndices;
                     for (int i = 0; i < globalIndices.length; i++) {
-                        // uvec2(.x = 0, .y = SSBO index) — vertex shader reads .y.
+                        // uvec2(.x = 0, .y = SSBO index). The vertex shader reads .y.
                         visStage.putInt(visOff, 0);
                         visStage.putInt(visOff + 4, globalIndices[i]);
                         visOff += VIS_LIST_ENTRY_BYTES;

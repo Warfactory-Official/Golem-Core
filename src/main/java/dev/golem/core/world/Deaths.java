@@ -1,5 +1,6 @@
 package dev.golem.core.world;
 
+import dev.golem.core.hook.Hook;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiConsumer;
@@ -11,7 +12,7 @@ import net.minecraft.world.entity.LivingEntity;
  * Server-side living death hooks with one shape on every loader.
  *
  * <p>{@link #onAllowDeath} handlers run first, at the loader's highest priority, and any of them may
- * veto the death by returning {@code false} — the legacy "cancel {@code LivingDeathEvent} and restore
+ * veto the death by returning {@code false}, the legacy "cancel {@code LivingDeathEvent} and restore
  * health" revive pattern. {@link #onDeath} handlers run only for deaths nobody vetoed, before drops.
  */
 public final class Deaths {
@@ -19,9 +20,9 @@ public final class Deaths {
     private Deaths() {}
 
     /** Every listener, in phase order; register through the {@code on...} method or directly, with a phase. */
-    public static final dev.golem.core.hook.Hook<BiPredicate<LivingEntity, DamageSource>> ALLOW = dev.golem.core.hook.Hook.notifying();
+    public static final Hook<BiPredicate<LivingEntity, DamageSource>> ALLOW = Hook.notifying();
     /** Every listener, in phase order; register through the {@code on...} method or directly, with a phase. */
-    public static final dev.golem.core.hook.Hook<BiConsumer<LivingEntity, DamageSource>> AFTER = dev.golem.core.hook.Hook.notifying();
+    public static final Hook<BiConsumer<LivingEntity, DamageSource>> AFTER = Hook.notifying();
     private static boolean installed;
 
     /** Registers a veto: return {@code false} to cancel the death (the handler must restore health). */

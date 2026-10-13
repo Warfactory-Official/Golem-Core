@@ -35,8 +35,8 @@ public interface EnergySource {
     long extractableFe(ServerLevel level, BlockPos pos);
 
     /**
-     * @param from the position pushing at us, or null when the caller is sideless — the key an
-     *             implementor needs to tell one peer from another.
+     * @param from the position pushing at us, or null when the caller is sideless; an
+     *             implementor uses it to tell one peer from another.
      * @return how much was actually taken.
      */
     long insertFe(ServerLevel level, BlockPos pos, @Nullable BlockPos from, long fe);

@@ -19,16 +19,12 @@ import java.util.Map;
  * Writes the declared models, blockstates, item definitions, loot tables and tags out as the JSON
  * files they stand in for.
  *
- * <p>This is the delivery layer in its simplest possible form: the build emits the files, and the
- * game loads them the way it loads every other file. Nothing is intercepted, nothing is resolved at
- * runtime, and a connected-texture engine, a resource pack, JEI and the model debugger all see
- * exactly what they see today, because what they see today is what this writes.
+ * <p>The build emits the files and the game loads them like any other resource. Nothing is
+ * intercepted or resolved at runtime, so resource packs, JEI and the model debugger see the same files.
  *
- * <p>The interesting half is {@link #verify}, which is what makes deleting a file safe. A
- * declaration is only worth anything if it says the same thing as the file it replaces, and that is
- * a question with a yes-or-no answer as long as the file is still there. So the order is: declare,
- * verify against the file, delete the file. After the deletion there is nothing left to compare
- * against, which is why the comparison has to happen first and has to be part of the build.
+ * <p>{@link #verify} is what makes deleting an authored file safe: a declaration must say the same
+ * thing as the file it replaces, and that can only be checked while the file exists. The order is
+ * declare, verify against the file, delete the file, so the comparison is part of the build.
  */
 public final class DejsonWriter {
 
@@ -45,9 +41,9 @@ public final class DejsonWriter {
     /**
      * Emits every declaration that no authored file already covers.
      *
-     * <p>{@code authored} is the hand-written resource root. A path that exists there is left to it
-     * — that is the "file wins" rule, applied once at build time instead of on every lookup. The
-     * two roots are then stacked by the build, authored last.
+     * <p>{@code authored} is the hand-written resource root. A path that exists there is left to it.
+     * This is the "file wins" rule, applied once at build time instead of on every lookup. The
+     * build then stacks the two roots, authored last.
      */
     public static Report write(Path out, Path authored) throws IOException {
         int written = 0;
@@ -72,7 +68,7 @@ public final class DejsonWriter {
      * <p>Comparison is on the parsed JSON, not on the text: key order and whitespace are not
      * meaningful to any loader, and the files on disk do not agree on either. A bare {@code parent}
      * such as {@code block/cube_all} is read as the {@code minecraft:} one it resolves to, which is
-     * also not a difference — both spellings are on disk and they load the same.
+     * also not a difference: both spellings are on disk and they load the same.
      */
     public static List<Mismatch> verify(Path authored) {
         List<Mismatch> mismatches = new ArrayList<>();
@@ -99,17 +95,14 @@ public final class DejsonWriter {
     /**
      * Sprites a declaration names that no texture file backs.
      *
-     * <p>This is the failure the generated model cannot catch on its own. A model that names a
-     * texture which is not there still parses, still bakes, and comes out as the missing-texture
-     * chequerboard on a block in a world — and because the model was generated, there is no file
-     * for anyone to notice the typo in. The set of names is known at declaration time and the set
-     * of files is on disk, so the two can simply be compared, and this is the only check in the
-     * layer that needs the texture tree rather than the model tree.
+     * <p>A generated model that names a missing texture still parses and bakes and shows the
+     * missing-texture chequerboard in the world, and there is no authored file in which to notice
+     * the typo. This is the only check that needs the texture tree rather than the model tree.
      *
      * <p>{@code hbm:blocks/steel} is a sprite id, and the file it wants is
      * {@code assets/hbm/textures/blocks/steel.png}. Only namespaces whose texture tree is in the
      * authored root are checked. Vanilla's sprites live in the game jar and another mod's live in
-     * that mod's, so their absence here says nothing — and a consumer that ships one file under
+     * that mod's, so their absence here says nothing, and a consumer that ships one file under
      * {@code assets/minecraft} must not thereby make every vanilla sprite look missing.
      */
     public static List<String> missingSprites(Path authored) {

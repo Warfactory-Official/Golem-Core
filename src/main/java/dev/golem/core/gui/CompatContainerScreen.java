@@ -19,26 +19,25 @@ import net.minecraft.client.input.MouseButtonEvent;
 /**
  * A container screen that behaves like 26.1's on every version.
  *
- * <p>Three differences in {@code AbstractContainerScreen} are invisible at compile time — the overrides
- * bind, the screen draws — and surface only as a misplaced label and tooltips that never appear:
+ * <p>Three differences in {@code AbstractContainerScreen} are invisible at compile time (the overrides
+ * bind, the screen draws) and surface only as a misplaced label and tooltips that never appear:
  *
  * <ul>
  *   <li><b>26.1 has a constructor taking the screen's size</b>; 1.21.1 has only the three-argument one
  *       and expects subclasses to assign {@code imageWidth}/{@code imageHeight} afterwards.</li>
  *   <li><b>The inventory label's Y is derived at a different moment.</b> 26.1 computes
- *       {@code inventoryLabelY = imageHeight - 94} from that constructor <i>argument</i>, so it reflects
- *       the screen's real height. 1.21.1 computes it from the {@code imageHeight} <i>field</i>, which is
- *       still the 166 default at that point — subclasses set their real height a moment later, and the
- *       label is left stranded at 72. Supplying the sized constructor here fixes both at once.</li>
+ *       {@code inventoryLabelY = imageHeight - 94} from that constructor <i>argument</i>. 1.21.1 computes
+ *       it from the {@code imageHeight} <i>field</i>, which is still the 166 default at that point, so the
+ *       label is stranded at 72. The sized constructor here fixes both.</li>
  *   <li><b>The tooltip hook is engine-called on 26.1 and subclass-called below it.</b> 26.1's
  *       {@code extractRenderState} always invokes {@code extractTooltip}. In 1.21.1 nothing in
- *       {@code AbstractContainerScreen} ever calls {@code renderTooltip} — every vanilla screen that
+ *       {@code AbstractContainerScreen} calls {@code renderTooltip}; every vanilla screen that
  *       wants tooltips calls it from its own {@code render}. A port that only renames the override
- *       therefore compiles to a method nobody invokes, and no tooltip ever appears.</li>
- *   <li><b>And on 26.1 that hook is already occupied.</b> {@code extractTooltip} is where vanilla
- *       draws the hovered slot's <em>item</em> tooltip; below 26.1 it is empty. So a screen that
- *       overrides it to add a gauge tooltip keeps item tooltips on five targets and loses them on the
- *       sixth. Subclasses override {@link #extractOwnTooltip} instead and get both, everywhere.</li>
+ *       compiles to a method nobody invokes.</li>
+ *   <li><b>On 26.1 that hook is already occupied.</b> {@code extractTooltip} draws the hovered slot's
+ *       <em>item</em> tooltip; below 26.1 it is empty. A screen that overrides it to add a gauge tooltip
+ *       keeps item tooltips on five targets and loses them on the sixth. Subclasses override
+ *       {@link #extractOwnTooltip} instead.</li>
  * </ul>
  *
  * <p>Extend this instead of {@code AbstractContainerScreen} and all three behave as they do on 26.1.
@@ -80,9 +79,8 @@ public abstract class CompatContainerScreen<T extends AbstractContainerMenu> ext
     /**
      * The 26.1 label hook, backported for subclasses. The default is vanilla's: the title at
      * ({@code titleLabelX}, {@code titleLabelY}) and "Inventory" at ({@code inventoryLabelX},
-     * {@code inventoryLabelY}), dark grey, no shadow, on every version. This used to be an empty body, which on
-     * 26.1 also overrode vanilla's labels away, so a screen that did not draw its own (or called super for the
-     * title) showed none anywhere.
+     * {@code inventoryLabelY}), dark grey, no shadow, on every version. An empty body would be
+     * wrong on 26.1, where it overrides vanilla's labels away.
      */
     protected void extractLabels(
             //? if >=26.1 {
@@ -99,20 +97,16 @@ public abstract class CompatContainerScreen<T extends AbstractContainerMenu> ext
     }
 
     /**
-     * This screen's <em>own</em> tooltips — the ones for gauges, tanks, bars and other painted regions.
+     * This screen's <em>own</em> tooltips: the ones for gauges, tanks, bars and other painted regions.
      *
-     * <p><b>Deliberately not named {@code extractTooltip}.</b> On 26.1 that name is not a free hook: it
-     * is the vanilla method that draws the hovered <em>slot's item</em> tooltip, so a screen overriding
-     * it without calling super silently deletes item tooltips for the whole screen. Below 26.1 the same
-     * name is an empty hook and item tooltips keep working, so the mistake shows up on exactly one of
-     * the six targets. Giving the subclass its own name makes it unmakeable, and
-     * {@code extractTooltip} is {@code final} here so a leftover override fails to compile rather than
-     * failing quietly.
+     * <p>Not named {@code extractTooltip}: on 26.1 that is the vanilla method that draws the hovered
+     * <em>slot's item</em> tooltip, so overriding it without calling super deletes item tooltips for
+     * the whole screen, on one of the six targets only. {@code extractTooltip} is {@code final} here so
+     * such an override fails to compile.
      *
      * <p>Called <b>before</b> the item tooltip. 26.1's {@code setTooltipForNextFrame} keeps the
-     * <em>first</em> tooltip set in a frame, not the last, so this ordering lets a screen override the
-     * item tooltip for a region that overlaps a slot, while a region that does not overlap simply
-     * leaves the item's alone.
+     * <em>first</em> tooltip set in a frame, so a screen can override the item tooltip for a region that
+     * overlaps a slot, while a region that does not overlap leaves the item's alone.
      */
     protected void extractOwnTooltip(
             //? if >=26.1 {

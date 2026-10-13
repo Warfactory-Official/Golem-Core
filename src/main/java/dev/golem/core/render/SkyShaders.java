@@ -120,10 +120,10 @@ final class SkyShaders {
     /**
      * The blend of a draw. In the sky ({@code picture} false): 1.7's colour factors with vanilla's alpha factors
      * {@code ONE, ZERO}. Into a GUI picture-in-picture texture ({@code picture} true), which starts transparent black and
-     * is blitted with premultiplied alpha ({@code GUI_TEXTURED_PREMULTIPLIED_ALPHA}): the same colour factors, the alpha
-     * kept as coverage - an alpha-blended draw adds {@code a} of it ({@code ONE, ONE_MINUS_SRC_ALPHA}), an additive one
-     * none ({@code ZERO, ONE}). The texture then holds {@code (C, A)} with {@code C + (1 - A) * screen} equal to drawing
-     * the same sequence straight onto the screen, as 1.7 did (up to 8-bit rounding of the texture).
+     * is blitted with premultiplied alpha ({@code GUI_TEXTURED_PREMULTIPLIED_ALPHA}): the same colour factors with the
+     * alpha kept as coverage. An alpha-blended draw adds {@code a} of it ({@code ONE, ONE_MINUS_SRC_ALPHA}), an additive
+     * one none ({@code ZERO, ONE}). The texture then holds {@code (C, A)} with {@code C + (1 - A) * screen} equal to
+     * drawing the same sequence onto the screen as 1.7 did, up to 8-bit rounding.
      */
     static BlendFunction blend(Sky.Blend blend, boolean picture) {
         if (picture) return blend == Sky.Blend.ALPHA ? PICTURE_ALPHA : PICTURE_ADDITIVE;

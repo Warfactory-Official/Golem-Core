@@ -17,12 +17,12 @@ import net.minecraft.client.gui.GuiGraphics;
 *///?}
 
 /**
- * Draws a small 3D scene — blocks, block-entity models, items — inside a screen, the way a 1.7
- * {@code GuiScreen} could simply push a matrix and tesselate the world into itself.
+ * Draws a small 3D scene (blocks, block-entity models, items) inside a screen, the way a 1.7
+ * {@code GuiScreen} could push a matrix and tesselate the world into itself.
  *
  * <p><b>The frame the scene draws in.</b> The pose handed to {@link Scene#draw} has its origin at the
  * centre of the screen rectangle, one unit per GUI pixel, +X right, +Y <em>down</em> and +Z towards the
- * viewer — the frame a legacy GUI matrix stack had, without the screen-space offset. A scene ported
+ * viewer, the frame a legacy GUI matrix stack had, without the screen-space offset. A scene ported
  * from a 1.7 screen therefore applies the transforms it used there (scale, rotate, translate) unchanged,
  * minus the {@code glTranslated(width / 2, height / 2, z)} that placed it on screen. Depth is available
  * for about ±1000 / guiScale pixels either side of the origin.
@@ -30,14 +30,14 @@ import net.minecraft.client.gui.GuiGraphics;
  * <p>Geometry goes through a {@link SubmitSink}, so a scene reuses the block and block-entity renderers
  * that already draw into the world: the same {@code GemBER} replay, the same block tesselation.
  *
- * <p><b>Why this is Core's business.</b> 26.1 screens have no 3D transform at all: a screen's matrix is
- * a 2D {@code Matrix3x2fStack}, and 3D inside a GUI is rendered to an offscreen texture by a
- * "picture in picture" renderer and blitted back. The vanilla renderers of that kind are a fixed list, so
- * this registers one through each loader's own hook — NeoForge's
- * {@code RegisterPictureInPictureRenderersEvent}, Fabric's {@code PictureInPictureRendererRegistry} — and
- * feeds it through the submit pipeline exactly as vanilla's own entity preview does. Below 26.1 the GUI
- * matrix stack is still a {@code PoseStack} and the scene is drawn straight into it; its depth is then
- * cleared so later screen elements layer over the scene in submission order, as the offscreen blit does.
+ * <p>26.1 screens have no 3D transform: a screen's matrix is a 2D {@code Matrix3x2fStack}, and 3D inside
+ * a GUI is rendered to an offscreen texture by a "picture in picture" renderer and blitted back. The
+ * vanilla renderers of that kind are a fixed list, so this registers one through each loader's own hook
+ * (NeoForge's {@code RegisterPictureInPictureRenderersEvent}, Fabric's
+ * {@code PictureInPictureRendererRegistry}) and feeds it through the submit pipeline as vanilla's entity
+ * preview does. Below 26.1 the GUI matrix stack is a {@code PoseStack} and the scene is drawn straight
+ * into it; its depth is then cleared so later screen elements layer over the scene in submission order,
+ * as the offscreen blit does.
  *
  * <p>Client only.
  */

@@ -1,5 +1,6 @@
 package dev.golem.core.world;
 
+import dev.golem.core.Ids;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.core.registries.Registries;
@@ -56,6 +57,6 @@ public final class WorldTypes {
     }
 
     private static ResourceKey<MultiNoiseBiomeSourceParameterList> key(String id) {
-        return ResourceKey.create(Registries.MULTI_NOISE_BIOME_SOURCE_PARAMETER_LIST, dev.golem.core.Ids.parse(id));
+        return ResourceKey.create(Registries.MULTI_NOISE_BIOME_SOURCE_PARAMETER_LIST, Ids.parse(id));
     }
 }

@@ -3,10 +3,9 @@ package dev.golem.core.render;
 /**
  * Base render state for an entity renderer, mirroring {@link CompatRenderState} on the entity side.
  *
- * <p>26.1 renders entities in two passes — extract, then submit — and this is the object that carries
- * data between them, so there it must be a real {@code EntityRenderState}. Older versions have no such
- * split and no such type; there this is a plain class that {@link CompatEntityRenderer} allocates and
- * fills itself, which is what lets a renderer be written once against the two-pass shape.
+ * <p>26.1 renders entities in two passes, extract then submit, and this object carries data between them, so
+ * there it is a real {@code EntityRenderState}. Older versions have no such split; there this is a plain class
+ * that {@link CompatEntityRenderer} allocates and fills itself.
  */
 public class CompatEntityRenderState
         //? if >=26.1 {

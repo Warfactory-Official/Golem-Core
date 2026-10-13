@@ -22,7 +22,7 @@ public interface Instance {
      * Write the four float components of {@code InstanceColor} directly without ARGB byte
      * quantization. Use for materials that hijack {@code InstanceColor} as raw per-instance
      * data (e.g. {@link dev.golem.core.flywheel.Material#CUTOUT_CLIP_SLAB}'s slide offset
-     * in {@code rgb}). Skips the {@link #setVisible} restore-cache update — callers using
+     * in {@code rgb}). Skips the {@link #setVisible} restore-cache update. Callers using
      * raw color must re-write each frame, or avoid {@link #setVisible} toggles. Alpha must
      * stay positive on live instances; the dead-instance sentinel is {@code alpha <= 0}.
      */
@@ -31,7 +31,7 @@ public interface Instance {
     void setVisible(boolean visible);
 
     // Per-instance UV transform: texCoord = vert.uv * (scaleU, scaleV) + (offsetU, offsetV).
-    // Identity (0, 0, 1, 1) is the default — non-UV-animated visuals don't need to call this.
+    // Identity (0, 0, 1, 1) is the default. Non-UV-animated visuals don't need to call this.
     void setUV(float offsetU, float offsetV, float scaleU, float scaleV);
 
     // Convenience for sprite-sheet animation. Picks the (col, row) cell of an N×M frame grid

@@ -1,8 +1,11 @@
 package dev.golem.core.dejson;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -81,11 +84,11 @@ public final class DejsonMain {
 
         if (Files.exists(out)) {
             try (var paths = Files.walk(out)) {
-                paths.sorted(java.util.Comparator.reverseOrder()).forEach(path -> {
+                paths.sorted(Comparator.reverseOrder()).forEach(path -> {
                     try {
                         Files.delete(path);
-                    } catch (java.io.IOException failure) {
-                        throw new java.io.UncheckedIOException(failure);
+                    } catch (IOException failure) {
+                        throw new UncheckedIOException(failure);
                     }
                 });
             }
@@ -98,12 +101,12 @@ public final class DejsonMain {
     /**
      * Runs one declaring class: initialises it, then calls its static {@code declare()} if it has one.
      *
-     * <p>Initialising is itself a way to declare. A registration class whose fields chain declarations
+     * <p>Initialising is itself a way to declare: a registration class whose fields chain declarations
      * onto each registration ({@code block(...).model(...).loot(...)}) records them while its statics
-     * run, and has no {@code declare()} at all. Its registrations are only recorded, never flushed — there
-     * is no game here — so the one requirement is that its static initialiser reaches no Minecraft class
-     * that needs a bootstrapped game (a {@code SoundEvents} constant, a {@code BuiltInRegistries} lookup):
-     * keep those inside the factory and properties lambdas, where registration already defers them.
+     * run and has no {@code declare()}. Registrations are recorded, never flushed (there is no game), so
+     * its static initialiser must not reach a Minecraft class that needs a bootstrapped game (a
+     * {@code SoundEvents} constant, a {@code BuiltInRegistries} lookup). Keep those inside the factory
+     * and properties lambdas, which defer them.
      */
     private static void declare(String className) throws Exception {
         Class<?> type;

@@ -17,10 +17,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /**
  * Tells the instancing engine when a client block entity arrives and leaves.
  *
- * <p>Fabric publishes {@code ClientBlockEntityEvents} for exactly this; NeoForge publishes nothing, and
- * without it the engine holds a visualizer per declared machine and is never handed a single block
- * entity to build one from — which is silent, because the machine goes on drawing through the vanilla
- * renderer that instancing was meant to relieve.
+ * <p>Fabric publishes {@code ClientBlockEntityEvents} for exactly this; NeoForge publishes nothing.
+ * Without these hooks the engine holds a visualizer per declared machine but is never handed a block
+ * entity to build one from. That is silent: the machine keeps drawing through the vanilla renderer.
  *
  * <p>Three hooks, because a block entity can leave three ways. {@code setBlockEntity} is the one funnel
  * every arrival goes through, {@code addAndRegisterBlockEntity} included. {@code removeBlockEntity} is

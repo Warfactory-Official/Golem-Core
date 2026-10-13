@@ -1,5 +1,6 @@
 package dev.golem.core.client;
 
+import dev.golem.core.hook.Hook;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import net.minecraft.world.entity.Entity;
@@ -16,7 +17,7 @@ import net.minecraft.world.phys.Vec3;
  * caps the sky and cloud fog the way vanilla's own world fog (the boss-bar fog) does; below 26.1 it is the shader fog of
  * both the sky and the terrain pass. Nothing changes unless a modifier is {@link Modifier#active active}.
  *
- * <p>Linear only: Golem ships no override of vanilla's shader includes (user decision 2026-10-11: an override of
+ * <p>Linear only: Golem ships no override of vanilla's shader includes (an override of
  * {@code minecraft:shaders/include/fog.glsl} risks clashing with other mods and shader packs). A legacy exponential fog
  * ({@code GL_EXP}) is approximated by its caller with a linear fog ending where the exponential one is 95 % opaque
  * ({@code ln 20 / density}).
@@ -41,7 +42,7 @@ public final class Fogs {
     }
 
     /** Every listener, in phase order; register through the {@code on...} method or directly, with a phase. */
-    public static final dev.golem.core.hook.Hook<Modifier> MODIFIERS = dev.golem.core.hook.Hook.notifying();
+    public static final Hook<Modifier> MODIFIERS = Hook.notifying();
     private static boolean hooked;
 
     public static synchronized void addModifier(Modifier modifier) {

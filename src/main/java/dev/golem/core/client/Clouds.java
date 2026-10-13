@@ -1,5 +1,8 @@
 package dev.golem.core.client;
 
+import dev.golem.core.Ids;
+import dev.golem.core.platform.Platform;
+import dev.golem.core.render.CloudRendering;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -12,11 +15,10 @@ import net.minecraft.world.level.Level;
  * frame (none at all when the list is empty, see {@link #off}). Dimensions nobody registers keep vanilla's clouds.
  *
  * <p>Each {@link Layer} is drawn by the node's own vanilla cloud renderer with the layer's height, colour, alpha and
- * texture position: the same cloud texture, 12-block cells 4 blocks deep, the face shading (top 1, sides 0.9 / 0.8,
- * bottom 0.7), the depth pre-pass, the clouds render target under Fabulous, the cloud fog and the player's cloud setting
- * (fancy, fast, off) as vanilla's own clouds on that node. Vanilla's own drift ({@code ticks * 0.03} along x) is
- * <b>not</b> added: the layer's {@link Layer#shiftX shift} is the whole texture offset, so every node draws a layer at the
- * same place for the same inputs. Layers draw in list order.
+ * texture position, so it keeps vanilla's cloud texture, cells, face shading, depth pre-pass, Fabulous render target,
+ * fog and the player's cloud setting. Vanilla's own drift ({@code ticks * 0.03} along x) is <b>not</b> added: the
+ * layer's {@link Layer#shiftX shift} is the whole texture offset, so every node draws a layer at the same place for
+ * the same inputs. Layers draw in list order.
  *
  * <p>How each node is hooked ({@code dev.golem.core.render.CloudRendering}):
  * <ul>
@@ -69,10 +71,10 @@ public final class Clouds {
     public static void register(ResourceKey<Level> dimension, Provider provider) {
         Provider existing = PROVIDERS.putIfAbsent(dimension, provider);
         if (existing != null) {
-            throw new IllegalStateException("The clouds of " + dev.golem.core.Ids.keyId(dimension) + " are already drawn by "
+            throw new IllegalStateException("The clouds of " + Ids.keyId(dimension) + " are already drawn by "
                     + existing.getClass().getName() + "; one mod draws a dimension's clouds");
         }
-        if (dev.golem.core.platform.Platform.isClient()) dev.golem.core.render.CloudRendering.install(dimension);
+        if (Platform.isClient()) CloudRendering.install(dimension);
     }
 
     /** No clouds at all in {@code dimension} (1.7 {@code getCloudHeight()} of -99999). */

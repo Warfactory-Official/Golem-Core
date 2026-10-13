@@ -25,23 +25,20 @@ import java.util.function.Function;
 *///?}
 
 /**
- * The render type for a self-lit glow drawn over solid geometry — plasma, beams, flames.
- *
- * <p>It reproduces the state a 1.7/1.12 renderer sets by hand around such an effect:
+ * The render type for a self-lit glow drawn over solid geometry (plasma, beams, flames), with the state a 1.7
+ * renderer sets by hand:
  *
  * <ul>
- *   <li><b>{@code blendFunc(SRC_ALPHA, ONE)}</b> — <i>alpha-weighted</i> additive. Not the same as
- *       plain additive ({@code ONE/ONE}): the fragment alpha is what lets a vertex colour fade the
- *       glow in and out, so with plain additive a pulsing effect renders at constant full brightness.</li>
- *   <li><b>{@code depthMask(false)}</b> — depth is tested but not written, so several coincident
- *       layers can stack without z-fighting each other into a flicker.</li>
- *   <li><b>culling off</b> — a hollow shell is seen from the inside too.</li>
- *   <li><b>emissive / full-bright</b> — the effect lights itself.</li>
+ *   <li><b>{@code blendFunc(SRC_ALPHA, ONE)}</b>: alpha-weighted additive. Plain additive ({@code ONE/ONE}) would
+ *       ignore the fragment alpha, so a pulsing effect would render at constant full brightness.</li>
+ *   <li><b>{@code depthMask(false)}</b>: depth is tested but not written, so coincident layers do not z-fight.</li>
+ *   <li><b>culling off</b>: a hollow shell is seen from the inside too.</li>
+ *   <li><b>emissive / full-bright</b>: the effect lights itself.</li>
  * </ul>
  *
- * <p>No stock render type carries that exact combination on either era: 26.1's {@code energySwirl} is
- * additive but writes depth, and {@code eyes} neither weights by alpha nor leaves culling off. So the
- * pipeline is declared here, once, and memoized per texture.
+ * <p>No stock render type has that combination: 26.1's {@code energySwirl} is additive but writes depth, and
+ * {@code eyes} neither weights by alpha nor leaves culling off. The pipeline is declared here and memoized per
+ * texture.
  */
 public final class PlasmaGlowRenderType {
 
@@ -80,7 +77,7 @@ public final class PlasmaGlowRenderType {
     //?} else {
     /*/^*
      * Pre-26.1 there is no pipeline object; the same state is a {@code CompositeState}. {@code create}
-     * is protected on {@code RenderType}, hence the subclass — the long-standing way to declare one.
+     * is protected on {@code RenderType}, hence the subclass.
      ^/
     private static final class Factory extends RenderType {
         private Factory() { super(null, null, null, 0, false, false, null, null); }

@@ -33,7 +33,7 @@ public final class Skies {
         /*return level.getMoonPhase();
         *///?}
     }
-    // ======================================================================== sky modifiers
+    // Sky modifiers
 
     /**
      * A runtime change to how bright and what colour the sky is - the stand-in for a 1.7 {@code WorldProvider}

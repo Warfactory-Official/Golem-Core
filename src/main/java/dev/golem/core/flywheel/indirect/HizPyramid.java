@@ -19,26 +19,21 @@ import org.lwjgl.opengl.GL43;
 // (mip 0 covers the screen at half-resolution worst case). Rebuilt once per dispatchCullPass
 // from the vanilla MainRenderTarget depth attachment via the two compute shaders in
 // IndirectHizProgram (first pass + per-mip downsample). Cull samples it as sampler2D bound
-// to texture unit 0 — see golem_cull.csh for the projection-into-pyramid test.
+// to texture unit 0, see golem_cull.csh for the projection-into-pyramid test.
 //
-// Texture format & filtering:
-//   - GL_R32F, mipmapped, linear-magnify / linear-minify-linear (we sample by texelFetch so
-//     filtering is irrelevant at runtime, but a no-op default keeps Mojang's validators happy).
-//   - GL_NEAREST/CLAMP_TO_EDGE on the depth source — out-of-range gathers return 0 which is
-//     the cleared depth, which the conservative max keeps as the smallest depth seen.
+// GL_R32F, mipmapped. Sampling is by texelFetch, so filtering does not matter. The depth source
+// is GL_NEAREST/CLAMP_TO_EDGE: out-of-range gathers return 0 (the cleared depth), which the
+// conservative max keeps as the smallest depth seen.
 //
-// Resize strategy: re-allocate the whole texture on window-size change. The window check is
-// keyed on framebuffer width/height — if either differs from the recorded value we tear down
-// and rebuild. No partial reuse.
+// Resize: the whole texture is re-allocated when the framebuffer width or height differs from
+// the recorded value.
 //
 // Texture binds go through GlStateManager, never raw glActiveTexture/glBindTexture. blaze3d keeps
-// a per-unit cache of the bound texture and skips the GL call when the cache says the texture is
-// already bound; a raw bind leaves that cache naming the texture it replaced, so the next cached
-// "bind" of that texture is skipped and the parameters that follow it land on the pyramid. With
-// Sodium 0.9 on 26.1.2 that happened every few frames (2026-10-05, History §19em-hiz): the pyramid's
-// GL_TEXTURE_MAX_LEVEL was reset to 0, textureSize() in the cull read 0 for every mip above 0, and
-// every instance tested as occluded — machines drew nothing but their shadows until a backend
-// reset generated a new texture.
+// a per-unit cache of the bound texture and skips the GL call when the cache says it is already
+// bound; a raw bind leaves the cache naming the texture it replaced, so the next cached bind is
+// skipped and the parameters after it land on the pyramid. Symptom (Sodium 0.9, 26.1.2):
+// GL_TEXTURE_MAX_LEVEL reset to 0, textureSize() read 0 above mip 0, every instance tested as
+// occluded and machines drew only their shadows.
 public final class HizPyramid {
 
     private int textureId;
@@ -94,12 +89,12 @@ public final class HizPyramid {
 
         int depthHandle = ((GlTexture) depthTexture).glId();
 
-        // First pass: vanilla depth → mip 0. Bind depth to sampler unit 0, mip 0 to image unit 0.
+        // First pass: vanilla depth to mip 0. Bind depth to sampler unit 0, mip 0 to image unit 0.
         program.useFirst();
         bind(0, depthHandle);
-        // textureGather wants nearest filtering and the comparison mode disabled — Mojang may
-        // have left GL_TEXTURE_COMPARE_MODE on GL_COMPARE_REF_TO_TEXTURE for shadow sampling
-        // elsewhere, which would make gather return comparison results instead of raw depth.
+        // textureGather wants nearest filtering and the comparison mode off: Mojang may have left
+        // GL_TEXTURE_COMPARE_MODE on GL_COMPARE_REF_TO_TEXTURE for shadow sampling, which would
+        // make gather return comparison results instead of raw depth.
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL14.GL_TEXTURE_COMPARE_MODE, GL11.GL_NONE);

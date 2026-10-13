@@ -150,9 +150,9 @@ public final class IndirectDrawManager implements DrawManager {
         // flushAll fills the cull/draw inputs two ways: the scatter compute writes
         // descriptorBuffer, modelMetaBuffer, and indirectBuffer (SSBO stores), while instance
         // data is copied into objectBuffer with glCopyNamedBufferSubData (a buffer-update).
-        // Cull reads all of them, so the barrier must cover both write classes — SHADER_STORAGE
+        // Cull reads all of them, so the barrier must cover both write classes: SHADER_STORAGE
         // for the scatter stores, BUFFER_UPDATE for the copy. Without BUFFER_UPDATE, cull may
-        // observe the prior frame's objectBuffer on drivers that don't auto-sync copy→SSBO read.
+        // observe the prior frame's objectBuffer on drivers that don't auto-sync copy-to-SSBO read.
         GL42.glMemoryBarrier(GL43.GL_SHADER_STORAGE_BARRIER_BIT | GL42.GL_BUFFER_UPDATE_BARRIER_BIT);
 
         extractFrustumPlanes(state.viewProjection(), frustumPlanes);

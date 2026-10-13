@@ -1,5 +1,6 @@
 package dev.golem.core.world;
 
+import dev.golem.core.Ids;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,12 +23,12 @@ public final class Biomes {
 
     /** Creates a key for a datapack biome registry entry. */
     public static ResourceKey<Biome> key(String namespace, String path) {
-        return ResourceKey.create(Registries.BIOME, dev.golem.core.Ids.of(namespace, path));
+        return ResourceKey.create(Registries.BIOME, Ids.of(namespace, path));
     }
 
     /** The vanilla noise used by the legacy biome grass-colour overrides. */
     public static boolean legacyGrassColorNoise(double x, double z) {
-        return net.minecraft.world.level.biome.Biome.BIOME_INFO_NOISE.getValue(
+        return Biome.BIOME_INFO_NOISE.getValue(
                 x * 0.225D, z * 0.225D, false) < -0.1D;
     }
 

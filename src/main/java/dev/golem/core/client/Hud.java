@@ -15,7 +15,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
  * their own registries again. All a consumer wants to say is "draw this, on top".
  *
  * <p>The id is taken as namespace and path rather than an {@code Identifier} so this signature does not
- * have to be written twice for that reason as well — the graphics type alone already forces a split,
+ * have to be written twice for that reason as well. The graphics type alone already forces a split,
  * since {@code GuiGraphics} became {@code GuiGraphicsExtractor} when HUD drawing became an extract pass.
  *
  * <p>Client-only: never call this from common initialization.
@@ -60,10 +60,9 @@ public final class Hud {
      *
      * <p>26.1 composes the GUI by submission order, and 1.20.5+ separates every HUD layer by
      * {@code LayeredDraw.Z_SEPARATION}. 1.20.1 has neither: the whole HUD shares one depth buffer at raw z, and
-     * vanilla draws some of it well above zero — every chat line is translated to z 50 — so an overlay drawn
-     * afterwards at z 0 simply failed the depth test wherever the chat (or anything else raised) had been, and
-     * power-armour charge bars, which sit exactly where recent chat lines are, did not appear at all while chat
-     * was visible. Flushing and clearing depth before the layer reproduces "later is on top" exactly.
+     * every chat line is translated to z 50, so an overlay drawn afterwards at z 0 fails the depth test wherever
+     * chat is (power-armour charge bars vanish while chat is visible). Flushing and clearing depth before the
+     * layer reproduces "later is on top".
      */
     //? if >=26.1 {
     public static void draw(GuiGraphicsExtractor graphics, Consumer<GuiGraphicsExtractor> renderer) {

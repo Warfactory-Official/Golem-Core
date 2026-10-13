@@ -1,6 +1,8 @@
 package dev.golem.core.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import dev.golem.core.client.FrameTime;
+import dev.golem.core.hook.Hook;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import net.minecraft.client.Minecraft;
@@ -42,7 +44,7 @@ public final class Skyboxes {
     }
 
     /** Every listener, in phase order; register through the {@code on...} method or directly, with a phase. */
-    public static final dev.golem.core.hook.Hook<Skybox> SKYBOXES = dev.golem.core.hook.Hook.notifying();
+    public static final Hook<Skybox> SKYBOXES = Hook.notifying();
     private static float lastAngle;
     private static int lastPhase;
 
@@ -50,7 +52,7 @@ public final class Skyboxes {
         SKYBOXES.register(skybox);
     }
 
-    // ======================================================================== hooks (MixinSkyRender only)
+    // Hooks (MixinSkyRender only)
 
     /** Draws the first replacing skybox's celestial bodies; true when vanilla's must be skipped. */
     public static boolean celestial(PoseStack pose, float partialTick, float celestialAngle, int moonPhase) {
@@ -85,7 +87,7 @@ public final class Skyboxes {
 
     /** 26.1: the after-sky call, with the sun position {@link #celestial} recorded earlier in the same sky pass. */
     public static void afterSky() {
-        afterSky(new PoseStack(), dev.golem.core.client.FrameTime.partialTick(), lastAngle, lastPhase);
+        afterSky(new PoseStack(), FrameTime.partialTick(), lastAngle, lastPhase);
     }
 
     /** 26.1: whether vanilla will draw the dark disc after the sun, moon and stars this frame. */

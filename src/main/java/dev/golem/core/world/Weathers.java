@@ -1,5 +1,6 @@
 package dev.golem.core.world;
 
+import dev.golem.core.hook.Hook;
 import java.util.Map;
 import java.util.WeakHashMap;
 import net.minecraft.network.protocol.game.ClientboundGameEventPacket;
@@ -11,14 +12,13 @@ import org.jetbrains.annotations.Nullable;
  * dimension's rain and thunder itself (per planet, per world type, ...) set {@code worldObj.rainingStrength} and
  * {@code thunderingStrength} there every tick instead of letting the overworld's weather drive it.
  *
- * <p><b>Why vanilla cannot.</b> Every sky-lit level without a ceiling runs vanilla's weather cycle
+ * <p>Vanilla cannot do this: every sky-lit level without a ceiling runs vanilla's weather cycle
  * ({@code ServerLevel.advanceWeatherCycle}) from the server's single weather data (before 26.1 the overworld's level
- * data, which other dimensions see read-only), so rain in the overworld is rain in every such dimension. A
- * {@link Provider} answering for a level replaces that cycle for it: each level tick, in place of vanilla's, the level's
- * rain and thunder levels become the provider's and are sent to the level's players with vanilla's own packets
- * ({@code RAIN_LEVEL_CHANGE}, {@code THUNDER_LEVEL_CHANGE}, {@code START_RAINING} / {@code STOP_RAINING}), so everything
- * that reads the level's weather - the client's rain and sky, lightning, snow and ice, cauldrons, the sky darkening -
- * follows it. A level no provider answers for keeps vanilla's cycle.
+ * data, which other dimensions see read-only), so overworld rain is rain in every such dimension. A
+ * {@link Provider} answering for a level replaces that cycle for it: each level tick the level's rain and thunder
+ * levels become the provider's and are sent to the level's players with vanilla's own packets
+ * ({@code RAIN_LEVEL_CHANGE}, {@code THUNDER_LEVEL_CHANGE}, {@code START_RAINING} / {@code STOP_RAINING}), so
+ * everything that reads the level's weather follows. A level no provider answers for keeps vanilla's cycle.
  *
  * <p>The levels are set without vanilla's one-tick interpolation on the server ({@code setRainLevel}), which is how the
  * client receives them anyway. Hook: {@code MixinServerLevelWeather} (HEAD of {@code advanceWeatherCycle}).
@@ -37,7 +37,7 @@ public final class Weathers {
     }
 
     /** Every provider, in phase order; the first non-null answer wins. */
-    public static final dev.golem.core.hook.Hook<Provider> PROVIDERS = dev.golem.core.hook.Hook.notifying();
+    public static final Hook<Provider> PROVIDERS = Hook.notifying();
 
     /** The last levels sent per level, so a change is sent once (vanilla compares its previous-tick fields). */
     private static final Map<ServerLevel, float[]> SENT = new WeakHashMap<>();
@@ -56,7 +56,7 @@ public final class Weathers {
         return null;
     }
 
-    // ======================================================================== hook (MixinServerLevelWeather only)
+    // Hook (MixinServerLevelWeather only)
 
     /**
      * Runs a provider's weather for {@code level} in place of vanilla's cycle; false when no provider answers (vanilla

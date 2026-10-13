@@ -20,16 +20,16 @@ import org.jspecify.annotations.Nullable;
 *///?}
 
 /**
- * A cube-model ({@code ModelPart} tree) for a living entity, written once against 26.1's shape: the
- * model is built from a baked root and posed from a render state.
+ * A cube-model ({@code ModelPart} tree) for a living entity, written once against 26.1's shape: built from a
+ * baked root and posed from a render state.
  *
- * <p>26.1's {@code EntityModel} is exactly that. Older versions pose from the entity plus five loose
- * floats and draw through an abstract {@code renderToBuffer}; there this class owns the root itself,
- * copies vanilla's five floats into the bound state, and forwards to {@link #pose}. The bound state is
- * whichever {@link CompatMobRenderer} is currently drawing the model, set before vanilla's pass.
+ * <p>Older versions pose from the entity plus five loose floats and draw through an abstract
+ * {@code renderToBuffer}; there this class owns the root, copies vanilla's five floats into the bound state and
+ * forwards to {@link #pose}. The bound state is the one the {@link CompatMobRenderer} currently drawing the model
+ * set before vanilla's pass.
  *
- * <p>Every part's pose is reset before {@link #pose} runs, on both eras, so a model only ever writes
- * the rotations it animates.
+ * <p>Every part's pose is reset before {@link #pose} runs on both eras, so a model writes only the rotations it
+ * animates.
  *
  * @param <S> the render state the model reads
  */
@@ -47,7 +47,7 @@ public abstract class CompatEntityModel<S extends CompatLivingRenderState>
     @Nullable S bound;
     *///?}
 
-    /** A model drawn with the cutout, unculled entity type — vanilla's default for cube models. */
+    /** A model drawn with the cutout, unculled entity type (vanilla's default for cube models). */
     protected CompatEntityModel(ModelPart root) {
         //? if >=26.1 {
         super(root);

@@ -42,16 +42,11 @@ import net.minecraft.resources.ResourceLocation;
  *     1.12's per-frame put did.</li>
  * </ul>
  *
- * <p>Elytra wings. Every version draws a worn elytra with, in order: the player's own elytra skin texture (Mojang
- * profile {@code ELYTRA}); else the cape texture if the player has a cape and shows it; else the default elytra texture
- * (26.1 {@code WingsLayer.getPlayerElytraTexture} + the {@code elytra} equipment asset; 1.21.1 {@code ElytraLayer} with
- * {@code PlayerSkin.elytraTexture()/capeTexture()}; 1.20.1 {@code ElytraLayer} with
- * {@code getElytraTextureLocation()/getCloakTextureLocation()}). The wings sample the cape image's elytra region (the
- * {@code ElytraModel} box at {@code texOffs(22, 0)}, 10x20x2, on a 64x32 sheet: x 22..46, y 0..22; scaled for larger
- * capes). Capes made before the elytra, such as 1.7's, leave that region transparent, so a caped player's wings would be
- * invisible. Unless a cape is declared with {@link #declareElytraArt}, the installed entry therefore also names the default
- * elytra texture as the player's elytra skin (only where the profile has none), which is exactly what vanilla draws for
- * a player without a cape. The cape itself is unchanged.
+ * <p>Elytra: every version draws a worn elytra with the player's own elytra skin, else the cape texture if the player
+ * shows a cape, else the default elytra texture. The wings sample the cape image's elytra region ({@code ElytraModel}
+ * box at {@code texOffs(22, 0)}, 10x20x2, on a 64x32 sheet: x 22..46, y 0..22). Capes older than the elytra, such as
+ * 1.7's, leave that region transparent, so unless a cape is declared with {@link #declareElytraArt} the installed entry
+ * also names the default elytra texture as the player's elytra skin (only where the profile has none).
  *
  * <p>No mixin: the only obstacle on every version is the visibility of one field (AGENTS.md section 7, rung 3).
  * Client-only.

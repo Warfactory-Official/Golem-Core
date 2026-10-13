@@ -18,16 +18,15 @@ import net.minecraft.world.phys.Vec3;
 /**
  * An entity renderer written once against 26.1's extract/submit shape, on every version.
  *
- * <p>This is the entity-side counterpart to {@link CompatBER}, and the split it hides is the same one:
- * 26.1 renders in two passes — {@code extractRenderState} snapshots what the frame needs, {@code submit}
- * hands geometry to a collector the engine draws later — while older versions have a single
- * {@code render} that draws immediately into a {@code MultiBufferSource}. Subclasses implement the
- * two-pass form; below 26.1 this class runs both halves back to back and replays the submissions through
- * {@link RecordingSubmitSink}, which preserves {@link SubmitSink#order} rather than silently dropping it.
+ * <p>The entity-side counterpart to {@link CompatBER}. 26.1 renders in two passes: {@code extractRenderState}
+ * snapshots what the frame needs and {@code submit} hands geometry to a collector the engine draws later. Older
+ * versions have a single {@code render} that draws immediately into a {@code MultiBufferSource}. Subclasses
+ * implement the two-pass form; below 26.1 this class runs both halves back to back and replays the submissions
+ * through {@link RecordingSubmitSink}, which keeps {@link SubmitSink#order}.
  *
- * <p>Unlike {@code CompatBER} this is a class, not an interface, because on both eras it must *be* a
- * vanilla {@code EntityRenderer} — the registries take the concrete type, and its generic arity differs
- * between the eras, so the {@code extends} clause itself is version-split.
+ * <p>Unlike {@code CompatBER} this is a class, because it must be a vanilla {@code EntityRenderer}: the
+ * registries take the concrete type, and its generic arity differs between the eras, so the {@code extends}
+ * clause is version-split.
  *
  * @param <T> the entity type
  * @param <S> its render state
@@ -58,7 +57,7 @@ public abstract class CompatEntityRenderer<T extends Entity, S extends CompatEnt
 
     /**
      * Whether the entity's bounding box should be frustum-culled. An entity whose renderer draws far
-     * outside that box — a mushroom cloud, say — must answer false or it vanishes at the screen edge.
+     * outside that box (a mushroom cloud, say) must answer false or it vanishes at the screen edge.
      */
     public boolean culled(T entity) {
         return true;

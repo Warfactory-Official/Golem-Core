@@ -28,34 +28,29 @@ import org.jspecify.annotations.Nullable;
  * Per-slot work on what a player is carrying, resolved when a slot changes rather than re-derived
  * every time it is needed.
  *
- * <p>The obvious shape for "do something to every item a player carries" is a loop over the
- * inventory on a timer. It is also the expensive one: the answer for a slot is recomputed from
- * scratch on every pass even though the slot has not changed between passes, and the recomputation
- * is the whole cost — a tag walk, a registry lookup, a list fold. Forty-odd slots times every player
- * times every few ticks, on the server thread.
+ * <p>Looping over the inventory on a timer recomputes every slot's answer on every pass although the
+ * slot has not changed, and the recomputation (a tag walk, a registry lookup, a list fold) is the whole
+ * cost: forty-odd slots times every player times every few ticks, on the server thread.
  *
- * <p>This inverts it. A {@link Resolver} turns a stack into whatever the consumer needs to act on it
- * and runs <b>once per change</b>, off the server thread; the result is memoised per slot. The
- * {@link Application} runs on the server thread at the consumer's cadence and does nothing but walk
- * the memo. Both halves stay small, and neither repeats the other's work.
+ * <p>Here a {@link Resolver} turns a stack into whatever the consumer needs to act on it and runs
+ * <b>once per change</b>, off the server thread; the result is memoised per slot. The
+ * {@link Application} runs on the server thread at the consumer's cadence and only walks the memo.
  *
- * <p><b>Where the changes come from.</b> Vanilla already computes them: {@code AbstractContainerMenu}
- * compares each slot against its own last-sent copy every tick and notifies its
- * {@link ContainerListener}s about the ones that differ. The comparison is by value, so a component
- * or NBT edit counts as a change, not only a swap. {@link MenuWatch} is that listener; the
- * {@code ServerPlayer} mixin installs one on every menu the player opens. Only the player's own
- * inventory slots are taken, and only the open menu broadcasts — so while a foreign menu is open the
- * player's own menu is polled here, which is the only way armour and offhand edits are seen.
+ * <p><b>Where the changes come from.</b> {@code AbstractContainerMenu} compares each slot against its
+ * last-sent copy every tick and notifies its {@link ContainerListener}s of the ones that differ. The
+ * comparison is by value, so a component or NBT edit counts, not only a swap. {@link MenuWatch} is that
+ * listener; the {@code ServerPlayer} mixin installs one on every menu the player opens. Only the
+ * player's own inventory slots are taken, and only the open menu broadcasts, so while a foreign menu is
+ * open the player's own menu is polled here, which is the only way armour and offhand edits are seen.
  *
  * <p><b>Threading.</b> The stack handed to a listener is the menu's private copy, replaced and never
  * mutated on the next change, so it is safe to read after the tick that produced it. Resolution runs
- * on the common pool with one batch in flight at a time, and the memo is published by an array
- * swap. A resolver must therefore be pure with respect to game state: it may read the stack it is
- * given and immutable registries, and nothing else.
+ * on the common pool with one batch in flight at a time, and the memo is published by an array swap.
+ * A resolver must therefore be pure with respect to game state: it may read the stack it is given and
+ * immutable registries, and nothing else.
  *
- * <p>The memo holds the item the answer was resolved for. If the live slot no longer holds that
- * item the entry is skipped rather than used, so the worst a lagging memo can do is miss a tick —
- * never apply the wrong answer to the wrong stack.
+ * <p>The memo holds the item the answer was resolved for. If the live slot does not hold that item the
+ * entry is skipped, so a lagging memo can miss a tick but never applies the wrong answer to a stack.
  */
 public final class InventoryScan<T> {
 
@@ -96,7 +91,7 @@ public final class InventoryScan<T> {
     /**
      * Writes are locked and reads are not: a write is one slot edit away from another and costs an
      * array copy either way, while the read is the hazard tick's own loop. What the lock buys is that
-     * two of the rare writers — the resolve batch and a caller asking for an immediate pass — cannot
+     * two of the rare writers (the resolve batch and a caller asking for an immediate pass) cannot
      * lose each other's slot.
      */
     private static final class Memo<T> {
@@ -181,7 +176,7 @@ public final class InventoryScan<T> {
     }
 
     /**
-     * Declares every memoised answer out of date — what a consumer calls when the data its resolver
+     * Declares every memoised answer out of date: what a consumer calls when the data its resolver
      * reads has changed. The re-resolve is queued rather than done here: a batch may be in flight,
      * and replacing the memo underneath it would leave whatever that batch writes unreachable.
      */
@@ -268,8 +263,8 @@ public final class InventoryScan<T> {
     }
 
     /**
-     * Only the open menu broadcasts, and no menu but the player's own carries armour and offhand —
-     * so a player standing at a chest would never report a boot swap. Suppressed remote updates keep
+     * Only the open menu broadcasts, and no menu but the player's own carries armour and offhand.
+     * A player standing at a chest would never report a boot swap. Suppressed remote updates keep
      * this from sending the client a second copy of a menu it is not looking at.
      */
     private static void pollOwnMenu(ServerPlayer player) {

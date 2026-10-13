@@ -27,9 +27,9 @@ import java.util.function.Function;
  *
  * <p>Vanilla binds its own {@code enchanted_glint_item} sheet to every glint type, animates it with a fixed
  * texture matrix, and its glint shader reads no vertex colour. A 1.7 renderer that tinted its glint with
- * {@code glColor} and scrolled it with its own matrix or its own UVs therefore needs all three freed: the colour
- * goes into the sheet (the blend multiplies by the source, so a sheet pre-multiplied by the colour is the tinted
- * sheet), and the scrolling into the UVs the caller writes.
+ * {@code glColor} and scrolled it with its own matrix therefore needs all three freed: the colour goes into the
+ * sheet (the blend multiplies by the source, so a pre-multiplied sheet is the tinted sheet) and the scrolling
+ * into the caller's UVs.
  *
  * <p>Two blends. {@code additive = false} is vanilla's and 1.7's 3D glint, {@code SRC_COLOR, ONE}; {@code true}
  * is {@code ONE, ONE}, which is 1.7's flat inventory glint ({@code DST_ALPHA, ONE} over an opaque slot).

@@ -18,16 +18,12 @@ import java.util.List;
  * {@link SubmitSink} for versions without the submit pipeline: records submissions during the pass and
  * draws them into a {@code MultiBufferSource} at the end.
  *
- * <p>Drawing eagerly would be simpler, but it would silently discard {@link SubmitSink#order}: before
- * 26.1 geometry reaches the buffer source in call order, with no way to say "draw this after that".
- * Recording and replaying sorted by order reproduces 26.1's observable result. The sort is stable, so
- * submissions sharing an order keep their relative sequence — which is what an eager implementation
- * would have given, making order 0 alone behave exactly like immediate drawing.
+ * <p>Drawing eagerly would discard {@link SubmitSink#order}: before 26.1 geometry reaches the buffer source in
+ * call order. Replaying sorted by order reproduces 26.1's result. The sort is stable, so submissions sharing an
+ * order keep their sequence and order 0 alone behaves like immediate drawing.
  *
- * <p>The pose is <b>copied</b> at submit time, not referenced. {@link PoseStack#last()} returns the live
- * top {@code Pose} and the transform methods mutate it in place, so holding the reference would draw
- * every entry with the stack's final state — and callers routinely keep transforming, and pop, before
- * the flush happens.
+ * <p>The pose is <b>copied</b> at submit time. {@link PoseStack#last()} returns the live top {@code Pose} and
+ * the transform methods mutate it in place, and callers keep transforming and popping before the flush.
  ^/
 public final class RecordingSubmitSink implements SubmitSink {
 
@@ -85,11 +81,10 @@ public final class RecordingSubmitSink implements SubmitSink {
 
     @Override
     public void submitCustomGeometry(PoseStack poseStack, RenderType renderType, CustomGeometry geometry) {
-        // copy(), not last(). PoseStack.last() hands back the LIVE top Pose, and translate/mulPose/scale
-        // mutate it in place — so keeping the reference means every entry recorded at the same stack
-        // level is drawn with whatever that pose held when the batch was finally flushed, not with the
-        // transform it was submitted under. A renderer that accumulates joint transforms between
-        // submissions (the assembly machine's arms) therefore drew its parts on top of each other.
+        // Copy, never keep last(): it is the LIVE top Pose and translate/mulPose/scale mutate it, so a
+        // kept reference draws every entry at that stack level with the pose held at flush time. A
+        // renderer that accumulates joint transforms between submissions (the assembly machine's
+        // arms) would draw its parts on top of each other.
         PoseStack.Pose pose = poseStack.last();
         sink().add(new GeometryEntry(order, new Matrix4f(pose.pose()), new Matrix3f(pose.normal()), renderType, geometry));
     }

@@ -1,5 +1,9 @@
 package dev.golem.core.client;
 
+import dev.golem.core.hook.Hook;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Predicate;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 
@@ -13,22 +17,19 @@ import net.minecraft.client.multiplayer.ClientLevel;
  * to 255, as 1.7's {@code if (color > 255) color = 255}. Additions are whole numbers, so the result is the same integer
  * colour on every node.
  *
- * <p>How it is applied: 26.1 computes the light map on the GPU ({@code Lightmap.render}); right after vanilla's pass,
- * a second pass draws each cell's addition into the light-map texture with additive blending
- * ({@code golemcore:core/lightmap_tint}). Before 26.1 the light map is a CPU image; the additions are made to its pixels
- * just before it is uploaded ({@code LightTexture.updateLightTexture}). Both only when vanilla updated the light map
- * that frame, and only while a modifier is {@link Modifier#active active}. Hook: {@code MixinLightmapTint}.
+ * <p>26.1 computes the light map on the GPU ({@code Lightmap.render}); right after vanilla's pass, a second pass draws
+ * each cell's addition into the light-map texture with additive blending ({@code golemcore:core/lightmap_tint}).
+ * Before 26.1 the light map is a CPU image and the additions are made to its pixels just before upload
+ * ({@code LightTexture.updateLightTexture}). Both run only when vanilla updated the light map that frame and a
+ * modifier is {@link Modifier#active active}. Hook: {@code MixinLightmapTint}.
  *
- * <p><b>The classic formula</b> ({@link #useClassicFormula}): 26.1 rewrote the light map - the sky light is
- * {@code SkyLightColor * factor} with no 3 % floor, the gamma curve scales by the brightest channel instead of each
- * channel, block light uses {@code 1.4 + flicker} and a tint, and the final 4 % lerp to grey is gone - so the same sky
- * brightness lights a block far darker on 26.1 than on 1.20.1/1.21.1 (a 1.7 moon at night: (6, 6, 12) against
- * (38, 38, 60)). Pre-26.1 light maps are 1.7's {@code EntityRenderer.updateLightmap}, term by term. For a level a mod
- * registers, 26.1 then draws the pre-26.1 formula's cells itself, computed on the CPU exactly as
- * {@code LightTexture.updateLightTexture} does (with the modifiers' additions), over vanilla's pass; the sky brightness is
- * {@link dev.golem.core.world.Skies#clientSkyLight}. Before 26.1 it is a no-op: vanilla already computes that formula.
- * Not reproduced: Forge's {@code adjustLightmapColors} and the forced-bright (Nether-like) map, neither of which a
- * registering level uses.
+ * <p><b>The classic formula</b> ({@link #useClassicFormula}): 26.1 rewrote the light map (sky light without the 3 %
+ * floor, a per-brightest-channel gamma curve, different block light, no final 4 % lerp to grey), so the same sky
+ * brightness lights a block far darker than on 1.20.1/1.21.1. Pre-26.1 light maps follow 1.7's
+ * {@code EntityRenderer.updateLightmap} term by term. For a level a mod registers, 26.1 draws the pre-26.1
+ * formula's cells itself on the CPU, as {@code LightTexture.updateLightTexture} does, with the modifiers'
+ * additions, over vanilla's pass; the sky brightness is {@link dev.golem.core.world.Skies#clientSkyLight}. Before
+ * 26.1 it is a no-op. Not reproduced: Forge's {@code adjustLightmapColors} and the forced-bright (Nether-like) map.
  */
 public final class Lightmaps {
 
@@ -46,26 +47,26 @@ public final class Lightmaps {
     }
 
     /** Every listener, in phase order. */
-    public static final dev.golem.core.hook.Hook<Modifier> MODIFIERS = dev.golem.core.hook.Hook.notifying();
+    public static final Hook<Modifier> MODIFIERS = Hook.notifying();
 
     public static void register(Modifier modifier) {
         MODIFIERS.register(modifier);
     }
 
-    private static final java.util.List<java.util.function.Predicate<ClientLevel>> CLASSIC = new java.util.concurrent.CopyOnWriteArrayList<>();
+    private static final List<Predicate<ClientLevel>> CLASSIC = new CopyOnWriteArrayList<>();
 
     /**
      * The levels whose light map is the pre-26.1 (1.7-shaped) formula on every node; see the class comment. For levels
      * whose sky light a mod already states in 1.7's terms ({@link dev.golem.core.world.Skies.Modifier#skyLight}).
      */
-    public static void useClassicFormula(java.util.function.Predicate<ClientLevel> levels) {
+    public static void useClassicFormula(Predicate<ClientLevel> levels) {
         CLASSIC.add(levels);
     }
 
     /** Whether {@code level}'s light map follows the classic formula ({@link #useClassicFormula}). */
     public static boolean classic(ClientLevel level) {
         if (level == null) return false;
-        for (java.util.function.Predicate<ClientLevel> p : CLASSIC) if (p.test(level)) return true;
+        for (Predicate<ClientLevel> p : CLASSIC) if (p.test(level)) return true;
         return false;
     }
 
@@ -181,7 +182,7 @@ public final class Lightmaps {
         return null;
     }
 
-    // ======================================================================== per-version application
+    // Per-version application
 
     //? if >=26.1 {
     private static final com.mojang.blaze3d.pipeline.RenderPipeline PIPELINE =

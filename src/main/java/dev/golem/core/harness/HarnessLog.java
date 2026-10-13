@@ -71,9 +71,7 @@ final class HarnessLog {
      * Of the last {@code count} lines, those matching {@code regex} (all of them when empty). With {@code since >= 0}
      * (a {@code total} an earlier answer gave, i.e. a client's log mark) only lines logged at or after that running index
      * are considered, still at most the last {@code count}. The lines and {@code total} are read under one lock, so a
-     * client's "since the mark" read cannot lose its first lines to lines logged between two queries (it did: a
-     * scenario that marked, right-clicked and then read lost the right-click's sound line whenever a geiger click was
-     * logged between its "how many lines now" and "give me the last N lines" queries).
+     * "since the mark" read cannot lose its first lines to lines logged between two queries.
      */
     static JsonObject tail(int count, String regex, long since) {
         Pattern pattern = regex == null || regex.isEmpty() ? null : Pattern.compile(regex);

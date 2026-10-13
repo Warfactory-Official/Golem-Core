@@ -12,9 +12,9 @@ import net.minecraft.resources.Identifier;
 import org.lwjgl.opengl.GL20;
 import org.lwjgl.opengl.GL43;
 
-// Owns the two HiZ build compute programs (vanilla depth → mip 0, and mip k → mip k+1) used
-// by HizPyramid.rebuild. Same compile/link/cache pattern as IndirectComputeProgram — Mojang's
-// pipeline doesn't manage compute, so we go raw GL.
+// Owns the two HiZ build compute programs (vanilla depth to mip 0, and mip k to mip k+1) used
+// by HizPyramid.rebuild. Same compile/link/cache pattern as IndirectComputeProgram.
+// Mojang's pipeline doesn't manage compute, so we go raw GL.
 public final class IndirectHizProgram {
 
     private static final Identifier FIRST_SHADER = Identifier.fromNamespaceAndPath(GolemCore.MOD_ID, "shaders/core/golem_hiz_first.csh");

@@ -14,22 +14,21 @@ import net.minecraft.client.renderer.entity.RenderLayerParent;
  * <li><b>The hook.</b> NeoForge and Forge only accept layers inside a mod-bus {@code AddLayers} event,
  *     so registration is deferred onto that bus exactly as {@code KeyMappings} defers key bindings.
  *     fabric-api instead fires a callback per living renderer as the renderers are built.
- * <li><b>The fabric-api entry point was renamed.</b> Through 1.21.1 it is
- *     {@code LivingEntityFeatureRendererRegistrationCallback}; the 26.x line dropped that class and
- *     replaced it with {@code LivingEntityRenderLayerRegistrationCallback}. Same four arguments, same
- *     helper, different name — a straight rename, not a behaviour change.
- * <li><b>Player renderers are not in the entity-type map</b> on any loader, so they have to be walked
- *     separately — and that side keyed its map differently three times: {@code String} on Forge 1.20.1,
- *     {@code PlayerSkin.Model} on NeoForge 1.21.1, {@code PlayerModelType} on 26.1, which also split
- *     mannequins into a map of their own.
+ * <li><b>The fabric-api entry point name.</b> Through 1.21.1 it is
+ *     {@code LivingEntityFeatureRendererRegistrationCallback}; the 26.x line has
+ *     {@code LivingEntityRenderLayerRegistrationCallback}. Same four arguments, same helper.
+ * <li><b>Player renderers are not in the entity-type map</b> on any loader, so they are walked
+ *     separately, and that map is keyed three ways: {@code String} on Forge 1.20.1,
+ *     {@code PlayerSkin.Model} on NeoForge 1.21.1, {@code PlayerModelType} on 26.1, which also keeps
+ *     mannequins in a map of their own.
  * </ul>
  *
- * <p>The entity types themselves are walked from {@code BuiltInRegistries.ENTITY_TYPE} rather than from
- * the event, because Forge 1.20.1's {@code AddLayers} exposes no {@code getEntityTypes()} — the registry
- * is the one enumeration all six nodes agree on.
+ * <p>The entity types are walked from {@code BuiltInRegistries.ENTITY_TYPE} rather than from the event,
+ * because Forge 1.20.1's {@code AddLayers} exposes no {@code getEntityTypes()}; the registry is the one
+ * enumeration all six nodes share.
  *
- * <p>Only renderers whose model is a {@link HumanoidModel} are offered to the factory — a layer posing
- * against {@link HumanoidPose} has nothing to attach itself to otherwise.
+ * <p>Only renderers whose model is a {@link HumanoidModel} are offered to the factory: a layer posing
+ * against {@link HumanoidPose} has nothing to attach to otherwise.
  *
  * <p>Client-only: never call this from common initialization.
  */
@@ -112,14 +111,13 @@ public final class HumanoidLayers {
     /**
      * How many renderers have actually received a layer, across every {@link #register} call.
      *
-     * <p>This is logged rather than left implicit because "no error appeared" says nothing here: a
-     * layer attached to zero renderers — the wrong event, a renderer map that was empty at the time,
-     * a model that turned out not to be humanoid — draws nothing and throws nothing. The count is the
-     * positive signal to read in the client log. Expect a number in the low tens on a vanilla game.
+     * <p>The count is the positive signal to read in the client log: a layer attached to zero renderers
+     * (the wrong event, an empty renderer map, no humanoid model) draws nothing and throws nothing.
+     * Expect a number in the low tens on a vanilla game.
      *
      * <p>It is exposed rather than logged here because the loaders differ on when a batch <i>ends</i>:
      * the mod-bus event hands over every renderer at once, while fabric-api fires its callback once per
-     * renderer with no completion signal. The caller logs it when it has somewhere sensible to.
+     * renderer with no completion signal.
      */
     private static int attached;
 
@@ -146,21 +144,20 @@ public final class HumanoidLayers {
      *
      * <p>Only the mod-bus loaders need this. {@code LivingEntityRenderer#addLayer} is {@code protected}
      * in vanilla and made {@code public} by the Forge/NeoForge patches, so on Fabric it is unreachable
-     * from here — which is fine, because there the registration helper fabric-api hands to the callback
-     * does the attaching itself. Calling it unconditionally is what made all three Fabric nodes fail to
-     * compile while all three patched ones passed.
+     * from here. That is fine: there the registration helper fabric-api hands to the callback attaches
+     * the layer itself. Calling it unconditionally does not compile on the Fabric nodes.
      */
     //? if forge {
     /*/^*
      * Forge 1.20.1's {@code getRenderer} is not safe to call for an arbitrary entity type: its body is
      * a bare {@code checkcast} to {@code LivingEntityRenderer} on the map lookup, so asking it about
-     * any type whose renderer is not one — {@code minecraft:marker} and friends get a {@code
-     * NoopRenderer} — throws {@code ClassCastException} from inside Forge, before {@link #build}'s
+     * any type whose renderer is not one ({@code minecraft:marker} and friends get a {@code
+     * NoopRenderer}) throws {@code ClassCastException} from inside Forge, before {@link #build}'s
      * {@code instanceof} guard ever sees the value.
      *
      * <p>There is no way to ask first: the renderer map is private and the event exposes no
-     * {@code getEntityTypes()}. So the cast failure IS the test — it means precisely "not a living
-     * renderer", which is the set we want to skip. NeoForge returns the value without casting, and
+     * {@code getEntityTypes()}. So the cast failure IS the test: it means "not a living renderer",
+     * the set to skip. NeoForge returns the value without casting, and
      * fabric-api hands over only living renderers, so neither needs this.
      ^/
     private static Object rendererOrNull(net.minecraftforge.client.event.EntityRenderersEvent.AddLayers event,

@@ -6,7 +6,7 @@ package dev.golem.core.registry;
  *
  * <p>Not generic, unlike ntm-next's: a bundle here only ever reads the handle's id, and a non-generic type
  * keeps {@code Presets.cubeAll(t).viaItemModel()} chainable without type witnesses. A member's difference
- * is an ARGUMENT to the bundle, never a second statement after it — Dejson registers a surface once.
+ * is an ARGUMENT to the bundle, never a second statement after it. Dejson registers a surface once.
  */
 @FunctionalInterface
 public interface Preset {

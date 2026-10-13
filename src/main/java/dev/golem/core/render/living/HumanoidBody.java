@@ -19,7 +19,7 @@ import net.minecraft.client.renderer.RenderType;
  * so a mod names the body and never spells its type argument.
  *
  * <p>The zombie and skeleton bodies are 26.1's {@code ZombieModel} over vanilla's zombie and skeleton
- * layers — both arms held out when aggressive. Below 26.1 {@code ZombieModel} demands a {@code Zombie}
+ * layers, both arms held out when aggressive. Below 26.1 {@code ZombieModel} demands a {@code Zombie}
  * entity, so the same pose is applied through {@code AnimationUtils#animateZombieArms}, which is the
  * routine {@code ZombieModel} itself calls there.
  *
@@ -43,7 +43,7 @@ public final class HumanoidBody<T extends net.minecraft.world.entity.Mob> {
     *///?}
 
     /**
-     * A bare biped baked from {@code layer} — {@code HumanoidModel.createMesh} at the sheet size the
+     * A bare biped baked from {@code layer}: {@code HumanoidModel.createMesh} at the sheet size the
      * skin was drawn for.
      *
      * @param translucent whether the skin blends rather than alpha-tests, for a ghost
@@ -66,7 +66,7 @@ public final class HumanoidBody<T extends net.minecraft.world.entity.Mob> {
         return undead(context.bakeLayer(ModelLayers.ZOMBIE));
     }
 
-    /** Vanilla's skeleton body — the thin-armed sheet — posed like a zombie's, which is 1.7's ModelSkeletonNT. */
+    /** Vanilla's skeleton body (the thin-armed sheet) posed like a zombie's, which is 1.7's ModelSkeletonNT. */
     public static <T extends net.minecraft.world.entity.Mob> HumanoidBody<T> skeleton(EntityRendererProvider.Context context) {
         return undead(context.bakeLayer(ModelLayers.SKELETON));
     }

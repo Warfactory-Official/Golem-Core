@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 /^*
  * 1.20.1: every living entity has the backported physics attributes ({@link LegacyPhysics}), created on first use.
  *
- * <p>Why a mixin (§7). The attributes must exist on every living entity, vanilla and modded. Rung 1, vanilla: an
+ * <p>Why a mixin. The attributes must exist on every living entity, vanilla and modded. Rung 1, vanilla: an
  * entity's attribute supplier is built by {@code DefaultAttributes} during bootstrap, before any mod can register an
  * attribute, so the supplier cannot list them. Rung 2, loaders: Forge's {@code EntityAttributeModificationEvent} covers
  * Forge only; Fabric has no way to add an attribute to another mod's or vanilla's supplier. Rung 3: visibility is not the

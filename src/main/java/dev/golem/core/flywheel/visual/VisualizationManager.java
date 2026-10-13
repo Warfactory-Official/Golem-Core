@@ -156,11 +156,11 @@ public final class VisualizationManager {
     /**
      * Runs every visual that has to publish before the asynchronous backend work starts.
      *
-     * <p>All three managers, not just entities: a {@link SynchronousDynamicVisual} is deliberately not
+     * <p>All three managers, not just entities: a {@link SynchronousDynamicVisual} is not
      * a {@link DynamicVisual}, so it has no frame plan and this walk is its <em>only</em> route to
-     * {@code beginFrame}. Walking entities alone left every synchronous block entity — which is what a
-     * declared model is — holding instances it never wrote, drawing correctly through its vanilla
-     * renderer and reporting nothing wrong.
+     * {@code beginFrame}. Walking entities alone would leave every synchronous block entity (which is
+     * what a declared model is) holding instances it never wrote, drawing through its vanilla renderer
+     * with no error.
      */
     public void runFrameSynchronous(DynamicVisual.Context context) {
         beginSynchronous(blockEntities, context);

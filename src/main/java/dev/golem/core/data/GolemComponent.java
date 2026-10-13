@@ -5,10 +5,14 @@ import dev.golem.core.GolemCore;
 import dev.golem.core.Ids;
 import dev.golem.core.registry.DeferredRegister;
 import dev.golem.core.registry.RegistryObject;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import net.minecraft.nbt.CompoundTag;
@@ -37,16 +41,15 @@ public final class GolemComponent<T> {
     /**
      * Every component id declared through this facade, in declaration order.
      *
-     * <p>A component's id is a string in the places that name one from data — a recipe matching an
-     * ingredient on {@code hbm:item_variant}, or handing {@code hbm:heat} to its result — and below
-     * 1.20.5 there is no component registry for such a name to be wrong against. This is what a
-     * consumer can hold those names up to on every target.
+     * <p>Data names components by string (a recipe matching an ingredient on a component, or handing one
+     * to its result). Below 1.20.5 there is no component registry to check such a name against, so this
+     * set is what a consumer validates against on every target.
      */
-    private static final java.util.Set<String> KEYS =
-            java.util.Collections.synchronizedSet(new java.util.LinkedHashSet<>());
+    private static final Set<String> KEYS =
+            Collections.synchronizedSet(new LinkedHashSet<>());
 
     /** Every declared component by its id, for {@link #legacyJson}. */
-    private static final Map<String, GolemComponent<?>> BY_KEY = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final Map<String, GolemComponent<?>> BY_KEY = new ConcurrentHashMap<>();
 
     private final String key;
     //? if >=1.21.1 {
@@ -167,8 +170,7 @@ public final class GolemComponent<T> {
      * As {@link #of(String, String, Codec)}, with a codec that is read only when first needed:
      * {@code of(ns, "box", () -> ItemContents.CODEC)}. Use it for a codec built on registry-backed codecs
      * ({@code ItemStack.CODEC}, ...): on 1.20.1 initialising one outside a bootstrapped game fails, and a
-     * registration class that declares the component must still initialise in a plain JVM. The component
-     * is declared and registered at this call, exactly as with the eager form.
+     * registration class that declares the component must initialise in a plain JVM.
      */
     public static <T> GolemComponent<T> of(String namespace, String name, Supplier<Codec<T>> codec) {
         return new GolemComponent<>(namespace, name, Objects.requireNonNull(codec));

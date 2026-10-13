@@ -14,19 +14,19 @@ import java.util.Map;
  *
  * <p>Three of these families carry no decision at all: a block that packs from nine of something,
  * the same block unpacking back into nine, and a furnace turning one item into another are each a
- * fixed arrangement around two ids. The rest do carry a decision — a pattern somebody chose, with
- * ingredients somebody balanced — and this vocabulary is built so that the decision is all that is
+ * fixed arrangement around two ids. The rest do carry a decision: a pattern somebody chose, with
+ * ingredients somebody balanced. This vocabulary is built so that the decision is all that is
  * left at the call site. {@code shaped} takes the pattern and the symbols and nothing else; the
  * type, the category and the punctuation are the declaration's to supply.
  *
  * <p>Every shape the emitted file can take is checked here rather than at load: a pattern wider
  * than three, a ragged one, a symbol the key does not define, a key symbol the pattern never uses.
- * Those are the mistakes a hand-written recipe made silently — the file parsed, the recipe simply
- * never appeared in the book — and they are decidable from the declaration alone.
+ * Those are silent mistakes in a hand-written recipe (the file parses, the recipe never appears in
+ * the book) and they are decidable from the declaration alone.
  *
- * <p>The recipe id is passed rather than derived. Recipe ids are visible — the recipe book
- * remembers them, JEI bookmarks them, {@code /recipe} names them — so a migration that renamed them
- * would be a migration that reset people's progress.
+ * <p>The recipe id is passed rather than derived. Recipe ids are visible: the recipe book
+ * remembers them, JEI bookmarks them and {@code /recipe} names them, so renaming one resets
+ * people's progress.
  */
 public final class Crafting {
 
@@ -71,7 +71,7 @@ public final class Crafting {
         return smelt(namespace, id, ingredient, result, experience, 1);
     }
 
-    /** The same, yielding more than one — a crystal smelting down into several ingots. */
+    /** The same, yielding more than one: a crystal smelting down into several ingots. */
     public static JsonObject smelt(String namespace, String id, String ingredient, String result,
                                    double experience, int count) {
         JsonObject recipe = cooking("minecraft:smelting", id, experience);
@@ -83,7 +83,7 @@ public final class Crafting {
     /**
      * A shaped recipe: a pattern, one ingredient per symbol used in it, and a result.
      *
-     * <p>The symbols follow the pattern as alternating pairs, the way the file spells them —
+     * <p>The symbols follow the pattern as alternating pairs, the way the file spells them:
      * {@code rows("SSS", " C ", " C "), "S", "hbm:plate_steel", "C", "#c:ingots/copper"}.
      */
     public static JsonObject shaped(String namespace, String id, String result,
@@ -204,7 +204,7 @@ public final class Crafting {
     /**
      * A shapeless recipe that carries one ingredient's components over to the result.
      *
-     * <p>{@code copyFrom} names which of the ingredients is the one carried — the empty rod a fuel
+     * <p>{@code copyFrom} names which of the ingredients is the one carried: the empty rod a fuel
      * rod is assembled in, whose remaining state has to survive the assembly.
      */
     public static JsonObject copyShapeless(String namespace, String id, String result,
@@ -232,9 +232,9 @@ public final class Crafting {
     /**
      * A recipe that is only a type.
      *
-     * <p>A few recipes are a program rather than an arrangement — what they match and what they
-     * produce is decided in Java — and the file exists only to put the serialiser in front of the
-     * recipe manager. There is nothing else to declare about them.
+     * <p>A few recipes are a program rather than an arrangement: what they match and what they
+     * produce is decided in Java, and the file only puts the serialiser in front of the
+     * recipe manager.
      */
     public static JsonObject special(String namespace, String id, String type) {
         Models.requireId(type, "recipe type");
@@ -368,7 +368,7 @@ public final class Crafting {
      * ones it has to be without, and what is left behind when it is consumed.
      *
      * <p>The remainder is how a recipe takes the contents of a container without taking the
-     * container — a cell of deuterium is spent, and the empty cell stays in the grid.
+     * container: a cell of deuterium is spent, and the empty cell stays in the grid.
      */
     public static final class Ingredient {
 

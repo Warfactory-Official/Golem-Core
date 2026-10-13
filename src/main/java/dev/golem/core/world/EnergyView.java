@@ -23,7 +23,7 @@ public interface EnergyView {
     long amount();
 
     /**
-     * Capacity, as a hint only — every one of these APIs permits a handler to over- or under-state
+     * Capacity, as a hint only: every one of these APIs permits a handler to over- or under-state
      * what an insert will actually accept.
      */
     long capacity();

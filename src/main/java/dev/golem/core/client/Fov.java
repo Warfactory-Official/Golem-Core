@@ -41,12 +41,11 @@ public final class Fov {
 
     /**
      * The field of view, in degrees, the level is drawn with this frame: the options' FOV after vanilla's dynamic
-     * modifier (sprinting, speed and slowness, a drawn bow, scoping), the death and under-fluid narrowing, the
-     * loaders' FOV events and {@link #register}'s callback - 1.7's {@code EntityRenderer.getFOVModifier(partialTicks,
-     * true)}. 26.1 keeps it on the camera ({@code Camera.getFov()}); before 26.1 {@code GameRenderer.getFov} is
-     * private and called once per frame for the level, so the value it returned is recorded (Fabric: the FOV mixin;
-     * Forge/NeoForge: a lowest-priority {@code ComputeFov} listener installed on the first call here, so the very
-     * first frame reads the options' FOV).
+     * modifier (sprinting, drawn bow, scoping), death and under-fluid narrowing, the loaders' FOV events and
+     * {@link #register}'s callback. Mirrors 1.7's {@code EntityRenderer.getFOVModifier(partialTicks, true)}.
+     * 26.1 keeps it on {@code Camera.getFov()}. Before 26.1 {@code GameRenderer.getFov} is private, so the value it
+     * returns once per frame is recorded (Fabric: the FOV mixin; Forge/NeoForge: a lowest-priority {@code ComputeFov}
+     * listener installed on the first call, so the very first frame reads the options' FOV).
      */
     public static float current() {
         Minecraft minecraft = Minecraft.getInstance();

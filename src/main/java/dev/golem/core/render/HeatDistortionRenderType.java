@@ -34,7 +34,7 @@ import java.io.IOException;
 /**
  * Scene-sampling render type for the jetpack heat shimmer.
  *
- * <p>This is intentionally not {@link CompatRenderTypes#entityTranslucent}: that type can only blend a
+ * <p>This is not {@link CompatRenderTypes#entityTranslucent}: that type can only blend a
  * colored quad. The old particle samples the already-rendered scene through a fresnel mask and animated
  * noise, so replacing it with a glow billboard changes the effect completely. The scene is copied to a
  * detached target at the first actual distortion draw, never during client ticking or state extraction.

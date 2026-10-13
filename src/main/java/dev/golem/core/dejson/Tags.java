@@ -11,20 +11,14 @@ import java.util.Map;
 /**
  * Tag files declared in code.
  *
- * <p>A tag file is the most paternal shape in a data pack: a {@code replace} flag that is false in
- * every one of them and a list of ids. There is nothing in it a program cannot write, and nothing
- * in it a person should have to. What is worth writing down is the <i>rule</i> that produced the
- * list — that a material comes in ingots, or that these four items are all tars — and a rule
- * belongs in code, where it can be applied to a catalogue rather than transcribed once per member.
+ * <p>A tag file is a {@code replace} flag (always false) and a list of ids; the rule that produced the list
+ * (a material comes in ingots) is written in code and applied to a catalogue.
  *
- * <p>Membership is spelled exactly as the file spells it, including a leading {@code #} for a tag
- * that includes another tag, because the difference is real: an id names one item and must exist,
- * while a {@code #} reference names a tag that may legitimately be empty on a given loader.
+ * <p>Membership is spelled as the file spells it, including a leading {@code #} for an included tag: an id names
+ * one entry and must exist, while a {@code #} reference may legitimately be empty on a given loader.
  *
- * <p>The path is the modern singular one ({@code data/<ns>/tags/item/<path>.json}). Targets that
- * want the pre-1.21 plural directories get them from the build's own legacy pass, which renames
- * what lands in the processed resources — generated and authored files alike, since by then they
- * are the same pile of files.
+ * <p>The path is the modern singular one ({@code data/<ns>/tags/item/<path>.json}); the build's legacy pass
+ * renames it to the pre-1.21 plural directories for older targets.
  */
 public final class Tags {
 
@@ -57,11 +51,10 @@ public final class Tags {
 
     /**
      * A tag built member by member, for the two things the one-line forms refuse: members that are
-     * {@linkplain Tag#optional optional}, and a tag that is deliberately declared with no members.
+     * {@linkplain Tag#optional optional}, and a tag declared with no members.
      *
-     * <p>An empty tag is not nothing. A repair ingredient or a block list that names a tag needs the tag
-     * to exist on every loader even while the mod has nothing to put in it, and declaring it empty is
-     * how that is said.
+     * <p>A repair ingredient or block list that names a tag needs the tag to exist on every loader even while it
+     * has no members.
      *
      * @param registry the registry folder: {@code item}, {@code block}, {@code entity_type}, ...
      */
@@ -131,11 +124,10 @@ public final class Tags {
      * {@code minecraft:mineable/pickaxe}: each block's registration states its own membership instead of
      * one list naming every block.
      *
-     * <p>Contributions accumulate and are merged when the files are written: appended in sorted order (class
-     * initialisation order differs between the build and a running game, so contribution order would not be
-     * reproducible), after whatever a whole-file declaration of the same tag ({@link #block}, {@link #of}) lists,
-     * or emitted as a tag of their own when there is none. A member stated twice — by two contributions,
-     * or by a contribution and the whole-file list — fails, because one of the two statements is dead.
+     * <p>Contributions are merged when the files are written, appended in sorted order (class initialisation order
+     * differs between the build and a running game) after whatever a whole-file declaration of the same tag
+     * ({@link #block}, {@link #of}) lists, or emitted as a tag of their own when there is none. A member stated
+     * twice fails, because one of the two statements is dead.
      *
      * @param registry the registry folder: {@code block}, {@code item}, {@code entity_type}, ...
      */

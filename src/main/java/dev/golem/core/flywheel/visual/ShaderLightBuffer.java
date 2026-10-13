@@ -75,7 +75,7 @@ public final class ShaderLightBuffer implements ShaderLightVisual.LightCollector
         staging.putFloat(off + 16, light.r());
         staging.putFloat(off + 20, light.g());
         staging.putFloat(off + 24, light.b());
-        // off + 28 is alignment padding — kept zero by the wipe above.
+        // off + 28 is alignment padding; the wipe above keeps it zero.
         count++;
     }
 

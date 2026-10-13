@@ -25,16 +25,15 @@ import org.jspecify.annotations.Nullable;
 *///?}
 
 /**
- * A mob renderer written once against 26.1's extract/submit shape, on every version — the living
- * counterpart to {@link dev.golem.core.render.CompatEntityRenderer}, and it must be a separate class
- * for the same reason: vanilla's {@code MobRenderer} is what gives a mob its body yaw, hurt flash,
- * death tilt, name tag and layers, and its generic arity differs between the eras.
+ * A mob renderer written once against 26.1's extract/submit shape, on every version. It is the living
+ * counterpart to {@link dev.golem.core.render.CompatEntityRenderer} and a separate class because vanilla's
+ * {@code MobRenderer} gives a mob its body yaw, hurt flash, death tilt, name tag and layers, and its generic
+ * arity differs between the eras.
  *
- * <p>Subclasses implement the 26.1 hooks — {@link #createRenderState}, {@link #extract},
- * {@link #texture}, {@link #scale}, {@link #submitExtra} — and the facade binds them to whichever
- * vanilla hook each era calls. Below 26.1, vanilla's single {@code render} is wrapped: the state is
- * created and filled from the entity first, vanilla's pass runs against it, and any extra geometry is
- * replayed afterwards through a {@code RecordingSubmitSink}.
+ * <p>Subclasses implement the 26.1 hooks ({@link #createRenderState}, {@link #extract}, {@link #texture},
+ * {@link #scale}, {@link #submitExtra}) and the facade binds them to each era's vanilla hook. Below 26.1,
+ * vanilla's single {@code render} is wrapped: the state is created and filled from the entity first, vanilla's
+ * pass runs against it, and extra geometry is replayed afterwards through a {@code RecordingSubmitSink}.
  *
  * @param <T> the mob
  * @param <S> its render state

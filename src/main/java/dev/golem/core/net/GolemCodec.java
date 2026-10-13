@@ -58,10 +58,9 @@ public final class GolemCodec<P extends GolemPayload> {
 
     /**
      * Like {@link #of}, but the encoder and decoder take the registry-aware buffer, so a payload can share one write/read
-     * method with block-entity sync ({@code serialize(RegistryFriendlyByteBuf)}) without naming the plain buffer type.
-     * Where the registry-aware buffer does not exist (below 1.20.5) it is the plain buffer itself. Modern play transports
-     * already hand a registry-aware buffer; any other buffer is wrapped over the same bytes (see
-     * {@link GolemBuffers#registry}).
+     * method with block-entity sync ({@code serialize(RegistryFriendlyByteBuf)}). Below 1.20.5 that is the plain
+     * buffer itself. Modern play transports already hand a registry-aware buffer; any other buffer is wrapped over the
+     * same bytes (see {@link GolemBuffers#registry}).
      */
     public static <P extends GolemPayload> GolemCodec<P> ofRegistry(Class<P> payloadType,
             //? if >=26.1 {

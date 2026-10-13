@@ -57,11 +57,9 @@ public final class Entities {
     /**
      * Whether vanilla's {@code Entity.setXRot} clamps the value it stores to [-90, 90].
      *
-     * <p>From 26.1 it does — {@code Math.clamp(xRot % 360.0F, -90.0F, 90.0F)}. Below it the field
-     * takes whatever it is handed. So an entity that models a pitch outside that range, such as a
-     * missile nosing over past vertical, needs its own copy of the value on 26.1 and does not below
-     * it, and a test asserting that {@code getXRot} was clamped is asserting a fact about one era
-     * rather than about the entity.
+     * <p>From 26.1 it does ({@code Math.clamp(xRot % 360.0F, -90.0F, 90.0F)}); below it the field
+     * takes whatever it is handed. An entity that models a pitch outside that range, such as a
+     * missile nosing over past vertical, needs its own copy of the value on 26.1 only.
      */
     public static boolean clampsXRot() {
         //? if >=26.1 {

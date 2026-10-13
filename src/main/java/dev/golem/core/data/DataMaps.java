@@ -8,10 +8,13 @@ import com.mojang.serialization.JsonOps;
 import dev.golem.core.GolemCore;
 import dev.golem.core.Ids;
 import dev.golem.core.hook.Hook;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -72,11 +75,11 @@ public final class DataMaps {
         DataMap<T, V> map = new DataMap<>(namespace, path, registryPath, registry, codec);
         if (MAPS.putIfAbsent(map.fileId(), map) != null) throw new IllegalStateException("Data map " + map.fileId() + " declared twice");
         String resource = "/data/" + namespace + "/" + FOLDER + "/" + registryPath + "/" + path + ".json";
-        java.net.URL url = DataFiles.bundled(owner, resource);
+        URL url = DataFiles.bundled(owner, resource);
         if (url != null) {
             try (InputStream in = url.openStream()) {
                 map.load(List.of(JsonParser.parseReader(new InputStreamReader(in, StandardCharsets.UTF_8))));
-            } catch (java.io.IOException | RuntimeException e) {
+            } catch (IOException | RuntimeException e) {
                 throw new IllegalStateException("The bundled data map " + resource + " is broken: " + e.getMessage(), e);
             }
         }
@@ -211,7 +214,7 @@ public final class DataMaps {
                     }
                 }
             }
-            byId = java.util.Collections.unmodifiableMap(ids);
+            byId = Collections.unmodifiableMap(ids);
             byTag = List.copyOf(new ArrayList<>(tags.entrySet()).stream().map(e -> Map.entry(e.getKey(), e.getValue())).toList());
             for (Runnable listener : changed) listener.run();
         }

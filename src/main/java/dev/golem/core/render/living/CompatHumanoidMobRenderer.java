@@ -26,8 +26,8 @@ import net.minecraft.resources.ResourceLocation;
  *
  * <p>A renderer with several bodies picks one per frame through {@link #variant}; the undead soldier
  * switches between a zombie and a skeleton this way. Because the renderer's model is a
- * {@code HumanoidModel}, every humanoid layer Golem attaches — a mod's own armour renderers among
- * them — attaches here too.
+ * {@code HumanoidModel}, every humanoid layer Golem attaches, including a mod's own armour renderers,
+ * works here too.
  *
  * @param <T> the mob
  */

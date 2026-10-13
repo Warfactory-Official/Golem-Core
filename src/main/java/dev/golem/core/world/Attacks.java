@@ -1,5 +1,6 @@
 package dev.golem.core.world;
 
+import dev.golem.core.hook.Hook;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiConsumer;
@@ -8,7 +9,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 
 /**
- * The server-side "player swings at an entity" hook — legacy {@code AttackEntityEvent} — with one
+ * The server-side "player swings at an entity" hook, legacy {@code AttackEntityEvent}, with one
  * shape on every loader. {@link #onPlayerAttack} handlers observe the attack; {@link #interceptPlayerAttack}
  * handlers may take it over, which is 1.7's {@code Item.onLeftClickEntity} returning {@code true}.
  */
@@ -17,9 +18,9 @@ public final class Attacks {
     private Attacks() {}
 
     /** Every listener, in phase order; register through the {@code on...} method or directly, with a phase. */
-    public static final dev.golem.core.hook.Hook<BiConsumer<Player, Entity>> HANDLERS = dev.golem.core.hook.Hook.notifying();
+    public static final Hook<BiConsumer<Player, Entity>> HANDLERS = Hook.notifying();
     /** Every listener, in phase order; register through the {@code on...} method or directly, with a phase. */
-    public static final dev.golem.core.hook.Hook<BiPredicate<Player, Entity>> INTERCEPTORS = dev.golem.core.hook.Hook.notifying();
+    public static final Hook<BiPredicate<Player, Entity>> INTERCEPTORS = Hook.notifying();
     private static boolean installed;
 
     public static void onPlayerAttack(BiConsumer<Player, Entity> handler) {

@@ -14,10 +14,9 @@ import org.jspecify.annotations.Nullable;
  * integer harvest level. The integer level is the one thing all three can be derived from, and it is
  * what legacy content was written against, so that is what this carries.
  *
- * <p>A value class with the accessors of the record it used to be. The repair tag may be given lazily
- * ({@link #of}): a {@code TagKey} names the item registry, which on 1.20.1 cannot be done before the game
- * is bootstrapped, and tool materials are typically constants of a registration class that must also
- * initialise in a plain JVM.
+ * <p>A value class with the accessors of 26.1's record. The repair tag may be given lazily ({@link #of}): a
+ * {@code TagKey} names the item registry, which on 1.20.1 cannot be done before bootstrap, and tool materials
+ * are typically constants of a registration class that must also initialise in a plain JVM.
  */
 public final class ToolTier {
 

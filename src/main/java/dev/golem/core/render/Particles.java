@@ -13,7 +13,7 @@ import net.minecraft.resources.Identifier;
 /**
  * Spawning a mod-authored particle, and looking up the sprite it draws with.
  *
- * <p>A mod that registers its particles as vanilla {@code ParticleType}s does not need this — it can
+ * <p>A mod that registers its particles as vanilla {@code ParticleType}s does not need this; it can
  * call {@code level.addParticle(options, ...)}. This is for the other model, which HBM uses: the
  * server sends one packet naming an <i>effect</i> plus an arbitrary NBT payload, and the client
  * constructs however many particles that effect implies. Vanilla {@code ParticleOptions} cannot carry
@@ -77,18 +77,16 @@ public final class Particles {
     /**
      * Resolves a sprite on the <b>particles</b> atlas.
      *
-     * <p>No atlas-extension file is needed: vanilla's particles atlas is declared with a
-     * {@code directory} source over {@code textures/particle}, and directory sources scan <i>every</i>
-     * namespace, so a mod's own {@code textures/particle/} folder is stitched in automatically.
+     * <p>No atlas-extension file is needed: vanilla's particles atlas has a {@code directory} source over
+     * {@code textures/particle} that scans <i>every</i> namespace, so a mod's own
+     * {@code textures/particle/} folder is stitched in.
      *
-     * <p><b>But mind the prefix.</b> That source is declared with {@code "prefix": ""}, where
-     * {@code blocks.json} uses {@code "prefix": "block/"} — so the sprite id carries <i>no</i>
-     * {@code particle/} segment: {@code assets/hbm/textures/particle/particle_base.png} is
-     * {@code hbm:particle_base}, not {@code hbm:particle/particle_base}.
+     * <p><b>Mind the prefix.</b> That source has {@code "prefix": ""} (where {@code blocks.json} uses
+     * {@code "prefix": "block/"}), so the sprite id carries <i>no</i> {@code particle/} segment:
+     * {@code assets/hbm/textures/particle/particle_base.png} is {@code hbm:particle_base}.
      *
-     * <p>An id that is not on the atlas does <b>not</b> throw — the atlas returns its missing sprite
-     * and the particle draws as a checkerboard. Only a wrong <i>atlas</i> id throws. The two mistakes
-     * therefore look nothing alike, which is worth remembering when one of them bites.
+     * <p>An id that is not on the atlas does <b>not</b> throw; the atlas returns its missing sprite and the
+     * particle draws as a checkerboard. Only a wrong <i>atlas</i> id throws.
      */
     public static TextureAtlasSprite sprite(
             //? if >=26.1 {

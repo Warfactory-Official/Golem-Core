@@ -32,17 +32,13 @@ import net.minecraft.client.renderer.texture.atlas.SpriteSource;
  * <p>A roster that carries one colour per variant rather than two declares
  * {@link Remap#tint(String, int) tint} instead, which multiplies the art the way an item tint would.
  *
- * <p>Declaration is the default path and needs no resource of any kind — no atlas JSON, no generated
- * asset, nothing on disk but the greyscale source. The same source type is registered for resource
- * packs under {@code golemcore:interpolated_remap}, so a pack can write one by hand into its own
- * {@code atlases/} file; a consumer that ships only JSON and never declares anything in code calls
- * {@link #install()} once so the type is known before the pack is read.
+ * <p>Declaration needs no atlas JSON or generated asset, only the greyscale source on disk. The same source type
+ * is registered for resource packs under {@code golemcore:interpolated_remap}; a consumer that only ships JSON
+ * calls {@link #install()} once so the type is known before the pack is read.
  *
- * <p>Declared sources run <em>before</em> the atlas's own, so a real PNG at the generated sprite's path
- * still wins: overriding one recoloured sprite in a pack means shipping that one file, and nothing here
- * takes that away.
+ * <p>Declared sources run <em>before</em> the atlas's own, so a real PNG at a generated sprite's path wins.
  *
- * <p>Client only, and called from client initialisation: nothing here touches a dedicated server.
+ * <p>Client only, called from client initialisation.
  */
 public final class Sprites {
 
@@ -51,14 +47,13 @@ public final class Sprites {
     /**
      * Which atlas a declaration lands in.
      *
-     * <p>{@link #ITEMS} is its own atlas from 1.21.4 and part of the block atlas before it, which is
-     * exactly the sort of difference a consumer should not be spelling out.
+     * <p>{@link #ITEMS} is its own atlas from 1.21.4 and part of the block atlas before it.
      */
     public enum Atlas {
         BLOCKS,
         ITEMS;
 
-        /** The atlas definition id — what {@code atlases/<path>.json} is read for. */
+        /** The atlas definition id, what {@code atlases/<path>.json} is read for. */
         public String id() {
             //? if >=26.1 {
             return this == ITEMS ? "minecraft:items" : "minecraft:blocks";
@@ -158,12 +153,11 @@ public final class Sprites {
     /**
      * The sprite an atlas stitched for {@code id}, or its missing-texture sprite when it holds none.
      *
-     * <p>Where an atlas is reached from moved: 26.1 hands out an atlas manager keyed by the definition
-     * id an {@code atlases/} file is read for, and every version below it a lookup function keyed by the
-     * atlas <em>texture</em> — where the items atlas is the block atlas, so both enum constants answer
-     * the same one.
+     * <p>26.1 reaches an atlas through a manager keyed by the definition id an {@code atlases/} file is read
+     * for; older versions use a lookup keyed by the atlas <em>texture</em>, where the items atlas is the block
+     * atlas, so both enum constants answer the same one.
      *
-     * <p>Client only, and only after the first resource load; before that an atlas holds nothing.
+     * <p>Client only, and only after the first resource load.
      */
     public static net.minecraft.client.renderer.texture.TextureAtlasSprite sprite(
             Atlas atlas,
@@ -231,11 +225,10 @@ public final class Sprites {
         /**
          * One output sprite: the art multiplied by {@code colour}, the way an item tint multiplies it.
          *
-         * <p>A roster that carries a single colour per variant — a fluid, a dye, a team — has no second
-         * one to hand {@link #permutation}. Multiplying is still a remap: the band's own two ends, each
-         * multiplied by {@code colour}, are two points on the multiply's line, so the ramp drawn through
-         * them reproduces it for every pixel, inside the band and extrapolated outside it. Declaring the
-         * band as the art's full range, {@code band(0xFFFFFF, 0x000000)}, makes it exact.
+         * <p>For a roster with one colour per variant (a fluid, a dye, a team). The band's two ends, each
+         * multiplied by {@code colour}, are two points on the multiply's line, so the ramp through them
+         * reproduces it for every pixel, extrapolated outside the band. A band of the art's full range,
+         * {@code (0xFFFFFF, 0x000000)}, makes it exact.
          */
         public Remap tint(String name, int colour) {
             tints.put(name, colour & 0xFFFFFF);

@@ -8,10 +8,9 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 /^*
  * Asks a block entity's registered renderer whether it draws outside its own block.
  *
- * <p>Lives in its own class so that {@code CompatBlockEntity} — which a dedicated server loads — never
- * names {@link Minecraft} itself. Same reasoning as {@code GolemClientNetwork}: keep the client-only
- * types behind a class the server has no reason to resolve, rather than relying on lazy method
- * verification to save us.
+ * <p>Lives in its own class so that {@code CompatBlockEntity}, which a dedicated server loads, never
+ * names {@link Minecraft} itself. Same reasoning as {@code GolemClientNetwork}: the client-only
+ * types stay behind a class the server never resolves.
  ^/
 public final class ClientRenderBounds {
 

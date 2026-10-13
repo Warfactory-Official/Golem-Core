@@ -7,8 +7,8 @@ import net.minecraft.nbt.CompoundTag;
  *
  * <p>26.1 added {@code getIntOr}/{@code getStringOr} to {@code CompoundTag} itself, matching the
  * explicit-default style of {@code ValueInput}. Older versions only have {@code getInt}, which returns
- * a silent {@code 0} for a missing <i>or</i> wrong-typed key — the same trap {@link TagDataIn} exists
- * to avoid, so the same type-checked treatment is applied here.
+ * a silent {@code 0} for a missing <i>or</i> wrong-typed key, the trap {@link TagDataIn} avoids; these
+ * helpers type-check the same way.
  *
  * <p>These are for the handful of places that legitimately hold a raw {@code CompoundTag} (packet
  * payloads, item component data). Block-entity persistence should use {@link DataIn} instead.

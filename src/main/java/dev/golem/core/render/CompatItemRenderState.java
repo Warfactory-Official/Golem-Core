@@ -15,17 +15,17 @@ import net.minecraft.client.renderer.MultiBufferSource;
 *///?}
 
 /**
- * An item stack prepared for drawing inside a block-entity renderer — a machine's floating output
+ * An item stack prepared for drawing inside a block-entity renderer, a machine's floating output
  * preview, a mould's contents.
  *
  * <p>The two eras split the work differently. 26.1 resolves the stack's model during the extract pass
  * into an {@code ItemStackRenderState} and submits that later, so nothing touches the item registry on
- * the render thread. Older versions have no such split and simply hand the {@code ItemStack} to
+ * the render thread. Older versions have no such split and hand the {@code ItemStack} to
  * {@code ItemRenderer} at draw time.
  *
- * <p>This type holds whichever of the two the target version needs, so renderers can keep 26.1's
- * shape — {@link #extract} during the extract pass, {@link SubmitSink#submitItem} during submit —
- * without either side leaking a version-specific type into their fields.
+ * <p>This type holds whichever of the two the target version needs, so renderers keep 26.1's shape
+ * ({@link #extract} during the extract pass, {@link SubmitSink#submitItem} during submit) without a
+ * version-specific type in their fields.
  */
 public final class CompatItemRenderState {
 

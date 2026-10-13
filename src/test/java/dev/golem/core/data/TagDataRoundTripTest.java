@@ -17,12 +17,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /^*
  * Behaviour tests for the pre-26.1 persistence backend.
  *
- * <p>This is the part of the compat layer with real translation logic rather than delegation, and it
- * is reachable without a game instance — {@code CompoundTag} and {@code NbtOps} are plain classes. The
- * cases that matter are not the happy-path round trips but the two places where the old
- * {@code CompoundTag} API and 26.1's {@code ValueInput} disagree: a missing key and a wrong-typed key.
- * On the old API both silently yield zero/empty; a backport that inherits that would corrupt data in a
- * way no compiler or GameTest would catch.
+ * <p>This part of the compat layer has real translation logic rather than delegation, and it is reachable
+ * without a game instance: {@code CompoundTag} and {@code NbtOps} are plain classes. The cases that matter are
+ * the two where the pre-26.1 {@code CompoundTag} API and 26.1's {@code ValueInput} disagree: a missing key and a
+ * wrong-typed key. The old API silently yields zero/empty for both; a backport that inherits that would corrupt
+ * data in a way no compiler or GameTest would catch.
  ^/
 class TagDataRoundTripTest {
 

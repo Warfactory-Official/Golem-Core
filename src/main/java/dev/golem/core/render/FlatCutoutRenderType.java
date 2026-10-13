@@ -19,17 +19,17 @@ import net.minecraft.resources.ResourceLocation;
 
 /**
  * Alpha-tested, unculled, lightmapped entity geometry with <b>no cardinal lighting</b>: the vertex colour
- * times the lightmap, and nothing else — what a 1.7 renderer drew after {@code glDisable(GL_LIGHTING)}.
+ * times the lightmap: what a 1.7 renderer drew after {@code glDisable(GL_LIGHTING)}.
  *
- * <p>Why the stock cutout cannot stand in for it on 26.1: {@code RenderPipelines.ENTITY_CUTOUT} defines
- * {@code PER_FACE_LIGHTING}, under which {@code entity.vsh} lights the vertex twice — once from its normal
- * and once from the <i>negated</i> normal — and {@code entity.fsh} picks by {@code gl_FrontFacing}. A
+ * <p>The stock cutout cannot stand in for it on 26.1: {@code RenderPipelines.ENTITY_CUTOUT} defines
+ * {@code PER_FACE_LIGHTING}, under which {@code entity.vsh} lights the vertex twice, once from its normal
+ * and once from the <i>negated</i> normal, and {@code entity.fsh} picks by {@code gl_FrontFacing}. A
  * double-sided sheet (a hanging wire, a ribbon, a flag) is a front face from one side and a back face
  * from the other, so with the pipeline unculled its far side always lands on the ambient floor of
- * {@code 0.4}. No normal a caller could emit fixes that; the shader has to stop consulting it.
+ * {@code 0.4}. No normal a caller emits fixes that; the shader has to stop consulting it.
  *
- * <p>Below 26.1 the entity shader has no front/back split — {@code minecraft_mix_light} is evaluated once
- * per vertex from the emitted normal — so the stock no-cull cutout is used and the caller's normal decides
+ * <p>Below 26.1 the entity shader has no front/back split: {@code minecraft_mix_light} is evaluated once
+ * per vertex from the emitted normal, so the stock no-cull cutout is used and the caller's normal decides
  * the shade. An <b>upward</b> normal {@code (0, 1, 0)} evaluates to exactly {@code 1.0} there (both level
  * light directions lean up: {@code 2 × 0.8165 × 0.6 + 0.4 > 1}, clamped), which is the flat result. Callers
  * emit that normal unconditionally; 26.1 ignores it.
@@ -122,7 +122,7 @@ public final class FlatCutoutRenderType {
     }
 
     // translucent: unlit, lightmapped, blended SRC_ALPHA / ONE_MINUS_SRC_ALPHA, unculled, depth tested but not written -
-    // a 1.12 particle or decal drawn with lighting off and depthMask(false) (old-hbm ParticleBlood, ParticleDecal).
+    // a 1.12 particle or decal drawn with lighting off and depthMask(false) (1.12.2 ParticleBlood, ParticleDecal).
     private static final RenderPipeline TRANSLUCENT_PIPELINE = RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
             .withLocation("pipeline/golem_flat_translucent")
             .withVertexShader("core/entity")

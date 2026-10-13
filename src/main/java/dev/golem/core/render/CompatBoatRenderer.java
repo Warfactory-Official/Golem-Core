@@ -33,7 +33,7 @@ import org.joml.Quaternionf;
 
 /**
  * A boat renderer for a custom hull: one baked cube model and one skin, drawn with vanilla's boat
- * frame — the 0.375 lift, the hurt wobble, the bubble-column tilt, and the water patch that keeps the
+ * frame: the 0.375 lift, the hurt wobble, the bubble-column tilt, and the water patch that keeps the
  * hull's interior dry.
  *
  * <p>26.1's {@code AbstractBoatRenderer} owns that frame and asks only for the model; older versions

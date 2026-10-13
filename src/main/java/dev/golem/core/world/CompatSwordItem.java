@@ -136,7 +136,7 @@ public class CompatSwordItem extends
         return properties.attributes(Tools.attributes(attackDamage, attackSpeed, movement));
     }
 
-    /** The original HBM steel tool material: level 3, 750 uses, speed 8, damage bonus 2, ench 10. */
+    /** The 1.7 steel tool material: level 3, 750 uses, speed 8, damage bonus 2, ench 10. */
     private static net.minecraft.world.item.ToolMaterial steelMaterial(
             int durability, net.minecraft.tags.TagKey<net.minecraft.world.item.Item> repairTag) {
         return new net.minecraft.world.item.ToolMaterial(

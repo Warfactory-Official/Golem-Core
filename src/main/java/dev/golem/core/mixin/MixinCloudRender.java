@@ -16,11 +16,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  *
  * <p>Why a mixin (AGENTS.md section 7): (1) vanilla 26.1 draws clouds from the dimension's environment attributes only
  * (colour and height; one layer, its own drift), with no per-level renderer; (2) Fabric API 26.1 removed
- * {@code DimensionRenderingRegistry} and its {@code LevelRenderEvents} have no cloud stage - drawing in another stage
- * would miss the frame graph's clouds target under Fabulous, which only the clouds pass declares; (3) widening cannot add a
- * call. One cancellable HEAD inject on {@code CloudRenderer.render}, inside vanilla's own clouds pass; it cancels only for
- * a level registered with {@code Clouds}, and never for Golem's own per-layer renderers (they are {@code CloudRenderer}s
- * too). Sodium 0.9 replaces only {@code buildMesh}, so its meshes serve both.
+ * {@code DimensionRenderingRegistry} and its {@code LevelRenderEvents} have no cloud stage, and drawing in another stage
+ * would miss the clouds target under Fabulous, which only the clouds pass declares; (3) widening cannot add a
+ * call. One cancellable HEAD inject on {@code CloudRenderer.render}; it cancels only for a level registered with
+ * {@code Clouds}, and never for Golem's own per-layer renderers (they are {@code CloudRenderer}s too). Sodium 0.9
+ * replaces only {@code buildMesh}, so its meshes serve both.
  */
 @Mixin(CloudRenderer.class)
 public abstract class MixinCloudRender {

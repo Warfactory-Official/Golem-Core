@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.At;
 /**
  * {@link Gliders#wingsFor}: the cape hides behind wings drawn for an elytra stored in the chest item, as it hides
  * behind a worn elytra (26.1: the chest asset has a wings layer; before: the chest item is an elytra). The companion of
- * {@link MixinGliderWings}, with the same §7 justification. Listed on every loader (client).
+ * {@link MixinGliderWings}, with the same justification. Listed on every loader (client).
  */
 @Mixin(CapeLayer.class)
 public abstract class MixinGliderCape {

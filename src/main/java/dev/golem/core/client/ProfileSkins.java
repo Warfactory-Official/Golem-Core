@@ -25,7 +25,7 @@ import net.minecraft.resources.Identifier;
 
 /**
  * Any player's skin by UUID, with its pixels - legacy {@code SessionService.fillProfileProperties} plus a read of the
- * skin manager's cache file and {@code ImageBufferDownload.parseUserSkin} (old-hbm's {@code MojangSkinLoader}).
+ * skin manager's cache file and {@code ImageBufferDownload.parseUserSkin} (1.12.2's {@code MojangSkinLoader}).
  *
  * <p>The vanilla skin manager hands out only a texture id, and the pixels behind it are unreachable on 1.21.1/1.20.1,
  * so this fetches the profile from Mojang's session server itself (the request authlib makes), downloads the skin from
@@ -59,7 +59,7 @@ public final class ProfileSkins {
     /** Starts fetching {@code id}'s skin in the background, if it was not asked for before. */
     public static void preload(UUID id) {
         if (STATE.putIfAbsent(id, PENDING) != null) return;
-        // a thread of its own, as old-hbm's "BobbleSkinFetch-<uuid>": the shared pool can be held by loader work
+        // a thread of its own, as 1.12.2's "BobbleSkinFetch-<uuid>": the shared pool can be held by loader work
         Thread thread = new Thread(() -> {
             int[] pixels;
             try {

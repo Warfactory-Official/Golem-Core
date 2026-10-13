@@ -16,14 +16,13 @@ import net.minecraft.world.level.Level;
  * <p>Pass a {@link GolemArmorMaterial} and an {@link ArmorSlot}; native material construction stays
  * inside Golem Core even though Minecraft moved the material API repeatedly.
  *
- * <p>Durability is the sharpest of those moves, because each era puts it somewhere else and the odd
- * one out fails silently. 26.1's {@code ArmorMaterial} carries durability and {@code humanoidArmor}
- * applies it; 1.20.1's {@code ArmorMaterial} answers {@code getDurabilityForType} and {@code
- * ArmorItem}'s constructor applies it. 1.21.x does neither — its {@code ArmorMaterial} record has no
- * durability field, its {@code ArmorItem} constructor only builds attribute modifiers, and vanilla's
- * own item registrations pass {@code Properties.durability(type.getDurability(n))} at every call
- * site. Omit that and the armour is not broken in any visible way: it registers, equips, and gives
- * its full armour points, with {@code getMaxDamage() == 0} — armour that never wears out.
+ * <p>Durability differs per era and the odd one out fails silently. 26.1's {@code ArmorMaterial} carries
+ * durability and {@code humanoidArmor} applies it; 1.20.1's {@code ArmorMaterial} answers
+ * {@code getDurabilityForType} and {@code ArmorItem}'s constructor applies it. 1.21.x does neither: its
+ * {@code ArmorMaterial} record has no durability field, its {@code ArmorItem} constructor only builds
+ * attribute modifiers, and vanilla's registrations pass {@code Properties.durability(type.getDurability(n))}
+ * at every call site. Omit that and the armour registers, equips and gives its full armour points, with
+ * {@code getMaxDamage() == 0}: it never wears out.
  */
 public class CompatArmorItem extends
     //? if >=26.1 {
@@ -57,9 +56,9 @@ public class CompatArmorItem extends
      * defaultDurability} leaves it alone, and vanilla's own {@code ItemStack.isDamageableItem} ({@code
      * getMaxDamage() > 0}) and {@code Item.canBeDepleted} both answer false on every loader.
      *
-     * <p>Overriding {@code canBeDepleted} instead is not enough: only Forge routes {@code isDamageableItem}
-     * through it. Fabric 1.20.1 reads the final {@code getMaxDamage()} directly, so such armour still wore
-     * down and reported itself damageable there. Pass the result straight to this class's constructor.
+     * <p>Overriding {@code canBeDepleted} is not enough: only Forge routes {@code isDamageableItem} through it,
+     * and Fabric 1.20.1 reads the final {@code getMaxDamage()} directly. Pass the result straight to this
+     * class's constructor.
      */
     public static Item.Properties unbreakable(Item.Properties properties) {
         //? if >=26.1 {
@@ -85,10 +84,9 @@ public class CompatArmorItem extends
      * Forge 1.20.1 asks the ITEM for its custom renderer, so every item base Golem offers has to carry
      * this or the item silently loses its icon.
      *
-     * <p>This is the one loader where the hook is a virtual method rather than a registration: Fabric
-     * registers a {@code DynamicItemRenderer} per item and NeoForge 1.21.1 registers a client extension
-     * per item, both walking the item registry from outside, so there the item's CLASS is irrelevant.
-     * Here it is everything — an item that does not inherit this override is never offered to the
+     * <p>Only on this loader is the hook a virtual method rather than a registration: Fabric registers a
+     * {@code DynamicItemRenderer} per item and NeoForge 1.21.1 a client extension per item, so there the
+     * item's class is irrelevant. Here an item that does not inherit this override is never offered to the
      * renderer, its {@code builtin/entity} model has no geometry of its own, and it draws nothing.
      * Keep this in lockstep with {@link CompatItem} and {@link CompatBlockItem}.
      ^/
@@ -155,14 +153,13 @@ public class CompatArmorItem extends
 
     //? if >=26.1 {
     /**
-     * Applies the material, working around one hard edge in {@code Properties.humanoidArmor}: it calls
-     * {@code enchantable(material.enchantmentValue())} unconditionally, and that method throws on a value
-     * of 0 — {@code IllegalArgumentException: Enchantment value must be positive}. Power armour declares
-     * exactly that, meaning "never enchantable", so for those materials the rest of {@code humanoidArmor}
-     * is applied by hand with the enchantable component simply left off.
+     * Applies the material, working around {@code Properties.humanoidArmor}: it calls
+     * {@code enchantable(material.enchantmentValue())} unconditionally, and that throws on a value of 0
+     * ({@code IllegalArgumentException: Enchantment value must be positive}). Power armour declares 0,
+     * meaning "never enchantable", so for those materials the rest of {@code humanoidArmor} is applied by
+     * hand with the enchantable component left off.
      *
-     * <p>The failure this avoids is not subtle at runtime but is entirely invisible at compile time: six
-     * nodes built cleanly and the dedicated server died during registry init.
+     * <p>The failure shows at registry init, not at compile time.
      */
     private static Item.Properties configure(net.minecraft.world.item.equipment.ArmorMaterial material,
                                              ArmorSlot slot, Item.Properties properties,

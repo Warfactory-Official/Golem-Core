@@ -75,7 +75,7 @@ final class FieldJson {
         return new JsonPrimitive(value.toString());
     }
 
-    // ----- default shapes -----------------------------------------------------------------------------------------
+    // Default shapes
 
     static JsonElement itemIn(ItemIn in) {
         JsonElement ingredient = vanillaIngredient(in);
@@ -142,7 +142,7 @@ final class FieldJson {
         return new FluidAmount(id, amount);
     }
 
-    // ----- this node's vanilla spellings --------------------------------------------------------------------------
+    // This node's vanilla spellings
 
     /** A one-item or one-tag ingredient as this node's vanilla {@code Ingredient} JSON. */
     static JsonElement vanillaIngredient(ItemIn in) {

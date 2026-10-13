@@ -15,11 +15,10 @@ import org.jspecify.annotations.Nullable;
  *   <li>Codec-based storage on 26.1 goes through {@link #store}; older versions have to encode against
  *       a registry lookup that the caller must thread through by hand.</li>
  *   <li>Nested compounds are created by {@link #child} on 26.1, versus building a tag and putting it
- *       back on older versions — easy to get subtly wrong when the child ends up empty.</li>
+ *       back on older versions, which is easy to get wrong when the child ends up empty.</li>
  * </ul>
  *
- * <p>Only the operations HBM actually uses are exposed. Adding a method here is cheap; the point is to
- * avoid mirroring vanilla's full surface for the sake of it.
+ * <p>Only the operations HBM uses are exposed, not vanilla's full surface.
  */
 public interface DataOut {
 

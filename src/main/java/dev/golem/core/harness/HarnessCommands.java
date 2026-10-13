@@ -3,8 +3,10 @@ package dev.golem.core.harness;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import dev.golem.core.client.ContainerClicks;
+import dev.golem.core.world.RecipeTables;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -125,7 +127,7 @@ final class HarnessCommands {
             var menu = mc.player.containerMenu;
             int slot = Json.integer(req, "slot", 0);
             int button = Json.integer(req, "button", 0);
-            ContainerClicks.Action action = ContainerClicks.Action.valueOf(Json.str(req, "action", "PICKUP").toUpperCase(java.util.Locale.ROOT));
+            ContainerClicks.Action action = ContainerClicks.Action.valueOf(Json.str(req, "action", "PICKUP").toUpperCase(Locale.ROOT));
             ContainerClicks.send(mc.gameMode, menu.containerId, slot, button, action, mc.player);
             return null;
         });
@@ -228,7 +230,7 @@ final class HarnessCommands {
         handlers.put("teleport", (mc, req) -> {
             if (mc.player == null) return Json.error("no player");
             HarnessCamera.stop();
-            mc.player.connection.sendCommand(String.format(java.util.Locale.ROOT, "tp @s %s %s %s",
+            mc.player.connection.sendCommand(String.format(Locale.ROOT, "tp @s %s %s %s",
                     Json.number(req, "x", mc.player.getX()), Json.number(req, "y", mc.player.getY()), Json.number(req, "z", mc.player.getZ())));
             double tx = Json.number(req, "x", mc.player.getX());
             double ty = Json.number(req, "y", mc.player.getY());
@@ -283,8 +285,8 @@ final class HarnessCommands {
             case "recipe_table": {
                 // what the client received in Golem Core's recipe-table sync for {"table": "<ns>:<name>"}
                 JsonObject out = new JsonObject();
-                com.google.gson.JsonArray ids = new com.google.gson.JsonArray();
-                for (String id : dev.golem.core.world.RecipeTables.receivedIds(Json.str(req, "table", ""))) ids.add(id);
+                JsonArray ids = new JsonArray();
+                for (String id : RecipeTables.receivedIds(Json.str(req, "table", ""))) ids.add(id);
                 out.add("ids", ids);
                 out.addProperty("count", ids.size());
                 return out;

@@ -8,17 +8,17 @@ import java.util.Arrays;
 import java.util.BitSet;
 
 // Page-arena over a paired (objectBuffer, frameDescriptorBuffer) pair, mirroring upstream
-// Flywheel's ObjectStorage. Per-instancer Mappings own local→global page tables; freed
-// pages go on AbstractArena's free-list and get reused on the next alloc — sparse
-// allocation. Freed-page descriptors are zeroed so the cull shader's validBits==0 lane mask
-// causes its workgroup to exit immediately.
+// Flywheel's ObjectStorage. Per-instancer Mappings own local-to-global page tables; freed
+// pages go on AbstractArena's free-list and get reused on the next alloc (sparse allocation).
+// Freed-page descriptors are zeroed so the cull shader's validBits==0 lane mask makes its
+// workgroup exit immediately.
 //
-// objectBuffer        — instance data, PAGE_SIZE * elementSizeBytes per page
-// frameDescriptorBuffer — (uint drawIndex, uint validBits) per page, consumed by golem_cull
-// frameDescriptors    — CPU-side mirror of the descriptor buffer; uploaded through staging
+// objectBuffer        : instance data, PAGE_SIZE * elementSizeBytes per page
+// frameDescriptorBuffer: (uint drawIndex, uint validBits) per page, consumed by golem_cull
+// frameDescriptors    : CPU-side mirror of the descriptor buffer; uploaded through staging
 //
 // alloc / grow run from the per-stage prepareFrame worker (one worker per group, single-
-// threaded against this storage). grow() only bumps CPU-side state — the GPU buffers are
+// threaded against this storage). grow() only bumps CPU-side state. The GPU buffers are
 // grown later by ensureBufferCapacity() on the render thread.
 public final class ObjectStorage extends AbstractArena {
 

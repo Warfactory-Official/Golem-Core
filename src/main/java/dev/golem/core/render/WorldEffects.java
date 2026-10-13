@@ -184,7 +184,7 @@ public final class WorldEffects {
 
     /**
      * Starts a world frame. {@code viewRotation} is the matrix the game renderer applies to
-     * camera-relative world coordinates this frame — on 26.1 the camera state's view rotation, on
+     * camera-relative world coordinates this frame: on 26.1 the camera state's view rotation, on
      * 1.21.1 the loader event's model-view matrix, on 1.20.1 the pose vanilla passes down (which also
      * carries view bob and any loader camera roll). See {@link #viewRotation()}.
      */
@@ -217,8 +217,7 @@ public final class WorldEffects {
      * <p>Not for {@link #onBegin} hooks: their submissions are drawn under the hook model-view
      * ({@code HOOK_MODEL_VIEW}), which already is this rotation on every node, so a hook pose only
      * translates by {@code (world - camera.pos)}. Multiplying this in as well rotates the geometry
-     * twice (the conveyor-wand and rebar previews were drawn into the sky that way, History
-     * §19ed-followups). Submissions made from inside an entity or block-entity pass already sit
+     * twice. Submissions made from inside an entity or block-entity pass already sit
      * under the view rotation too.
      */
     public static Matrix4f viewRotation() {
@@ -238,10 +237,9 @@ public final class WorldEffects {
     /**
      * Registers client geometry that must be submitted at the start of the world frame.
      *
-     * <p>A hook runs before the world model-view exists — 1.20 puts the view rotation in the pose
-     * stack it hands renderers, and 1.21 onwards pushes it onto the global matrix, but both do so
-     * after the world frame has already started. So a hook cannot capture it the way an in-frame
-     * renderer does, and {@link #submit} supplies it instead. Poses passed from here are therefore
+     * <p>A hook runs before the world model-view exists: 1.20 puts the view rotation in the pose
+     * stack it hands renderers and 1.21 onwards pushes it onto the global matrix, both after the world
+     * frame has started. {@link #submit} supplies it instead. Poses passed from here are
      * <b>world-axis and camera-relative</b> on every version: translate by world minus
      * {@link CameraInfo#pos}, keep world axes, and billboard by rotating with
      * {@link CameraInfo#orientation}.
@@ -311,9 +309,8 @@ public final class WorldEffects {
      * Routes a declared model's geometry into this pass, so a {@code Gem} model can be replayed here
      * the way {@code CompatBER} replays one into the world frame.
      *
-     * <p>Only geometry is carried. An item, a text run or a block model has no business in a late
-     * effects pass — each of those wants the world's own batching and ordering, which this pass has
-     * already ended by the time it draws.
+     * <p>Only geometry is carried. An item, a text run or a block model needs the world's own batching and
+     * ordering, which have ended by the time this pass draws.
      */
     public static SubmitSink sink(int order) {
         return new EffectSink(order);

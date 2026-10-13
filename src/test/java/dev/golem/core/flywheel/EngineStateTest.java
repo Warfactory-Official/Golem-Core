@@ -12,9 +12,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 /**
- * The engine's one off switch. A throw from any guarded entry point must stop the engine — never
- * escape into the loader's event bus — and every later entry point must stand down, which is what
- * makes {@code Visuals.owns} answer no and every vanilla renderer draw again.
+ * The engine's one off switch. A throw from any guarded entry point must stop the engine and must not escape
+ * into the loader's event bus. Every later entry point then stands down, so {@code Visuals.owns} answers no and
+ * every vanilla renderer draws its machine.
  */
 final class EngineStateTest {
 

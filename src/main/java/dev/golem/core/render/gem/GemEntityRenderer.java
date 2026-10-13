@@ -14,10 +14,9 @@ import org.jspecify.annotations.Nullable;
  * The entity-side counterpart to {@link GemBER}: an entity renderer that declares its model.
  *
  * <p>An entity's own position and facing move every frame, so nothing here is rigid in the way a
- * bolted-down machine is. What the declaration buys on this side is the same single description —
- * transcribing the pose sequence into {@link Gem.Part} operations removes the hand-written submit body
- * and puts the model somewhere both backends can read it. Entities are not bound to the instanced
- * backend yet; when they are, it reads this same model.
+ * bolted-down machine is. The declaration is still a single description: the pose sequence is written as
+ * {@link Gem.Part} operations instead of a hand-written submit body, so both backends can read it. Entities are
+ * not bound to the instanced backend.
  */
 public abstract class GemEntityRenderer<T extends Entity, S extends CompatEntityRenderState>
         extends CompatEntityRenderer<T, S> {

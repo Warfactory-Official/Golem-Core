@@ -19,12 +19,12 @@ import net.minecraft.nbt.CompoundTag;
  * per-entity format can be read once ({@link EntityData#migrateFrom}).
  *
  * <p>Why a mixin (AGENTS.md §7 ladder): (1) vanilla has no load hook that exposes an entity's save data;
- * (2) the loader APIs hand an attachment or capability only its own sub-compound — NeoForge's
- * {@code IAttachmentSerializer}, Fabric's persistence codec, Forge's {@code INBTSerializable} — and no loader
- * posts an event carrying the entity's save data at load; (3) visibility is not the obstacle, so an access
- * widener cannot help. One {@code @Inject} at the tail of {@code Entity.load}, which runs after every loader
- * has read its own attachments/capabilities, so "no stored value yet" can be decided there. It does no work
- * unless some declaration named a legacy key.
+ * (2) the loader APIs (NeoForge's {@code IAttachmentSerializer}, Fabric's persistence codec, Forge's
+ * {@code INBTSerializable}) hand an attachment or capability only its own sub-compound, and no loader posts an
+ * event carrying the entity's save data at load; (3) visibility is not the obstacle, so an access widener cannot
+ * help. One {@code @Inject} at the tail of {@code Entity.load}, which runs after every loader has read its own
+ * attachments/capabilities, so "no stored value yet" can be decided there. It does no work unless some
+ * declaration named a legacy key.
  */
 @Mixin(Entity.class)
 public abstract class MixinEntityDataMigration {

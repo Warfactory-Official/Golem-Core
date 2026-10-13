@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** The vocabulary added for the 2026-09-28 migration: every shape must write exactly the file it replaced. */
+/** Every shape in the vocabulary must write exactly the file it replaces. */
 class DejsonVocabularyTest {
 
     @BeforeEach

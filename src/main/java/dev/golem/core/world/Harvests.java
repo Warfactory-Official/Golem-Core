@@ -21,7 +21,7 @@ public final class Harvests {
 
     /**
      * Runs the vanilla survival destroy sequence without asking the game mode for its main-hand stack.
-     * The caller supplies the source harvest decision because some tools intentionally bypass the
+     * The caller supplies the source harvest decision because some tools bypass the
      * ordinary vanilla tool-tier predicate.
      */
     public static boolean destroyBlock(ServerPlayer player, BlockPos pos, ItemStack tool,

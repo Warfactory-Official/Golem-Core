@@ -17,20 +17,19 @@ import org.jspecify.annotations.Nullable;
 /**
  * The picture-in-picture renderer behind {@link GuiScenes} on 26.1.
  *
- * <p>It is vanilla's {@code GuiEntityRenderer} with the entity taken out: the offscreen target, the
- * orthographic projection and the base pose are the superclass's, the geometry is submitted to the
- * feature dispatcher's node storage and drawn with {@code renderAllFeatures}, and the texture is blitted
- * back where the screen asked for it.
+ * <p>It is vanilla's {@code GuiEntityRenderer} without the entity: the offscreen target, the orthographic
+ * projection and the base pose are the superclass's, the geometry goes to the feature dispatcher's node storage
+ * and is drawn with {@code renderAllFeatures}, and the texture is blitted back where the screen asked.
  *
- * <p>The superclass hands {@link #renderToTexture} a pose whose origin is the middle of the target, in
- * GUI pixels, with Z mirrored so that +Z points <em>away</em> from the viewer (the frame an entity model
- * expects). {@link GuiScenes} promises the legacy GUI frame instead, so Z is mirrored back once here.
+ * <p>The superclass hands {@link #renderToTexture} a pose whose origin is the middle of the target, in GUI
+ * pixels, with Z mirrored so +Z points <em>away</em> from the viewer (the frame an entity model expects).
+ * {@link GuiScenes} promises the legacy GUI frame, so Z is mirrored back once here.
  *
- * <p><b>Several scenes in one frame.</b> Vanilla keeps ONE renderer per render-state class, and each renderer owns
- * ONE offscreen texture; its blit is only recorded during prepare and drawn later, so two states of one class in
- * a frame would both show whatever was rendered last. Scenes therefore take one of {@link #SLOTS} state classes,
- * each with its own renderer and texture, in the order a frame draws them; up to that many scenes per frame are
- * distinct. A frame with more reuses slots and the overflowing scenes show a later scene's picture.
+ * <p><b>Several scenes in one frame.</b> Vanilla keeps one renderer per render-state class, each with one
+ * offscreen texture whose blit is recorded during prepare and drawn later, so two states of one class in a
+ * frame would both show the last render. Scenes therefore take one of {@link #SLOTS} state classes, each with
+ * its own renderer and texture, in draw order. Scenes beyond {@link #SLOTS} in a frame reuse slots and show a
+ * later scene's picture.
  */
 final class GuiSceneRenderer extends PictureInPictureRenderer<GuiSceneRenderer.State> {
 

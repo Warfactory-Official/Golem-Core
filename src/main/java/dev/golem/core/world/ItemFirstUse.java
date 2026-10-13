@@ -1,5 +1,6 @@
 package dev.golem.core.world;
 
+import dev.golem.core.hook.Hook;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import net.minecraft.world.InteractionHand;
@@ -33,7 +34,7 @@ public final class ItemFirstUse {
     }
 
     /** Every listener, in phase order; register through the {@code on...} method or directly, with a phase. */
-    public static final dev.golem.core.hook.Hook<Handler> HANDLERS = dev.golem.core.hook.Hook.notifying();
+    public static final Hook<Handler> HANDLERS = Hook.notifying();
     private static boolean installed;
 
     private ItemFirstUse() {}

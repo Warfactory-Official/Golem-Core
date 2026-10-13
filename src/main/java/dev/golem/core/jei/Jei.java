@@ -25,7 +25,7 @@ import java.util.function.Predicate;
  * The parts of JEI's registration API that differ between its 15.x, 19.x, and 29.x lines, in one place.
  *
  * <p>Everything here exists so a mod's plugin reads the same on every target. Each method is the 29.x
- * spelling — the line this port is written against — implemented on the 15.x and 19.x lines in terms of
+ * spelling (the line this port is written against), implemented on the 15.x and 19.x lines in terms of
  * whatever those lines call the same thing. Compiled out entirely on a node that declares no JEI coordinates.
  *
  * @see JeiRecipeType for the type that appears in nearly every JEI signature
@@ -35,7 +35,7 @@ public final class Jei {
     private Jei() {}
 
     /**
-     * The role for the block that performs a recipe — the machine shown in a category's corner.
+     * The role for the block that performs a recipe: the machine shown in a category's corner.
      *
      * <p>29.x names this {@code CRAFTING_STATION}. 19.x has no such constant and uses {@code CATALYST}
      * for the same thing; the rename came with no behavioural change.
@@ -147,8 +147,8 @@ public final class Jei {
      * components (a fluid icon's fluid, amount, or pressure, say) are treated as distinct ingredients.
      *
      * <p>29.x offers {@code registerFromDataComponentTypes} directly. 19.x predates it and takes a
-     * subtype interpreter, so this supplies one that reads the same component — the component API
-     * itself is unchanged between the two, which is what makes the reimplementation exact.
+     * subtype interpreter, so this supplies one that reads the same component. The component API
+     * is the same on both, which makes the reimplementation exact.
      */
     public static void registerFromDataComponentTypes(ISubtypeRegistration registration, Item item,
                                                       dev.golem.core.data.GolemComponent<?>... components) {
@@ -176,7 +176,7 @@ public final class Jei {
         registration.registerSubtypeInterpreter(item, (stack, context) -> interpreter.apply(stack));
     }
 
-    // ------------------------------------------------------------------------------------------- runtime
+    // Runtime
 
     /** Adds recipes of one type once JEI's runtime exists ({@code IModPlugin.onRuntimeAvailable}). */
     public static <T> void addRecipes(mezz.jei.api.runtime.IJeiRuntime runtime, JeiRecipeType<T> type, List<T> recipes) {
@@ -185,7 +185,7 @@ public final class Jei {
 
     /**
      * Every vanilla furnace (smelting) recipe JEI knows, as one (input, result) pair per input item. JEI's own lookup is
-     * the only place a 26.1 client can read them (the client no longer receives the recipe manager); the older lines
+     * the only place a 26.1 client can read them (the client does not receive the recipe manager); the older lines
      * read the same recipes through the same lookup, so all three answer alike.
      */
     public static List<java.util.Map.Entry<ItemStack, ItemStack>> smeltingRecipes(mezz.jei.api.runtime.IJeiRuntime runtime) {

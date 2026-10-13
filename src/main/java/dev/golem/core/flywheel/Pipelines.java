@@ -20,10 +20,9 @@ import org.lwjgl.opengl.GL31;
 
 public final class Pipelines {
 
-    // Sized at runtime from GL_MAX_UNIFORM_BLOCK_SIZE inside build(). Both vertex shaders read
-    // this value via the pipeline-injected #define INSTANCE_CAP — they no longer carry an inline
-    // fallback, so it is baked into the pipeline and build() has to precede the first bind. Every
-    // route to a pipeline goes through pipelineFor, which is what makes that true on its own.
+    // Sized at runtime from GL_MAX_UNIFORM_BLOCK_SIZE inside build(). Both vertex shaders read it
+    // from the pipeline-injected #define INSTANCE_CAP and have no inline fallback, so build() must
+    // precede the first bind. Every route to a pipeline goes through pipelineFor, which guarantees that.
     public static int INSTANCE_CAP;
 
     // Hard upper cap. The instanced engine chunks per-bucket draws at INSTANCE_CAP instances,
@@ -85,7 +84,7 @@ public final class Pipelines {
         // RenderPass.setUniform asserts byteOffset is aligned to GL_UNIFORM_BUFFER_OFFSET_-
         // ALIGNMENT (256 on most NVIDIA drivers, sometimes 64 / 16 elsewhere). For every
         // chunkStart = k * cap to land on an aligned offset, cap * STD140_BYTES must itself
-        // be a multiple of the alignment — i.e. cap must be a multiple of
+        // be a multiple of the alignment, i.e. cap must be a multiple of
         // alignment / gcd(alignment, STD140_BYTES). With STD140_BYTES = 112 and alignment =
         // 256 the step is 16, so 585 (the raw value from a 64 KB UBO) gets snapped to 576.
         int alignment = GL31.glGetInteger(GL31.GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT);
@@ -133,13 +132,13 @@ public final class Pipelines {
                 break;
             case CUTOUT_CLIP_SLAB:
                 builder.withShaderDefine("ALPHA_CUTOUT", 0.1F);
-                // Per-instance slab — plane equation in UVTransform, slide in InstanceColor.rgb.
+                // Per-instance slab: plane equation in UVTransform, slide in InstanceColor.rgb.
                 // See Material.CUTOUT_CLIP_SLAB.
                 builder.withShaderDefine("CLIP_SLAB");
                 break;
             case CUTOUT_CLIP_HALFSPACE:
                 builder.withShaderDefine("ALPHA_CUTOUT", 0.1F);
-                // Per-instance half-space — same UVTransform/InstanceColor hijack as CLIP_SLAB,
+                // Per-instance half-space: same UVTransform/InstanceColor use as CLIP_SLAB, with a
                 // single-sided discard test. See Material.CUTOUT_CLIP_HALFSPACE.
                 builder.withShaderDefine("CLIP_HALFSPACE");
                 break;
@@ -175,8 +174,8 @@ public final class Pipelines {
 
     // Mirrors vanilla RenderPipelines.CRUMBLING (RenderPipelines.java:403): multiplicative blend
     // (DST*SRC), depth-test LE with depth-write OFF and polygon offset (-1, -10) to overlay the
-    // existing geometry without z-fighting. Uses our crumbling shader pair which strips lighting
-    // and overlay sampling — destroy_stage textures should pass straight through to the blender.
+    // existing geometry without z-fighting. Our crumbling shader pair strips lighting and overlay
+    // sampling so destroy_stage textures pass straight through to the blender.
     private static RenderPipeline buildCrumblingPipeline() {
         return RenderPipeline.builder(RenderPipelines.MATRICES_FOG_LIGHT_DIR_SNIPPET)
                 .withLocation(Identifier.fromNamespaceAndPath(GolemCore.MOD_ID, "pipeline/golem_flywheel_crumbling"))

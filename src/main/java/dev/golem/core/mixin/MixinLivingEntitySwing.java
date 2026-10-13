@@ -1,10 +1,10 @@
 package dev.golem.core.mixin;
 
-// SwingReceiver on Fabric. Ladder (AGENTS.md §7): vanilla has no swing callback (1); NeoForge and Forge
+// SwingReceiver on Fabric. Ladder (AGENTS.md section 7): vanilla has no swing callback (1); NeoForge and Forge
 // answer it through their own item hook, IItemExtension/IForgeItem.onEntitySwing, which Core overrides on
 // its item bases (2) - Fabric API has no swing event or item hook at all; an access widener (3) cannot add a
-// call. The smallest hook is this HEAD inject into LivingEntity.swing(hand, sendToSwingingEntity), exactly
-// where the Forge-like loaders call their item hook, cancelling the swing when the item asks, as they do.
+// call. The smallest hook is this HEAD inject into LivingEntity.swing(hand, sendToSwingingEntity), where the
+// Forge-like loaders call their item hook; it cancels the swing when the item asks, as they do.
 //? if fabric {
 
 /*import dev.golem.core.world.SwingReceiver;

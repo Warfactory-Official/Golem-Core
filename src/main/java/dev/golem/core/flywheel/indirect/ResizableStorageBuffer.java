@@ -5,7 +5,7 @@ package dev.golem.core.flywheel.indirect;
 import org.lwjgl.opengl.GL15;
 import org.lwjgl.opengl.GL45;
 
-// Driver-managed immutable-storage GPU buffer. Never CPU-mapped — uploads go through
+// Driver-managed immutable-storage GPU buffer. Never CPU-mapped; uploads go through
 // StagingBuffer (compute scatter), reads happen on the GPU. ensureCapacity reallocates and
 // copies prior contents; the backing handle changes on grow.
 public final class ResizableStorageBuffer {

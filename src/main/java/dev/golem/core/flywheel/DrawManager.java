@@ -9,7 +9,7 @@ import java.util.List;
 import net.minecraft.resources.Identifier;
 
 // Backend-facing draw root. Engine builds the shared per-frame state (FrameState, crumbling
-// groups), then dispatches to the active backend's DrawManager — which knows how to issue draws
+// groups), then dispatches to the active backend's DrawManager, which knows how to issue draws
 // for its storage layout (UBO + Mojang RenderPass for INSTANCING; SSBO + multidraw + raw GL
 // for INDIRECT).
 public interface DrawManager {
@@ -30,7 +30,7 @@ public interface DrawManager {
 
     void drawCrumbling(List<CrumblingDraw> draws, FrameState state);
 
-    // INSTANCING-only — INDIRECT will return null until the crumbling path is reimplemented
+    // INSTANCING-only: INDIRECT returns null until the crumbling path is implemented
     // there. Engine doesn't read this; it's exposed for backends that need to coordinate between
     // their own crumbling renderer and the scratch UBO. Will likely move/disappear in a future
     // refactor.

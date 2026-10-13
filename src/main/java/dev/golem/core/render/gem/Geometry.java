@@ -6,7 +6,7 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * One rigid lump of triangles a {@linkplain Gem.Part part} draws, supplied by the consumer. Core does
- * not parse meshes; it needs the same lump expressed twice, once for each backend — {@link #draw} for
+ * not parse meshes; it needs the same lump expressed twice, once for each backend, {@link #draw} for
  * the vanilla submit pass, {@link #vertices}/{@link #indices} as a resident mesh for the instanced one.
  *
  * <p>Both must describe the same surface. In particular a single-sided mesh drawn with reversed faces
@@ -29,7 +29,7 @@ public interface Geometry {
     void draw(PoseStack.Pose pose, VertexConsumer buffer, int light, int overlay, int color);
 
     /**
-     * The same triangles interleaved as {@code x, y, z, u, v, nx, ny, nz} per vertex — the layout the
+     * The same triangles interleaved as {@code x, y, z, u, v, nx, ny, nz} per vertex, the layout the
      * instanced backend's mesh pool takes.
      */
     float[] vertices();
@@ -47,8 +47,7 @@ public interface Geometry {
      * This lump's axis-aligned bounds in mesh space, as {@code {{minX, minY, minZ}, {maxX, maxY, maxZ}}},
      * or {@code null} when it holds no vertices.
      *
-     * <p>Read off {@link #vertices} so every implementation has one; an implementation that already
-     * knows the numbers should answer from them rather than walk the array again.
+     * <p>The default walks {@link #vertices}; an implementation that knows the numbers should override it.
      */
     default float @Nullable [][] bounds() {
         float[] data = vertices();

@@ -22,10 +22,9 @@ import org.joml.Vector3f;
 /**
  * The GPU rows behind one billboard visual, whatever supplies them.
  *
- * <p>An entity renderer and a client-owned pool want exactly the same thing — a set of camera-facing
- * quads refreshed every frame, released the moment the source stops claiming them — and differ only
- * in what they are keyed by. Keeping the instancing here means the two cannot drift, and that the
- * per-level cap below is counted once across both.
+ * <p>An entity renderer and a client-owned pool both want a set of camera-facing quads refreshed every
+ * frame and released as soon as the source stops claiming them; they differ only in what they are keyed
+ * by. Sharing the instancing here keeps the two from drifting and counts the per-level cap once across both.
  */
 final class BillboardLayers {
 
