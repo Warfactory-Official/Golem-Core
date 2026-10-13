@@ -3,11 +3,14 @@ package dev.golem.core.world;
 import dev.golem.core.hook.Hook;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Predicate;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 
 /**
@@ -64,6 +67,44 @@ public final class ItemFirstUse {
                         event.setCancellationResult(result);
                     }
                 });
+        *///?}
+    }
+
+    /**
+     * Forge-era {@code Item.doesSneakBypassUse}: a sneaking player holding one of {@code items} still uses the block
+     * clicked, as if not sneaking past the gate. Vanilla skips the block then and goes straight to the item. The block
+     * sees the sneak ({@code player.isShiftKeyDown()}) as usual; a block that does not take the click passes it on to
+     * the item.
+     */
+    public static void sneakBypass(Predicate<ItemStack> items) {
+        register((stack, context) -> {
+            Player player = context.getPlayer();
+            if (player == null || !player.isSecondaryUseActive() || !items.test(stack)) return InteractionResult.PASS;
+            BlockHitResult hit = new BlockHitResult(context.getClickLocation(), context.getClickedFace(),
+                    context.getClickedPos(), context.isInside());
+            return useBlock(context.getLevel().getBlockState(context.getClickedPos()), context.getLevel(), player,
+                    context.getHand(), stack, hit);
+        });
+    }
+
+    /** The server's block-use step for a held item, as {@code ServerPlayerGameMode.useItemOn} runs it past the gate. */
+    private static InteractionResult useBlock(BlockState state, Level level, Player player, InteractionHand hand,
+                                              ItemStack stack, BlockHitResult hit) {
+        //? if >=26.1 {
+        InteractionResult result = state.useItemOn(stack, level, player, hand, hit);
+        if (result instanceof InteractionResult.TryEmptyHandInteraction && hand == InteractionHand.MAIN_HAND) {
+            return state.useWithoutItem(level, player, hit);
+        }
+        return result;
+        //?} else if >=1.21.1 {
+        /*net.minecraft.world.ItemInteractionResult result = state.useItemOn(stack, level, player, hand, hit);
+        if (result == net.minecraft.world.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION
+                && hand == InteractionHand.MAIN_HAND) {
+            return state.useWithoutItem(level, player, hit);
+        }
+        return result.result();
+        *///?} else {
+        /*return state.use(level, player, hand, hit);
         *///?}
     }
 
