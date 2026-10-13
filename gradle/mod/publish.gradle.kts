@@ -11,11 +11,13 @@
 //   golem.build.publish.modrinthProject    Modrinth project ID (8 characters, ⋯ menu > Copy ID); blank skips
 //                                          Modrinth. A slug only resolves once the project is approved.
 //   golem.build.publish.curseforgeProject  CurseForge numeric project id; blank skips CurseForge
-//   golem.build.publish.requires           required dependencies, comma separated, used on both sites:
-//                                          Modrinth takes IDs or slugs (IDs for unapproved projects),
-//                                          CurseForge takes slugs
-//   golem.build.publish.fabricRequires     extra required dependencies on Fabric nodes (fabric-api)
-//   golem.build.publish.optional           optional dependencies, comma separated slugs (both sites)
+//   golem.build.publish.requires           required dependencies, comma separated, for both sites
+//   golem.build.publish.optional           optional dependencies, comma separated, for both sites
+//   golem.build.publish.fabricRequires     extra required dependencies on Fabric nodes, both sites (fabric-api)
+//   golem.build.publish.modrinthRequires   per-site lists that replace requires / optional on that site when
+//   golem.build.publish.modrinthOptional   the key is present, even blank. Modrinth takes project IDs or slugs
+//   golem.build.publish.curseforgeRequires (a slug is not found while the project is unapproved, use the ID);
+//   golem.build.publish.curseforgeOptional CurseForge takes slugs, of public (approved) projects only
 //   golem.build.publish.minecraftVersions  game versions this jar is listed for; default deps.minecraft
 //   golem.build.publish.skip               true leaves this node out (snapshot nodes are left out anyway)
 //   golem.build.publish.environment        Modrinth environment: client_and_server (default: the mod has content
@@ -54,8 +56,11 @@ val skipped = setting("skip").toBoolean() || unreleased
 // reobfuscated jar on Forge, and the plain jar everywhere else (NeoForge, unobfuscated Fabric).
 val releaseJarTask = listOf("remapJar", "reobfJar").firstOrNull { it in tasks.names } ?: "jar"
 
-val requires = list("requires") + if (loader == "fabric") list("fabricRequires") else emptyList()
-val optional = list("optional")
+// A per-site key replaces the shared one whenever it is present, so "curseforgeRequires=" (blank) means none.
+fun siteList(site: String, kind: String): List<String> =
+    if (hasProperty("golem.build.publish.$site${kind.replaceFirstChar(Char::uppercase)}"))
+        list("$site${kind.replaceFirstChar(Char::uppercase)}") else list(kind)
+val fabricRequires = if (loader == "fabric") list("fabricRequires") else emptyList()
 
 // CHANGELOG.md keeps every release under a "## <version>" heading; only this version's section is
 // uploaded. An explicit publish.changelogFile (the workflow's tag message) is used whole.
@@ -102,8 +107,10 @@ configure<me.modmuss50.mpp.ModPublishExtension> {
         minecraftVersions.addAll(gameVersions)
         environment.set(me.modmuss50.mpp.platforms.modrinth.ModrinthEnvironment.valueOf(
             setting("environment").ifEmpty { "client_and_server" }.uppercase()))
-        if (requires.isNotEmpty()) requires(*requires.toTypedArray())
-        if (optional.isNotEmpty()) optional(*optional.toTypedArray())
+        val required = siteList("modrinth", "requires") + fabricRequires
+        val optionals = siteList("modrinth", "optional")
+        if (required.isNotEmpty()) requires(*required.toTypedArray())
+        if (optionals.isNotEmpty()) optional(*optionals.toTypedArray())
     }
 
     if (setting("curseforgeProject").isNotEmpty()) curseforge {
@@ -114,8 +121,10 @@ configure<me.modmuss50.mpp.ModPublishExtension> {
         javaVersions.add(JavaVersion.toVersion(property("java_version") as String))
         client.set(true)
         server.set(true)
-        if (requires.isNotEmpty()) requires(*requires.toTypedArray())
-        if (optional.isNotEmpty()) optional(*optional.toTypedArray())
+        val required = siteList("curseforge", "requires") + fabricRequires
+        val optionals = siteList("curseforge", "optional")
+        if (required.isNotEmpty()) requires(*required.toTypedArray())
+        if (optionals.isNotEmpty()) optional(*optionals.toTypedArray())
     }
 }
 
