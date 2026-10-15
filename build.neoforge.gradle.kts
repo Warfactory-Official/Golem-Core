@@ -196,8 +196,10 @@ tasks.processResources {
     )
     inputs.properties(props)
     filesMatching(listOf("META-INF/neoforge.mods.toml", "pack.mcmeta", "*.mixins.json")) { expand(props) }
+    // Only Forge generates a refmap; naming an absent one leaves the jar pointing at a file it lacks.
+    filesMatching("*.mixins.json") { filter { if (it.trimStart().startsWith("\"refmap\"")) null else it } }
     exclude(
-        "fabric.mod.json", "golemcore.fabric.mixins.json",
+        "fabric.mod.json", "golemcore.fabric.mixins.json", "META-INF/mods.toml",
         "META-INF/accesstransformer.cfg", "META-INF/golemcore.neoforge.accesstransformer.cfg",
         "META-INF/golemcore.forge.accesstransformer.cfg",
         "META-INF/golemcore.flywheel.accesstransformer.cfg",
