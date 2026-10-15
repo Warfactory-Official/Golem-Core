@@ -49,6 +49,12 @@ import java.util.Map;
  * differs then disables blending after its own render type enabled it (vignette, HUD and translucent geometry drawn
  * opaque). The render type's {@code LIGHTNING_TRANSPARENCY} sets {@code SRC_ALPHA / ONE}; the program's default
  * (opaque) blend that {@code apply()} re-applies over it is undone after every {@code apply()}, as {@link Bloom} does.
+ *
+ * <p><b>Textured variant</b> ({@link #textured}): the same state with a second texture, {@code Sampler1}, for the
+ * fragment stage, and in place of the local matrix a full parameter matrix ({@link #params}) the shader reads as it
+ * likes, translation included: on 26.1 {@code TextureMat}, before 26.1 {@code LocalMat}. HBM 1.12's gluon beam is the
+ * user: its vertex shaders displace each vertex in the beam's own space by noise and the time, billboard against the
+ * camera, and the fragment stage samples the beam texture.
  */
 public final class NoiseDisplacedRenderType {
 
@@ -56,9 +62,13 @@ public final class NoiseDisplacedRenderType {
     public static final int SLOTS = 16;
 
     private static final Matrix4f[] LOCAL = new Matrix4f[SLOTS];
+    private static final Matrix4f[] PARAMS = new Matrix4f[SLOTS];
 
     static {
-        for (int i = 0; i < SLOTS; i++) LOCAL[i] = new Matrix4f();
+        for (int i = 0; i < SLOTS; i++) {
+            LOCAL[i] = new Matrix4f();
+            PARAMS[i] = new Matrix4f();
+        }
     }
 
     private NoiseDisplacedRenderType() {}
@@ -71,6 +81,11 @@ public final class NoiseDisplacedRenderType {
     /** {@link #localMatrix(Matrix4f)} for the render types of {@code slot} (the four-argument {@code of}). */
     public static void localMatrix(int slot, Matrix4f matrix) {
         LOCAL[slot].set(matrix).setTranslation(0F, 0F, 0F);
+    }
+
+    /** The parameter matrix the {@link #textured} render types of {@code slot} hand their shader, kept whole. */
+    public static void params(int slot, Matrix4f matrix) {
+        PARAMS[slot].set(matrix);
     }
 
     /** One vertex: posed position, sample coordinate {@code u}, per-vertex {@code time}, ARGB colour. */
@@ -95,6 +110,14 @@ public final class NoiseDisplacedRenderType {
                     () -> new Matrix4f(local));
         }
     }
+    private static final TextureTransform[] PARAM_TRANSFORMS = new TextureTransform[SLOTS];
+
+    static {
+        for (int i = 0; i < SLOTS; i++) {
+            Matrix4f params = PARAMS[i];
+            PARAM_TRANSFORMS[i] = new TextureTransform("golem_noise_params_" + i, () -> new Matrix4f(params));
+        }
+    }
     private static final OutputTarget BLOOM_OUTPUT = new OutputTarget("golem_bloom_layer", Bloom.LAYER::drawTarget);
 
     /**
@@ -111,6 +134,37 @@ public final class NoiseDisplacedRenderType {
     public static RenderType of(String shaderId, Identifier noise, boolean bloom, int slot) {
         String key = shaderId + "\n" + noise + "\n" + bloom + "\n" + slot;
         return TYPES.computeIfAbsent(key, k -> create(shaderId, noise, bloom, slot));
+    }
+
+    /**
+     * The textured variant for {@code shaderId}: {@code Sampler0} is {@code noise} as {@link #of}, {@code Sampler1} is
+     * {@code texture} sampled the same way (1.12 bound its beam textures with the same linear magnification), and
+     * {@code TextureMat} is the parameter matrix of {@code slot}.
+     */
+    public static RenderType textured(String shaderId, Identifier noise, Identifier texture, int slot) {
+        String key = shaderId + "\n" + noise + "\n" + texture + "\n" + slot + "\ntextured";
+        return TYPES.computeIfAbsent(key, k -> createTextured(shaderId, noise, texture, slot));
+    }
+
+    private static RenderType createTextured(String shaderId, Identifier noise, Identifier texture, int slot) {
+        Identifier base = dev.golem.core.Ids.parse(shaderId);
+        RenderPipeline pipeline = RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET)
+                .withLocation(dev.golem.core.Ids.of(base.getNamespace(), "pipeline/" + base.getPath()))
+                .withVertexShader(dev.golem.core.Ids.of(base.getNamespace(), "core/" + base.getPath()))
+                .withFragmentShader(dev.golem.core.Ids.of(base.getNamespace(), "core/" + base.getPath()))
+                .withSampler("Sampler0")
+                .withSampler("Sampler1")
+                .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS)
+                .withDepthStencilState(new DepthStencilState(DepthStencilState.DEFAULT.depthTest(), false))
+                .withColorTargetState(new ColorTargetState(BlendFunction.LIGHTNING))
+                .withCull(false)
+                .build();
+        RenderSetup setup = RenderSetup.builder(pipeline)
+                .withTexture("Sampler0", noise, NoiseTextures::sampler)
+                .withTexture("Sampler1", texture, NoiseTextures::sampler)
+                .setTextureTransform(PARAM_TRANSFORMS[slot])
+                .createRenderSetup();
+        return RenderType.create("golem_noise_displaced_textured", setup);
     }
 
     private static RenderType create(String shaderId, Identifier noise, boolean bloom, int slot) {
@@ -140,16 +194,25 @@ public final class NoiseDisplacedRenderType {
     }
 
     public static RenderType of(String shaderId, ResourceLocation noise, boolean bloom, int slot) {
-        if (!reloadRegistered) {
-            reloadRegistered = true;
-            dev.golem.core.client.ClientResourceReloads.register("golemcore", "noise_displaced", () -> {
-                SHADERS.values().forEach(ShaderInstance::close);
-                SHADERS.clear();
-                TYPES.clear();
-            });
-        }
+        watchReloads();
         String key = shaderId + "\n" + noise + "\n" + bloom + "\n" + slot;
         return TYPES.computeIfAbsent(key, k -> Factory.create(shaderId, noise, bloom, slot));
+    }
+
+    private static void watchReloads() {
+        if (reloadRegistered) return;
+        reloadRegistered = true;
+        dev.golem.core.client.ClientResourceReloads.register("golemcore", "noise_displaced", () -> {
+            SHADERS.values().forEach(ShaderInstance::close);
+            SHADERS.clear();
+            TYPES.clear();
+        });
+    }
+
+    public static RenderType textured(String shaderId, ResourceLocation noise, ResourceLocation texture, int slot) {
+        watchReloads();
+        String key = shaderId + "\n" + noise + "\n" + texture + "\n" + slot + "\ntextured";
+        return TYPES.computeIfAbsent(key, k -> Factory.createTextured(shaderId, noise, texture, slot));
     }
 
     private static ShaderInstance shader(String shaderId) {
@@ -193,6 +256,45 @@ public final class NoiseDisplacedRenderType {
                 NoiseTextures.apply(Minecraft.getInstance().getTextureManager().getTexture(noiseId));
                 shader(shaderId).safeGetUniform("LocalMat").set(new Matrix4f(LOCAL[slot]));
             }
+        }
+
+        /^* Noise on unit 0, the fragment stage's texture on unit 1, and the whole parameter matrix as {@code LocalMat}. ^/
+        private static final class TexturedState extends TextureStateShard {
+            private final String shaderId;
+            private final int slot;
+            private final ResourceLocation noiseId;
+            private final ResourceLocation textureId;
+
+            private TexturedState(ResourceLocation noise, ResourceLocation texture, String shaderId, int slot) {
+                super(noise, false, false);
+                this.noiseId = noise;
+                this.textureId = texture;
+                this.shaderId = shaderId;
+                this.slot = slot;
+            }
+
+            @Override
+            public void setupRenderState() {
+                super.setupRenderState();
+                var textures = Minecraft.getInstance().getTextureManager();
+                com.mojang.blaze3d.systems.RenderSystem.setShaderTexture(1, textureId);
+                NoiseTextures.apply(textures.getTexture(textureId));
+                NoiseTextures.apply(textures.getTexture(noiseId));
+                shader(shaderId).safeGetUniform("LocalMat").set(new Matrix4f(PARAMS[slot]));
+            }
+        }
+
+        static RenderType createTextured(String shaderId, ResourceLocation noise, ResourceLocation texture, int slot) {
+            CompositeState state = CompositeState.builder()
+                    .setShaderState(new ShaderStateShard(() -> shader(shaderId)))
+                    .setTextureState(new TexturedState(noise, texture, shaderId, slot))
+                    .setTransparencyState(LIGHTNING_TRANSPARENCY)
+                    .setDepthTestState(LEQUAL_DEPTH_TEST)
+                    .setCullState(NO_CULL)
+                    .setWriteMaskState(COLOR_WRITE)
+                    .createCompositeState(false);
+            return RenderType.create("golem_noise_displaced_textured", DefaultVertexFormat.POSITION_TEX_COLOR,
+                    com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, 256, false, true, state);
         }
 
         static RenderType create(String shaderId, ResourceLocation noise, boolean bloom, int slot) {

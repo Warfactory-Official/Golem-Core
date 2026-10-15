@@ -39,6 +39,9 @@ import java.util.function.Function;
  * <p>No stock render type has that combination: 26.1's {@code energySwirl} is additive but writes depth, and
  * {@code eyes} neither weights by alpha nor leaves culling off. The pipeline is declared here and memoized per
  * texture.
+ *
+ * <p>{@link #ofSeeThrough} is the same glow with the depth test off as well, for a 1.12 flare that called
+ * {@code disableDepth()} and so showed through everything.
  */
 public final class PlasmaGlowRenderType {
 
@@ -71,8 +74,30 @@ public final class PlasmaGlowRenderType {
             RenderType.create("golem_plasma_glow",
                     RenderSetup.builder(PIPELINE).withTexture("Sampler0", texture).createRenderSetup()));
 
+    private static final RenderPipeline SEE_THROUGH_PIPELINE = RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
+            .withLocation("pipeline/golem_plasma_glow_see_through")
+            .withVertexShader("core/entity")
+            .withFragmentShader("core/entity")
+            .withShaderDefine("EMISSIVE")
+            .withShaderDefine("NO_OVERLAY")
+            .withShaderDefine("NO_CARDINAL_LIGHTING")
+            .withSampler("Sampler0")
+            .withColorTargetState(new ColorTargetState(BlendFunction.LIGHTNING))
+            .withVertexFormat(DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS)
+            .withDepthStencilState(java.util.Optional.empty())
+            .withCull(false)
+            .build();
+
+    private static final Function<Identifier, RenderType> SEE_THROUGH = Util.memoize(texture ->
+            RenderType.create("golem_plasma_glow_see_through",
+                    RenderSetup.builder(SEE_THROUGH_PIPELINE).withTexture("Sampler0", texture).createRenderSetup()));
+
     public static RenderType of(Identifier texture) {
         return BY_TEXTURE.apply(texture);
+    }
+
+    public static RenderType ofSeeThrough(Identifier texture) {
+        return SEE_THROUGH.apply(texture);
     }
     //?} else {
     /*/^*
@@ -129,7 +154,11 @@ public final class PlasmaGlowRenderType {
         ^///?}
 
         static RenderType glow(ResourceLocation texture) {
-            return create("golem_plasma_glow",
+            return glow(texture, false);
+        }
+
+        static RenderType glow(ResourceLocation texture, boolean seeThrough) {
+            return create(seeThrough ? "golem_plasma_glow_see_through" : "golem_plasma_glow",
                     DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS, 256, false, true,
                     CompositeState.builder()
                             //? if <1.21 {
@@ -141,6 +170,7 @@ public final class PlasmaGlowRenderType {
                             // SRC_ALPHA / ONE - the alpha-weighted additive blend, not ONE/ONE.
                             .setTransparencyState(LIGHTNING_TRANSPARENCY)
                             .setCullState(NO_CULL)
+                            .setDepthTestState(seeThrough ? NO_DEPTH_TEST : LEQUAL_DEPTH_TEST)
                             .setWriteMaskState(COLOR_WRITE)
                             .setLightmapState(LIGHTMAP)
                             .setOverlayState(OVERLAY)
@@ -148,10 +178,16 @@ public final class PlasmaGlowRenderType {
         }
     }
 
-    private static final Function<ResourceLocation, RenderType> BY_TEXTURE = Util.memoize(Factory::glow);
+    private static final Function<ResourceLocation, RenderType> BY_TEXTURE = Util.memoize(texture -> Factory.glow(texture));
+    private static final Function<ResourceLocation, RenderType> SEE_THROUGH =
+            Util.memoize(texture -> Factory.glow(texture, true));
 
     public static RenderType of(ResourceLocation texture) {
         return BY_TEXTURE.apply(texture);
+    }
+
+    public static RenderType ofSeeThrough(ResourceLocation texture) {
+        return SEE_THROUGH.apply(texture);
     }
     *///?}
 }

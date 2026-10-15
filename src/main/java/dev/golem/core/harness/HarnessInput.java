@@ -116,6 +116,11 @@ final class HarnessInput {
         return held.contains(new Binding(false, key));
     }
 
+    /** Whether the harness is holding mouse button {@code button} down. */
+    static boolean mouseHeld(int button) {
+        return held.contains(new Binding(true, button));
+    }
+
     static void press(Minecraft minecraft, Binding binding, boolean down, int mods) {
         if (binding.mouse()) mouseButton(minecraft, binding.code(), down, mods);
         else key(minecraft, binding.code(), down, mods);

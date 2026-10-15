@@ -21,6 +21,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * NeoForge has {@code CalculateDetachedCameraDistanceEvent}, but Forge 1.20.1 and fabric-api have no camera-distance
  * event, and 26.1's {@code camera_distance} attribute is server-synced entity state, not a client view setting; one
  * argument modifier here serves all six nodes the same way.
+ *
+ * <p>{@link CameraHooks#PITCH} turns the placed camera by re-setting its rotation at the end of the method that placed
+ * it, through vanilla's protected {@code setRotation}. Rung 2: NeoForge and Forge have {@code ComputeCameraAngles},
+ * fabric-api has no camera-angle event; the TAIL inject serves all six nodes the same way and leaves the position alone.
  */
 @Mixin(net.minecraft.client.Camera.class)
 public abstract class MixinCamera {
@@ -50,6 +54,26 @@ public abstract class MixinCamera {
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Camera;getMaxZoom(D)D"))
     private double golem$thirdPersonDistance(double distance) {
         return CameraHooks.thirdPersonDistance(((net.minecraft.client.Camera) (Object) this).getEntity(), (float) distance);
+    }
+    *///?}
+
+    @org.spongepowered.asm.mixin.Shadow
+    protected abstract void setRotation(float yRot, float xRot);
+
+    //? if >=26.1 {
+    @Inject(method = "alignWithEntity", at = @At("TAIL"))
+    private void golem$pitchOffset(float partialTick, CallbackInfo ci) {
+        net.minecraft.client.Camera camera = (net.minecraft.client.Camera) (Object) this;
+        float offset = CameraHooks.pitchOffset(camera.entity());
+        if (offset != 0F) setRotation(camera.yRot(), camera.xRot() + offset);
+    }
+    //?} else {
+    /*@Inject(method = "setup", at = @At("TAIL"))
+    private void golem$pitchOffset(net.minecraft.world.level.BlockGetter level, Entity entity, boolean detached,
+            boolean mirror, float partialTick, CallbackInfo ci) {
+        net.minecraft.client.Camera camera = (net.minecraft.client.Camera) (Object) this;
+        float offset = CameraHooks.pitchOffset(entity);
+        if (offset != 0F) setRotation(camera.getYRot(), camera.getXRot() + offset);
     }
     *///?}
 

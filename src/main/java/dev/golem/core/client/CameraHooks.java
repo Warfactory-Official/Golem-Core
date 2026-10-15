@@ -39,6 +39,26 @@ public final class CameraHooks {
     /** Every {@link Distance} listener, in phase order; each receives the previous one's answer. */
     public static final dev.golem.core.hook.Hook<Distance> DISTANCE = dev.golem.core.hook.Hook.notifying();
 
+    /**
+     * Degrees added to the camera's pitch once it is placed, turning the view without moving the camera or the entity:
+     * 1.12's {@code EntityViewRenderEvent.CameraSetup.setPitch}. Called once per camera setup.
+     */
+    @FunctionalInterface
+    public interface Pitch {
+        float pitchOffset(Entity entity);
+    }
+
+    /** Every {@link Pitch} listener; their offsets add up. */
+    public static final dev.golem.core.hook.Hook<Pitch> PITCH = dev.golem.core.hook.Hook.notifying();
+
+    /** The sum of every {@link #PITCH} listener's offset for this camera setup. */
+    public static float pitchOffset(Entity entity) {
+        if (entity == null || PITCH.isEmpty()) return 0F;
+        float offset = 0F;
+        for (Pitch listener : PITCH) offset += listener.pitchOffset(entity);
+        return offset;
+    }
+
     /** The detached camera distance after every {@link #DISTANCE} listener (vanilla's when there are none). */
     public static float thirdPersonDistance(Entity entity, float distance) {
         if (!(entity instanceof Player player) || DISTANCE.isEmpty()) return distance;

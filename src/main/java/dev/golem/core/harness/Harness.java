@@ -67,6 +67,11 @@ public final class Harness {
         return initialised && HarnessInput.keyHeld(glfwKey);
     }
 
+    /** {@link #keyHeld} for a mouse button ({@code glfwGetMouseButton} never sees a harness press either). */
+    public static boolean mouseHeld(int button) {
+        return initialised && HarnessInput.mouseHeld(button);
+    }
+
     /** Called once from each loader's client initialisation. Safe to call twice. */
     public static void init() {
         if (initialised) return;

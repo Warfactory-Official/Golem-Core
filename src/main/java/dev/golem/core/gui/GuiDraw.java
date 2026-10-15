@@ -71,19 +71,34 @@ public final class GuiDraw {
             *///?}
             int x, int y, int width, int height, float u0, float v0, float u1, float v1,
             int textureWidth, int textureHeight, boolean additive) {
+        blitUv(graphics, texture, x, y, width, height, u0, v0, u1, v1, textureWidth, textureHeight, additive, 0xFFFFFFFF);
+    }
+
+    /** {@link #blitUv} tinted by the ARGB {@code color}, as a 1.12 {@code GlStateManager.color} before the draw. */
+    public static void blitUv(
+            //? if >=26.1 {
+            GuiGraphicsExtractor graphics, Identifier texture,
+            //?} else {
+            /*GuiGraphics graphics, ResourceLocation texture,
+            *///?}
+            int x, int y, int width, int height, float u0, float v0, float u1, float v1,
+            int textureWidth, int textureHeight, boolean additive, int color) {
         int sourceWidth = Math.max(1, Math.round((u1 - u0) * textureWidth));
         int sourceHeight = Math.max(1, Math.round((v1 - v0) * textureHeight));
         //? if >=26.1 {
         graphics.blit(additive ? GUI_ADDITIVE : RenderPipelines.GUI_TEXTURED, texture, x, y, u0 * textureWidth, v0 * textureHeight,
-                width, height, sourceWidth, sourceHeight, textureWidth, textureHeight);
+                width, height, sourceWidth, sourceHeight, textureWidth, textureHeight, color);
         //?} else {
         /*com.mojang.blaze3d.systems.RenderSystem.enableBlend();
         com.mojang.blaze3d.systems.RenderSystem.defaultBlendFunc();
         if (additive) com.mojang.blaze3d.systems.RenderSystem.blendFunc(
                 com.mojang.blaze3d.platform.GlStateManager.SourceFactor.SRC_ALPHA,
                 com.mojang.blaze3d.platform.GlStateManager.DestFactor.ONE);
+        graphics.setColor(((color >> 16) & 0xFF) / 255F, ((color >> 8) & 0xFF) / 255F, (color & 0xFF) / 255F,
+                ((color >>> 24) & 0xFF) / 255F);
         graphics.blit(texture, x, y, width, height, u0 * textureWidth, v0 * textureHeight, sourceWidth, sourceHeight,
                 textureWidth, textureHeight);
+        graphics.setColor(1F, 1F, 1F, 1F);
         com.mojang.blaze3d.systems.RenderSystem.disableBlend();
         com.mojang.blaze3d.systems.RenderSystem.defaultBlendFunc();
         *///?}

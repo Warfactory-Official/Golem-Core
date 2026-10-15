@@ -206,6 +206,42 @@ public final class FlatCutoutRenderType {
         return TRANSLUCENT_BY_TEXTURE.apply(texture);
     }
 
+    private static net.minecraft.client.renderer.ShaderInstance faintShader;
+    private static boolean reloadRegistered;
+
+    // The program's apply() resets the blend on 1.20.1 (its JSON states none), so the hook run after it restores
+    // the translucent blend. See NoiseDisplacedRenderType for the 1.20.1 trap.
+    private static net.minecraft.client.renderer.ShaderInstance faintShader() {
+        if (!reloadRegistered) {
+            reloadRegistered = true;
+            dev.golem.core.client.ClientResourceReloads.register("golemcore", "flat_translucent", () -> {
+                if (faintShader != null) faintShader.close();
+                faintShader = null;
+            });
+        }
+        if (faintShader == null) {
+            //? if >=1.21 {
+            String id = "golemcore:flat_translucent_legacy";
+            //?} else {
+            /^String id = "golemcore:flat_translucent_legacy120";
+            ^///?}
+            try {
+                faintShader = ShaderLoader.load(net.minecraft.client.Minecraft.getInstance().getResourceManager(), id,
+                        com.mojang.blaze3d.vertex.DefaultVertexFormat.NEW_ENTITY, () -> {
+                            com.mojang.blaze3d.systems.RenderSystem.enableBlend();
+                            com.mojang.blaze3d.systems.RenderSystem.blendFuncSeparate(
+                                    com.mojang.blaze3d.platform.GlStateManager.SourceFactor.SRC_ALPHA,
+                                    com.mojang.blaze3d.platform.GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA,
+                                    com.mojang.blaze3d.platform.GlStateManager.SourceFactor.ONE,
+                                    com.mojang.blaze3d.platform.GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
+                        });
+            } catch (java.io.IOException e) {
+                throw new IllegalStateException("Could not load shader " + id, e);
+            }
+        }
+        return faintShader;
+    }
+
     /^* Whether {@code type} is one of these; its buffer must then go through {@link #flatten}. ^/
     static boolean isFlat(RenderType type) {
         return FLAT.contains(type);
@@ -245,11 +281,14 @@ public final class FlatCutoutRenderType {
                             .createCompositeState(true));
         }
 
+        /^* Vanilla's entity-translucent program, discarding only at alpha 0 as 26.1's pipeline does. ^/
+        private static final ShaderStateShard FAINT_TRANSLUCENT_SHADER = new ShaderStateShard(FlatCutoutRenderType::faintShader);
+
         static RenderType translucent(ResourceLocation texture) {
             return RenderType.create("golem_flat_translucent", com.mojang.blaze3d.vertex.DefaultVertexFormat.NEW_ENTITY,
                     com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, 256, true, true,
                     CompositeState.builder()
-                            .setShaderState(RENDERTYPE_ENTITY_TRANSLUCENT_SHADER)
+                            .setShaderState(FAINT_TRANSLUCENT_SHADER)
                             .setTextureState(new TextureStateShard(texture, false, false))
                             .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
                             .setCullState(NO_CULL)

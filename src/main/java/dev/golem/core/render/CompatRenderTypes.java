@@ -173,6 +173,17 @@ public final class CompatRenderTypes {
         return PlasmaGlowRenderType.of(texture);
     }
 
+    /** {@link #plasmaGlow} with no depth test either: drawn over everything. */
+    public static RenderType plasmaGlowSeeThrough(
+            //? if >=26.1 {
+            Identifier
+            //?} else {
+            /*ResourceLocation
+            *///?}
+            texture) {
+        return PlasmaGlowRenderType.ofSeeThrough(texture);
+    }
+
     /** Torex's legacy fog-free, lightmapped {@code SRC_ALPHA/ONE} flare with no depth write. */
     public static RenderType torexFlare(
             //? if >=26.1 {
@@ -300,6 +311,7 @@ public final class CompatRenderTypes {
     /**
      * {@link #flatCutout} blended {@code SRC_ALPHA / ONE_MINUS_SRC_ALPHA}, unculled, depth tested without writing it: a
      * 1.12 particle or decal drawn with {@code GL_LIGHTING} off and {@code depthMask(false)}. Emit an upward normal.
+     * Only alpha 0 is discarded, so a faint particle (1.12's {@code alphaFunc(GL_GREATER, 1/255)}) stays visible.
      */
     public static RenderType flatTranslucent(
             //? if >=26.1 {
