@@ -41,6 +41,11 @@ repositories {
         forRepository { maven("https://maven.latvian.dev/releases") { name = "LatvianDev" } }
         filter { includeGroup("dev.latvian.mods") }
     }
+    // Jade (the optional `jade` peer, see deps.jade), published on Modrinth's maven.
+    exclusiveContent {
+        forRepository { maven("https://api.modrinth.com/maven") { name = "Modrinth" } }
+        filter { includeGroup("maven.modrinth") }
+    }
     // REI and its Cloth Config / Architectury dependencies (the optional `rei` peer, see deps.rei).
     exclusiveContent {
         forRepository { maven("https://maven.shedaniel.me") { name = "Shedaniel" } }
@@ -175,6 +180,7 @@ tasks.processResources {
         // dev.golem.core.gametest.GameTestMixinPlugin adds it when its target is present (a listed mixin with a missing
         // target fails the required config and crashed players' clients).
         "legacy_client_mixins" to ", \"MixinMouseInput\"" +
+            (if (mcVersion.substringBefore('.').toInt() < 26) ", \"MixinLegacyKeyMappingWinner\"" else "") +
             (if (obfuscated) ", \"MixinLegacyCrosshair\"" else "") +
             // VanillaHud: Fabric API before 26.1 has no named HUD elements to suppress hearts/armour by.
             (if (obfuscated) ", \"MixinLegacyHudRows\"" else ""),
@@ -202,6 +208,13 @@ tasks.processResources {
         )
         filesMatching("fabric.mod.json") {
             filter { line -> sableLines[line.trim()]?.let { "$line, $it" } ?: line }
+        }
+    }
+    // Jade's plugin entrypoint, only where the adapter is compiled. Appended by line, like Sable's.
+    if (!(findProperty("deps.jade") as String?).isNullOrBlank()) {
+        filesMatching("fabric.mod.json") {
+            filter { line -> if (line.trim() == "\"entrypoints\": {")
+                "$line\n        \"jade\": [\"dev.golem.core.jade.JadePlugin\"]," else line }
         }
     }
     allAccessWideners.filter { it != accessWidenerName }.forEach { exclude(it) }
@@ -267,6 +280,11 @@ dependencies {
             exclude(group = "net.fabricmc")
             exclude(group = "net.fabricmc.fabric-api")
         }
+    }
+
+    // Jade, compile-only and per-node optional (see the NeoForge buildscript); intermediary-mapped below 26.1.
+    (findProperty("deps.jade") as String?)?.takeIf { it.isNotBlank() }?.let {
+        (if (obfuscated) "modCompileOnly" else "compileOnly")("maven.modrinth:jade:$it") { isTransitive = false }
     }
 
     // KubeJS 6, compile-only and per-node optional (see the NeoForge buildscript); intermediary-mapped below 26.1.

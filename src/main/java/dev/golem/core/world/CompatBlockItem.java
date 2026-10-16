@@ -1,5 +1,6 @@
 package dev.golem.core.world;
 
+import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.BlockItem;
@@ -45,6 +46,18 @@ public class CompatBlockItem extends BlockItem {
 
     protected void appendCompatHoverText(ItemStack stack, CompatTooltipContext context,
                                          List<Component> tooltip, TooltipFlag flag) {
+    }
+
+    /** The lines this item adds below its name: the block's {@link BlockTooltip} lines, then the item's. */
+    public List<Component> hoverLines(ItemStack stack, TooltipFlag flag) {
+        List<Component> lines = new ArrayList<>();
+        appendLines(stack, lines, flag);
+        return lines;
+    }
+
+    private void appendLines(ItemStack stack, List<Component> tooltip, TooltipFlag flag) {
+        if (getBlock() instanceof BlockTooltip block) block.appendBlockTooltip(stack, tooltip, flag);
+        appendCompatHoverText(stack, CompatTooltipContext.INSTANCE, tooltip, flag);
     }
 
     /**
@@ -94,25 +107,21 @@ public class CompatBlockItem extends BlockItem {
                                 net.minecraft.world.item.component.TooltipDisplay display,
                                 java.util.function.Consumer<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, context, display, tooltip, flag);
-        appendCompatHoverText(stack, CompatTooltipContext.INSTANCE, new java.util.AbstractList<>() {
-            @Override public Component get(int index) { throw new UnsupportedOperationException(); }
-            @Override public int size() { return 0; }
-            @Override public void add(int index, Component component) { tooltip.accept(component); }
-        }, flag);
+        hoverLines(stack, flag).forEach(tooltip);
     }
     //?} else if >=1.21.1 {
     /*@Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip,
                                 TooltipFlag flag) {
         super.appendHoverText(stack, context, tooltip, flag);
-        appendCompatHoverText(stack, CompatTooltipContext.INSTANCE, tooltip, flag);
+        appendLines(stack, tooltip, flag);
     }
     *///?} else {
     /*@Override
     public void appendHoverText(ItemStack stack, net.minecraft.world.level.Level level, List<Component> tooltip,
                                 TooltipFlag flag) {
         super.appendHoverText(stack, level, tooltip, flag);
-        appendCompatHoverText(stack, CompatTooltipContext.INSTANCE, tooltip, flag);
+        appendLines(stack, tooltip, flag);
     }
     *///?}
 }

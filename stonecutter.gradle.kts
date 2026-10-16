@@ -38,6 +38,8 @@ stonecutter parameters {
     constants["computercraft"] = !(node.project.findProperty("deps.cc") as String?).isNullOrBlank()
     // True only where the node declares KubeJS coordinates (an optional peer; dev.golem.core.kubejs in Golem Core).
     constants["kubejs"] = !(node.project.findProperty("deps.kubejs") as String?).isNullOrBlank()
+    // True only where the node declares Jade coordinates (an optional peer; dev.golem.core.jade in Golem Core).
+    constants["jade"] = !(node.project.findProperty("deps.jade") as String?).isNullOrBlank()
 
     swaps["mc_version"] = "\"${node.metadata.version}\";"
 

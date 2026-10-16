@@ -56,6 +56,11 @@ repositories {
         forRepository { maven("https://maven.latvian.dev/releases") { name = "LatvianDev" } }
         filter { includeGroup("dev.latvian.mods") }
     }
+    // Jade (the optional `jade` peer, see deps.jade), published on Modrinth's maven.
+    exclusiveContent {
+        forRepository { maven("https://api.modrinth.com/maven") { name = "Modrinth" } }
+        filter { includeGroup("maven.modrinth") }
+    }
     // REI and its Cloth Config / Architectury dependencies (the optional `rei` peer, see deps.rei).
     exclusiveContent {
         forRepository { maven("https://maven.shedaniel.me") { name = "Shedaniel" } }
@@ -162,6 +167,9 @@ dependencies {
         (findProperty("deps.rei_cloth") as String?)?.takeIf { it.isNotBlank() }?.let { modCompileOnly("me.shedaniel.cloth:cloth-config-forge:$it") }
         (findProperty("deps.rei_architectury") as String?)?.takeIf { it.isNotBlank() }?.let { modCompileOnly("dev.architectury:architectury-forge:$it") }
     }
+
+    // Jade 11, compile-only and per-node optional (see the NeoForge buildscript); its Forge jar is SRG-mapped.
+    (findProperty("deps.jade") as String?)?.takeIf { it.isNotBlank() }?.let { modCompileOnly("maven.modrinth:jade:$it") }
 
     // KubeJS 6, compile-only and per-node optional (see the NeoForge buildscript). Its Forge jars are SRG-mapped, hence
     // `modCompileOnly`; MDG Legacy remaps each jar alone, and KubeJS 6's API names Rhino's and Architectury's types.

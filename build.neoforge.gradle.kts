@@ -122,6 +122,11 @@ repositories {
         forRepository { maven("https://maven.latvian.dev/releases") { name = "LatvianDev" } }
         filter { includeGroup("dev.latvian.mods") }
     }
+    // Jade (the optional `jade` peer, see deps.jade), published on Modrinth's maven.
+    exclusiveContent {
+        forRepository { maven("https://api.modrinth.com/maven") { name = "Modrinth" } }
+        filter { includeGroup("maven.modrinth") }
+    }
     // REI and its Cloth Config / Architectury dependencies (the optional `rei` peer, see deps.rei).
     exclusiveContent {
         forRepository { maven("https://maven.shedaniel.me") { name = "Shedaniel" } }
@@ -255,6 +260,10 @@ dependencies {
     (findProperty("deps.rei") as String?)?.takeIf { it.isNotBlank() }?.let { rei ->
         compileOnly("me.shedaniel:RoughlyEnoughItems-api-neoforge:$rei")
     }
+
+    // Jade, compile-only and per-node optional: dev.golem.core.jade shows dev.golem.core.info declarations in Jade's
+    // HUD (26.x and 15.x API lines). A node without deps.jade compiles the adapter out (`jade`).
+    (findProperty("deps.jade") as String?)?.takeIf { it.isNotBlank() }?.let { compileOnly("maven.modrinth:jade:$it") }
 
     // KubeJS, compile-only and per-node optional: dev.golem.core.kubejs turns every RecipeTables table into a script
     // recipe schema and serves dev.golem.core.script's bindings and events (8.x on 26.1, 7.x on 1.21.1). Rhino is the
