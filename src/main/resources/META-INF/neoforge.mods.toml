@@ -11,6 +11,9 @@ description = '''${mod_description}'''
 
 [[mixins]]
 config = "golemcore.mixins.json"
+
+[[mixins]]
+config = "golemcore.harness.mixins.json"
 ${sable_mixins}
 
 [[dependencies.${mod_id}]]

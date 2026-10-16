@@ -84,7 +84,10 @@ val changelogText = providers.gradleProperty("publish.changelog").orElse(
 ).map { it.ifBlank { "$modName $modVersion." } }
 
 configure<me.modmuss50.mpp.ModPublishExtension> {
-    file.set(tasks.named<AbstractArchiveTask>(releaseJarTask).flatMap { it.archiveFile })
+    // A build that strips dev-only code from its upload names the stripped copy in extra["golem.releaseJar"].
+    @Suppress("UNCHECKED_CAST")
+    file.set(if (project.extra.has("golem.releaseJar")) project.extra["golem.releaseJar"] as Provider<RegularFile>
+        else tasks.named<AbstractArchiveTask>(releaseJarTask).flatMap { it.archiveFile })
     // Unique per node: Fabric and Forge jars for one Minecraft version must not share a version number.
     version.set("$modVersion+$minecraft-$loader")
     val loaderName = mapOf("neoforge" to "NeoForge", "forge" to "Forge", "fabric" to "Fabric")[loader] ?: loader

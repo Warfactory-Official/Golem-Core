@@ -13,14 +13,17 @@ supplies one `harness.json` plus its own scenarios.
 - Client windows are **minimized, never focused and never grab the mouse**, so you can keep working.
 - Clients start from `java` directly (a launch captured once from Gradle). No Gradle daemon stays alive.
 - All six nodes are supported: 26.1 NeoForge/Fabric, 1.21.1 NeoForge/Fabric, 1.20.1 Forge/Fabric.
+- Dev builds only. The uploaded Golem Core jars (`releaseJar`, `gradle/release-jar.gradle.kts`) leave the listener,
+  its mixins and its registrations out; `HarnessQueryRegistry` stays, so a mod's query registrations still compile and run.
 
 ## What is where
 
 | Location | What | Owner |
 |---|---|---|
 | `Golem-Core/harness/` (this folder) | The CLI (`cli`), the scenario API (`api`), wrappers, default client options | Golem Core |
-| `Golem-Core/src/main/java/dev/golem/core/harness/` | The in-game listener: commands, input, queries, screenshots, worlds, log buffer | Golem Core |
-| `Golem-Core/src/main/java/dev/golem/core/mixin/` | `MixinHarnessWindow`, `MixinHarnessMouseGrab` and the accessor mixins | Golem Core |
+| `Golem-Core/src/main/java/dev/golem/core/harness/` | The in-game listener: commands, input, queries, screenshots, worlds, log buffer; `HarnessSetup` (NeoForge/Forge) and `HarnessFabricClient` start it | Golem Core |
+| `Golem-Core/src/main/java/dev/golem/core/harness/mixin/` + `golemcore.harness.mixins.json` | `MixinHarnessWindow`, `MixinHarnessMouseGrab` and the accessor mixins, in their own config | Golem Core |
+| `Golem-Core/gradle/release-jar.gradle.kts` | `releaseJar`: the uploaded jar, with everything above except `HarnessQueryRegistry` and `HarnessHooks` removed | Golem Core |
 | `Golem-Core/gradle/harness-spec.gradle.kts` | Captures a node's real `runClient` launch as a JSON spec | Golem Core |
 | `<mod>/harness.json` | The mod's configuration: nodes, ports, paths | the mod |
 | `<mod>/harness/scenarios/*.java` | The mod's scenarios | the mod |
@@ -29,7 +32,7 @@ supplies one `harness.json` plus its own scenarios.
 | `<mod>/.harness/state.json` | Which clients are running (git-ignored) | the mod |
 
 The listener is only active on a **development client** started with `-Dgolem.harness.port=<port>`. Release
-builds never open it.
+jars do not contain it (see `releaseJar` above).
 
 ## First-time setup (new developers)
 

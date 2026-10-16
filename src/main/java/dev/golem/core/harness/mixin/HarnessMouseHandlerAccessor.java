@@ -1,4 +1,4 @@
-package dev.golem.core.mixin;
+package dev.golem.core.harness.mixin;
 
 import net.minecraft.client.MouseHandler;
 import org.spongepowered.asm.mixin.Mixin;

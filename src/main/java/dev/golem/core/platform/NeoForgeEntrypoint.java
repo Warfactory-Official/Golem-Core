@@ -24,8 +24,6 @@ public class NeoForgeEntrypoint {
         dev.golem.core.data.DataFiles.init();
         if (Platform.isClient()) dev.golem.core.data.DataFiles.initClient();
         if (Platform.isClient()) dev.golem.core.world.RecipeTables.initClient();
-        // Dev-only visual test harness; a no-op unless -Dgolem.harness.port is set on a client.
-        if (Platform.isClient()) dev.golem.core.harness.Harness.init();
         // The GUI scene renderer must be registered before the game renderer builds its PiP list.
         if (Platform.isClient()) dev.golem.core.gui.GuiScenes.bootstrap();
         // Every Golem-based mod's registers and payloads, filled once by Golem Core (see ModEntries).

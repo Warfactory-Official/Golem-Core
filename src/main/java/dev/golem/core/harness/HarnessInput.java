@@ -1,8 +1,8 @@
 package dev.golem.core.harness;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import dev.golem.core.mixin.HarnessKeyboardHandlerAccessor;
-import dev.golem.core.mixin.HarnessMouseHandlerAccessor;
+import dev.golem.core.harness.mixin.HarnessKeyboardHandlerAccessor;
+import dev.golem.core.harness.mixin.HarnessMouseHandlerAccessor;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;

@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "dev.golem.core.harness.mixin",
+  "refmap": "golemcore.refmap.json",
+  "compatibilityLevel": "${mixin_compatibility}",
+  "client": ["MixinHarnessWindow", "MixinHarnessMouseGrab", "HarnessKeyboardHandlerAccessor", "HarnessMouseHandlerAccessor",
+    "HarnessCreateWorldScreenAccessor", "HarnessContainerScreenAccessor"],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

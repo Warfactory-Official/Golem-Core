@@ -1,4 +1,4 @@
-package dev.golem.core.mixin;
+package dev.golem.core.harness.mixin;
 
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.world.inventory.Slot;

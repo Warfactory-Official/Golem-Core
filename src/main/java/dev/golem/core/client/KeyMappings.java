@@ -1,5 +1,6 @@
 package dev.golem.core.client;
 
+import dev.golem.core.harness.HarnessHooks;
 import net.minecraft.client.KeyMapping;
 //? if >=26.1 {
 import java.util.HashMap;
@@ -109,11 +110,11 @@ public final class KeyMappings {
         //? if >=26.1 {
         return com.mojang.blaze3d.platform.InputConstants.isKeyDown(
                 net.minecraft.client.Minecraft.getInstance().getWindow(), glfwKey)
-                || dev.golem.core.harness.Harness.keyHeld(glfwKey);
+                || HarnessHooks.keyHeld(glfwKey);
         //?} else {
         /*return com.mojang.blaze3d.platform.InputConstants.isKeyDown(
                 net.minecraft.client.Minecraft.getInstance().getWindow().getWindow(), glfwKey)
-                || dev.golem.core.harness.Harness.keyHeld(glfwKey);
+                || HarnessHooks.keyHeld(glfwKey);
         *///?}
     }
 
@@ -125,7 +126,7 @@ public final class KeyMappings {
             return MouseInput.isDown(key.getValue());
         }
         if (key.getType() == com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM) {
-            if (dev.golem.core.harness.Harness.keyHeld(key.getValue())) return true;
+            if (HarnessHooks.keyHeld(key.getValue())) return true;
             //? if >=26.1 {
             return com.mojang.blaze3d.platform.InputConstants.isKeyDown(
                     net.minecraft.client.Minecraft.getInstance().getWindow(), key.getValue());

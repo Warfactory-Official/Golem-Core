@@ -2,7 +2,7 @@ package dev.golem.core.harness;
 
 import com.google.gson.JsonObject;
 import dev.golem.core.GolemCore;
-import dev.golem.core.mixin.HarnessCreateWorldScreenAccessor;
+import dev.golem.core.harness.mixin.HarnessCreateWorldScreenAccessor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.gui.screens.worldselection.CreateWorldScreen;

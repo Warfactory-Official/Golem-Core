@@ -57,21 +57,6 @@ public final class Harness {
         return tick;
     }
 
-    /**
-     * Whether a harness-driven key is held. The harness presses keys through vanilla's handlers, which a
-     * physical poll ({@code glfwGetKey}) never sees; {@code KeyMappings}' physical polls ask here as well so
-     * code that polls a key reacts to a harness press as it would to a real one. Answers false without touching
-     * {@code HarnessInput} (and its GLFW name table) on a client where the harness never started.
-     */
-    public static boolean keyHeld(int glfwKey) {
-        return initialised && HarnessInput.keyHeld(glfwKey);
-    }
-
-    /** {@link #keyHeld} for a mouse button ({@code glfwGetMouseButton} never sees a harness press either). */
-    public static boolean mouseHeld(int button) {
-        return initialised && HarnessInput.mouseHeld(button);
-    }
-
     /** Called once from each loader's client initialisation. Safe to call twice. */
     public static void init() {
         if (initialised) return;
@@ -86,6 +71,7 @@ public final class Harness {
         GolemCore.LOG.info("[harness] starting listener on 127.0.0.1:{}", port);
         HarnessLog.install();
         HarnessCommands.registerDefaults();
+        HarnessHooks.install(HarnessInput::keyHeld, HarnessInput::mouseHeld);
         ClientTicks.onEndTick(Harness::onTick);
         Hud.addLast(GolemCore.MOD_ID, "harness", graphics -> HarnessScreenshot.render());
         HarnessServer.start(port);

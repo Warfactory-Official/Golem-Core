@@ -1,4 +1,4 @@
-package dev.golem.core.mixin;
+package dev.golem.core.harness.mixin;
 
 import dev.golem.core.harness.HarnessWindowHints;
 import net.minecraft.client.MouseHandler;

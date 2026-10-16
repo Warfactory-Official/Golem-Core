@@ -2,7 +2,7 @@ package dev.golem.core.harness;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import dev.golem.core.mixin.HarnessContainerScreenAccessor;
+import dev.golem.core.harness.mixin.HarnessContainerScreenAccessor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import net.minecraft.client.Minecraft;

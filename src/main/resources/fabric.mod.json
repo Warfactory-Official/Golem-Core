@@ -20,7 +20,8 @@
     },
     "mixins": [
         "golemcore.mixins.json",
-        "golemcore.fabric.mixins.json"
+        "golemcore.fabric.mixins.json",
+        "golemcore.harness.mixins.json"
     ],
     "depends": {
         "fabricloader": ">=${fabric_loader}",

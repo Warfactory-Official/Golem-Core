@@ -1,5 +1,7 @@
 package dev.golem.core.client;
 
+import dev.golem.core.harness.HarnessHooks;
+
 /** Physical mouse state and a callback that runs before vanilla consumes mapped clicks. */
 public final class MouseInput {
 
@@ -35,7 +37,7 @@ public final class MouseInput {
     /** Whether a physical mouse button is held, independent of any drained vanilla mapping. */
     public static boolean isDown(int button) {
         if (button < 0) return false;
-        if (dev.golem.core.harness.Harness.mouseHeld(button)) return true;
+        if (HarnessHooks.mouseHeld(button)) return true;
         //? if >=26.1 {
         long window = net.minecraft.client.Minecraft.getInstance().getWindow().handle();
         //?} else {

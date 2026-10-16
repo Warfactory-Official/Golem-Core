@@ -297,5 +297,8 @@ tasks.test {
     testLogging { events("passed", "failed", "skipped") }
 }
 
+// The uploaded copy of this node's jar, without the test harness.
+apply(from = rootProject.file("gradle/release-jar.gradle.kts"))
+
 // Modrinth + CurseForge upload of this node's jar; run every node with the root `publishAllMods`.
 apply(from = rootProject.file("gradle/mod/publish.gradle.kts"))

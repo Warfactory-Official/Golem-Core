@@ -122,7 +122,8 @@ jobs:
         if: steps.cfg.outputs.dry != 'true'
         run: |
           mkdir -p dist
-          find versions/*/build/libs -maxdepth 1 -name '*.jar' ! -name '*-sources.jar' -exec cp {} dist/ \;
+          # build/release holds the uploaded jars, without the test harness (gradle/release-jar.gradle.kts).
+          find versions/*/build/release -maxdepth 1 -name '*.jar' -exec cp {} dist/ \;
           ls -l dist
 
       - name: GitHub release

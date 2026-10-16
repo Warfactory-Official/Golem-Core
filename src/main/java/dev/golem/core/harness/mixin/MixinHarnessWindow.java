@@ -1,4 +1,4 @@
-package dev.golem.core.mixin;
+package dev.golem.core.harness.mixin;
 
 import com.mojang.blaze3d.platform.Window;
 import dev.golem.core.harness.HarnessWindowHints;

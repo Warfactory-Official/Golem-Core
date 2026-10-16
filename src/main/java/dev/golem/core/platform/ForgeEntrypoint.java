@@ -20,8 +20,6 @@ public final class ForgeEntrypoint {
         dev.golem.core.data.DataFiles.init();
         if (Platform.isClient()) dev.golem.core.data.DataFiles.initClient();
         if (Platform.isClient()) dev.golem.core.world.RecipeTables.initClient();
-        // Dev-only visual test harness; a no-op unless -Dgolem.harness.port is set on a client.
-        if (Platform.isClient()) dev.golem.core.harness.Harness.init();
         // Every Golem-based mod's registers and payloads, filled once by Golem Core (see ModEntries). Payloads wait
         // for common setup, after every mod is constructed: Forge numbers them as they are registered.
         modBus.addListener(ForgeEntrypoint::fillRegistry);

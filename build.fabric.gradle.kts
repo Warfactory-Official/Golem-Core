@@ -204,7 +204,7 @@ tasks.processResources {
         val sableLines = mapOf(
             "\"dev.golem.core.platform.FabricEntrypoint\"" to "\"dev.golem.core.sable.SableFabric\"",
             "\"dev.golem.core.harness.HarnessFabricClient\"" to "\"dev.golem.core.sable.SableFabricClient\"",
-            "\"golemcore.fabric.mixins.json\"" to "\"golemcore.sable.mixins.json\"",
+            "\"golemcore.harness.mixins.json\"" to "\"golemcore.sable.mixins.json\"",
         )
         filesMatching("fabric.mod.json") {
             filter { line -> sableLines[line.trim()]?.let { "$line, $it" } ?: line }
@@ -322,6 +322,9 @@ tasks.test {
     dependsOn(tasks.named("stonecutterGenerateTest"))
     testLogging { events("passed", "failed", "skipped") }
 }
+
+// The uploaded copy of this node's jar, without the test harness.
+apply(from = rootProject.file("gradle/release-jar.gradle.kts"))
 
 // Modrinth + CurseForge upload of this node's jar; run every node with the root `publishAllMods`.
 apply(from = rootProject.file("gradle/mod/publish.gradle.kts"))

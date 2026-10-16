@@ -197,6 +197,7 @@ dependencies {
 mixin {
     add(sourceSets["main"], "golemcore.refmap.json")
     config("golemcore.mixins.json")
+    config("golemcore.harness.mixins.json")
 }
 
 // Stonecutter writes the shared resources in place; the legacy toolkit must see the active node's
@@ -209,7 +210,7 @@ tasks.test {
 }
 
 tasks.jar {
-    manifest.attributes["MixinConfigs"] = "golemcore.mixins.json"
+    manifest.attributes["MixinConfigs"] = "golemcore.mixins.json,golemcore.harness.mixins.json"
 }
 
 publishing {
@@ -220,6 +221,9 @@ publishing {
         }
     }
 }
+
+// The uploaded copy of this node's jar, without the test harness.
+apply(from = rootProject.file("gradle/release-jar.gradle.kts"))
 
 // Modrinth + CurseForge upload of this node's jar; run every node with the root `publishAllMods`.
 apply(from = rootProject.file("gradle/mod/publish.gradle.kts"))
