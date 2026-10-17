@@ -44,7 +44,17 @@ final class JeiCategory<T> extends AbstractRecipeCategory<T> {
 
     @Override
     public void setRecipe(IRecipeLayoutBuilder builder, T recipe, IFocusGroup focuses) {
-        category.setRecipe((role, x, y) -> new Slot(builder.addSlot(role(role), x, y)), recipe);
+        category.setRecipe(new SlotLayout() {
+            @Override
+            public SlotLayout.Slot addSlot(Role role, int x, int y) {
+                return new JeiSlot(builder.addSlot(role(role), x, y));
+            }
+
+            @Override
+            public void addInvisible(Role role, List<ItemStack> stacks) {
+                builder.addInvisibleIngredients(role(role)).addItemStacks(stacks);
+            }
+        }, recipe);
     }
 
     @Override
@@ -66,10 +76,10 @@ final class JeiCategory<T> extends AbstractRecipeCategory<T> {
         };
     }
 
-    private final class Slot implements SlotLayout.Slot {
+    private final class JeiSlot implements SlotLayout.Slot {
         private final IRecipeSlotBuilder slot;
 
-        Slot(IRecipeSlotBuilder slot) {
+        JeiSlot(IRecipeSlotBuilder slot) {
             this.slot = slot;
         }
 

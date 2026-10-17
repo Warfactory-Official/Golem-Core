@@ -2,6 +2,8 @@ package dev.golem.core.jei;
 
 //? if jei {
 
+import com.google.gson.JsonObject;
+import dev.golem.core.harness.HarnessQueryRegistry;
 import dev.golem.core.viewer.Subtypes;
 import dev.golem.core.viewer.ViewerCategory;
 import dev.golem.core.viewer.ViewerPlugin;
@@ -15,6 +17,7 @@ import mezz.jei.api.registration.IRecipeCategoryRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
 import mezz.jei.api.registration.IRecipeTransferRegistration;
 import mezz.jei.api.registration.ISubtypeRegistration;
+import mezz.jei.api.runtime.IJeiRuntime;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MenuType;
@@ -127,7 +130,8 @@ public final class JeiViewer {
         });
     }
 
-    public static void runtime(mezz.jei.api.runtime.IJeiRuntime runtime, ViewerPlugin plugin) {
+    public static void runtime(IJeiRuntime runtime, ViewerPlugin plugin) {
+        registerHarnessQuery(runtime);
         plugin.runtime(new ViewerPlugin.Runtime() {
             @Override
             public String viewer() {
@@ -143,6 +147,28 @@ public final class JeiViewer {
             public <T> void addRecipes(ViewerType<T> type, List<T> recipes) {
                 Jei.addRecipes(runtime, type(type), recipes);
             }
+        });
+    }
+
+    /**
+     * The harness query {@code jei} (dev clients only): {@code op=open category=ns:path} opens JEI's recipe screen on
+     * one category, as clicking its tab would, and answers the category's title and recipe count.
+     */
+    private static void registerHarnessQuery(IJeiRuntime runtime) {
+        HarnessQueryRegistry.register("jei", (mc, params) -> {
+            JsonObject out = new JsonObject();
+            String category = params.get("category").getAsString();
+            for (ViewerType<?> type : TYPES.keySet()) {
+                if (!type.id().equals(category)) continue;
+                var jeiType = type(type).unwrap();
+                out.addProperty("title", runtime.getRecipeManager().getRecipeCategory(jeiType).getTitle().getString());
+                out.addProperty("recipes", runtime.getRecipeManager().createRecipeLookup(jeiType).get().count());
+                runtime.getRecipesGui().showTypes(List.of(jeiType));
+                out.addProperty("opened", true);
+                return out;
+            }
+            out.addProperty("opened", false);
+            return out;
         });
     }
 }

@@ -15,6 +15,9 @@ public interface SlotLayout {
     /** Adds a slot holding the given role's ingredient at {@code (x, y)}. */
     Slot addSlot(Role role, int x, int y);
 
+    /** Stacks the recipe is looked up by in the given role without a drawn slot (JEI's invisible ingredients). */
+    void addInvisible(Role role, List<ItemStack> stacks);
+
     /** One slot: its alternatives cycle, as in both viewers. */
     interface Slot {
 

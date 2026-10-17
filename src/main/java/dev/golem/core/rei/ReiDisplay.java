@@ -74,12 +74,23 @@ public final class ReiDisplay<T> implements Display {
         this.category = category;
         this.id = id;
         this.recipe = recipe;
-        category.setRecipe((role, x, y) -> {
-            RecordedSlot slot = new RecordedSlot(role, x, y);
-            slots.add(slot);
-            return slot;
+        List<RecordedSlot> invisible = new ArrayList<>();
+        category.setRecipe(new SlotLayout() {
+            @Override
+            public SlotLayout.Slot addSlot(Role role, int x, int y) {
+                RecordedSlot slot = new RecordedSlot(role, x, y);
+                slots.add(slot);
+                return slot;
+            }
+
+            @Override
+            public void addInvisible(Role role, List<ItemStack> stacks) {
+                invisible.add((RecordedSlot) new RecordedSlot(role, 0, 0).addItemStacks(stacks));
+            }
         }, recipe);
-        for (RecordedSlot slot : slots) {
+        List<RecordedSlot> all = new ArrayList<>(slots);
+        all.addAll(invisible);
+        for (RecordedSlot slot : all) {
             if (slot.role == Role.INPUT) inputs.add(EntryIngredients.ofItemStacks(slot.stacks));
             else if (slot.role == Role.OUTPUT) outputs.add(EntryIngredients.ofItemStacks(slot.stacks));
         }
