@@ -182,6 +182,8 @@ tasks.processResources {
         // Gliders: 26.1 has canGlide (covers the starts too); 1.21.1 asks the chest item at three points.
         "glider_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinGliderFlight\"" else ", \"MixinGliderFlight\", \"MixinGliderStart\"",
         "glider_client_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) "" else ", \"MixinGliderClientStart\"",
+        // SlotSync: from 26.1 the client echoes server slot pushes from the creative screen.
+        "creative_echo_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinCreativeEchoPush\", \"MixinCreativeEchoListener\"" else "",
         "world_effect_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinWorldEffects\"" else "",
         // Skies.Modifier: 26.1 appends environment-attribute layers; older nodes wrap the sky darkening and the
         // client colour getters (the mixin classes are empty stubs on the other era).

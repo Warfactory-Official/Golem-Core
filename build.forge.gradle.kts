@@ -95,6 +95,8 @@ tasks.processResources {
         // Gliders: the chest item's canElytraFly/elytraFlightTick (flight + server start) and the client start check.
         "glider_mixins" to ", \"MixinGliderFlight\", \"MixinGliderStart\"",
         "glider_client_mixins" to ", \"MixinGliderClientStart\"",
+        // SlotSync: from 26.1 the client echoes server slot pushes from the creative screen.
+        "creative_echo_mixins" to "",
         "world_effect_mixins" to "",
         // Skies.Modifier: 26.1 appends environment-attribute layers; older nodes wrap the sky darkening and the
         // client colour getters (the mixin classes are empty stubs on the other era).

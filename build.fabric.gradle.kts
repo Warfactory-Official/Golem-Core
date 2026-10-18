@@ -161,6 +161,8 @@ tasks.processResources {
         // Gliders: fabric-api's EntityElytraEvents.CUSTOM grants the flight; only the wings mixins (always listed) apply.
         "glider_mixins" to "",
         "glider_client_mixins" to "",
+        // SlotSync: from 26.1 the client echoes server slot pushes from the creative screen.
+        "creative_echo_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinCreativeEchoPush\", \"MixinCreativeEchoListener\"" else "",
         "world_effect_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinWorldEffects\"" else "",
         // Skies.Modifier: 26.1 appends environment-attribute layers; older nodes wrap the sky darkening and the
         // client colour getters (the mixin classes are empty stubs on the other era).
