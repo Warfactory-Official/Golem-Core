@@ -195,6 +195,20 @@ public final class CompatRenderTypes {
         return TorexFlareRenderType.of(texture);
     }
 
+    /**
+     * A 1.7 flare drawn inside {@code glDisable(GL_FOG)}: {@code SRC_ALPHA/ONE}, depth tested without writing,
+     * unculled, lightmapped, and no fog on any node.
+     */
+    public static RenderType flare(
+            //? if >=26.1 {
+            Identifier
+            //?} else {
+            /*ResourceLocation
+            *///?}
+            texture) {
+        return TorexFlareRenderType.fogless(texture);
+    }
+
     public record FlareVertex(float red, float green, float blue, float alpha, int packedLight) {}
 
     /** Adapts the old flare row to the render type available on this target. */

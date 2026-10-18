@@ -109,7 +109,7 @@ public final class ItemFirstUse {
     }
 
     private static InteractionResult dispatch(Player player, InteractionHand hand, BlockHitResult hit) {
-        if (player == null || player.isSpectator() || hit == null) return InteractionResult.PASS;
+        if (player == null || player.isSpectator() || hit == null || Interactions.probing()) return InteractionResult.PASS;
         ItemStack stack = player.getItemInHand(hand);
         if (stack.isEmpty()) return InteractionResult.PASS;
         UseOnContext context = new UseOnContext(player, hand, hit);

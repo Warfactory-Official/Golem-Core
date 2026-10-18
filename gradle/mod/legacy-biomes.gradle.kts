@@ -61,12 +61,13 @@ fun biomeColor(value: Any?): Any? = if (value is String && value.startsWith("#")
  */
 val FORGE_1_20_BIOME_TAGS = mapOf(
     "c:is_sandy" to "forge:is_sandy", "c:is_desert" to "forge:is_desert", "c:is_plains" to "forge:is_plains",
-    "c:is_swamp" to "forge:is_swamp", "c:is_sparse_vegetation" to "forge:is_sparse",
+    "c:is_swamp" to "forge:is_swamp", "c:is_sparse_vegetation" to "forge:is_sparse", "c:is_snowy" to "forge:is_snowy",
 )
 val FABRIC_1_20_BIOME_TAGS = mapOf(
     "c:is_ocean" to "c:ocean", "c:is_river" to "c:river", "c:is_beach" to "c:beach", "c:is_stony_shores" to "c:stony_shores",
     "c:is_plains" to "c:plains", "c:is_savanna" to "c:savanna", "c:is_desert" to "c:desert", "c:is_badlands" to "c:badlands",
     "c:is_swamp" to "c:swamp", "c:is_sparse_vegetation" to "c:vegetation_sparse", "c:is_overworld" to "c:in_overworld",
+    "c:is_snowy" to "c:snowy",
 )
 
 /** Adds the 1.20.1 spelling next to every 26.1 convention reference in the mod's biome tags; returns the files changed. */
