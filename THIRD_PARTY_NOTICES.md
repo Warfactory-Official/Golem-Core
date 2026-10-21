@@ -1,6 +1,6 @@
 # Third-party notices
 
-This repository is licensed under GPL-3.0-or-later (see `LICENSE` / `LICENSE.LESSER`).
+This repository is licensed under LGPL-3.0 (see `LICENSE` / `LICENSE.LESSER`).
 Portions of it are ported or derived from other projects under compatible licenses; their
 original copyright notices and permission notices are reproduced below.
 

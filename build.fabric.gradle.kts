@@ -328,9 +328,11 @@ tasks.test {
 // The uploaded copy of this node's jar, without the test harness.
 apply(from = rootProject.file("gradle/release-jar.gradle.kts"))
 
+// Credits and links in the loader metadata, from the mod.* properties.
+apply(from = rootProject.file("gradle/mod/mod-metadata.gradle.kts"))
 // Modrinth + CurseForge upload of this node's jar; run every node with the root `publishAllMods`.
 apply(from = rootProject.file("gradle/mod/publish.gradle.kts"))
 
 tasks.jar {
-    from(files(rootProject.file("LICENSE"), rootProject.file("LICENSE.LESSER"))) { rename { "${it}_${prop("mod.id")}" } }
+    from(files(rootProject.file("LICENSE"), rootProject.file("LICENSE.LESSER"), rootProject.file("CREDITS.txt"))) { rename { "${it}_${prop("mod.id")}" } }
 }
