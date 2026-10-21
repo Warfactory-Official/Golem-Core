@@ -459,19 +459,6 @@ public final class Compat {
     }
 
     /**
-     * Registers or clears a chunk's forced-loading ticket <b>without waiting for the chunk</b>.
-     *
-     * <p>{@code ServerLevel.setChunkForced} is this call followed by {@code getChunk(x, z)}, a
-     * synchronous load that <b>generates</b> when nobody has the chunk. A caller claiming a wide area
-     * would pay a full chunk generation on the server thread per chunk before doing any work. The ticket
-     * alone is a registration; the chunk system produces the chunk on its own workers and the caller
-     * picks it up with {@code getChunkNow} on a later tick. The state change is identical either way.
-     */
-    public static void updateChunkForced(ServerLevel level, int chunkX, int chunkZ, boolean forced) {
-        level.getChunkSource().updateChunkForced(new net.minecraft.world.level.ChunkPos(chunkX, chunkZ), forced);
-    }
-
-    /**
      * Whether a chunk is in the level's forced-chunk set (a {@code /forceload}, a GameTest plot, another mod's
      * {@code setChunkForced}). That set is one flag per chunk, not a refcount, so a caller that forces a chunk
      * already in it must not clear it again when it lets go. 26.1 renamed {@code getForcedChunks} to

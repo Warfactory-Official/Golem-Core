@@ -384,6 +384,11 @@ public final class Client implements AutoCloseable {
         send("join_world", obj("name", name), timeoutMs);
     }
 
+    /** Joins a dedicated server through vanilla's connect screen (the client must not be in a world). */
+    public void joinServer(String host, int port, long timeoutMs) {
+        send("join_server", obj("host", host, "port", port), timeoutMs);
+    }
+
     public void createWorld(String name, long timeoutMs) {
         send("create_world", obj("name", name), timeoutMs);
     }

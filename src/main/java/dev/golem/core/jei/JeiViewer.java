@@ -2,9 +2,11 @@ package dev.golem.core.jei;
 
 //? if jei {
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import dev.golem.core.harness.HarnessQueryRegistry;
 import dev.golem.core.viewer.Subtypes;
+import dev.golem.core.viewer.TransferAction;
 import dev.golem.core.viewer.ViewerCategory;
 import dev.golem.core.viewer.ViewerPlugin;
 import dev.golem.core.viewer.ViewerType;
@@ -127,6 +129,12 @@ public final class JeiViewer {
                 Jei.addSelectiveRecipeTransferHandler(registration, menuClass, menuType, type(type), recipeSlots,
                         inventorySlotStart, inventorySlotCount, canHandle);
             }
+
+            @Override
+            public <C extends AbstractContainerMenu, R> void addAction(Class<? extends C> menuClass,
+                    MenuType<C> menuType, ViewerType<R> type, TransferAction<C, R> action) {
+                Jei.addRecipeTransferAction(registration, menuClass, menuType, type(type), action);
+            }
         });
     }
 
@@ -152,11 +160,25 @@ public final class JeiViewer {
 
     /**
      * The harness query {@code jei} (dev clients only): {@code op=open category=ns:path} opens JEI's recipe screen on
-     * one category, as clicking its tab would, and answers the category's title and recipe count.
+     * one category, as clicking its tab would, and answers the category's title and recipe count; without a category it lists every category with its title, recipe and catalyst counts.
      */
     private static void registerHarnessQuery(IJeiRuntime runtime) {
         HarnessQueryRegistry.register("jei", (mc, params) -> {
             JsonObject out = new JsonObject();
+            if (!params.has("category")) {
+                JsonArray all = new JsonArray();
+                for (ViewerType<?> type : TYPES.keySet()) {
+                    var jeiType = type(type).unwrap();
+                    JsonObject row = new JsonObject();
+                    row.addProperty("id", type.id());
+                    row.addProperty("title", runtime.getRecipeManager().getRecipeCategory(jeiType).getTitle().getString());
+                    row.addProperty("recipes", runtime.getRecipeManager().createRecipeLookup(jeiType).get().count());
+                    row.addProperty("catalysts", runtime.getRecipeManager().createRecipeCatalystLookup(jeiType).get().count());
+                    all.add(row);
+                }
+                out.add("categories", all);
+                return out;
+            }
             String category = params.get("category").getAsString();
             for (ViewerType<?> type : TYPES.keySet()) {
                 if (!type.id().equals(category)) continue;

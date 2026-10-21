@@ -74,6 +74,10 @@ public interface ViewerPlugin {
         <C extends AbstractContainerMenu, R> void addSelective(Class<? extends C> menuClass, MenuType<C> menuType,
                 ViewerType<R> type, int[] recipeSlots, int inventorySlotStart, int inventorySlotCount,
                 Predicate<R> canHandle);
+
+        /** The transfer button runs {@code action} on the open screen instead of moving items. */
+        <C extends AbstractContainerMenu, R> void addAction(Class<? extends C> menuClass, MenuType<C> menuType,
+                ViewerType<R> type, TransferAction<C, R> action);
     }
 
     interface Runtime {

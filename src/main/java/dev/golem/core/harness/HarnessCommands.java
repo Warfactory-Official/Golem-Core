@@ -205,6 +205,11 @@ final class HarnessCommands {
             HarnessWorld.join(mc, Json.str(req, "name", ""));
             return HarnessWorld.untilInWorld(Harness.tick());
         });
+        handlers.put("join_server", (mc, req) -> {
+            if (mc.level != null) return Json.error("already in a world; leave_world first");
+            HarnessWorld.joinServer(mc, Json.str(req, "host", "127.0.0.1"), Json.integer(req, "port", 25565));
+            return HarnessWorld.untilInWorld(Harness.tick());
+        });
         handlers.put("create_world", (mc, req) -> {
             if (mc.level != null) return Json.error("already in a world; leave_world first");
             return HarnessWorld.create(mc, Json.str(req, "name", "harness"), Json.str(req, "type", "flat"),

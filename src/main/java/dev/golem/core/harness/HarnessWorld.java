@@ -4,9 +4,12 @@ import com.google.gson.JsonObject;
 import dev.golem.core.GolemCore;
 import dev.golem.core.harness.mixin.HarnessCreateWorldScreenAccessor;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.ConnectScreen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.gui.screens.worldselection.CreateWorldScreen;
 import net.minecraft.client.gui.screens.worldselection.WorldCreationUiState;
+import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.client.multiplayer.resolver.ServerAddress;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.level.levelgen.presets.WorldPresets;
 
@@ -46,6 +49,18 @@ final class HarnessWorld {
         minecraft.createWorldOpenFlows().openWorld(name, () -> minecraft.setScreen(new TitleScreen()));
         //?} else {
         /*minecraft.createWorldOpenFlows().loadLevel(new TitleScreen(), name);
+        *///?}
+    }
+
+    /** Connects to a dedicated server through vanilla's connect screen. */
+    static void joinServer(Minecraft minecraft, String host, int port) {
+        String address = host + ":" + port;
+        //? if >=1.21 {
+        ServerData data = new ServerData("harness", address, ServerData.Type.OTHER);
+        ConnectScreen.startConnecting(new TitleScreen(), minecraft, ServerAddress.parseString(address), data, false, null);
+        //?} else {
+        /*ServerData data = new ServerData("harness", address, false);
+        ConnectScreen.startConnecting(new TitleScreen(), minecraft, ServerAddress.parseString(address), data, false);
         *///?}
     }
 

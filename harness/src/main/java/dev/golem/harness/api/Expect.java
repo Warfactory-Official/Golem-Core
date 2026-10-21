@@ -1,6 +1,7 @@
 package dev.golem.harness.api;
 
 import com.google.gson.JsonObject;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -90,7 +91,8 @@ public final class Expect {
 
     /** No line logged since {@link Client#markLog} matches the regex. */
     public static void logCleanSinceMark(Client c, String regex) {
-        List<String> log = c.logSinceMark(regex);
+        List<String> log = new ArrayList<>(c.logSinceMark(regex));
+        log.removeIf(line -> line.contains("Realms"));   // offline dev clients log Realms auth failures
         that(log.isEmpty(), "no log line matching /" + regex + "/ since the mark, but found: " + (log.isEmpty() ? "" : log.get(0)));
     }
 

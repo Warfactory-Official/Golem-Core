@@ -2,7 +2,13 @@ package dev.golem.core.jei;
 
 //? if jei {
 
+import dev.golem.core.viewer.TransferAction;
+import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.recipe.RecipeIngredientRole;
+import mezz.jei.api.recipe.transfer.IRecipeTransferError;
+import mezz.jei.api.recipe.transfer.IRecipeTransferHandler;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Player;
 import mezz.jei.api.registration.IGuiHandlerRegistration;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
@@ -140,6 +146,31 @@ public final class Jei {
             }
         });
         *///?}
+    }
+
+    /** Registers a transfer button that runs a {@link TransferAction} on the container screen. */
+    @SuppressWarnings({"deprecation", "removal"})
+    public static <C extends AbstractContainerMenu, R> void addRecipeTransferAction(
+            IRecipeTransferRegistration registration, Class<? extends C> containerClass, MenuType<C> menuType,
+            JeiRecipeType<R> type, TransferAction<C, R> action) {
+        var helper = registration.getTransferHelper();
+        registration.addRecipeTransferHandler(new IRecipeTransferHandler<C, R>() {
+            @Override public Class<? extends C> getContainerClass() { return containerClass; }
+            @Override public Optional<MenuType<C>> getMenuType() { return Optional.of(menuType); }
+            //? if >=26.1 {
+            @Override public mezz.jei.api.recipe.types.IRecipeType<R> getRecipeType() { return type.unwrap(); }
+            //?} else {
+            /*@Override public mezz.jei.api.recipe.RecipeType<R> getRecipeType() { return type.unwrap(); }
+            *///?}
+            @Override
+            public IRecipeTransferError transferRecipe(C menu, R recipe, IRecipeSlotsView slots, Player player,
+                                                       boolean maxTransfer, boolean doTransfer) {
+                Component why = action.unavailable(menu, recipe);
+                if (why != null) return helper.createUserErrorWithTooltip(why);
+                if (doTransfer) TransferAction.runWhenBack(menu, recipe, action);
+                return null;
+            }
+        }, type.unwrap());
     }
 
     /**

@@ -127,10 +127,29 @@ The CLI finds `harness.json` by walking up from the working directory, so run it
    A query runs on the client thread. If it needs server data, read only chunks that are already fully loaded
    and answer `pending` otherwise — a query that waits on chunk generation can freeze the client.
 
+## Multiplayer (dedicated server)
+
+A client can join a dedicated server on localhost instead of a singleplayer world, so interaction, menus and
+block-entity sync are tested over the real network.
+
+1. In the node's `runs/server` folder (the mod's EULA is already accepted there) write a `server.properties` with
+   `online-mode=false`, a free `server-port`, `enable-rcon=true`, `rcon.port`, `rcon.password=rc` and
+   `pause-when-empty-seconds=-1` (an empty paused server ignores rcon).
+2. Start the server from the mod folder: `./gradlew.bat :<node>:runServer`. Stop it by sending `stop` over rcon, and check
+   that its java process is gone (stopping Gradle does not stop the forked server).
+3. Join it: `harness up --nodes <node> --server 127.0.0.1:<server-port> --username RcServer`. Op the player after its
+   first join (`op RcServer` over rcon); opping a never-seen name resolves a different offline profile.
+4. In a scenario, `c.joinServer("127.0.0.1", port, timeoutMs)` rejoins after `c.leaveWorld(...)`, and
+   `new Rcon("127.0.0.1", rconPort, "rc").command("data get block x y z")` reads what the server holds. The `block` and
+   `block_entity` queries only see the client's copy on a dedicated server, which is what a sync test wants.
+
+`RcServerMenus` and `RcServerSync` in HBM's scenarios are working examples; they read the ports from the node's
+`server.properties`.
+
 ## Commands
 
 ```bash
-harness up [--nodes a,b | --all] [--rebuild | --no-build] [--no-sodium] [--show] [--heap 2G] [--world harness] [--world-type seeded] [--username Name] [--size 1920x1080]
+harness up [--nodes a,b | --all] [--rebuild | --no-build] [--no-sodium] [--show] [--heap 2G] [--world harness] [--world-type seeded] [--username Name] [--server host:port] [--size 1920x1080]
 harness down [--nodes a,b | --all]
 harness restart [--nodes a,b | --all]    # down + up, same options as up
 harness status                           # live clients: in world, screen, fps, heap

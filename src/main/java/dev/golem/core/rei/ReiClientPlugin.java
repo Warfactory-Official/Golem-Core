@@ -4,6 +4,7 @@ package dev.golem.core.rei;
 
 import dev.golem.core.Ids;
 import dev.golem.core.viewer.Subtypes;
+import dev.golem.core.viewer.TransferAction;
 import dev.golem.core.viewer.ViewerCategory;
 import dev.golem.core.viewer.ViewerPlugin;
 import dev.golem.core.viewer.ViewerType;
@@ -27,6 +28,7 @@ import me.shedaniel.rei.api.common.util.EntryIngredients;
 import me.shedaniel.rei.api.common.util.EntryStacks;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.ItemStack;
@@ -358,7 +360,44 @@ public abstract class ReiClientPlugin implements REIClientPlugin {
                 registry.register(new Transfer<>(menuClass, Rei.id(type), recipeSlots, inventorySlotStart,
                         inventorySlotCount, canHandle));
             }
+
+            @Override
+            public <C extends AbstractContainerMenu, R> void addAction(Class<? extends C> menuClass,
+                    MenuType<C> menuType, ViewerType<R> type, TransferAction<C, R> action) {
+                registry.register(new ActionTransfer<>(menuClass, Rei.id(type), action));
+            }
         });
+    }
+
+    /** A {@link TransferAction} as a REI transfer handler; REI returns to the container screen on success. */
+    private static final class ActionTransfer<C extends AbstractContainerMenu, R> implements TransferHandler {
+        private final Class<?> menuClass;
+        private final CategoryIdentifier<?> id;
+        private final TransferAction<C, R> action;
+
+        ActionTransfer(Class<?> menuClass, CategoryIdentifier<?> id, TransferAction<C, R> action) {
+            this.menuClass = menuClass;
+            this.id = id;
+            this.action = action;
+        }
+
+        private boolean applies(TransferHandler.Context context) {
+            AbstractContainerMenu menu = context.getMenu();
+            return menu != null && menuClass.isInstance(menu) && context.getDisplay() instanceof ReiDisplay<?> display
+                    && id.equals(display.getCategoryIdentifier());
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public TransferHandler.Result handle(TransferHandler.Context context) {
+            if (!applies(context)) return TransferHandler.Result.createNotApplicable();
+            C menu = (C) context.getMenu();
+            R recipe = (R) ((ReiDisplay<?>) context.getDisplay()).recipe();
+            Component why = action.unavailable(menu, recipe);
+            if (why != null) return TransferHandler.Result.createFailed(why);
+            if (context.isActuallyCrafting()) TransferAction.runWhenBack(menu, recipe, action);
+            return TransferHandler.Result.createSuccessful().blocksFurtherHandling();
+        }
     }
 
     /** JEI's slot-list transfer as a REI simple transfer handler, for one category's displays in one menu class. */

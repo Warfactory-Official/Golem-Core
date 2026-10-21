@@ -20,7 +20,9 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 
 import io.netty.util.ReferenceCountUtil;
 import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 
 //? if >=1.21 {
 import net.minecraft.server.network.CommonListenerCookie;
@@ -233,32 +235,75 @@ public final class GameTestHelpers {
     }
 
     /**
-     * Vanilla's {@code makeMockServerPlayerInLevel} for Forge 1.20.1: that loader's login hooks read
-     * {@code connection.channel()} inside {@code placeNewPlayer}, and the vanilla mock's {@link Connection} has no
-     * channel, so the helper throws. Binding an {@link EmbeddedChannel} first gives the hooks one (without FML
-     * attributes, so the player counts as a vanilla client). Every other era uses the vanilla helper.
+     * A server player placed in the level, in survival mode. Vanilla's mock answers creative, which skips block
+     * drops, tool wear, hunger and damage, so assertions on those pass without testing anything.
      */
     public static ServerPlayer mockServerPlayerInLevel(GameTestHelper helper) {
-        //? if forge && <1.20.5 {
-        /*ServerLevel level = helper.getLevel();
-        // Named for the same reason as mockPlayer's.
-        final class FixturePlayer extends ServerPlayer {
-            FixturePlayer() {
+        return survivalServerPlayerInLevel(helper);
+    }
+
+    /** A survival-mode server player placed in the level. Works on Forge 1.20.1, whose login hooks need a channel. */
+    public static ServerPlayer survivalServerPlayerInLevel(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        //? if >=1.21 {
+        CommonListenerCookie cookie = CommonListenerCookie.createInitial(
+                new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(), "test-mock-player"), false);
+        final class SurvivalPlayer extends ServerPlayer {
+            SurvivalPlayer() {
+                super(level.getServer(), level, cookie.gameProfile(), cookie.clientInformation());
+            }
+
+            @Override public boolean isSpectator() { return false; }
+            @Override public boolean isCreative() { return false; }
+        }
+        ServerPlayer player = new SurvivalPlayer();
+        Connection connection = new Connection(PacketFlow.SERVERBOUND);
+        new EmbeddedChannel(connection);
+        level.getServer().getPlayerList().placeNewPlayer(connection, player, cookie);
+        //?} else {
+        /*final class SurvivalPlayer extends ServerPlayer {
+            SurvivalPlayer() {
                 super(level.getServer(), level,
                         new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(), "test-mock-player"));
             }
 
             @Override public boolean isSpectator() { return false; }
-            @Override public boolean isCreative() { return true; }
+            @Override public boolean isCreative() { return false; }
         }
-        ServerPlayer player = new FixturePlayer();
+        ServerPlayer player = new SurvivalPlayer();
         Connection connection = new Connection(PacketFlow.SERVERBOUND);
         new EmbeddedChannel(connection);
         level.getServer().getPlayerList().placeNewPlayer(connection, player);
+        *///?}
+        player.setGameMode(GameType.SURVIVAL);
+        long[] seen = {level.getGameTime()};
+        synchronized (SURVIVAL_PLAYERS) {
+            SURVIVAL_PLAYERS.put(player, seen);
+        }
+        helper.onEachTick(() -> {
+            seen[0] = level.getGameTime();
+            removeStaleSurvivalPlayers(level);
+        });
         return player;
-        *///?} else {
-        return helper.makeMockServerPlayerInLevel();
-        //?}
+    }
+
+    /** A mock that has not been seen ticking this long belongs to a test that is over. */
+    private static final int STALE_TICKS = 40;
+    private static final Map<ServerPlayer, long[]> SURVIVAL_PLAYERS = new IdentityHashMap<>();
+
+    /** Removes the survival mocks of finished tests, so they stop counting as mob targets. */
+    private static void removeStaleSurvivalPlayers(ServerLevel level) {
+        List<ServerPlayer> stale = new ArrayList<>();
+        synchronized (SURVIVAL_PLAYERS) {
+            SURVIVAL_PLAYERS.entrySet().removeIf(entry -> {
+                boolean old = level.getGameTime() - entry.getValue()[0] > STALE_TICKS;
+                if (old) stale.add(entry.getKey());
+                return old;
+            });
+        }
+        for (ServerPlayer player : stale) {
+            level.getServer().getPlayerList().remove(player);
+        }
     }
 
     /** The common fields carried by a loader's menu-opening packet. */

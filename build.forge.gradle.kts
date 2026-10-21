@@ -213,6 +213,7 @@ tasks.test {
 
 tasks.jar {
     manifest.attributes["MixinConfigs"] = "golemcore.mixins.json,golemcore.harness.mixins.json"
+    from(files(rootProject.file("LICENSE"), rootProject.file("LICENSE.LESSER"))) { rename { "${it}_${prop("mod.id")}" } }
 }
 
 publishing {

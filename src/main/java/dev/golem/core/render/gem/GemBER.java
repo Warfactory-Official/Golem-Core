@@ -3,16 +3,24 @@ package dev.golem.core.render.gem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.golem.core.render.CameraInfo;
 import dev.golem.core.render.CompatBER;
+import dev.golem.core.platform.Platform;
 import dev.golem.core.render.CompatRenderState;
+import dev.golem.core.render.Frustums;
 import dev.golem.core.render.SubmitSink;
 import dev.golem.core.render.gem.Gem.Model;
 import dev.golem.core.render.Visuals;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Matrix4f;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -56,9 +64,16 @@ public abstract class GemBER<T extends BlockEntity, S extends CompatRenderState>
         boolean owned = Visuals.owns(state.blockPos);
         if (!owned) {
             Gem.replay(gem(), state, poseStack, sink, state.lightCoords);
+            if (cullable()) learnReach(state);
         }
         if (tracing) trace(state.blockPos, owned);
-        submitUndeclared(state, poseStack, sink, camera);
+        if (undeclared == null) {
+            undeclaredBase = false;
+            submitUndeclared(state, poseStack, sink, camera);
+            undeclared = !undeclaredBase;
+        } else {
+            submitUndeclared(state, poseStack, sink, camera);
+        }
     }
 
     /**
@@ -110,7 +125,9 @@ public abstract class GemBER<T extends BlockEntity, S extends CompatRenderState>
      * node in every frame, including frames where the instanced backend owns the declared tree. Override it
      * only for geometry with no fixed shape; a mesh placed by a computed transform belongs in {@link #setup}.
      */
-    protected void submitUndeclared(S state, PoseStack poseStack, SubmitSink sink, CameraInfo camera) {}
+    protected void submitUndeclared(S state, PoseStack poseStack, SubmitSink sink, CameraInfo camera) {
+        undeclaredBase = true;
+    }
 
     @Override
     public int viewDistance() {
@@ -123,13 +140,107 @@ public abstract class GemBER<T extends BlockEntity, S extends CompatRenderState>
     }
 
     /**
-     * A model that draws outside its own block is never distance-culled here; declaring
-     * {@link Gem.Model#offScreen} already put it in the level's globally-rendered set, and culling it
-     * again by its one owning cell is what made multiblock machines vanish when that cell scrolled off.
+     * A model that draws outside its own block stays in the level's globally-rendered set, which is never
+     * distance-culled: culling it by its one owning cell made multiblock machines vanish when that cell
+     * scrolled off. It is frustum-culled by the box its own parts were last drawn in.
      */
     @Override
     public boolean shouldRender(T blockEntity, Vec3 cameraPosition) {
-        return gem().isOffScreen()
-                || Vec3.atCenterOf(blockEntity.getBlockPos()).closerThan(cameraPosition, viewDistance());
+        if (!gem().isOffScreen()) {
+            return Vec3.atCenterOf(blockEntity.getBlockPos()).closerThan(cameraPosition, viewDistance());
+        }
+        if (!cullable()) return true;
+        BlockPos pos = blockEntity.getBlockPos();
+        Reach seen = reach.computeIfAbsent(pos.asLong(), key -> new Reach());
+        seen.attach(blockEntity);
+        if (!seen.known) return true;
+        float[] box = seen.box;
+        if (Frustums.isVisible(new AABB(
+                pos.getX() + box[0] - REACH_PAD, pos.getY() + box[1] - REACH_PAD, pos.getZ() + box[2] - REACH_PAD,
+                pos.getX() + box[3] + REACH_PAD, pos.getY() + box[4] + REACH_PAD, pos.getZ() + box[5] + REACH_PAD))) {
+            seen.culled = 0;
+            return true;
+        }
+        // A culled machine is never drawn, so its box could not grow: draw it now and then to re-measure.
+        if (++seen.culled % CULL_PROBE != 0) return false;
+        seen.probe = true;
+        return true;
+    }
+
+    /** Blocks added on every side of the drawn box, for animation between two samples. */
+    private static final float REACH_PAD = 3F;
+    /** The box is re-measured on one submit in this many; it only ever grows. */
+    private static final int REACH_SAMPLE = 8;
+    /** A culled machine is drawn (and re-measured) on one check in this many. */
+    private static final int CULL_PROBE = 32;
+
+    /** The union of the boxes a block entity's declared parts were drawn in, relative to its block. */
+    private static final class Reach {
+        final float[] box = {Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE,
+                -Float.MAX_VALUE};
+        boolean known;
+        boolean probe;
+        int submits;
+        int culled;
+        private @Nullable WeakReference<BlockEntity> owner;
+        private @Nullable BlockState shape;
+
+        /** Starts again when the block entity or its state is not the one this box was measured for. */
+        void attach(BlockEntity blockEntity) {
+            if (owner != null && owner.get() == blockEntity && shape == blockEntity.getBlockState()) return;
+            owner = new WeakReference<>(blockEntity);
+            shape = blockEntity.getBlockState();
+            Arrays.fill(box, 0, 3, Float.MAX_VALUE);
+            Arrays.fill(box, 3, 6, -Float.MAX_VALUE);
+            known = false;
+            probe = false;
+            submits = 0;
+            culled = 0;
+        }
+    }
+
+    private final Map<Long, Reach> reach = new ConcurrentHashMap<>();
+    /** {@code GOLEM_GEM_CULL=off} (or {@code -Dgolem.gem.cull=off}) keeps every machine drawn, to compare frame times. */
+    private static final boolean CULLING = !"off".equalsIgnoreCase(
+            System.getProperty("golem.gem.cull", System.getenv().getOrDefault("GOLEM_GEM_CULL", "on")));
+    private static @Nullable Boolean shaderPack;
+    /** Whether {@link #submitUndeclared} is overridden; known after the first submit. */
+    private @Nullable Boolean undeclared;
+    private boolean undeclaredBase;
+
+    /**
+     * Whether the frustum may drop this machine. Not before the first submit has shown that nothing outside
+     * the declaration is drawn (its extent is unknown), and not with a shader pack mod installed, whose shadow
+     * pass draws what the camera cannot see.
+     */
+    private boolean cullable() {
+        return CULLING && gem().isOffScreen() && Boolean.FALSE.equals(undeclared) && !shaderPackInstalled();
+    }
+
+    private static boolean shaderPackInstalled() {
+        Boolean known = shaderPack;
+        if (known == null) {
+            known = Platform.isModLoaded("iris") || Platform.isModLoaded("oculus");
+            shaderPack = known;
+        }
+        return known;
+    }
+
+    private void learnReach(S state) {
+        BlockPos pos = state.blockPos;
+        if (pos == null) return;
+        Reach seen = reach.computeIfAbsent(pos.asLong(), key -> new Reach());
+        if (seen.known && !seen.probe && seen.submits++ % REACH_SAMPLE != 0) return;
+        seen.probe = false;
+        float[] box = seen.box;
+        Gem.extents(gem(), state, new Matrix4f(), corner -> {
+            box[0] = Math.min(box[0], corner.x());
+            box[1] = Math.min(box[1], corner.y());
+            box[2] = Math.min(box[2], corner.z());
+            box[3] = Math.max(box[3], corner.x());
+            box[4] = Math.max(box[4], corner.y());
+            box[5] = Math.max(box[5], corner.z());
+            seen.known = true;
+        });
     }
 }

@@ -49,6 +49,15 @@ final class HarnessQueries {
         json.addProperty("window_height", minecraft.getWindow().getScreenHeight());
         json.addProperty("focused", minecraft.isWindowActive());
         json.addProperty("singleplayer", minecraft.hasSingleplayerServer());
+        // Average server tick in ms (the integrated server only), as /tick query reports it.
+        MinecraftServer tickServer = minecraft.getSingleplayerServer();
+        if (tickServer != null) {
+            //? if >=1.21 {
+            json.addProperty("mspt", tickServer.getAverageTickTimeNanos() / 1_000_000.0);
+            //?} else {
+            /*json.addProperty("mspt", (double) tickServer.getAverageTickTime());
+            *///?}
+        }
         // True once the chunk renderer has no section build queued or running (Sodium answers for its own builder).
         // A scenario that changes the render distance must wait for it before placing blocks: Sodium rebuilds every
         // section after that change, and a block entity placed meanwhile could be missing from its section's lists.

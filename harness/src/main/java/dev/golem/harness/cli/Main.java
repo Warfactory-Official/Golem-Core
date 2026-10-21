@@ -24,6 +24,8 @@ public final class Main {
               up      [--nodes a,b | --all] [--rebuild | --no-build] [--no-sodium] [--show] [--heap 2G] [--world harness] [--max-clients 2]
                       [--world-type flat|seeded]   seeded = default world preset, fixed seed, world 'harness_seeded'
                       [--username Name]   the offline player name (default: the loader's dev name, Dev / Player###)
+                      [--server host:port] join a dedicated server (vanilla quick play) instead of the harness world;
+                                          see "Multiplayer" in the README
                       [--size 1920x1080]  the window size (default 1280x720); check status window_width/height,
                                           an OS may shrink a window larger than the screen
                       Gradle runs once for all nodes and is skipped for a node whose build inputs are older than its
@@ -147,6 +149,7 @@ public final class Main {
         if (!o.worldType.equals("flat") && !o.worldType.equals("seeded")) throw new HarnessException("--world-type flat | seeded");
         o.world = args.get("world", o.worldType.equals("seeded") ? Client.SEEDED_WORLD : o.world);
         o.username = args.get("username", null);
+        o.server = args.get("server", null);
         o.verbose = args.flag("verbose");
         o.guiScale = Integer.parseInt(args.get("gui-scale", "2"));
         String size = args.get("size", null);
@@ -282,11 +285,11 @@ public final class Main {
         try {
             LaunchSpec spec = LaunchSpec.read(Paths.specFile(node));
             Launcher.prepareRunDir(node, options);
-            boolean worldExists = World.exists(node, options.world);
+            boolean worldExists = options.server != null || World.exists(node, options.world);
             Path clientLog = Paths.out().resolve("clients").resolve(node.name() + "-" + Launcher.stamp() + ".log");
             Files.createDirectories(clientLog.getParent());
             System.out.println("[harness] " + node.name() + ": launching (heap " + options.heap + ", port " + node.port()
-                    + (worldExists ? ", quick play '" + options.world + "'" : ", no world yet") + ")");
+                    + (options.server != null ? ", joining server " + options.server : worldExists ? ", quick play '" + options.world + "'" : ", no world yet") + ")");
             Process process = Launcher.launch(node, spec, options, clientLog, worldExists);
             state.put(new State.Live(node.name(), process.pid(), node.port(), Paths.runDir(node).toString(),
                     clientLog.toString(), options.world, System.currentTimeMillis()));

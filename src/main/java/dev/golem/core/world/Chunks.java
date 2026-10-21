@@ -2,8 +2,10 @@ package dev.golem.core.world;
 
 import dev.golem.core.GolemCore;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.TicketType;
 import net.minecraft.world.level.ChunkPos;
 
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.WeakHashMap;
@@ -65,6 +67,43 @@ public final class Chunks {
         *///?}
     }
 
+    /**
+     * Loads and simulates a chunk under a ticket of its own. Vanilla's shared {@code FORCED} ticket is one entry per
+     * chunk, so a holder that removes it takes another holder's forced chunk out of entity ticking.
+     */
+    //? if >=26.1 {
+    private static final TicketType TICKING = new TicketType(TicketType.NO_TIMEOUT,
+            TicketType.FLAG_LOADING | TicketType.FLAG_SIMULATION | TicketType.FLAG_KEEP_DIMENSION_ACTIVE);
+    //?} else {
+    /*private static final TicketType<ChunkPos> TICKING =
+            TicketType.create("golem_ticking", Comparator.comparingLong(ChunkPos::toLong));
+    *///?}
+
+    /** Radius 2 is ticket level 31 (entity-ticking), the level of a forced chunk. */
+    private static final int TICKING_RADIUS = 2;
+
+    /**
+     * Holds a chunk entity-ticking until {@link #releaseTicking}, without waiting for it to load (unlike
+     * {@code setChunkForced}). Not counted: the caller counts its own holders.
+     */
+    public static void claimTicking(ServerLevel level, int chunkX, int chunkZ) {
+        ChunkPos pos = new ChunkPos(chunkX, chunkZ);
+        //? if >=26.1 {
+        level.getChunkSource().addTicketWithRadius(TICKING, pos, TICKING_RADIUS);
+        //?} else {
+        /*level.getChunkSource().addRegionTicket(TICKING, pos, TICKING_RADIUS, pos);
+        *///?}
+    }
+
+    /** Drops the claim taken by {@link #claimTicking}. */
+    public static void releaseTicking(ServerLevel level, int chunkX, int chunkZ) {
+        ChunkPos pos = new ChunkPos(chunkX, chunkZ);
+        //? if >=26.1 {
+        level.getChunkSource().removeTicketWithRadius(TICKING, pos, TICKING_RADIUS);
+        //?} else {
+        /*level.getChunkSource().removeRegionTicket(TICKING, pos, TICKING_RADIUS, pos);
+        *///?}
+    }
     /**
      * Loads or generates a chunk on the calling server thread and returns it, blocking until it is a full
      * chunk. The synchronous fallback for a claim the chunk system does not answer.

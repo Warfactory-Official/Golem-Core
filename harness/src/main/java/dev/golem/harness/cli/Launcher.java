@@ -36,6 +36,8 @@ public final class Launcher {
         public String worldType = "flat";
         /** The offline player name, replacing the dev run's own {@code --username}; null keeps it. */
         public String username = null;
+        /** "host:port" of a dedicated server to join through vanilla quick play instead of opening a world; null = singleplayer. */
+        public String server = null;
         public int width = 1280;
         public int height = 720;
         public int guiScale = 2;
@@ -307,7 +309,10 @@ public final class Launcher {
         argfile.add(Integer.toString(options.width));
         argfile.add("--height");
         argfile.add(Integer.toString(options.height));
-        if (quickPlay) {
+        if (options.server != null) {
+            argfile.add("--quickPlayMultiplayer");
+            argfile.add(options.server);
+        } else if (quickPlay) {
             argfile.add("--quickPlaySingleplayer");
             argfile.add(options.world);
         }

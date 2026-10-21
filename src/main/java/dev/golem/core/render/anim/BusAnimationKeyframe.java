@@ -45,10 +45,14 @@ public class BusAnimationKeyframe {
         this(value, duration, IType.LINEAR);
     }
 
+    /** Playback speed applied to every keyframe duration as it is built; 1 leaves them as authored. */
+    public static volatile double speed = 1D;
+
     public BusAnimationKeyframe(double value, int duration, IType type) {
         this.value = value;
-        this.duration = duration;
-        this.originalDuration = duration;
+        int scaled = (int) (duration / Math.max(0.001D, speed));
+        this.duration = scaled;
+        this.originalDuration = scaled;
         this.interpolationType = type;
     }
 

@@ -188,7 +188,17 @@ public final class ItemStacks {
         }
         return true;
         //?} else {
-        /*return true;
+        /*var tag = stack.getTag();
+        if (tag == null) return true;
+        outer:
+        for (String name : tag.getAllKeys()) {
+            if (name.equals("Damage")) continue;
+            for (GolemComponent<?> variant : allowed) {
+                if (variant.key().equals(name)) continue outer;
+            }
+            return false;
+        }
+        return true;
         *///?}
     }
 

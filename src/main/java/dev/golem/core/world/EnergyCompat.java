@@ -3,6 +3,7 @@ package dev.golem.core.world;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelReader;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -48,6 +49,14 @@ public final class EnergyCompat {
         *///?} else {
         /*return RebornEnergy.present() ? RebornEnergy.find(level, pos, side) : null;
         *///?}
+    }
+
+    /**
+     * Whether {@link #find} would answer, for callers holding only a reader (block shape updates). False when
+     * the reader is not a full level, as during world generation.
+     */
+    public static boolean exposes(LevelReader reader, BlockPos pos, @Nullable Direction side) {
+        return supported() && reader instanceof Level level && find(level, pos, side) != null;
     }
 
     /**
