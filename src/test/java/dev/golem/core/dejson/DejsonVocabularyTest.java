@@ -5,6 +5,8 @@ import com.google.gson.JsonParser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -117,5 +119,17 @@ class DejsonVocabularyTest {
         JsonObject wreck = DejsonWriter.files().get("data/hbm/loot_table/blocks/zirnox_destroyed.json");
         assertEquals(6, wreck.getAsJsonArray("pools").get(0).getAsJsonObject().getAsJsonArray("entries").get(0)
                 .getAsJsonObject().getAsJsonArray("functions").get(0).getAsJsonObject().get("count").getAsInt());
+    }
+
+    @Test
+    void featureModifierExcludesATag() {
+        BiomeModifiers.addFeatures("hbm", "tfc_test", "#hbm:has_feature/tfc_test", "#minecraft:is_overworld",
+                List.of("hbm:bedrock_ore"), BiomeModifiers.UNDERGROUND_ORES);
+        assertEquals(json("{'type':'neoforge:add_features','biomes':{'type':'neoforge:and','values':["
+                + "'#hbm:has_feature/tfc_test',{'type':'neoforge:not','value':'#minecraft:is_overworld'}]},"
+                + "'features':'hbm:bedrock_ore','step':'underground_ores'}"),
+                DejsonWriter.files().get("data/hbm/neoforge/biome_modifier/tfc_test.json"));
+        assertEquals("forge:and", DejsonWriter.files().get("data/hbm/forge/biome_modifier/tfc_test.json")
+                .getAsJsonObject("biomes").get("type").getAsString());
     }
 }

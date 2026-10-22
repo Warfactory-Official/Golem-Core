@@ -40,6 +40,14 @@ public final class BiomeFeatures {
                 selector = net.fabricmc.fabric.api.biome.v1.BiomeSelectors.includeByKey(net.minecraft.resources.ResourceKey.create(
                         net.minecraft.core.registries.Registries.BIOME, dev.golem.core.Ids.parse(biomes)));
             }
+            String excluded = declaration.excluded();
+            if (excluded != null && excluded.startsWith("#")) {
+                selector = selector.and(net.fabricmc.fabric.api.biome.v1.BiomeSelectors.tag(net.minecraft.tags.TagKey.create(
+                        net.minecraft.core.registries.Registries.BIOME, dev.golem.core.Ids.parse(excluded.substring(1)))).negate());
+            } else if (excluded != null) {
+                selector = selector.and(net.fabricmc.fabric.api.biome.v1.BiomeSelectors.excludeByKey(net.minecraft.resources.ResourceKey.create(
+                        net.minecraft.core.registries.Registries.BIOME, dev.golem.core.Ids.parse(excluded))));
+            }
             net.minecraft.world.level.levelgen.GenerationStep.Decoration step =
                     net.minecraft.world.level.levelgen.GenerationStep.Decoration.valueOf(
                             declaration.step().toUpperCase(java.util.Locale.ROOT));

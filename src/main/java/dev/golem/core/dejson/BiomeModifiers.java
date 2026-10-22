@@ -42,9 +42,11 @@ public final class BiomeModifiers {
 
     /**
      * One declared modifier: add {@code features} (placed-feature ids, in order) to every biome named by
-     * {@code biomes} (a biome id or a {@code #}-prefixed biome tag) at {@code step}.
+     * {@code biomes} (a biome id or a {@code #}-prefixed biome tag), except those named by {@code excluded} (or null),
+     * at {@code step}.
      */
-    public record Declaration(String namespace, String name, String biomes, List<String> features, String step) {}
+    public record Declaration(String namespace, String name, String biomes, String excluded, List<String> features,
+                              String step) {}
 
     private static final List<Declaration> DECLARED = Collections.synchronizedList(new ArrayList<>());
 
@@ -61,10 +63,20 @@ public final class BiomeModifiers {
      * @param biomes a biome id or a {@code #}-prefixed biome tag
      */
     public static void addFeatures(String namespace, String name, String biomes, List<String> features, String step) {
+        addFeatures(namespace, name, biomes, null, features, step);
+    }
+
+    /**
+     * {@link #addFeatures(String, String, String, List, String)} skipping the biomes in {@code excluded} (a biome id or
+     * a {@code #}-prefixed tag), so a second list for another mod's biomes never adds a feature twice to one biome.
+     */
+    public static void addFeatures(String namespace, String name, String biomes, String excluded, List<String> features,
+                                   String step) {
         if (namespace == null || namespace.isEmpty() || name == null || name.isEmpty()) {
             throw new DejsonException("a biome modifier needs a namespace and a name");
         }
         Models.requireId(biomes.startsWith("#") ? biomes.substring(1) : biomes, "biome");
+        if (excluded != null) Models.requireId(excluded.startsWith("#") ? excluded.substring(1) : excluded, "biome");
         if (features == null || features.isEmpty()) {
             throw new DejsonException(name + " adds no feature");
         }
@@ -77,7 +89,20 @@ public final class BiomeModifiers {
         for (String loader : new String[] {"neoforge", "forge"}) {
             JsonObject modifier = new JsonObject();
             modifier.addProperty("type", loader + ":add_features");
-            modifier.addProperty("biomes", biomes);
+            if (excluded == null) {
+                modifier.addProperty("biomes", biomes);
+            } else {
+                JsonObject not = new JsonObject();
+                not.addProperty("type", loader + ":not");
+                not.addProperty("value", excluded);
+                JsonArray both = new JsonArray();
+                both.add(biomes);
+                both.add(not);
+                JsonObject set = new JsonObject();
+                set.addProperty("type", loader + ":and");
+                set.add("values", both);
+                modifier.add("biomes", set);
+            }
             if (features.size() == 1) {
                 modifier.addProperty("features", features.get(0));
             } else {
@@ -86,7 +111,7 @@ public final class BiomeModifiers {
             modifier.addProperty("step", step);
             Data.declare("data/" + namespace + "/" + loader + "/biome_modifier/" + name + ".json", modifier);
         }
-        DECLARED.add(new Declaration(namespace, name, biomes, List.copyOf(features), step));
+        DECLARED.add(new Declaration(namespace, name, biomes, excluded, List.copyOf(features), step));
     }
 
     /**
