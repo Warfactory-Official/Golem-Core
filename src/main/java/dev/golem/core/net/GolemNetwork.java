@@ -281,8 +281,9 @@ public final class GolemNetwork {
         GolemClientNetwork.sendToServer(codec, payload);
     }
     *///?} elif forge {
-    /*private static final SimpleChannel CHANNEL = NetworkRegistry.ChannelBuilder
-            .named(new ResourceLocation("golemcore", "play"))
+    /*private static final ResourceLocation FORGE_CHANNEL = new ResourceLocation("golemcore", "play");
+    private static final SimpleChannel CHANNEL = NetworkRegistry.ChannelBuilder
+            .named(FORGE_CHANNEL)
             .networkProtocolVersion(() -> "1")
             .clientAcceptedVersions("1"::equals)
             .serverAcceptedVersions("1"::equals)
@@ -292,6 +293,11 @@ public final class GolemNetwork {
     // SimpleChannel writes this index as one byte ahead of the body, so the accelerated transport has
     // to reproduce it to build the same wire. Nothing else needs it.
     private static final java.util.Map<String, Integer> FORGE_DISCRIMINATORS = new java.util.HashMap<>();
+
+    // Every payload shares this one Forge channel; the custom-payload packet is named after it, not the payload.
+    static ResourceLocation forgeChannel() {
+        return FORGE_CHANNEL;
+    }
 
     static int forgeDiscriminator(GolemCodec<?> codec) {
         Integer index = FORGE_DISCRIMINATORS.get(codec.id().toString());

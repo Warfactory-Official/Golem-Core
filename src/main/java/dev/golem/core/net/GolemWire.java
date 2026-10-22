@@ -258,11 +258,11 @@ public final class GolemWire {
             FriendlyByteBuf writer = new FriendlyByteBuf(scratch);
             //? if >=26.1 {
             writer.writeIdentifier(codec.id());
-            //?} else {
+            //?} elif forge && <1.20.5 {
+            /*writer.writeResourceLocation(GolemNetwork.forgeChannel());
+            scratch.writeByte(GolemNetwork.forgeDiscriminator(codec) & 0xff);
+            *///?} else {
             /*writer.writeResourceLocation(codec.id());
-            *///?}
-            //? if forge && <1.20.5 {
-            /*scratch.writeByte(GolemNetwork.forgeDiscriminator(codec) & 0xff);
             *///?}
             byte[] prefix = new byte[scratch.readableBytes()];
             scratch.readBytes(prefix);

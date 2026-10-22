@@ -5,6 +5,7 @@ import dev.golem.core.render.CameraInfo;
 import dev.golem.core.render.CompatBER;
 import dev.golem.core.platform.Platform;
 import dev.golem.core.render.CompatRenderState;
+import dev.golem.core.world.SubLevels;
 import dev.golem.core.render.Frustums;
 import dev.golem.core.render.SubmitSink;
 import dev.golem.core.render.gem.Gem.Model;
@@ -148,11 +149,16 @@ public abstract class GemBER<T extends BlockEntity, S extends CompatRenderState>
      */
     @Override
     public boolean shouldRender(T blockEntity, Vec3 cameraPosition) {
-        if (!gem().isOffScreen()) {
-            return Vec3.atCenterOf(blockEntity.getBlockPos()).closerThan(cameraPosition, viewDistance());
-        }
-        if (!cullable()) return true;
         BlockPos pos = blockEntity.getBlockPos();
+        // On a sub-level the block sits in a far plot while it is seen elsewhere: measure in the world, never frustum-cull.
+        boolean carried = blockEntity.getLevel() != null && SubLevels.isOnSubLevel(blockEntity.getLevel(), pos);
+        if (!gem().isOffScreen()) {
+            Vec3 centre = Vec3.atCenterOf(pos);
+            double range = viewDistance();
+            return carried ? SubLevels.distanceSq(blockEntity.getLevel(), centre, cameraPosition) < range * range
+                    : centre.closerThan(cameraPosition, range);
+        }
+        if (!cullable() || carried) return true;
         Reach seen = reach.computeIfAbsent(pos.asLong(), key -> new Reach());
         seen.attach(blockEntity);
         if (!seen.known) return true;
