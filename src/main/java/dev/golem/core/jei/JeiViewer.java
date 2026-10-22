@@ -11,7 +11,9 @@ import dev.golem.core.viewer.ViewerCategory;
 import dev.golem.core.viewer.ViewerPlugin;
 import dev.golem.core.viewer.ViewerType;
 import mezz.jei.api.constants.RecipeTypes;
+import mezz.jei.api.constants.VanillaTypes;
 import mezz.jei.api.helpers.IGuiHelper;
+import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.registration.IExtraIngredientRegistration;
 import mezz.jei.api.registration.IGuiHandlerRegistration;
 import mezz.jei.api.registration.IRecipeCatalystRegistration;
@@ -156,6 +158,7 @@ public final class JeiViewer {
                 Jei.addRecipes(runtime, type(type), recipes);
             }
         });
+        if (!Jei.showHiddenIngredients(runtime)) plugin.hidden(stacks -> Jei.removeItemStacks(runtime, stacks));
     }
 
     /**
@@ -165,6 +168,22 @@ public final class JeiViewer {
     private static void registerHarnessQuery(IJeiRuntime runtime) {
         HarnessQueryRegistry.register("jei", (mc, params) -> {
             JsonObject out = new JsonObject();
+            if (params.has("focus")) {
+                // R (output) or U (input) on the main-hand stack: recipes per category, as the recipe screen counts them
+                ItemStack held = mc.player.getMainHandItem();
+                boolean output = params.get("focus").getAsString().equals("output");
+                var focus = runtime.getJeiHelpers().getFocusFactory().createFocus(
+                        output ? RecipeIngredientRole.OUTPUT : RecipeIngredientRole.INPUT, VanillaTypes.ITEM_STACK, held);
+                JsonObject counts = new JsonObject();
+                for (ViewerType<?> type : TYPES.keySet()) {
+                    long count = runtime.getRecipeManager().createRecipeLookup(type(type).unwrap())
+                            .limitFocus(List.of(focus)).get().count();
+                    if (count > 0) counts.addProperty(type.id(), count);
+                }
+                out.addProperty("stack", held.toString());
+                out.add("counts", counts);
+                return out;
+            }
             if (!params.has("category")) {
                 JsonArray all = new JsonArray();
                 for (ViewerType<?> type : TYPES.keySet()) {

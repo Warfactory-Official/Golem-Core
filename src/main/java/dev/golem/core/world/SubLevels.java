@@ -4,6 +4,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.phys.Vec3;
 
@@ -120,6 +121,15 @@ public final class SubLevels {
         void afterMove(Move move);
     }
 
+    /**
+     * A mod's block masses, in vanilla iron blocks (the system's own mass for {@code minecraft:iron_block} is the
+     * unit). NaN for a block the rule does not cover. The system's own data for a block, by name or tag, wins.
+     */
+    @FunctionalInterface
+    public interface MassRule {
+        double inIronBlocks(Block block);
+    }
+
     private static final Backend NONE = new Backend() {
         @Override
         public boolean isOnSubLevel(Level level, double x, double y, double z) {
@@ -140,6 +150,7 @@ public final class SubLevels {
     private static volatile Backend backend = NONE;
     private static final List<StructureResolver> RESOLVERS = new ArrayList<>();
     private static final List<MoveListener> MOVE_LISTENERS = new ArrayList<>();
+    private static final List<MassRule> MASS_RULES = new CopyOnWriteArrayList<>();
     /** Levels a move is under way in (from and to), innermost last; a move can start inside another. */
     private static final List<Level> MOVING = new CopyOnWriteArrayList<>();
 
@@ -174,6 +185,20 @@ public final class SubLevels {
         synchronized (MOVE_LISTENERS) {
             MOVE_LISTENERS.add(listener);
         }
+    }
+
+    /** Registers a {@link MassRule}; a mod states once, at setup, what its blocks weigh. */
+    public static void addMassRule(MassRule rule) {
+        MASS_RULES.add(rule);
+    }
+
+    /** For a backend: the first rule's mass for {@code block} in iron blocks, NaN when no rule covers it. */
+    public static double massInIronBlocks(Block block) {
+        for (MassRule rule : MASS_RULES) {
+            double mass = rule.inIronBlocks(block);
+            if (!Double.isNaN(mass)) return mass;
+        }
+        return Double.NaN;
     }
 
     /**

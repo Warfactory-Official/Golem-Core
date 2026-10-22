@@ -12,7 +12,10 @@ import net.minecraft.world.phys.Vec3;
 import org.joml.Quaterniond;
 import org.joml.Vector3d;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
@@ -91,16 +94,24 @@ final class SableSubLevels implements SubLevels.Backend {
      * structure to the piece that holds any part of it, so a structure always travels whole.
      */
     static void keepStructuresWhole() {
-        SubLevelHeatMapManager.addSplitListener((level, bounds, blocks) -> {
-            Set<BlockPos> present = new HashSet<>(blocks);
-            Set<BlockPos> added = new HashSet<>();
-            for (BlockPos pos : blocks) {
-                for (BlockPos part : SubLevels.structurePartsWith(level, pos)) {
-                    BlockPos immutable = part.immutable();
-                    if (!present.contains(immutable) && !level.getBlockState(immutable).isAir()) added.add(immutable);
-                }
+        SubLevelHeatMapManager.addSplitListener((level, bounds, blocks) -> blocks.addAll(missingParts(level, blocks)));
+    }
+
+    /** The non-air parts of structures {@code blocks} cuts into, closed over further structures. */
+    static Set<BlockPos> missingParts(Level level, Iterable<BlockPos> blocks) {
+        Set<BlockPos> present = new HashSet<>();
+        for (BlockPos pos : blocks) present.add(pos.immutable());
+        Set<BlockPos> added = new LinkedHashSet<>();
+        Deque<BlockPos> open = new ArrayDeque<>(present);
+        while (!open.isEmpty()) {
+            for (BlockPos part : SubLevels.structurePartsWith(level, open.poll())) {
+                BlockPos immutable = part.immutable();
+                if (present.contains(immutable) || level.getBlockState(immutable).isAir()) continue;
+                present.add(immutable);
+                added.add(immutable);
+                open.add(immutable);
             }
-            blocks.addAll(added);
-        });
+        }
+        return added;
     }
 }

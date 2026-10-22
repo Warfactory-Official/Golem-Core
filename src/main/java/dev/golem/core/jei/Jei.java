@@ -3,6 +3,7 @@ package dev.golem.core.jei;
 //? if jei {
 
 import dev.golem.core.viewer.TransferAction;
+import mezz.jei.api.constants.VanillaTypes;
 import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.transfer.IRecipeTransferError;
@@ -14,6 +15,7 @@ import mezz.jei.api.registration.IRecipeCatalystRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
 import mezz.jei.api.registration.IRecipeTransferRegistration;
 import mezz.jei.api.registration.ISubtypeRegistration;
+import mezz.jei.api.runtime.IJeiRuntime;
 // No DataComponentType import: the type is only ever inferred here (through GolemComponent.type()),
 // and naming it would break 1.20.1, where net.minecraft.core.component does not exist at all.
 import net.minecraft.world.item.Item;
@@ -24,6 +26,7 @@ import net.minecraft.world.inventory.MenuType;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Predicate;
 
@@ -175,7 +178,7 @@ public final class Jei {
 
     /**
      * Makes an item's JEI identity depend on data components, so stacks differing only in those
-     * components (a fluid icon's fluid, amount, or pressure, say) are treated as distinct ingredients.
+     * components (a fluid icon's fluid, say) are treated as distinct ingredients.
      *
      * <p>29.x offers {@code registerFromDataComponentTypes} directly. 19.x predates it and takes a
      * subtype interpreter, so this supplies one that reads the same component. The component API
@@ -210,8 +213,27 @@ public final class Jei {
     // Runtime
 
     /** Adds recipes of one type once JEI's runtime exists ({@code IModPlugin.onRuntimeAvailable}). */
-    public static <T> void addRecipes(mezz.jei.api.runtime.IJeiRuntime runtime, JeiRecipeType<T> type, List<T> recipes) {
+    public static <T> void addRecipes(IJeiRuntime runtime, JeiRecipeType<T> type, List<T> recipes) {
         if (!recipes.isEmpty()) runtime.getRecipeManager().addRecipes(type.unwrap(), recipes);
+    }
+
+    /** JEI's {@code showHiddenIngredients} option, through the config manager every line has (29.x deprecates it). */
+    @SuppressWarnings({"deprecation", "removal"})
+    public static boolean showHiddenIngredients(IJeiRuntime runtime) {
+        for (var file : runtime.getConfigManager().getConfigFiles()) {
+            for (var category : file.getCategories()) {
+                if (!category.getName().equals("cheating")) continue;
+                for (var value : category.getConfigValues()) {
+                    if (value.getName().equals("showHiddenIngredients")) return Boolean.TRUE.equals(value.getValue());
+                }
+            }
+        }
+        return false;
+    }
+
+    /** Takes stacks out of JEI's ingredient list; recipes keep showing them. */
+    public static void removeItemStacks(IJeiRuntime runtime, List<ItemStack> stacks) {
+        if (!stacks.isEmpty()) runtime.getIngredientManager().removeIngredientsAtRuntime(VanillaTypes.ITEM_STACK, stacks);
     }
 
     /**
@@ -219,15 +241,15 @@ public final class Jei {
      * the only place a 26.1 client can read them (the client does not receive the recipe manager); the older lines
      * read the same recipes through the same lookup, so all three answer alike.
      */
-    public static List<java.util.Map.Entry<ItemStack, ItemStack>> smeltingRecipes(mezz.jei.api.runtime.IJeiRuntime runtime) {
-        List<java.util.Map.Entry<ItemStack, ItemStack>> out = new ArrayList<>();
+    public static List<Map.Entry<ItemStack, ItemStack>> smeltingRecipes(IJeiRuntime runtime) {
+        List<Map.Entry<ItemStack, ItemStack>> out = new ArrayList<>();
         //? if >=26.1 {
         runtime.getRecipeManager().createRecipeLookup(mezz.jei.api.constants.RecipeTypes.SMELTING).get().forEach(holder -> {
             var recipe = holder.value();
             recipe.input().items().forEach(item -> {
                 ItemStack in = new ItemStack(item);
                 ItemStack result = recipe.assemble(new net.minecraft.world.item.crafting.SingleRecipeInput(in));
-                if (!result.isEmpty()) out.add(java.util.Map.entry(in, result));
+                if (!result.isEmpty()) out.add(Map.entry(in, result));
             });
         });
         //?} elif >=1.21.1 {
@@ -237,7 +259,7 @@ public final class Jei {
             if (recipe.getIngredients().isEmpty()) return;
             ItemStack result = recipe.getResultItem(registries);
             if (result.isEmpty()) return;
-            for (ItemStack in : recipe.getIngredients().get(0).getItems()) out.add(java.util.Map.entry(in.copyWithCount(1), result.copy()));
+            for (ItemStack in : recipe.getIngredients().get(0).getItems()) out.add(Map.entry(in.copyWithCount(1), result.copy()));
         });
         *///?} else {
         /*var registries = net.minecraft.client.Minecraft.getInstance().level.registryAccess();
@@ -245,7 +267,7 @@ public final class Jei {
             if (recipe.getIngredients().isEmpty()) return;
             ItemStack result = recipe.getResultItem(registries);
             if (result.isEmpty()) return;
-            for (ItemStack in : recipe.getIngredients().get(0).getItems()) out.add(java.util.Map.entry(in.copyWithCount(1), result.copy()));
+            for (ItemStack in : recipe.getIngredients().get(0).getItems()) out.add(Map.entry(in.copyWithCount(1), result.copy()));
         });
         *///?}
         return out;

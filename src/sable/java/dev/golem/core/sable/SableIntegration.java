@@ -17,7 +17,7 @@ public final class SableIntegration {
     private SableIntegration() {}
 
     /**
-     * Common setup: Sable answers {@link SubLevels}, and splits keep resolved structures whole.
+     * Common setup: Sable answers {@link SubLevels}, splits keep resolved structures whole, and mass rules apply.
      *
      * @param carriesInstancedVisuals whether this loader's Sable draws Flywheel visuals with its sub-levels (its
      *                                NeoForge build embeds them; its Fabric build does not)
@@ -25,7 +25,8 @@ public final class SableIntegration {
     public static void setup(boolean carriesInstancedVisuals) {
         SubLevels.install(new SableSubLevels(carriesInstancedVisuals));
         SableSubLevels.keepStructuresWhole();
-        GolemCore.LOG.info("Sable present: sub-level positions, velocities and structure splits are Sable's");
+        SableBlockMasses.install();
+        GolemCore.LOG.info("Sable present: sub-level positions, velocities, structure splits and block masses are Sable's");
     }
 
     /** End of every server tick: closes a block move whose {@code moveBlocks} never returned. */

@@ -7,9 +7,12 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Turns one call of Sable's {@code SubLevelAssemblyHelper.moveBlocks} into {@link SubLevels#beginMove} /
@@ -29,6 +32,16 @@ public final class SableMoves {
                 pos -> transform.apply(pos).immutable(), transform.getRotation());
         BATCHES.push(move);
         SubLevels.beginMove(move.from(), move.to());
+    }
+
+    /** {@code blocks} plus the rest of every structure they cut into; Simulated's assembler can gather one cell alone. */
+    public static Iterable<BlockPos> wholeStructures(ServerLevel level, Iterable<BlockPos> blocks) {
+        Set<BlockPos> missing = SableSubLevels.missingParts(level, blocks);
+        if (missing.isEmpty()) return blocks;
+        List<BlockPos> all = new ArrayList<>();
+        for (BlockPos pos : blocks) all.add(pos);
+        all.addAll(missing);
+        return all;
     }
 
     public static void end() {

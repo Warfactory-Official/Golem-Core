@@ -23,6 +23,9 @@ public interface ViewerPlugin {
     /** Stacks to list beside the registered items (JEI's extra ingredients, REI's entries). */
     default void ingredients(Ingredients registration) {}
 
+    /** Stacks left out of the list, not the recipes: by REI always, by JEI unless {@code showHiddenIngredients} is on. */
+    default void hidden(Ingredients registration) {}
+
     void categories(Categories registration);
 
     void recipes(Recipes registration);

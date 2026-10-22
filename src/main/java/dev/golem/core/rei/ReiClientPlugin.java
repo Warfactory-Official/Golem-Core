@@ -9,6 +9,7 @@ import dev.golem.core.viewer.ViewerCategory;
 import dev.golem.core.viewer.ViewerPlugin;
 import dev.golem.core.viewer.ViewerType;
 import me.shedaniel.math.Rectangle;
+import me.shedaniel.rei.api.client.entry.filtering.base.BasicFilteringRule;
 import me.shedaniel.rei.api.client.plugins.REIClientPlugin;
 import me.shedaniel.rei.api.client.registry.category.CategoryRegistry;
 import me.shedaniel.rei.api.client.registry.display.DisplayRegistry;
@@ -51,7 +52,7 @@ import java.util.function.Predicate;
  *   <li>recipes: a {@link ReiDisplay} per recipe;</li>
  *   <li>click areas: REI container click areas, relative to the screen's left/top as JEI's are;</li>
  *   <li>transfers: REI simple transfer handlers over the same menu slots, restricted to the category's displays;</li>
- *   <li>ingredients: REI entries;</li>
+ *   <li>ingredients: REI entries; hidden stacks: REI's basic entry filtering;</li>
  *   <li>runtime: the categories built from other recipes (the furnace's) are REI display generators that run the
  *       plugin's runtime the first time they are asked, once REI's furnace displays exist. A display generator rather
  *       than a reload hook because on 26.1 REI's furnace displays arrive from the server after the client reload.</li>
@@ -338,6 +339,15 @@ public abstract class ReiClientPlugin implements REIClientPlugin {
             List<EntryStack<?>> entries = new ArrayList<>(stacks.size());
             for (ItemStack stack : stacks) entries.add(EntryStacks.of(stack));
             registry.addEntries(entries);
+        });
+    }
+
+    @Override
+    public void registerBasicEntryFiltering(BasicFilteringRule<?> rule) {
+        plugin.hidden(stacks -> {
+            List<EntryStack<?>> entries = new ArrayList<>(stacks.size());
+            for (ItemStack stack : stacks) entries.add(EntryStacks.of(stack));
+            rule.hide(entries);
         });
     }
 

@@ -7,6 +7,7 @@ import net.minecraft.server.level.ServerLevel;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
@@ -26,11 +27,18 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  *       listener covers splits only, not assembly or disassembly.</li>
  *   <li>Access widening does not apply: nothing is hidden, there is no batch callback.</li>
  * </ol>
- * Two {@code @Inject}s at HEAD and RETURN of a public static API method, no redirect or overwrite. The config
+ * Two {@code @Inject}s at HEAD and RETURN of a public static API method, and one {@code @ModifyVariable} widening
+ * {@code assembleBlocks}' block set (Sable's split listener covers splits only), no redirect or overwrite. The config
  * applies only when Sable is loaded ({@link SableMixinPlugin}).
  */
 @Mixin(value = SubLevelAssemblyHelper.class, remap = false)
 public abstract class MixinSubLevelAssemblyHelper {
+
+    /** Assembly carries whole structures, as Sable's split listener already does for splits (same rungs as below). */
+    @ModifyVariable(method = "assembleBlocks", at = @At("HEAD"), argsOnly = true)
+    private static Iterable<BlockPos> golem$wholeStructures(Iterable<BlockPos> blocks, ServerLevel level) {
+        return SableMoves.wholeStructures(level, blocks);
+    }
 
     @Inject(method = "moveBlocks", at = @At("HEAD"))
     private static void golem$beginMove(ServerLevel level, SubLevelAssemblyHelper.AssemblyTransform transform,

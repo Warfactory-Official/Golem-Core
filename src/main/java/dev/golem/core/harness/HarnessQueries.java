@@ -5,6 +5,8 @@ import com.google.gson.JsonObject;
 import dev.golem.core.harness.mixin.HarnessContainerScreenAccessor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.EditBox;
@@ -112,6 +114,14 @@ final class HarnessQueries {
         p.addProperty("flying", minecraft.player.getAbilities().flying);
         p.addProperty("air", minecraft.player.getAirSupply());
         p.addProperty("xp_level", minecraft.player.experienceLevel);
+        // what the crosshair outlines: MISS, BLOCK (with target_x/y/z) or ENTITY
+        HitResult hit = minecraft.hitResult;
+        p.addProperty("target", hit == null ? "MISS" : hit.getType().name());
+        if (hit instanceof BlockHitResult block && hit.getType() == HitResult.Type.BLOCK) {
+            p.addProperty("target_x", block.getBlockPos().getX());
+            p.addProperty("target_y", block.getBlockPos().getY());
+            p.addProperty("target_z", block.getBlockPos().getZ());
+        }
         JsonArray effects = new JsonArray();
         minecraft.player.getActiveEffects().forEach(effect ->
                 effects.add(effect.toString()));
