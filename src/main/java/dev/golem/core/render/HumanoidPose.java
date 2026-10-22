@@ -24,7 +24,7 @@ public final class HumanoidPose {
 
     private final HumanoidModel<?> model;
 
-    /** Whether the entity is crouching. Armour bodies need this: vanilla's crouch offsets the torso. */
+    /** Whether the model has vanilla's crouch pose (it offsets the torso); never while {@link BodyAnimations} pose. */
     public final boolean sneaking;
     /** Whether the entity is a baby, i.e. rendered at the halved scale with an enlarged head. */
     public final boolean baby;

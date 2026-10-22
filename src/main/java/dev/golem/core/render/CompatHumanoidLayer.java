@@ -130,7 +130,8 @@ public abstract class CompatHumanoidLayer extends RenderLayer {
                 living.getItemBySlot(EquipmentSlot.FEET));
         if (worn.isEmpty() && !drawsUnequipped()) return;
 
-        HumanoidPose parts = new HumanoidPose(model, living.isCrouching(), living.isBaby(),
+        boolean crouchPose = living.isCrouching() && !BodyAnimations.animates(living);
+        HumanoidPose parts = new HumanoidPose(model, crouchPose, living.isBaby(),
                 living.isInvisible(), living instanceof net.minecraft.world.entity.player.Player player ? player : null);
 
         RecordingSubmitSink sink = new RecordingSubmitSink();

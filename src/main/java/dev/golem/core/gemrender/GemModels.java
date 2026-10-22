@@ -83,6 +83,7 @@ final class GemModels {
 
     private static Material perFace(SimpleMaterial.Builder builder) {
         //? if >=26.1 {
+        if (!GemRender.UNFIXED) return builder.build();
         return builder.shaders(PER_FACE).cardinalLightingMode(CardinalLightingMode.OFF).build();
         //?} else {
         /*return builder.build();
@@ -91,6 +92,7 @@ final class GemModels {
 
     private static FogShader vanillaFog() {
         //? if >=26.1 {
+        if (!GemRender.UNFIXED) return FogShaders.LINEAR;
         return new SimpleFogShader(Ids.of("golemcore", "fog/linear.glsl"));
         //?} else {
         /*return FogShaders.LINEAR;

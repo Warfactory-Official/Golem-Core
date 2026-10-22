@@ -213,6 +213,10 @@ tasks.processResources {
             ", \"MixinClientLevelSky\", \"MixinDimensionEffectsSky\", \"MixinOverworldFogColor\"",
         // Clouds: Fabric 26.1 has no cloud hook (DimensionRenderingRegistry serves 1.20.1/1.21.1).
         "cloud_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinCloudRender\", \"MixinWeatherRender\"" else "",
+        // GemRender 0.1.14 patches (26.1 only, applied by version; see GemRenderMixinPlugin)
+        "gemrender_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) "\"GameRendererBob\", \"MixinRenderContextBob\"" else "",
+        "gemrender_mixin_plugin" to "dev.golem.core.gemrender.mixin.GemRenderMixinPlugin",
+        "gemrender_mixin_config" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"golemcore.gemrender.mixins.json\"" else "",
         // Fabric has no debug-screen entry registry, so the F3 lines are appended by a mixin there.
         "debug_line_mixins" to if (!obfuscated) ", \"MixinDebugScreenLines\"" else "",
         // 1.20.1 has no pre-removal explosion hook for blocks (1.21 added onExplosionHit); see CompatBlock.

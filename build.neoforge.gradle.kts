@@ -157,6 +157,14 @@ if (hasSable) {
     }
 }
 
+// Mo' Bends (bendy player animations), an optional client peer on the nodes that declare it. Its backend of
+// dev.golem.core.render.BodyAnimations lives in its own source roots, src/mobends and src/mobends-neoforge, added only
+// here. Installed at client setup only when the `mobends` mod is loaded.
+if (propOrNull("deps.mobends") != null) {
+    sourceSets["main"].java.srcDir(rootProject.file("src/mobends/java"))
+    sourceSets["main"].java.srcDir(rootProject.file("src/mobends-neoforge/java"))
+}
+
 tasks.processResources {
     val props = mapOf(
         "mod_id" to prop("mod.id"),
@@ -191,6 +199,10 @@ tasks.processResources {
             ", \"MixinClientLevelSky\", \"MixinDimensionEffectsSky\", \"MixinOverworldFogColor\"",
         // Clouds: NeoForge 26.1 uses CustomCloudsRenderer; 1.21.1 has only the effects object's renderClouds.
         "cloud_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) "" else ", \"MixinLegacyCloudRender\", \"MixinLegacyWeatherRender\"",
+        // GemRender 0.1.14 patches (26.1 only, applied by version; see GemRenderMixinPlugin)
+        "gemrender_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) "\"GameRendererBob\", \"MixinRenderContextBob\"" else "",
+        "gemrender_mixin_plugin" to "dev.golem.core.gemrender.mixin.GemRenderMixinPlugin",
+        "gemrender_mixin_config" to if (mcVersion.substringBefore('.').toInt() >= 26) "[[mixins]]\nconfig = \"golemcore.gemrender.mixins.json\"" else "",
         // The Sable integration's own mixin config (src/sable/resources), only on nodes that declare Sable.
         "sable_mixins" to if (hasSable) "[[mixins]]\nconfig = \"golemcore.sable.mixins.json\"" else "",
         "pack_format" to prop("pack_format"),
@@ -268,6 +280,12 @@ dependencies {
     // Jade, compile-only and per-node optional: dev.golem.core.jade shows dev.golem.core.info declarations in Jade's
     // HUD (26.x and 15.x API lines). A node without deps.jade compiles the adapter out (`jade`).
     (findProperty("deps.jade") as String?)?.takeIf { it.isNotBlank() }?.let { compileOnly("maven.modrinth:jade:$it") }
+
+    // Mo' Bends, compile-only and per-node optional: its public skeleton API answers dev.golem.core.render.BodyAnimations
+    // (src/mobends, added below). Never shipped or required.
+    (findProperty("deps.mobends") as String?)?.takeIf { it.isNotBlank() }?.let {
+        compileOnly("maven.modrinth:mo-bends-unofficial-modern-port:$it") { isTransitive = false }
+    }
 
     // KubeJS, compile-only and per-node optional: dev.golem.core.kubejs turns every RecipeTables table into a script
     // recipe schema and serves dev.golem.core.script's bindings and events (8.x on 26.1, 7.x on 1.21.1). Rhino is the

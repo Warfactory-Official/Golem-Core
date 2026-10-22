@@ -17,6 +17,7 @@ config = "golemcore.mixins.json"
 [[mixins]]
 config = "golemcore.harness.mixins.json"
 ${sable_mixins}
+${gemrender_mixin_config}
 
 [[dependencies.${mod_id}]]
 modId = "neoforge"

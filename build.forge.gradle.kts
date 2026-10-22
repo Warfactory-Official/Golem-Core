@@ -114,6 +114,8 @@ tasks.processResources {
             ", \"MixinClientLevelSky\", \"MixinDimensionEffectsSky\", \"MixinOverworldFogColor\"",
         // Clouds: Forge's only seam is the effects object's renderClouds (see MixinLegacyCloudRender).
         "cloud_mixins" to ", \"MixinLegacyCloudRender\", \"MixinLegacyWeatherRender\"",
+        "gemrender_mixins" to "",
+        "gemrender_mixin_plugin" to "dev.golem.core.gemrender.mixin.GemRenderRefmapPlugin",
         "pack_format" to prop("pack_format"),
         "pack_format_entry" to "\"pack_format\": ${prop("pack_format")}",
     )
@@ -183,6 +185,11 @@ dependencies {
     // Jade 11, compile-only and per-node optional (see the NeoForge buildscript); its Forge jar is SRG-mapped.
     (findProperty("deps.jade") as String?)?.takeIf { it.isNotBlank() }?.let { modCompileOnly("maven.modrinth:jade:$it") }
 
+    // Mo' Bends, compile-only and per-node optional (see the NeoForge buildscript); its Forge jar is SRG-mapped.
+    (findProperty("deps.mobends") as String?)?.takeIf { it.isNotBlank() }?.let {
+        modCompileOnly("maven.modrinth:mo-bends-unofficial-modern-port:$it") { isTransitive = false }
+    }
+
     // KubeJS 6, compile-only and per-node optional (see the NeoForge buildscript). Its Forge jars are SRG-mapped, hence
     // `modCompileOnly`; MDG Legacy remaps each jar alone, and KubeJS 6's API names Rhino's and Architectury's types.
     (findProperty("deps.kubejs") as String?)?.takeIf { it.isNotBlank() }?.let { kubejs ->
@@ -210,6 +217,7 @@ mixin {
     add(sourceSets["main"], "golemcore.refmap.json")
     config("golemcore.mixins.json")
     config("golemcore.harness.mixins.json")
+    config("golemcore.gemrender.mixins.json")
 }
 
 // Stonecutter writes the shared resources in place; the legacy toolkit must see the active node's
@@ -222,7 +230,7 @@ tasks.test {
 }
 
 tasks.jar {
-    manifest.attributes["MixinConfigs"] = "golemcore.mixins.json,golemcore.harness.mixins.json"
+    manifest.attributes["MixinConfigs"] = "golemcore.mixins.json,golemcore.harness.mixins.json,golemcore.gemrender.mixins.json"
     from(files(rootProject.file("LICENSE"), rootProject.file("LICENSE.LESSER"), rootProject.file("CREDITS.txt"))) { rename { "${it}_${prop("mod.id")}" } }
 }
 
@@ -242,3 +250,10 @@ apply(from = rootProject.file("gradle/release-jar.gradle.kts"))
 apply(from = rootProject.file("gradle/mod/mod-metadata.gradle.kts"))
 // Modrinth + CurseForge upload of this node's jar; run every node with the root `publishAllMods`.
 apply(from = rootProject.file("gradle/mod/publish.gradle.kts"))
+
+// Mo' Bends (bendy player animations), an optional client peer on the nodes that declare it. Its backend of
+// dev.golem.core.render.BodyAnimations lives in its own source roots, src/mobends and src/mobends-forge, added only here.
+if ((findProperty("deps.mobends") as String?)?.isNotBlank() == true) {
+    sourceSets["main"].java.srcDir(rootProject.file("src/mobends/java"))
+    sourceSets["main"].java.srcDir(rootProject.file("src/mobends-forge/java"))
+}

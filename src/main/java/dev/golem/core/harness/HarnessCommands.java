@@ -379,6 +379,10 @@ final class HarnessCommands {
                 previous = mc.options.cloudStatus().get().name().toLowerCase(java.util.Locale.ROOT);
                 mc.options.cloudStatus().set(net.minecraft.client.CloudStatus.valueOf(value.toUpperCase(java.util.Locale.ROOT)));
                 break;
+            case "view_bobbing":
+                previous = String.valueOf(mc.options.bobView().get());
+                mc.options.bobView().set(Boolean.parseBoolean(value));
+                break;
             case "camera":
                 previous = mc.options.getCameraType().name().toLowerCase(java.util.Locale.ROOT);
                 mc.options.setCameraType(net.minecraft.client.CameraType.valueOf(value.toUpperCase(java.util.Locale.ROOT)));

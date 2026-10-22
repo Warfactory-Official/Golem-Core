@@ -9,6 +9,7 @@ import dev.engine_room.flywheel.api.visualization.VisualizationManager;
 import dev.engine_room.flywheel.api.visualization.VisualizerRegistry;
 import dev.engine_room.flywheel.lib.visualization.VisualizationHelper;
 import dev.golem.core.GolemCore;
+import dev.golem.core.gemrender.mixin.GemRenderMixinPlugin;
 import dev.golem.core.platform.Platform;
 import dev.golem.core.render.CompatRenderState;
 import dev.golem.core.render.Instancing;
@@ -29,6 +30,8 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 public final class GemRender {
 
     private static boolean installed;
+    /** GemRender 0.1.14, whose faults Core works around here and in {@link GemModels}; later releases fix them. */
+    static final boolean UNFIXED = GemRenderMixinPlugin.isPatched(Platform.modVersion("gemrender"));
 
     private GemRender() {}
 
@@ -36,7 +39,7 @@ public final class GemRender {
             BlockEntityType<T> type, Supplier<? extends GemBER<T, S>> renderer) {
         install();
         //? if neoforge && >=26.1 {
-        if (Platform.isModLoaded("sodium")) SodiumBlockEntities.add(type);
+        if (UNFIXED && Platform.isModLoaded("sodium")) SodiumBlockEntities.add(type);
         //?}
         VisualizerRegistry.setVisualizer(type, new BlockEntityVisualizer<T>() {
             @Override
@@ -61,7 +64,8 @@ public final class GemRender {
     private static void install() {
         if (installed) return;
         installed = true;
-        GolemCore.LOG.info("Binding gem visuals to GemRender");
+        GolemCore.LOG.info("Binding gem visuals to GemRender{}", UNFIXED ? " (with Core's 0.1.14 workarounds)" : "");
+        if (!UNFIXED) return;
         //? if neoforge && <26.1 {
         /*net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 (net.neoforged.neoforge.client.event.RenderFrameEvent.Pre event) -> {

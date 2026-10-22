@@ -1,0 +1,11 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "dev.golem.core.gemrender.mixin",
+  "plugin": "${gemrender_mixin_plugin}",
+  "compatibilityLevel": "${mixin_compatibility}",
+  "client": [${gemrender_mixins}],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

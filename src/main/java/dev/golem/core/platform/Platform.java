@@ -1,5 +1,7 @@
 package dev.golem.core.platform;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * Physical-side and loader questions whose spelling changed independently of Minecraft.
  */
@@ -43,6 +45,20 @@ public final class Platform {
         return net.neoforged.fml.ModList.get().isLoaded(modId);
         //?} elif forge {
         /*return net.minecraftforge.fml.ModList.get().isLoaded(modId);
+        *///?}
+    }
+
+    /** The loaded version of {@code modId}, or null when it is not loaded. */
+    public static @Nullable String modVersion(String modId) {
+        //? if fabric {
+        /*return net.fabricmc.loader.api.FabricLoader.getInstance().getModContainer(modId)
+                .map(c -> c.getMetadata().getVersion().getFriendlyString()).orElse(null);
+        *///?} elif neoforge {
+        return net.neoforged.fml.ModList.get().getModContainerById(modId)
+                .map(c -> c.getModInfo().getVersion().toString()).orElse(null);
+        //?} elif forge {
+        /*return net.minecraftforge.fml.ModList.get().getModContainerById(modId)
+                .map(c -> c.getModInfo().getVersion().toString()).orElse(null);
         *///?}
     }
 

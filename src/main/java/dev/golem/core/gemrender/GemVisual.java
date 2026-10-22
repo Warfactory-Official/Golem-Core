@@ -98,6 +98,7 @@ final class GemVisual<T extends BlockEntity, S extends CompatRenderState>
         Vec3 centre = Vec3.atCenterOf(pos);
         if (!model.isOffScreen() && !centre.closerThan(camera, model.viewDistance())) return false;
         //? if >=26.1 {
+        if (!GemRender.UNFIXED) return true;
         double dx = centre.x - camera.x, dz = centre.z - camera.z;
         double cylindrical = Math.max(Math.sqrt(dx * dx + dz * dz), Math.abs(centre.y - camera.y));
         float end = Minecraft.getInstance().options.getEffectiveRenderDistance() * 16F;
