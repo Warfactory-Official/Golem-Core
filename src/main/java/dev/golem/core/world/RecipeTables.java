@@ -314,11 +314,13 @@ public final class RecipeTables {
      * loader's recipe parser ignores the unknown top-level key, so the file loads as usual; Golem Core then takes the
      * recipes whose literals fail out of the server's recipe manager after every load, as it does for {@link #REMOVALS}
      * lists. Values are read at each datapack load, so a config change applies at the next {@code /reload}. A literal
-     * naming an undeclared flag fails (the recipe is left out, with a warning). Call at mod construction.
+     * naming an undeclared flag fails (the recipe is left out, with a warning). Loot pools read the same flags through
+     * {@link LootRequires}. Call at mod construction.
      */
     public static void flag(String name, java.util.function.BooleanSupplier value) {
         if (name.isEmpty() || name.startsWith("!")) throw new IllegalArgumentException("Bad recipe flag name " + name);
         if (FLAGS.putIfAbsent(name, value) != null) throw new IllegalStateException("Recipe flag " + name + " declared twice");
+        LootRequires.register();
     }
 
     /** Whether every literal holds now ({@code name} or {@code !name}); an empty list always holds. */

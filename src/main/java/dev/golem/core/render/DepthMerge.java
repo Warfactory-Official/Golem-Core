@@ -5,6 +5,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
+import dev.golem.core.GolemCore;
 
 /** Combines split world targets into an independent, nearest-surface depth snapshot. */
 final class DepthMerge {
@@ -74,7 +75,7 @@ final class DepthMerge {
         *///?}
         if (!reported) {
             reported = true;
-            dev.golem.core.GolemCore.LOG.info("World depth merge active: main + terrain + entities ({}x{})", output.width, output.height);
+            GolemCore.LOG.debug("World depth merge active: main + terrain + entities ({}x{})", output.width, output.height);
         }
     }
 

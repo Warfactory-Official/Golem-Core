@@ -21,6 +21,20 @@ java {
 repositories {
     mavenCentral()
     maven("https://maven.blamejared.com") { name = "BlameJared" }
+    // The vendored GemRender for 26.1 Fabric (vendor/gemrender, `gradlew :26.1-fabric:publishToMavenLocal` there).
+    exclusiveContent {
+        forRepository { mavenLocal() }
+        filter { includeGroup("com.wf.gemrender") }
+    }
+    // GemRender's CurseForge files (deps.gemrender) and Flywheel's API (deps.gemrender_flywheel).
+    exclusiveContent {
+        forRepository { maven("https://cursemaven.com") { name = "CurseMaven" } }
+        filter { includeGroup("curse.maven") }
+    }
+    exclusiveContent {
+        forRepository { maven("https://maven.createmod.net") { name = "CreateMod" } }
+        filter { includeGroup("dev.engine-room.flywheel") }
+    }
     maven("https://maven.squiddev.cc") {
         name = "SquidDev"
         content { includeGroup("cc.tweaked") }
@@ -90,12 +104,6 @@ val accessWidenerName = if (!obfuscated) "golemcore.accesswidener"
     else if (mcVersion.startsWith("1.21")) "golemcore.legacy-1.21.accesswidener"
     else "golemcore.legacy.accesswidener"
 val allAccessWideners = listOf("golemcore.accesswidener", "golemcore.legacy.accesswidener", "golemcore.legacy-1.21.accesswidener")
-
-// The vendored instancing backend names the blaze3d GPU-buffer API introduced with 26.1. The two
-// GlBuffer fields it reads are widened here by golemcore.accesswidener, which is also the file this
-// node already uses — so unlike NeoForge, where the widenings are a second access transformer that
-// has to be merged in, nothing else is needed to carry them.
-val hasVendoredFlywheel = !obfuscated
 
 dependencies {
     "minecraft"("com.mojang:minecraft:${prop("deps.minecraft")}")
@@ -171,10 +179,8 @@ tasks.processResources {
             ", \"MixinClientLevelSky\", \"MixinDimensionEffectsSky\", \"MixinOverworldFogColor\"",
         // Clouds: Fabric 26.1 has no cloud hook (DimensionRenderingRegistry serves 1.20.1/1.21.1).
         "cloud_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinCloudRender\", \"MixinWeatherRender\"" else "",
-        // Fabric is told about client block entities by fabric-api, so it needs no mixin for it.
-        "flywheel_be_mixins" to "",
         // Fabric has no debug-screen entry registry, so the F3 lines are appended by a mixin there.
-        "debug_line_mixins" to if (hasVendoredFlywheel) ", \"MixinDebugScreenLines\"" else "",
+        "debug_line_mixins" to if (!obfuscated) ", \"MixinDebugScreenLines\"" else "",
         // 1.20.1 has no pre-removal explosion hook for blocks (1.21 added onExplosionHit); see CompatBlock.
         // MixinLegacyStackLimit: no per-stack stack size before the 1.20.5 component; see ItemStacks.setMaxStackSize.
         "legacy_explosion_mixins" to if (mcVersion.startsWith("1.20.")) ", \"MixinExplosionBlockHook\", \"MixinLegacyStackLimit\"" else "",
@@ -224,13 +230,9 @@ tasks.processResources {
         "META-INF/accesstransformer.cfg",
         "META-INF/golemcore.neoforge.accesstransformer.cfg",
         "META-INF/golemcore.forge.accesstransformer.cfg",
-        // NeoForge's spelling of the same two GlBuffer widenings this node gets from its access
-        // widener. Never both.
-        "META-INF/golemcore.flywheel.accesstransformer.cfg",
     )
-    // The golem_* shaders belong to the vendored backend, which exists only from 26.1. Keep
-    // unrelated Core shaders such as depth_merge.
-    if (!hasVendoredFlywheel) {
+    // The golem_* shaders use 26.1's pipeline format; older nodes draw the same effects with *_legacy shaders.
+    if (obfuscated) {
         exclude("assets/golemcore/shaders/core/golem_*")
     }
     exclude("META-INF/neoforge.mods.toml", "META-INF/mods.toml")
@@ -264,6 +266,22 @@ dependencies {
     val jeiMc = (findProperty("deps.jei_mc") as String?)?.takeIf { it.isNotBlank() }
     val jeiVer = (findProperty("deps.jei") as String?)?.takeIf { it.isNotBlank() }
     if (jeiMc != null && jeiVer != null) compileOnly("mezz.jei:jei-$jeiMc-common-api:$jeiVer")
+
+    // GemRender, an optional client peer: dev.golem.core.gemrender instances gem-declared machines through the
+    // Flywheel it carries. CurseForge jars are compiled against, never shipped; deps.gemrender=vendor (no published
+    // build for this node) compiles against vendor/gemrender's own build and nests it in Core's jar.
+    when (val gem = (findProperty("deps.gemrender") as String?)?.takeIf { it.isNotBlank() }) {
+        null -> {}
+        "vendor" -> {
+            val vendored = "com.wf.gemrender:gemrender-fabric-${prop("deps.minecraft")}:${prop("deps.gemrender_vendored")}"
+            compileOnly(vendored) { isTransitive = false }
+            "include"(vendored) { isTransitive = false }
+        }
+        else -> (if (obfuscated) "modCompileOnly" else "compileOnly")("curse.maven:gemrender-1735539:$gem")
+    }
+    (findProperty("deps.gemrender_flywheel") as String?)?.takeIf { it.isNotBlank() }?.let {
+        (if (obfuscated) "modCompileOnly" else "compileOnly")(it)
+    }
 
     // REI, compile-only and per-node optional, like JEI: the adapter in dev.golem.core.rei feeds a mod's neutral
     // viewer declarations (dev.golem.core.viewer) to REI 12/16/26. Fabric REI jars are intermediary-mapped below 26.1.

@@ -3,6 +3,7 @@ package dev.golem.core.render;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
+import dev.golem.core.GolemCore;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -445,7 +446,7 @@ public final class WorldEffects {
             }
             if (!reported) {
                 reported = true;
-                dev.golem.core.GolemCore.LOG.info("World effects rendered after translucent composition ({} submissions)", ENTRIES.size());
+                GolemCore.LOG.debug("World effects rendered after translucent composition ({} submissions)", ENTRIES.size());
             }
         } finally {
             try {

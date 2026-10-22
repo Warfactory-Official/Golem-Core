@@ -213,7 +213,7 @@ public final class HeatDistortionRenderType {
     private static void reportCapture() {
         if (!captureReported) {
             captureReported = true;
-            dev.golem.core.GolemCore.LOG.info("Heat distortion scene capture active");
+            dev.golem.core.GolemCore.LOG.debug("Heat distortion scene capture active");
         }
     }
 
@@ -318,7 +318,7 @@ public final class HeatDistortionRenderType {
     private static void reportCapture() {
         if (!captureReported) {
             captureReported = true;
-            dev.golem.core.GolemCore.LOG.info("Heat distortion scene capture active");
+            dev.golem.core.GolemCore.LOG.debug("Heat distortion scene capture active");
         }
     }
 

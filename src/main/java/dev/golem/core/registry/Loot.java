@@ -79,6 +79,11 @@ public interface Loot {
         return (namespace, block) -> Drops.chance(namespace, block, drop, chance);
     }
 
+    /** {@link Drops#either}: {@code whenSet} while the recipe flag literal {@code requires} holds, else {@code otherwise}. */
+    static Loot either(String requires, Loot whenSet, Loot otherwise) {
+        return (namespace, block) -> Drops.either(namespace, block, requires, whenSet::declare, otherwise::declare);
+    }
+
     /** {@link Drops#stacks}: drop id, count, drop id, count, ... */
     static Loot stacks(Object... dropThenCount) {
         return (namespace, block) -> Drops.stacks(namespace, block, dropThenCount);

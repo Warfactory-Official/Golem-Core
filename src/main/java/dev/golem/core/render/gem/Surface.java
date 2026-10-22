@@ -105,6 +105,11 @@ public final class Surface {
         return blend;
     }
 
+    /** Whether it blends with what is behind it, so its quads must be sorted with the rest of the submit pass. */
+    public boolean blended() {
+        return blend == Blend.TRANSLUCENT || blend == Blend.TRANSLUCENT_EMISSIVE || blend == Blend.PLASMA_GLOW;
+    }
+
     /** The vanilla render type for this surface, resolved on first use and kept. */
     public RenderType renderType() {
         RenderType resolved = renderType;

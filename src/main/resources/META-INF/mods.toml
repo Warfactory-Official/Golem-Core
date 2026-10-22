@@ -24,3 +24,11 @@ mandatory = true
 versionRange = "${minecraft_range}"
 ordering = "NONE"
 side = "BOTH"
+
+# GemRender instances gem-declared machines when installed; without it they draw through their vanilla renderers.
+[[dependencies.${mod_id}]]
+modId = "gemrender"
+mandatory = false
+versionRange = "[0.1.14,)"
+ordering = "NONE"
+side = "CLIENT"

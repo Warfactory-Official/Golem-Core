@@ -6,13 +6,17 @@ original copyright notices and permission notices are reproduced below.
 
 ---
 
-## Flywheel
+## GemRender and Flywheel
 
-`dev.golem.core.flywheel` is a vendored GPU instancing engine, taken from the 26.1 port in
-**NTM-CE-26.1** (`com.hbm.render.flywheel`) and relocated here. Within it, the task pipeline
-(`dev.golem.core.flywheel.plan.*`) and the visualizer framework (`dev.golem.core.flywheel.visual.*`)
-are ported or derived from **Flywheel** by Jozufozu (https://github.com/Jozufozu/Flywheel),
-licensed under the MIT License.
+Golem Core draws gem-declared machines through **GemRender** by MrNorwood / Warfactory
+(https://github.com/Warfactory-Official/GemRender, GPL-3.0) when it is installed. It is not part of
+Golem Core's source: on five nodes it is a separate mod from CurseForge, and for 26.1 Fabric, which it
+does not publish, `vendor/gemrender` holds its source (0.1.14) ported to that node. That build produces
+GemRender's own jar, under GemRender's own licence, which the 26.1 Fabric Golem Core jar nests unchanged
+as a separate mod.
+
+GemRender carries **Flywheel** by Jozufozu (https://github.com/Engine-Room/Flywheel), licensed under
+the MIT License:
 
 ```
 Copyright (c) 2021-2024 Jozufozu

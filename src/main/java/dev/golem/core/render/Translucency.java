@@ -6,6 +6,8 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
+import dev.golem.core.GolemCore;
+import dev.golem.core.platform.Platform;
 import net.minecraft.client.Minecraft;
 
 /**
@@ -118,8 +120,10 @@ final class Translucency {
         if (translucent == null ? !reportedFast : !reportedFabulous) {
             if (translucent == null) reportedFast = true;
             else reportedFabulous = true;
-            dev.golem.core.GolemCore.LOG.info("Scene warp sees through translucency ({})",
-                    translucent == null ? "fast/fancy" : "fabulous");
+            // INFO in dev runs: the harness reads it (SingularityBehindWater)
+            String mode = translucent == null ? "fast/fancy" : "fabulous";
+            if (Platform.isDevelopment()) GolemCore.LOG.info("Scene warp sees through translucency ({})", mode);
+            else GolemCore.LOG.debug("Scene warp sees through translucency ({})", mode);
         }
     }
 

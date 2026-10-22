@@ -710,6 +710,16 @@ public final class Gem {
             return order;
         }
 
+        /**
+         * Whether the instanced backend can draw this part. A blended surface needs the submit pass's sort and an
+         * ordered part its bucket. Since the submit pass draws a machine's parts in walk order, the first such part
+         * that draws and every part drawn after it stay with the vanilla renderer ({@link #replayUninstanced}).
+         */
+        public boolean instanced(S state) {
+            Surface drawn = surfaceOf(state);
+            return order == 0 && drawn != null && !drawn.blended();
+        }
+
         private void seal() {
             sealed = true;
             frozen = List.copyOf(children);
@@ -764,7 +774,14 @@ public final class Gem {
      */
     public static <S> void replay(Model<S> model, S state, PoseStack poseStack, SubmitSink sink,
                                   int defaultLight) {
-        for (Part<S> root : model.roots) draw(root, state, poseStack, sink, model, defaultLight);
+        for (Part<S> root : model.roots) draw(root, state, poseStack, sink, model, defaultLight, null);
+    }
+
+    /** {@link #replay} from the first part {@link Part#instanced} refuses onward: what an instanced visual leaves. */
+    public static <S> void replayUninstanced(Model<S> model, S state, PoseStack poseStack, SubmitSink sink,
+                                             int defaultLight) {
+        boolean[] reached = {false};
+        for (Part<S> root : model.roots) draw(root, state, poseStack, sink, model, defaultLight, reached);
     }
 
     /** What {@link #walk} hands over for each part that would draw. */
@@ -796,12 +813,13 @@ public final class Gem {
     }
 
     private static <S> void draw(Part<S> part, S state, PoseStack poseStack, SubmitSink sink,
-                                 Model<S> model, int defaultLight) {
+                                 Model<S> model, int defaultLight, boolean @Nullable [] reached) {
         if (!part.visible(state)) return;
         poseStack.pushPose();
         part.applyTo(poseStack, state);
         Geometry geometry = part.geometryOf(state);
-        if (geometry != null) {
+        if (geometry != null && reached != null && !part.instanced(state)) reached[0] = true;
+        if (geometry != null && (reached == null || reached[0])) {
             int light = part.lightOf(state, model.lightOf(state, defaultLight));
             int overlay = model.overlayOf(state);
             int tint = part.tintOf(state);
@@ -814,7 +832,7 @@ public final class Gem {
                         (pose, buffer) -> geometry.draw(pose, buffer, light, overlay, tint));
             }
         }
-        for (Part<S> child : part.children) draw(child, state, poseStack, sink, model, defaultLight);
+        for (Part<S> child : part.children) draw(child, state, poseStack, sink, model, defaultLight, reached);
         poseStack.popPose();
     }
 }

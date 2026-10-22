@@ -80,6 +80,15 @@ public final class Crafting {
         return declare(namespace, id, recipe);
     }
 
+    /** A blast-furnace recipe, at vanilla's one hundred ticks. */
+    public static JsonObject blast(String namespace, String id, String ingredient, String result, double experience) {
+        JsonObject recipe = cooking("minecraft:blasting", id, experience);
+        recipe.addProperty("cookingtime", 100);
+        recipe.addProperty("ingredient", requireIngredient(ingredient));
+        recipe.add("result", result(result, 1));
+        return declare(namespace, id, recipe);
+    }
+
     /**
      * A shaped recipe: a pattern, one ingredient per symbol used in it, and a result.
      *

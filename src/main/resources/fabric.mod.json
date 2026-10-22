@@ -32,5 +32,8 @@
         "fabricloader": ">=${fabric_loader}",
         "minecraft": "${minecraft_range}",
         "java": ">=${java_version}"
+    },
+    "breaks": {
+        "gemrender": "<0.1.14"
     }
 }

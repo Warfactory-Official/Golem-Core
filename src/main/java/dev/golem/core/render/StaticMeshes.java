@@ -134,7 +134,7 @@ public final class StaticMeshes {
             }
             if (mesh == null) {
                 REJECTED.add(geometry);
-                GolemCore.LOG.info("Static mesh: {} does not pass its colour, light and overlay through; drawn immediately",
+                GolemCore.LOG.debug("Static mesh: {} does not pass its colour, light and overlay through; drawn immediately",
                         geometry.name());
                 return false;
             }

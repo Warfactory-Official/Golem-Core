@@ -1,109 +1,50 @@
 package dev.golem.core.render;
 
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.Level;
+import dev.golem.core.gemrender.GemRender;
+import dev.golem.core.platform.Platform;
 import net.minecraft.world.level.LevelAccessor;
-import net.minecraft.world.level.block.state.BlockState;
 import org.jspecify.annotations.Nullable;
 
-/** Optional GPU-instancing backend exposed without leaking an engine implementation to consumers. */
+/**
+ * GPU instancing through GemRender, an optional client mod carrying Flywheel; without it, or with the backend off, machines
+ * draw through their vanilla renderers. {@link GemRender} is touched only after {@link #isAvailable}.
+ */
 public final class Instancing {
 
-    @FunctionalInterface
-    public interface CrumblingCoreResolver {
-        @Nullable BlockPos coreOf(Level level, BlockPos mined, BlockState state);
-    }
+    public static final String MOD_ID = "gemrender";
+
+    private static @Nullable Boolean available;
 
     private Instancing() {}
 
     /**
-     * What the engine is holding right now.
-     *
-     * <p>An instanced draw and a vanilla draw are pixel-identical, so the screen cannot tell a working
-     * backend from one that never received anything. {@code visuals} settles that, and {@code owning}
-     * is the narrower claim that those visuals drew the current frame, which {@link Visuals#owns} asks
-     * per block.
-     *
-     * @param backend the chosen backend's name, or {@code off} / {@code failed} / {@code absent} /
-     *                {@code starting}
-     * @param visuals declared block entities the engine holds
-     * @param healthy of those, the ones that have not failed back to their vanilla renderer
-     * @param instances GPU rows written across them
-     * @param owning visuals that drew the current frame, so their vanilla renderer stood down
-     * @param draws GPU draw calls the last complete frame cost
-     * @param buckets instancer buckets those draws covered, equal to {@code draws} without batching
-     * @param animated models whose declaration reads state, so their transforms are rewritten each frame
-     * @param moving of those, the ones whose transforms actually differed from the previous frame
+     * What the engine holds: an instanced and a vanilla draw look the same, so counts tell a working backend from
+     * one that received nothing. {@code draws} is -1 (Flywheel does not count them); {@code buckets} counts
+     * (mesh, surface) models; {@code moving} is the animated models whose transforms changed this frame.
      */
     public record Report(String backend, int visuals, int healthy, int instances, int owning,
                          int draws, int buckets, int animated, int moving, int writes, int skipped) {}
 
-    /** Never null: a node with no engine reports an absent backend and zeroes. */
-    public static Report report() {
-        //? if >=26.1 {
-        if (!dev.golem.core.flywheel.Flywheel.isAvailable()) {
-            return new Report("off", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-        }
-        if (!dev.golem.core.platform.Platform.isClient()) {
-            return new Report("server", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-        }
-        return Client.report();
-        //?} else {
-        /*return new Report("absent", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-        *///?}
-    }
-
-    /** Whether Core provides an instancing engine on this node. */
+    /** Whether GemRender is installed on this client. */
     public static boolean isAvailable() {
-        //? if >=26.1 {
-        return dev.golem.core.flywheel.Flywheel.isAvailable();
-        //?} else {
-        /*return false;
-        *///?}
-    }
-
-    /** Whether Core's engine is currently drawing the supplied level. */
-    public static boolean isVisualizing(@Nullable LevelAccessor level) {
-        //? if >=26.1 {
-        // Keep the common facade server-safe before resolving the client-only Flywheel implementation.
-        // The level-side check is the contract: a dedicated-server query can never be visualized.
-        if (level == null || !level.isClientSide()) return false;
-        return dev.golem.core.flywheel.Flywheel.isVisualizing(level);
-        //?} else {
-        /*return false;
-        *///?}
-    }
-
-    /** Starts Core's backend and installs the consumer's multiblock crumbling resolver. */
-    public static void init(@Nullable CrumblingCoreResolver resolver) {
-        //? if >=26.1 {
-        dev.golem.core.flywheel.Flywheel.init();
-        dev.golem.core.flywheel.Flywheel.setCrumblingCoreResolver(
-                resolver == null ? null : resolver::coreOf);
-        //?}
-    }
-
-    //? if >=26.1 {
-    /** Client-only report implementation kept out of the common facade's verified method bodies. */
-    private static final class Client {
-
-        private Client() {}
-
-        private static Report report() {
-            String off = dev.golem.core.flywheel.EngineState.offReason();
-            if (off != null) {
-                return new Report(dev.golem.core.flywheel.EngineState.failed() ? "failed" : "off",
-                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-            }
-            var backend = dev.golem.core.flywheel.backend.BackendManager.selected();
-            int[] census = dev.golem.core.flywheel.visual.GemBlockEntityVisual.census();
-            return new Report(backend == null ? "starting" : backend.name(),
-                    census[0], census[1], census[2], census[3],
-                    dev.golem.core.flywheel.DrawStats.draws(), dev.golem.core.flywheel.DrawStats.buckets(),
-                    census[4], census[5],
-                    dev.golem.core.flywheel.DrawStats.writes(),
-                    dev.golem.core.flywheel.DrawStats.skipped());
+        Boolean known = available;
+        if (known == null) {
+            known = Platform.isClient() && Platform.isModLoaded(MOD_ID);
+            available = known;
         }
+        return known;
     }
-    //?}
+
+    /** Whether GemRender is drawing {@code level}: installed, and its backend is not switched off. */
+    public static boolean isVisualizing(@Nullable LevelAccessor level) {
+        if (level == null || !level.isClientSide() || !isAvailable()) return false;
+        return GemRender.isVisualizing(level);
+    }
+
+    /** Never null: a client without GemRender reports an absent backend and zeroes. */
+    public static Report report() {
+        if (!Platform.isClient()) return new Report("server", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        if (!isAvailable()) return new Report("absent", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        return GemRender.report();
+    }
 }

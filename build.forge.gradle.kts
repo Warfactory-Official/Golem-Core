@@ -47,6 +47,15 @@ legacyForge {
 repositories {
     mavenCentral()
     maven("https://maven.blamejared.com") { name = "BlameJared" }
+    // GemRender's CurseForge files (deps.gemrender) and Flywheel's API (deps.gemrender_flywheel).
+    exclusiveContent {
+        forRepository { maven("https://cursemaven.com") { name = "CurseMaven" } }
+        filter { includeGroup("curse.maven") }
+    }
+    exclusiveContent {
+        forRepository { maven("https://maven.createmod.net") { name = "CreateMod" } }
+        filter { includeGroup("dev.engine-room.flywheel") }
+    }
     maven("https://maven.squiddev.cc") {
         name = "SquidDev"
         content { includeGroup("cc.tweaked") }
@@ -105,8 +114,6 @@ tasks.processResources {
             ", \"MixinClientLevelSky\", \"MixinDimensionEffectsSky\", \"MixinOverworldFogColor\"",
         // Clouds: Forge's only seam is the effects object's renderClouds (see MixinLegacyCloudRender).
         "cloud_mixins" to ", \"MixinLegacyCloudRender\", \"MixinLegacyWeatherRender\"",
-        // No vendored engine below 26.1, so nothing to feed.
-        "flywheel_be_mixins" to "",
         "pack_format" to prop("pack_format"),
         "pack_format_entry" to "\"pack_format\": ${prop("pack_format")}",
     )
@@ -118,9 +125,7 @@ tasks.processResources {
         "fabric.mod.json", "golemcore.fabric.mixins.json", "META-INF/neoforge.mods.toml",
         "META-INF/accesstransformer.cfg", "META-INF/golemcore.forge.accesstransformer.cfg",
         "META-INF/golemcore.neoforge.accesstransformer.cfg",
-        // The flywheel widenings and golem_* shaders belong to the
-        // NeoForge-only vendored backend. Keep unrelated Core shaders such as depth_merge.
-        "META-INF/golemcore.flywheel.accesstransformer.cfg",
+        // golem_* shaders use 26.1's pipeline format; this node draws the same effects with *_legacy shaders.
         "assets/golemcore/shaders/core/golem_*",
     )
     from(file("../../src/main/resources/META-INF/golemcore.forge.accesstransformer.cfg")) {
@@ -149,6 +154,11 @@ dependencies {
     // newest copy any mod nests) and puts it on the dev runtime of Core and of mods built on it. The common
     // annotation processor writes its injectors into the refmap.
     compileOnly("io.github.llamalad7:mixinextras-common:0.3.5")
+
+    // GemRender, an optional client peer: dev.golem.core.gemrender instances gem-declared machines through the
+    // Flywheel it carries. SRG-mapped jars, hence modCompileOnly. Never shipped or required.
+    (findProperty("deps.gemrender") as String?)?.takeIf { it.isNotBlank() }?.let { modCompileOnly("curse.maven:gemrender-1735539:$it") }
+    (findProperty("deps.gemrender_flywheel") as String?)?.takeIf { it.isNotBlank() }?.let { modCompileOnly(it) }
     annotationProcessor("io.github.llamalad7:mixinextras-common:0.3.5")
     implementation("io.github.llamalad7:mixinextras-forge:0.5.5")
     jarJar("io.github.llamalad7:mixinextras-forge:[0.3.5,)") { version { prefer("0.5.5") } }

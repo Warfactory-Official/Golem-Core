@@ -10,27 +10,17 @@ fun propOrNull(name: String): String? = (findProperty(name) as String?)?.takeIf 
 val mcVersion = stonecutter.current.version
 val javaVersion = prop("java_version").toInt()
 
-// The vendored Flywheel backend in dev.golem.core.flywheel only exists from 26.1 — it is written
-// against the blaze3d GPU-buffer/pipeline API that arrived with it. Both its access transformer and
-// its access transformer names types that do not exist before then, so declaring it on an older
-// node fails the build outright rather than being ignored.
-val hasVendoredFlywheel = mcVersion.substringBefore('.').toInt() >= 26
-
 // Sable (see the dependency block below) on the nodes that declare its coordinates.
 val sableMc = (findProperty("deps.sable_mc") as String?)?.takeIf { it.isNotBlank() }
 val sableVer = (findProperty("deps.sable") as String?)?.takeIf { it.isNotBlank() }
 val sableCompanionVer = (findProperty("deps.sable_companion") as String?)?.takeIf { it.isNotBlank() }
 val hasSable = sableMc != null && sableVer != null && sableCompanionVer != null
 
-// NeoForge reads exactly one META-INF/accesstransformer.cfg per jar, so the backend's widenings
-// cannot ship as a second file — and they cannot join the shared one either, because GlBuffer does
-// not exist before 26.1 and an access transformer naming a missing class fails the node outright.
-// The shipped file is therefore assembled from whichever sources apply to this node.
+// NeoForge reads exactly one META-INF/accesstransformer.cfg per jar; it is assembled from whichever sources
+// apply to this node.
 val accessTransformerFiles = listOfNotNull(
     file("../../src/main/resources/META-INF/golemcore.neoforge.accesstransformer.cfg")
         .takeIf { it.exists() },
-    file("../../src/main/resources/META-INF/golemcore.flywheel.accesstransformer.cfg")
-        .takeIf { hasVendoredFlywheel && it.exists() },
 )
 val mergedAccessTransformer = layout.buildDirectory.file("golemcore-at/accesstransformer.cfg")
 val mergeAccessTransformers = tasks.register("mergeAccessTransformers") {
@@ -102,6 +92,15 @@ neoForge {
 repositories {
     mavenCentral()
     maven("https://maven.blamejared.com") { name = "BlameJared" }
+    // GemRender's CurseForge files (deps.gemrender) and Flywheel's API (deps.gemrender_flywheel).
+    exclusiveContent {
+        forRepository { maven("https://cursemaven.com") { name = "CurseMaven" } }
+        filter { includeGroup("curse.maven") }
+    }
+    exclusiveContent {
+        forRepository { maven("https://maven.createmod.net") { name = "CreateMod" } }
+        filter { includeGroup("dev.engine-room.flywheel") }
+    }
     maven("https://maven.squiddev.cc") {
         name = "SquidDev"
         content { includeGroup("cc.tweaked") }
@@ -192,7 +191,6 @@ tasks.processResources {
             ", \"MixinClientLevelSky\", \"MixinDimensionEffectsSky\", \"MixinOverworldFogColor\"",
         // Clouds: NeoForge 26.1 uses CustomCloudsRenderer; 1.21.1 has only the effects object's renderClouds.
         "cloud_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) "" else ", \"MixinLegacyCloudRender\", \"MixinLegacyWeatherRender\"",
-        "flywheel_be_mixins" to if (hasVendoredFlywheel) ", \"MixinLevelChunkVisuals\"" else "",
         // The Sable integration's own mixin config (src/sable/resources), only on nodes that declare Sable.
         "sable_mixins" to if (hasSable) "[[mixins]]\nconfig = \"golemcore.sable.mixins.json\"" else "",
         "pack_format" to prop("pack_format"),
@@ -209,15 +207,13 @@ tasks.processResources {
         "fabric.mod.json", "golemcore.fabric.mixins.json", "META-INF/mods.toml",
         "META-INF/accesstransformer.cfg", "META-INF/golemcore.neoforge.accesstransformer.cfg",
         "META-INF/golemcore.forge.accesstransformer.cfg",
-        "META-INF/golemcore.flywheel.accesstransformer.cfg",
     )
     // Golem Core's KubeJS plugin list names classes that exist only where the `kubejs` constant holds.
     if ((findProperty("deps.kubejs") as String?).isNullOrBlank()) exclude("kubejs.plugins.txt")
     dependsOn(mergeAccessTransformers)
     from(mergedAccessTransformer) { into("META-INF") }
-    // The golem_* shaders belong to the vendored Flywheel backend, which only exists on 26.1.
-    // Keep unrelated Core shaders such as depth_merge.
-    if (!hasVendoredFlywheel) {
+    // The golem_* shaders use 26.1's pipeline format; older nodes draw the same effects with *_legacy shaders.
+    if (mcVersion.substringBefore('.').toInt() < 26) {
         exclude("assets/golemcore/shaders/core/golem_*")
     }
 }
@@ -249,6 +245,12 @@ dependencies {
     // MixinExtras (@WrapOperation, @ModifyReturnValue): NeoForge bundles it at runtime on every line we target, so
     // compile against the oldest API we use and ship nothing.
     compileOnly("io.github.llamalad7:mixinextras-common:0.3.5")
+
+    // GemRender, an optional client peer: dev.golem.core.gemrender instances gem-declared machines through the
+    // Flywheel it carries. Compiled against, never shipped or required.
+    propOrNull("deps.gemrender")?.let { compileOnly("curse.maven:gemrender-1735539:$it") }
+    propOrNull("deps.gemrender_flywheel")?.let { compileOnly(it) }
+    propOrNull("deps.gemrender_sodium_api")?.let { compileOnly("net.caffeinemc:sodium-neoforge-api:$it") { isTransitive = false } }
 
     // JEI, compile-only and per-node optional: the facade in dev.golem.core.jei exists to hide the
     // 19.x/29.x API split from consumers, so this library has to see whichever line the node targets.

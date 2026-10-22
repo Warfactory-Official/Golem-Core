@@ -65,6 +65,8 @@ public abstract class GemBER<T extends BlockEntity, S extends CompatRenderState>
         if (!owned) {
             Gem.replay(gem(), state, poseStack, sink, state.lightCoords);
             if (cullable()) learnReach(state);
+        } else {
+            Gem.replayUninstanced(gem(), state, poseStack, sink, state.lightCoords);
         }
         if (tracing) trace(state.blockPos, owned);
         if (undeclared == null) {

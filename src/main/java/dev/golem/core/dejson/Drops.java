@@ -1,7 +1,9 @@
 package dev.golem.core.dejson;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import java.util.function.BiConsumer;
 
 /**
  * Block loot tables declared in code.
@@ -209,6 +211,41 @@ public final class Drops {
         loot.add("pools", pools);
         loot.addProperty("random_sequence", sequence(namespace, block));
         return Data.declare(path(namespace, block), loot);
+    }
+
+    /**
+     * Two tables in one: {@code whenSet}'s pools while the recipe flag literal {@code requires} holds, {@code otherwise}'s
+     * while it does not. Each pool carries a {@code golemcore:requires} condition, so the choice is made at every drop.
+     */
+    public static JsonObject either(String namespace, String block, String requires,
+                                    BiConsumer<String, String> whenSet, BiConsumer<String, String> otherwise) {
+        String negated = requires.startsWith("!") ? requires.substring(1) : "!" + requires;
+        String path = path(namespace, block);
+        JsonArray pools = new JsonArray();
+        whenSet.accept(namespace, block);
+        gatePools(Data.take(path), requires, pools);
+        otherwise.accept(namespace, block);
+        gatePools(Data.take(path), negated, pools);
+        JsonObject loot = new JsonObject();
+        loot.addProperty("type", "minecraft:block");
+        loot.add("pools", pools);
+        loot.addProperty("random_sequence", sequence(namespace, block));
+        return Data.declare(path, loot);
+    }
+
+    private static void gatePools(JsonObject table, String literal, JsonArray out) {
+        JsonArray literals = new JsonArray();
+        literals.add(literal);
+        JsonObject condition = new JsonObject();
+        condition.addProperty("condition", "golemcore:requires");
+        condition.add("requires", literals);
+        for (JsonElement element : table.getAsJsonArray("pools")) {
+            JsonObject pool = element.getAsJsonObject().deepCopy();
+            JsonArray conditions = pool.has("conditions") ? pool.getAsJsonArray("conditions") : new JsonArray();
+            conditions.add(condition.deepCopy());
+            pool.add("conditions", conditions);
+            out.add(pool);
+        }
     }
 
     public static String path(String namespace, String block) {

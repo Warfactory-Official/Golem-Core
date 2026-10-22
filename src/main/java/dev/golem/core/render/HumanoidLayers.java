@@ -134,7 +134,7 @@ public final class HumanoidLayers {
      * completion signal, so there the number has to be read through {@link #attachedCount()} instead.
      */
     private static void report() {
-        dev.golem.core.GolemCore.LOG.info("Humanoid render layers attached: {}", attached);
+        dev.golem.core.GolemCore.LOG.debug("Humanoid render layers attached: {}", attached);
     }
     //?}
 

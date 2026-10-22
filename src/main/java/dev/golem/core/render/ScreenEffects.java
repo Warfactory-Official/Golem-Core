@@ -5,6 +5,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
+import dev.golem.core.GolemCore;
 import dev.golem.core.client.ClientResourceReloads;
 import dev.golem.core.harness.HarnessQueryRegistry;
 import net.minecraft.client.Minecraft;
@@ -68,7 +69,7 @@ public final class ScreenEffects {
         state[1] = layer.width;
         state[2] = layer.height;
         if (REPORTED.add(effect)) {
-            dev.golem.core.GolemCore.LOG.info("Screen effect composited after the hand: {} ({}x{})", effect,
+            GolemCore.LOG.debug("Screen effect composited after the hand: {} ({}x{})", effect,
                     layer.width, layer.height);
         }
     }

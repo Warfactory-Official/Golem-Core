@@ -1,0 +1,20 @@
+{
+  "required": true,
+  "minVersion": "0.8.5",
+  "package": "com.wf.gemrender.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "client": [
+    "DrawManagerMixin",
+    "GlProgramMixin",
+    "IndirectCullingGroupMixin",
+    "IndirectDrawManagerMixin",
+    "InstancedDrawManagerMixin",
+    "LevelRendererAccessor",
+    "MaterialRenderStateMixin",
+    "OitFramebufferMixin",
+    "texture.NativeImageAccessor"
+  ]
+}

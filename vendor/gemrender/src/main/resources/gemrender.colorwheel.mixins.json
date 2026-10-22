@@ -1,0 +1,14 @@
+{
+  "required": false,
+  "minVersion": "0.8.5",
+  "package": "com.wf.gemrender.mixin.colorwheel",
+  "compatibilityLevel": "JAVA_21",
+  "injectors": {
+    "defaultRequire": 0
+  },
+  "client": [
+    "ClrwlDrawManagerMixin",
+    "ClrwlEngineMixin",
+    "ClrwlProgramMixin"
+  ]
+}

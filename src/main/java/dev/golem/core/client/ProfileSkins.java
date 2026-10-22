@@ -168,7 +168,7 @@ public final class ProfileSkins {
             DynamicTextures.register(texture, SIZE, SIZE, pixels);
             Skin skin = new Skin(pixels, texture);
             STATE.put(id, skin);
-            LOG.info("Loaded the skin of {}", id);
+            LOG.debug("Loaded the skin of {}", id);
             return skin;
         }
         return state instanceof Skin skin ? skin : null;

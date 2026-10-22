@@ -121,6 +121,13 @@ public final class Data {
         return Collections.unmodifiableMap(FILES);
     }
 
+    /** Removes one declaration and returns it, so a shape can be built from another shape's output. */
+    static JsonObject take(String path) {
+        JsonObject content = FILES.remove(path);
+        if (content == null) throw new DejsonException(path + " was never declared");
+        return content;
+    }
+
     public static JsonObject file(String path) {
         return files().get(path);
     }
