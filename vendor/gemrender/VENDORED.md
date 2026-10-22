@@ -33,7 +33,9 @@
 ```
 
 The jar is `versions/26.1-fabric/build/libs/gemrender-fabric-26.1.2-0.1.14.jar`.
-`:26.1-fabric:publishToMavenLocal` publishes it as `com.wf.gemrender:gemrender-fabric-26.1.2:0.1.14`, which Golem
-Core's 26.1 Fabric node compiles against and nests (`deps.gemrender=vendor`); run it before the first Core build.
+Golem Core's 26.1 Fabric node (`deps.gemrender=vendor`) compiles against `com.wf.gemrender:gemrender-fabric-26.1.2:0.1.14`
+and nests it. It builds it itself while configuring (`buildVendoredGemRender` in Core's `build.fabric.gradle.kts`):
+`:26.1-fabric:publishToMavenLocal` here with `-Dmaven.repo.local=Golem-Core/build/vendor-maven`, whenever that jar is missing or
+older than this tree's sources. Nothing needs running by hand.
 `--configure-on-demand` keeps Gradle from configuring the other five nodes. `ktxTest` fails on Windows on
 every node: LWJGL's Windows `ktx.dll` does not export `ktxTexture2_SetImageFromMemory`.

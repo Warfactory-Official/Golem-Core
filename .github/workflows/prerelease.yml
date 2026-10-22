@@ -44,11 +44,6 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Build the vendored GemRender (26.1 Fabric)
-        # Core's 26.1 Fabric node compiles against it and nests it, from Maven local.
-        working-directory: vendor/gemrender
-        run: bash ./gradlew :26.1-fabric:publishToMavenLocal --configure-on-demand --no-daemon --stacktrace
-
       - name: Build every node
         # ModDevGradle builds Minecraft through its binary pipeline whenever CI=true (GitHub always sets
         # it). That jar keeps Forge's signature digests over remapped classes (SecurityException in the
