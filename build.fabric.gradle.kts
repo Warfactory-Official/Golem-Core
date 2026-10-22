@@ -23,7 +23,7 @@ java {
 // setup step. It runs while this node configures because Loom resolves mod dependencies then.
 val vendorMaven = rootProject.layout.buildDirectory.dir("vendor-maven").get().asFile
 
-fun buildVendoredGemRender() {
+fun buildVendoredGemRender(): File {
     val source = rootProject.file("vendor/gemrender")
     val mc = prop("deps.minecraft")
     val version = prop("deps.gemrender_vendored")
@@ -33,7 +33,7 @@ fun buildVendoredGemRender() {
     val newest = inputs.map(source::resolve).filter { it.exists() }
         .flatMap { file -> if (file.isDirectory) file.walkTopDown().filter { it.isFile }.toList() else listOf(file) }
         .maxOf { it.lastModified() }
-    if (jar.isFile && jar.lastModified() >= newest) return
+    if (jar.isFile && jar.lastModified() >= newest) return jar
 
     logger.lifecycle("Building the vendored GemRender ($mc Fabric) from vendor/gemrender into $vendorMaven")
     val log = vendorMaven.resolve("build.log").apply { parentFile.mkdirs() }
@@ -48,9 +48,10 @@ fun buildVendoredGemRender() {
     if (process.waitFor() != 0 || !jar.isFile) {
         throw GradleException("vendor/gemrender did not build (log: $log):\n" + log.readLines().takeLast(30).joinToString("\n"))
     }
+    return jar
 }
 
-if (findProperty("deps.gemrender") == "vendor") buildVendoredGemRender()
+val vendoredGemRender = if (findProperty("deps.gemrender") == "vendor") buildVendoredGemRender() else null
 
 repositories {
     mavenCentral()
@@ -309,6 +310,9 @@ dependencies {
             val vendored = "com.wf.gemrender:gemrender-fabric-${prop("deps.minecraft")}:${prop("deps.gemrender_vendored")}"
             compileOnly(vendored) { isTransitive = false }
             "include"(vendored) { isTransitive = false }
+            // The jar itself on the runtime classpath, which a build including Golem Core inherits: its dev runs load
+            // GemRender with no repository or setup of their own. Not in the published POM; release jars nest it.
+            runtimeOnly(files(vendoredGemRender))
         }
         else -> (if (obfuscated) "modCompileOnly" else "compileOnly")("curse.maven:gemrender-1735539:$gem")
     }
