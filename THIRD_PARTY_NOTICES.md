@@ -10,10 +10,7 @@ original copyright notices and permission notices are reproduced below.
 
 Golem Core draws gem-declared machines through **GemRender** by MrNorwood / Warfactory
 (https://github.com/Warfactory-Official/GemRender, GPL-3.0) when it is installed. It is not part of
-Golem Core's source: on five nodes it is a separate mod from CurseForge, and for 26.1 Fabric, which it
-does not publish, `vendor/gemrender` holds its source (0.1.14) ported to that node. That build produces
-GemRender's own jar, under GemRender's own licence, which the 26.1 Fabric Golem Core jar nests unchanged
-as a separate mod.
+Golem Core's source or jars: on every node it is a separate mod from CurseForge.
 
 GemRender carries **Flywheel** by Jozufozu (https://github.com/Engine-Room/Flywheel), licensed under
 the MIT License:

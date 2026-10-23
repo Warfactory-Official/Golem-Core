@@ -8,6 +8,8 @@ fun prop(name: String): String = property(name) as String
 fun propOrNull(name: String): String? = (findProperty(name) as String?)?.takeIf { it.isNotBlank() }
 
 val mcVersion = stonecutter.current.version
+apply(from = rootProject.file("gradle/mod/gemrender-local.gradle.kts"))
+val localGemRender = extra.properties["golem.gemrender.local"]
 val javaVersion = prop("java_version").toInt()
 
 // Sable (see the dependency block below) on the nodes that declare its coordinates.
@@ -260,7 +262,8 @@ dependencies {
 
     // GemRender, an optional client peer: dev.golem.core.gemrender instances gem-declared machines through the
     // Flywheel it carries. Compiled against, never shipped or required.
-    propOrNull("deps.gemrender")?.let { compileOnly("curse.maven:gemrender-1735539:$it") }
+    if (localGemRender != null) compileOnly(localGemRender)
+    else propOrNull("deps.gemrender")?.let { compileOnly("curse.maven:gemrender-1735539:$it") }
     propOrNull("deps.gemrender_flywheel")?.let { compileOnly(it) }
     propOrNull("deps.gemrender_sodium_api")?.let { compileOnly("net.caffeinemc:sodium-neoforge-api:$it") { isTransitive = false } }
 

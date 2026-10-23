@@ -7,6 +7,8 @@ plugins {
 fun prop(name: String): String = property(name) as String
 
 val mcVersion = stonecutter.current.version
+apply(from = rootProject.file("gradle/mod/gemrender-local.gradle.kts"))
+val localGemRender = extra.properties["golem.gemrender.local"]
 val javaVersion = prop("java_version").toInt()
 
 group = prop("mod.group")
@@ -159,7 +161,8 @@ dependencies {
 
     // GemRender, an optional client peer: dev.golem.core.gemrender instances gem-declared machines through the
     // Flywheel it carries. SRG-mapped jars, hence modCompileOnly. Never shipped or required.
-    (findProperty("deps.gemrender") as String?)?.takeIf { it.isNotBlank() }?.let { modCompileOnly("curse.maven:gemrender-1735539:$it") }
+    if (localGemRender != null) modCompileOnly(localGemRender)
+    else (findProperty("deps.gemrender") as String?)?.takeIf { it.isNotBlank() }?.let { modCompileOnly("curse.maven:gemrender-1735539:$it") }
     (findProperty("deps.gemrender_flywheel") as String?)?.takeIf { it.isNotBlank() }?.let { modCompileOnly(it) }
     annotationProcessor("io.github.llamalad7:mixinextras-common:0.3.5")
     implementation("io.github.llamalad7:mixinextras-forge:0.5.5")

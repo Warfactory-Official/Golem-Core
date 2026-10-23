@@ -7,6 +7,8 @@ plugins {
 fun prop(name: String): String = property(name) as String
 
 val mcVersion = stonecutter.current.version
+apply(from = rootProject.file("gradle/mod/gemrender-local.gradle.kts"))
+val localGemRender = extra.properties["golem.gemrender.local"]
 val javaVersion = prop("java_version").toInt()
 
 group = prop("mod.group")
@@ -18,48 +20,9 @@ java {
     withSourcesJar()
 }
 
-// The vendored GemRender (deps.gemrender=vendor, a node GemRender publishes no jar for): built from vendor/gemrender into
-// build/vendor-maven whenever that jar is missing or older than its sources, so no build that includes Golem Core needs a
-// setup step. It runs while this node configures because Loom resolves mod dependencies then.
-val vendorMaven = rootProject.layout.buildDirectory.dir("vendor-maven").get().asFile
-
-fun buildVendoredGemRender(): File {
-    val source = rootProject.file("vendor/gemrender")
-    val mc = prop("deps.minecraft")
-    val version = prop("deps.gemrender_vendored")
-    val jar = vendorMaven.resolve("com/wf/gemrender/gemrender-fabric-$mc/$version/gemrender-fabric-$mc-$version.jar")
-    val inputs = listOf("src", "gradle", "build.gradle", "build.fabric.gradle", "settings.gradle", "stonecutter.gradle",
-        "gradle.properties", "versions/${project.name}/gradle.properties")
-    val newest = inputs.map(source::resolve).filter { it.exists() }
-        .flatMap { file -> if (file.isDirectory) file.walkTopDown().filter { it.isFile }.toList() else listOf(file) }
-        .maxOf { it.lastModified() }
-    if (jar.isFile && jar.lastModified() >= newest) return jar
-
-    logger.lifecycle("Building the vendored GemRender ($mc Fabric) from vendor/gemrender into $vendorMaven")
-    val log = vendorMaven.resolve("build.log").apply { parentFile.mkdirs() }
-    // The wrapper jar on this build's own JVM: the same on every OS, no shell or script quoting.
-    val java = File(System.getProperty("java.home"), "bin/java").absolutePath
-    val command = listOf(java, "-cp", source.resolve("gradle/wrapper/gradle-wrapper.jar").absolutePath,
-        "org.gradle.wrapper.GradleWrapperMain", ":${project.name}:publishToMavenLocal", "--configure-on-demand",
-        "--no-daemon", "-Dmaven.repo.local=${vendorMaven.absolutePath}")
-    val process = ProcessBuilder(command).directory(source).redirectErrorStream(true).redirectOutput(log)
-        .apply { environment()["JAVA_HOME"] = System.getProperty("java.home") }
-        .start()
-    if (process.waitFor() != 0 || !jar.isFile) {
-        throw GradleException("vendor/gemrender did not build (log: $log):\n" + log.readLines().takeLast(30).joinToString("\n"))
-    }
-    return jar
-}
-
-val vendoredGemRender = if (findProperty("deps.gemrender") == "vendor") buildVendoredGemRender() else null
-
 repositories {
     mavenCentral()
     maven("https://maven.blamejared.com") { name = "BlameJared" }
-    exclusiveContent {
-        forRepository { maven(vendorMaven) { name = "VendoredGemRender" } }
-        filter { includeGroup("com.wf.gemrender") }
-    }
     // GemRender's CurseForge files (deps.gemrender) and Flywheel's API (deps.gemrender_flywheel).
     exclusiveContent {
         forRepository { maven("https://cursemaven.com") { name = "CurseMaven" } }
@@ -306,19 +269,11 @@ dependencies {
     if (jeiMc != null && jeiVer != null) compileOnly("mezz.jei:jei-$jeiMc-common-api:$jeiVer")
 
     // GemRender, an optional client peer: dev.golem.core.gemrender instances gem-declared machines through the
-    // Flywheel it carries. CurseForge jars are compiled against, never shipped; deps.gemrender=vendor (no published
-    // build for this node) compiles against vendor/gemrender's own build (buildVendoredGemRender) and nests it in Core's jar.
-    when (val gem = (findProperty("deps.gemrender") as String?)?.takeIf { it.isNotBlank() }) {
-        null -> {}
-        "vendor" -> {
-            val vendored = "com.wf.gemrender:gemrender-fabric-${prop("deps.minecraft")}:${prop("deps.gemrender_vendored")}"
-            compileOnly(vendored) { isTransitive = false }
-            "include"(vendored) { isTransitive = false }
-            // The jar itself on the runtime classpath, which a build including Golem Core inherits: its dev runs load
-            // GemRender with no repository or setup of their own. Not in the published POM; release jars nest it.
-            runtimeOnly(files(vendoredGemRender))
-        }
-        else -> (if (obfuscated) "modCompileOnly" else "compileOnly")("curse.maven:gemrender-1735539:$gem")
+    // Flywheel it carries. CurseForge jars are compiled against, never shipped.
+    val gemConfig = if (obfuscated) "modCompileOnly" else "compileOnly"
+    if (localGemRender != null) gemConfig(localGemRender)
+    else (findProperty("deps.gemrender") as String?)?.takeIf { it.isNotBlank() }?.let {
+        gemConfig("curse.maven:gemrender-1735539:$it")
     }
     (findProperty("deps.gemrender_flywheel") as String?)?.takeIf { it.isNotBlank() }?.let {
         (if (obfuscated) "modCompileOnly" else "compileOnly")(it)
