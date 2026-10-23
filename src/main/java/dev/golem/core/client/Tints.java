@@ -146,7 +146,7 @@ public final class Tints {
      * Registers a {@link BlockTint} for the given blocks, on whichever colour API this node has.
      *
      * <p>26.1 registers a list of {@code BlockTintSource}s per block; older versions register a single
-     * {@code BlockColor} callback, which drops the level, position and tint index a state-keyed tint never uses.
+     * {@code BlockColor} callback, which passes the level and position on to {@link BlockTint#colorInWorld}.
      * See {@link #whenColorsRegisterable} for when this is safe.
      *
      * <p>Blocks are suppliers resolved inside the deferred action: NeoForge runs client init during mod
@@ -170,12 +170,20 @@ public final class Tints {
                 }
 
                 @Override
+                public int colorInWorld(net.minecraft.world.level.block.state.BlockState state,
+                                        net.minecraft.client.renderer.block.BlockAndTintGetter level,
+                                        net.minecraft.core.BlockPos pos) {
+                    return tint.colorInWorld(state, level, pos);
+                }
+
+                @Override
                 public java.util.Set<net.minecraft.world.level.block.state.properties.Property<?>> relevantProperties() {
                     return tint.relevantProperties();
                 }
             }), resolved);
             //?} else {
-            /*colors.register((state, level, pos, tintIndex) -> tint.color(state), resolved);
+            /*colors.register((state, level, pos, tintIndex) -> level == null || pos == null ? tint.color(state)
+                    : tint.colorInWorld(state, level, pos), resolved);
             *///?}
             GolemCore.LOG.info("Block tint installed for {} block(s)", resolved.length);
         });
@@ -205,6 +213,13 @@ public final class Tints {
                     }
 
                     @Override
+                    public int colorInWorld(net.minecraft.world.level.block.state.BlockState state,
+                                            net.minecraft.client.renderer.block.BlockAndTintGetter level,
+                                            net.minecraft.core.BlockPos pos) {
+                        return tint.colorInWorld(state, level, pos);
+                    }
+
+                    @Override
                     public java.util.Set<net.minecraft.world.level.block.state.properties.Property<?>> relevantProperties() {
                         return tint.relevantProperties();
                     }
@@ -212,8 +227,9 @@ public final class Tints {
             }
             colors.register(sources, resolved);
             //?} else {
-            /*colors.register((state, level, pos, tintIndex) -> tintIndex >= 0 && tintIndex < tints.size()
-                    ? tints.get(tintIndex).color(state) : -1, resolved);
+            /*colors.register((state, level, pos, tintIndex) -> tintIndex < 0 || tintIndex >= tints.size() ? -1
+                    : level == null || pos == null ? tints.get(tintIndex).color(state)
+                    : tints.get(tintIndex).colorInWorld(state, level, pos), resolved);
             *///?}
             GolemCore.LOG.info("Indexed block tints ({}) installed for {} block(s)", tints.size(), resolved.length);
         });

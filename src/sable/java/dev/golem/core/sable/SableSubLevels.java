@@ -4,18 +4,31 @@ import dev.golem.core.world.SubLevels;
 import dev.ryanhcode.sable.companion.ClientSubLevelAccess;
 import dev.ryanhcode.sable.companion.SableCompanion;
 import dev.ryanhcode.sable.companion.SubLevelAccess;
+import dev.ryanhcode.sable.api.physics.handle.RigidBodyHandle;
+import dev.ryanhcode.sable.companion.math.BoundingBox3d;
+import dev.ryanhcode.sable.companion.math.BoundingBox3dc;
 import dev.ryanhcode.sable.companion.math.Pose3dc;
+import dev.ryanhcode.sable.physics.config.block_properties.PhysicsBlockPropertyHelper;
+import dev.ryanhcode.sable.physics.config.dimension_physics.DimensionPhysicsData;
+import dev.ryanhcode.sable.sublevel.ServerSubLevel;
 import dev.ryanhcode.sable.sublevel.plot.heat.SubLevelHeatMapManager;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.EmptyBlockGetter;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Quaterniond;
 import org.joml.Vector3d;
+import org.joml.Vector3dc;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -86,6 +99,63 @@ final class SableSubLevels implements SubLevels.Backend {
                 new Quaterniond(pose.orientation()),
                 new Vec3(pose.rotationPoint().x(), pose.rotationPoint().y(), pose.rotationPoint().z()),
                 new Vec3(pose.scale().x(), pose.scale().y(), pose.scale().z()));
+    }
+
+    @Override
+    public List<SubLevels.Local> intoSubLevels(Level level, double x, double y, double z, double radius) {
+        List<SubLevels.Local> found = new ArrayList<>();
+        Vec3 world = new Vec3(x, y, z);
+        for (SubLevelAccess subLevel : SableCompanion.INSTANCE.getAllIntersecting(level,
+                new BoundingBox3d(x - radius, y - radius, z - radius, x + radius, y + radius, z + radius))) {
+            Pose3dc pose = subLevel.logicalPose();
+            Vector3dc anchor = pose.rotationPoint();
+            found.add(new SubLevels.Local(pose.transformPositionInverse(world),
+                    new Vec3(anchor.x(), anchor.y(), anchor.z()), gridBox(pose, subLevel.boundingBox())));
+        }
+        return found;
+    }
+
+    private static AABB gridBox(Pose3dc pose, BoundingBox3dc world) {
+        AABB bounds = null;
+        for (int corner = 0; corner < 8; corner++) {
+            Vec3 at = pose.transformPositionInverse(new Vec3((corner & 1) == 0 ? world.minX() : world.maxX(),
+                    (corner & 2) == 0 ? world.minY() : world.maxY(), (corner & 4) == 0 ? world.minZ() : world.maxZ()));
+            bounds = bounds == null ? new AABB(at, at) : bounds.minmax(new AABB(at, at));
+        }
+        return bounds;
+    }
+
+    @Override
+    public void push(Level level, double x, double y, double z, Vec3 force) {
+        if (!(SableCompanion.INSTANCE.getContaining(level, x, z) instanceof ServerSubLevel subLevel)) return;
+        // Weights to Sable's units: iron's mass times gravity, held for one tick.
+        double weight = PhysicsBlockPropertyHelper.getMass(EmptyBlockGetter.INSTANCE, BlockPos.ZERO,
+                Blocks.IRON_BLOCK.defaultBlockState()) * DimensionPhysicsData.getGravity(level).length();
+        impulse(subLevel, new Vector3d(x, y, z), force.scale(weight / TICKS_PER_SECOND));
+    }
+
+    @Override
+    public void accelerate(Level level, double x, double y, double z, Vec3 deltaV) {
+        if (!(SableCompanion.INSTANCE.getContaining(level, x, z) instanceof ServerSubLevel subLevel)) return;
+        Vector3dc centre = subLevel.logicalPose().rotationPoint();
+        impulse(subLevel, new Vector3d(centre), deltaV.scale(subLevel.getMassTracker().getMass() * TICKS_PER_SECOND));
+    }
+
+    /** Sable takes impulses in the sub-level's own frame, at a point of its plot. */
+    private static void impulse(ServerSubLevel subLevel, Vector3d at, Vec3 worldImpulse) {
+        RigidBodyHandle handle = RigidBodyHandle.of(subLevel);
+        if (handle == null || !handle.isValid()) return;
+        Vector3d local = subLevel.logicalPose().orientation()
+                .transformInverse(new Vector3d(worldImpulse.x, worldImpulse.y, worldImpulse.z));
+        handle.applyImpulseAtPoint(at, local);
+    }
+
+    @Override
+    public Vec3 carriedVelocity(Entity entity) {
+        SubLevelAccess subLevel = SableCompanion.INSTANCE.getTrackingOrVehicleSubLevel(entity);
+        if (subLevel == null) return Vec3.ZERO;
+        Vec3 local = subLevel.logicalPose().transformPositionInverse(entity.position());
+        return SableCompanion.INSTANCE.getVelocity(entity.level(), subLevel, local).scale(1.0 / TICKS_PER_SECOND);
     }
 
     /**

@@ -36,14 +36,30 @@ public final class ItemFirstUse {
         InteractionResult use(ItemStack stack, UseOnContext context);
     }
 
+    /** A right-click on a block with any hand, empty included, asked before the item handlers. */
+    @FunctionalInterface
+    public interface BlockClick {
+        InteractionResult use(Player player, InteractionHand hand, BlockHitResult hit);
+    }
+
     /** Every listener, in phase order; register through the {@code on...} method or directly, with a phase. */
     public static final Hook<Handler> HANDLERS = Hook.notifying();
+    public static final Hook<BlockClick> BLOCK_CLICKS = Hook.notifying();
     private static boolean installed;
 
     private ItemFirstUse() {}
 
     public static synchronized void register(Handler handler) {
         HANDLERS.register(handler);
+        install();
+    }
+
+    public static synchronized void registerBlockClick(BlockClick click) {
+        BLOCK_CLICKS.register(click);
+        install();
+    }
+
+    private static void install() {
         if (installed) return;
         installed = true;
         //? if fabric {
@@ -110,6 +126,10 @@ public final class ItemFirstUse {
 
     private static InteractionResult dispatch(Player player, InteractionHand hand, BlockHitResult hit) {
         if (player == null || player.isSpectator() || hit == null || Interactions.probing()) return InteractionResult.PASS;
+        for (BlockClick click : BLOCK_CLICKS) {
+            InteractionResult result = click.use(player, hand, hit);
+            if (result != null && result.consumesAction()) return result;
+        }
         ItemStack stack = player.getItemInHand(hand);
         if (stack.isEmpty()) return InteractionResult.PASS;
         UseOnContext context = new UseOnContext(player, hand, hit);

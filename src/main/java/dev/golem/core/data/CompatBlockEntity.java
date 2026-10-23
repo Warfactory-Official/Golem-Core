@@ -5,6 +5,7 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
@@ -87,6 +88,13 @@ public abstract class CompatBlockEntity extends BlockEntity {
 
     /** Writes this block entity's persisted state. */
     protected void saveData(DataOut out) {}
+
+    /** On a client, re-meshes this block's chunk section: for a block model that reads this block entity's data. */
+    protected void remesh() {
+        if (level != null && level.isClientSide()) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_IMMEDIATE);
+        }
+    }
 
     /** Exercises the same persistence hooks against an in-memory representation, primarily for GameTests. */
     public final void copyPersistentDataTo(CompatBlockEntity target) {

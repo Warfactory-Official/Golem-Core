@@ -5,7 +5,9 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
@@ -71,7 +73,26 @@ public final class SubLevels {
                                                                           float partialTick) {
             return null;
         }
+
+        /** World point {@code (x, y, z)} as seen from every sub-level whose bounds come within {@code radius} of it. */
+        default List<Local> intoSubLevels(Level level, double x, double y, double z, double radius) {
+            return List.of();
+        }
+
+        /** Server only: pushes a sub-level at its grid point for one tick; world force in iron-block weights. */
+        default void push(Level level, double x, double y, double z, Vec3 force) {}
+
+        /** Server only: adds {@code deltaV} (world, blocks per tick) to a whole sub-level's velocity, unturned. */
+        default void accelerate(Level level, double x, double y, double z, Vec3 deltaV) {}
+
+        /** World velocity in blocks per tick of the sub-level {@code entity} stands on or rides; zero when none. */
+        default Vec3 carriedVelocity(Entity entity) {
+            return Vec3.ZERO;
+        }
     }
+
+    /** A world point in one sub-level's grid, its centre of mass ({@code anchor}) and a grid box around its blocks. */
+    public record Local(Vec3 point, Vec3 anchor, AABB blocks) {}
 
     /**
      * A sub-level's pose as drawn: a block-grid point {@code p} appears in the world at
@@ -293,6 +314,34 @@ public final class SubLevels {
     public static @org.jspecify.annotations.Nullable RenderPose renderPose(Level level, double x, double y, double z,
                                                                             float partialTick) {
         return backend.renderPose(level, x, y, z, partialTick);
+    }
+
+    public static List<Local> intoSubLevels(Level level, Vec3 world, double radius) {
+        return backend.intoSubLevels(level, world.x, world.y, world.z, radius);
+    }
+
+    public static void push(Level level, Vec3 gridPoint, Vec3 force) {
+        backend.push(level, gridPoint.x, gridPoint.y, gridPoint.z, force);
+    }
+
+    public static void accelerate(Level level, Vec3 gridPoint, Vec3 deltaV) {
+        backend.accelerate(level, gridPoint.x, gridPoint.y, gridPoint.z, deltaV);
+    }
+
+    public static Vec3 carriedVelocity(Entity entity) {
+        return backend.carriedVelocity(entity);
+    }
+
+    /** The world box around a block-grid box: the box itself off a sub-level, else the bounds of its turned corners. */
+    public static AABB toWorld(Level level, AABB box) {
+        if (!isOnSubLevel(level, box.getCenter())) return box;
+        AABB bounds = null;
+        for (int corner = 0; corner < 8; corner++) {
+            Vec3 at = toWorld(level, (corner & 1) == 0 ? box.minX : box.maxX, (corner & 2) == 0 ? box.minY : box.maxY,
+                    (corner & 4) == 0 ? box.minZ : box.maxZ);
+            bounds = bounds == null ? new AABB(at, at) : bounds.minmax(new AABB(at, at));
+        }
+        return bounds;
     }
 
     /** Squared world distance between two block-grid points, either of which may be on a sub-level. */
