@@ -204,7 +204,7 @@ public final class ConnectedTextures {
      * Vanilla's vertex order per face ({@code FaceInfo}): which corner of the quad's box each vertex sits at, as
      * {min?} per axis (true = min). Vanilla's smooth lighting reads vertex i as that corner, so the quarters keep it.
      */
-    private static final boolean[][][] VANILLA_ORDER = {
+    static final boolean[][][] VANILLA_ORDER = {
             {{true, true, false}, {true, true, true}, {false, true, true}, {false, true, false}},      // DOWN
             {{true, false, true}, {true, false, false}, {false, false, false}, {false, false, true}},  // UP
             {{false, false, true}, {false, true, true}, {true, true, true}, {true, false, true}},      // NORTH
@@ -559,8 +559,13 @@ public final class ConnectedTextures {
                     quarter.face(), sprite, true));
 
     private static java.util.Set<Object> modelIds() {
+        return modelIds(SPECS.keySet());
+    }
+
+    /^* The model locations of every state of {@code blocks}, as the legacy baking events key them. ^/
+    static java.util.Set<Object> modelIds(java.util.Collection<Block> blocks) {
         java.util.Set<Object> ids = new java.util.HashSet<>();
-        for (Block block : SPECS.keySet()) {
+        for (Block block : blocks) {
             for (BlockState state : block.getStateDefinition().getPossibleStates()) {
                 ids.add(net.minecraft.client.renderer.block.BlockModelShaper.stateToModelLocation(state));
             }
