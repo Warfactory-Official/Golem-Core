@@ -150,7 +150,13 @@ public final class GameTestHelpers {
             if (readVarInt(buffer) != dev.golem.core.net.GolemWire.packetId()) return null;
             //? if >=26.1 {
             return new FriendlyByteBuf(buffer).readIdentifier().toString();
-            //?} else {
+            //?} elif forge {
+            /*FriendlyByteBuf reader = new FriendlyByteBuf(buffer);
+            net.minecraft.resources.ResourceLocation channel = reader.readResourceLocation();
+            // Forge carries every payload on one SimpleChannel; the index byte after it names the payload
+            if (!channel.equals(dev.golem.core.net.GolemNetwork.forgeChannel())) return channel.toString();
+            return dev.golem.core.net.GolemNetwork.forgePayloadId(reader.readByte() & 0xff);
+            *///?} else {
             /*return new FriendlyByteBuf(buffer).readResourceLocation().toString();
             *///?}
         } catch (RuntimeException malformed) {

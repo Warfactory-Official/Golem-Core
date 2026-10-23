@@ -60,10 +60,15 @@ public abstract class CompatScreen extends Screen {
 
     protected boolean mouseScrolledCompat(double mouseX, double mouseY, double scrollX, double scrollY) { return false; }
 
+    /** False leaves the world behind the screen neither blurred nor darkened, as 1.20.1 screens do by default. */
+    protected boolean menuBackground() {
+        return true;
+    }
+
     //? if >=26.1 {
     @Override
     public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
-        super.extractBackground(graphics, mouseX, mouseY, partialTick);
+        if (this.menuBackground()) super.extractBackground(graphics, mouseX, mouseY, partialTick);
         this.extractBackgroundCompat(graphics, mouseX, mouseY, partialTick);
     }
 
@@ -170,7 +175,7 @@ public abstract class CompatScreen extends Screen {
     //? if >=1.21 && <26.1 {
     /*@Override
     public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        super.renderBackground(graphics, mouseX, mouseY, partialTick);
+        if (this.menuBackground()) super.renderBackground(graphics, mouseX, mouseY, partialTick);
         this.extractBackgroundCompat(graphics, mouseX, mouseY, partialTick);
     }
 

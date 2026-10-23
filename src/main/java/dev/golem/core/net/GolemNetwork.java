@@ -295,8 +295,16 @@ public final class GolemNetwork {
     private static final java.util.Map<String, Integer> FORGE_DISCRIMINATORS = new java.util.HashMap<>();
 
     // Every payload shares this one Forge channel; the custom-payload packet is named after it, not the payload.
-    static ResourceLocation forgeChannel() {
+    public static ResourceLocation forgeChannel() {
         return FORGE_CHANNEL;
+    }
+
+    // The payload id behind a message index on the shared channel, or null; read by tests that inspect finished wires.
+    public static String forgePayloadId(int discriminator) {
+        for (java.util.Map.Entry<String, Integer> entry : FORGE_DISCRIMINATORS.entrySet()) {
+            if (entry.getValue() == discriminator) return entry.getKey();
+        }
+        return null;
     }
 
     static int forgeDiscriminator(GolemCodec<?> codec) {
