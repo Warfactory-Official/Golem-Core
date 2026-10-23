@@ -13,11 +13,16 @@ public final class Gradle {
 
     private Gradle() {}
 
-    /** Runs {@code gradlew.bat <args>} in {@code project}, appending output to {@code log}. */
+    /** Runs {@code gradlew <args>} ({@code gradlew.bat} on Windows) in {@code project}, appending output to {@code log}. */
     public static int run(Path project, Path log, String... args) {
         synchronized (LOCK) {
             List<String> command = new ArrayList<>();
-            command.add(project.resolve("gradlew.bat").toString());
+            if (System.getProperty("os.name", "").toLowerCase().contains("win")) {
+                command.add(project.resolve("gradlew.bat").toString());
+            } else {
+                command.add("sh");
+                command.add(project.resolve("gradlew").toString());
+            }
             command.addAll(List.of(args));
             command.add("--no-daemon");
             command.add("--offline");

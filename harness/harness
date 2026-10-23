@@ -7,7 +7,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 JAR="$HERE/build/libs/golem-harness.jar"
 if [ ! -f "$JAR" ] || [ -n "$(find "$HERE/src" "$HERE/build.gradle.kts" -newer "$JAR" -type f 2>/dev/null | head -n 1)" ]; then
     echo "[harness] building harness jar..." >&2
-    (cd "$HERE" && ./gradlew -q jar) || exit 1
+    (cd "$HERE" && sh ./gradlew -q jar) || exit 1
 fi
 # Prefer a Java 21 that Gradle provisioned, then JAVA_HOME, then java on the PATH.
 JAVA_EXE=""
