@@ -348,6 +348,11 @@ dependencies {
         (if (obfuscated) "modCompileOnly" else "compileOnly")("maven.modrinth:jade:$it") { isTransitive = false }
     }
 
+    // Applied Energistics 2, compile-only and per-node optional (see the NeoForge buildscript); 1.20.1 only.
+    (findProperty("deps.ae2") as String?)?.takeIf { it.isNotBlank() }?.let {
+        (if (obfuscated) "modCompileOnly" else "compileOnly")("maven.modrinth:ae2:$it") { isTransitive = false }
+    }
+
     // KubeJS 6, compile-only and per-node optional (see the NeoForge buildscript); intermediary-mapped below 26.1.
     // KubeJS 6's API names Rhino's and Architectury's types; the node declares its own Fabric Loader / Fabric API.
     (findProperty("deps.kubejs") as String?)?.takeIf { it.isNotBlank() }?.let { kubejs ->

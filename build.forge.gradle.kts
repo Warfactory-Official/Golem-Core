@@ -185,6 +185,11 @@ dependencies {
     // Jade 11, compile-only and per-node optional (see the NeoForge buildscript); its Forge jar is SRG-mapped.
     (findProperty("deps.jade") as String?)?.takeIf { it.isNotBlank() }?.let { modCompileOnly("maven.modrinth:jade:$it") }
 
+    // Applied Energistics 2, compile-only and per-node optional (see the NeoForge buildscript); SRG-mapped.
+    (findProperty("deps.ae2") as String?)?.takeIf { it.isNotBlank() }?.let {
+        modCompileOnly("maven.modrinth:ae2:$it") { isTransitive = false }
+    }
+
     // Mo' Bends, compile-only and per-node optional (see the NeoForge buildscript); its Forge jar is SRG-mapped.
     (findProperty("deps.mobends") as String?)?.takeIf { it.isNotBlank() }?.let {
         modCompileOnly("maven.modrinth:mo-bends-unofficial-modern-port:$it") { isTransitive = false }

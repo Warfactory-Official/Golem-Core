@@ -281,6 +281,12 @@ dependencies {
     // HUD (26.x and 15.x API lines). A node without deps.jade compiles the adapter out (`jade`).
     (findProperty("deps.jade") as String?)?.takeIf { it.isNotBlank() }?.let { compileOnly("maven.modrinth:jade:$it") }
 
+    // Applied Energistics 2, compile-only and per-node optional: dev.golem.core.ae2 serves dev.golem.core.autocraft
+    // (crafting machines on AE2's lookup, storage cell contents). A node without deps.ae2 compiles it out (`ae2`).
+    (findProperty("deps.ae2") as String?)?.takeIf { it.isNotBlank() }?.let {
+        compileOnly("maven.modrinth:ae2:$it") { isTransitive = false }
+    }
+
     // Mo' Bends, compile-only and per-node optional: its public skeleton API answers dev.golem.core.render.BodyAnimations
     // (src/mobends, added below). Never shipped or required.
     (findProperty("deps.mobends") as String?)?.takeIf { it.isNotBlank() }?.let {
