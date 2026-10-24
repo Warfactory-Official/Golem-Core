@@ -73,8 +73,16 @@ public final class RecipeFields {
     /** An item input: {@code id} is an item id, or a tag id when {@code tag}. */
     public record ItemIn(String id, boolean tag, int count) {}
 
-    /** An item output; {@code chance} is null when the script gave none. */
-    public record ItemOut(String id, int count, @Nullable Float chance) {}
+    /**
+     * An item output; {@code chance} is null when the script gave none, {@code data} when the stack has none
+     * (else its {@link ItemPatch} JSON, written under {@link ItemPatch#KEY}).
+     */
+    public record ItemOut(String id, int count, @Nullable Float chance, @Nullable JsonElement data) {
+
+        public ItemOut(String id, int count, @Nullable Float chance) {
+            this(id, count, chance, null);
+        }
+    }
 
     /** A fluid by its vanilla registry id and an amount in millibuckets (never loader droplets). */
     public record FluidAmount(String id, int amount) {}

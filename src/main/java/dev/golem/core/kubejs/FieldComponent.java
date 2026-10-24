@@ -8,6 +8,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.golem.core.Ids;
+import dev.golem.core.world.ItemPatch;
 import dev.golem.core.world.RecipeFields;
 import dev.golem.core.world.RecipeFields.Field;
 import dev.golem.core.world.RecipeFields.FluidAmount;
@@ -153,7 +154,9 @@ final class FieldComponent implements RecipeComponent<JsonElement> {
             case ITEM_OUT -> {
                 ItemStack stack = ItemWrapper.wrap(context, from);
                 if (stack.isEmpty()) throw new IllegalArgumentException("empty item: " + from);
-                yield FieldJson.write(field, new ItemOut(itemId(stack.getItem()), stack.getCount(), null));
+                ItemPatch data = ItemPatch.of(stack);
+                yield FieldJson.write(field, new ItemOut(itemId(stack.getItem()), stack.getCount(), null,
+                        data.isEmpty() ? null : data.json(cx.ops().json())));
             }
             case FLUID_IN, FLUID_OUT -> {
                 FluidStack stack = FluidWrapper.wrap(context, from);
@@ -261,7 +264,7 @@ final class FieldComponent implements RecipeComponent<JsonElement> {
             return FieldJson.write(field, new ItemIn(to.id(), to.tag(), in.count()));
         }
         if (was instanceof ItemOut out && now instanceof ItemOut to && to.count() == 1) {
-            return FieldJson.write(field, new ItemOut(to.id(), out.count(), to.chance() != null ? to.chance() : out.chance()));
+            return FieldJson.write(field, new ItemOut(to.id(), out.count(), to.chance() != null ? to.chance() : out.chance(), to.data()));
         }
         return next;
     }

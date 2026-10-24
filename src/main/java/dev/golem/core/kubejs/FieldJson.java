@@ -6,6 +6,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+import dev.golem.core.world.ItemPatch;
 import dev.golem.core.world.RecipeFields;
 import dev.golem.core.world.RecipeFields.Field;
 import dev.golem.core.world.RecipeFields.FluidAmount;
@@ -19,7 +20,8 @@ import org.jetbrains.annotations.Nullable;
  * A field's JSON, between the neutral values of {@link RecipeFields} and the row: the field's own
  * {@link RecipeFields.Shape} when it states one, otherwise the kind's default shape, which is this node's vanilla
  * spelling (an ingredient is {@code "id"} / {@code "#tag"} from 1.21.2 and {@code {"item"}} / {@code {"tag"}} below; an
- * item stack is {@code {"id", "count"}} from 1.20.5 and {@code {"item", "count"}} below). The default for a counted
+ * item stack is {@code {"id", "count"}} from 1.20.5 and {@code {"item", "count"}} below, with its data under
+ * {@link ItemPatch#KEY}). The default for a counted
  * input is {@code {"ingredient": <ingredient>, "count": n}}; a fluid is {@code {"fluid": id, "amount": mB}}.
  *
  * <p>No KubeJS types: every API line's adapter shares this.
@@ -88,6 +90,7 @@ final class FieldJson {
 
     static JsonElement itemOut(ItemOut out) {
         JsonObject json = vanillaStack(out.id(), out.count());
+        if (out.data() != null) json.add(ItemPatch.KEY, out.data());
         if (out.chance() != null) json.addProperty("chance", out.chance());
         return json;
     }
@@ -128,7 +131,7 @@ final class FieldJson {
         if (id == null) return null;
         int count = object.has("count") ? object.get("count").getAsInt() : 1;
         Float chance = object.has("chance") ? object.get("chance").getAsFloat() : null;
-        return new ItemOut(id, count, chance);
+        return new ItemOut(id, count, chance, object.get(ItemPatch.KEY));
     }
 
     @Nullable

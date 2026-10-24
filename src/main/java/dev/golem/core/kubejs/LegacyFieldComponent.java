@@ -5,7 +5,9 @@ package dev.golem.core.kubejs;
 /*import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.mojang.serialization.JsonOps;
 import dev.golem.core.Ids;
+import dev.golem.core.world.ItemPatch;
 import dev.golem.core.world.RecipeFields;
 import dev.golem.core.world.RecipeFields.Field;
 import dev.golem.core.world.RecipeFields.FluidAmount;
@@ -118,7 +120,9 @@ final class LegacyFieldComponent implements RecipeComponent<JsonElement> {
                 OutputItem out = OutputItem.of(from);
                 if (out.isEmpty()) throw new IllegalArgumentException("empty item: " + from);
                 Float chance = out.hasChance() ? (float) out.getChance() : null;
-                return FieldJson.write(field, new ItemOut(itemId(out.item), out.getCount(), chance));
+                ItemPatch data = ItemPatch.of(out.item);
+                return FieldJson.write(field, new ItemOut(itemId(out.item), out.getCount(), chance,
+                        data.isEmpty() ? null : data.json(JsonOps.INSTANCE)));
             }
             case FLUID_IN:
             case FLUID_OUT: {
@@ -244,7 +248,7 @@ final class LegacyFieldComponent implements RecipeComponent<JsonElement> {
             return FieldJson.write(field, new ItemIn(to.id(), to.tag(), in.count()));
         }
         if (was instanceof ItemOut out && now instanceof ItemOut to && to.count() == 1) {
-            return FieldJson.write(field, new ItemOut(to.id(), out.count(), to.chance() != null ? to.chance() : out.chance()));
+            return FieldJson.write(field, new ItemOut(to.id(), out.count(), to.chance() != null ? to.chance() : out.chance(), to.data()));
         }
         return next;
     }
