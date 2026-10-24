@@ -5,7 +5,7 @@
   "refmap": "golemcore.refmap.json",
   "compatibilityLevel": "${mixin_compatibility}",
   "mixins": ["MixinServerGamePacketListener", "MixinConnection", "MixinPacketListenerConnection",
-    "MixinChunkMapPromotion", "MixinCreeperFuse", "MixinFallingBlockState", "MixinBoatControl", "MixinLivingHurtAccess", "MixinTntOwner", "MixinClipContext", "MixinServerPlayerMenu", "MixinEntityDataMigration", "MixinFurnaceIgnition", "MixinWorldDimensionsStability", "MixinBucketEvaporation", "MixinServerLevelWeather", "MixinSlotSyncDrop", "MixinSlotSyncCreative"${gametest_mixins}${rail_mixins}${sky_mixins}${physics_mixins}${glider_mixins}],
+    "MixinChunkMapPromotion", "MixinCreeperFuse", "MixinFallingBlockState", "MixinBoatControl", "MixinLivingHurtAccess", "MixinTntOwner", "MixinClipContext", "MixinServerPlayerMenu", "MixinEntityDataMigration", "MixinFurnaceIgnition", "MixinWorldDimensionsStability", "MixinBucketEvaporation", "MixinServerLevelWeather", "MixinSlotSyncDrop", "MixinSlotSyncCreative", "MixinServerLevelBlockChange"${gametest_mixins}${rail_mixins}${sky_mixins}${physics_mixins}${glider_mixins}],
   "client": ["MixinCamera", "MixinLivingEntityRenderer", "MixinHumanoidModel", "MixinAtlasSources", "MixinHeldItemState", "MixinScreenEffects", "SpriteSourceTypesAccess",
     "MixinSkyRender", "MixinLightmapTint"${legacy_item_owner_mixins}${world_effect_mixins}${sky_client_mixins}${cloud_mixins}, "MixinGliderWings", "MixinGliderCape"${glider_client_mixins}${creative_echo_mixins}],
   "server": [],

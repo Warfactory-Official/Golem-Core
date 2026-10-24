@@ -55,8 +55,9 @@ tasks.named<ProcessResources>("processResources") {
         }
         val wrong = tables.mapNotNull { (key, rows) ->
             val (namespace, folder) = key.split('/', limit = 2)
-            // Below 1.21 the recipe folder is "recipes" (Golem Core's legacy-recipes renames it in this task's output).
-            val folders = if (folder.startsWith("recipe/")) listOf(folder, "recipes/" + folder.removePrefix("recipe/")) else listOf(folder)
+            // Below 1.21 the recipe and loot table folders are plural (Golem Core's legacy-recipes renames them in this task's output).
+            val plural = listOf("recipe/" to "recipes/", "loot_table/" to "loot_tables/").firstOrNull { folder.startsWith(it.first) }
+            val folders = if (plural != null) listOf(folder, plural.second + folder.removePrefix(plural.first)) else listOf(folder)
             val packed = folders.sumOf { path ->
                 destinationDir.resolve("data/$namespace/$path").walkTopDown().count { it.isFile && it.name.endsWith(".json") }
             }

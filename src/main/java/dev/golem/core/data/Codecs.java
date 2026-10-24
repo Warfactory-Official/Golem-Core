@@ -3,6 +3,7 @@ package dev.golem.core.data;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.DataResult;
+import java.util.Optional;
 import java.util.function.Function;
 
 /** DataFixerUpper spellings that moved between the 1.20.1 and 1.20.5 DFU lines. */
@@ -34,6 +35,36 @@ public final class Codecs {
         return keyCodec.partialDispatch(key, type, codec);
         //?} else {
         /*return keyCodec.partialDispatch(key, type, k -> codec.apply(k).map(MapCodec::codec));
+        *///?}
+    }
+
+    /**
+     * An optional field that fails on a value it cannot decode, as {@code optionalFieldOf} does from 1.20.5; the 1.20.1
+     * DFU's {@code optionalFieldOf} reads such a value as absent.
+     */
+    public static <A> MapCodec<Optional<A>> strictOptionalField(Codec<A> codec, String name) {
+        //? if >=1.20.5 {
+        return codec.optionalFieldOf(name);
+        //?} else {
+        /*return new MapCodec<>() {
+            @Override
+            public <T> com.mojang.serialization.RecordBuilder<T> encode(Optional<A> input,
+                    com.mojang.serialization.DynamicOps<T> ops, com.mojang.serialization.RecordBuilder<T> prefix) {
+                return input.isPresent() ? prefix.add(name, codec.encodeStart(ops, input.get())) : prefix;
+            }
+
+            @Override
+            public <T> DataResult<Optional<A>> decode(com.mojang.serialization.DynamicOps<T> ops,
+                    com.mojang.serialization.MapLike<T> input) {
+                T value = input.get(name);
+                return value == null ? DataResult.success(Optional.empty()) : codec.parse(ops, value).map(Optional::of);
+            }
+
+            @Override
+            public <T> java.util.stream.Stream<T> keys(com.mojang.serialization.DynamicOps<T> ops) {
+                return java.util.stream.Stream.of(ops.createString(name));
+            }
+        };
         *///?}
     }
 }

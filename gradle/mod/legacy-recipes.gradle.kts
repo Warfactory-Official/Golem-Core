@@ -213,6 +213,7 @@ fun convertLegacyLootTables(root: File): Int {
             @Suppress("UNCHECKED_CAST")
             val json = JsonSlurper().parse(file) as? MutableMap<String, Any?> ?: return@forEach
             var changed = convertLegacyToolPredicates(json)
+            if (convertLegacyLootTerms(json)) changed = true
             (json["pools"] as? List<*>)?.forEach { poolValue ->
                 val pool = poolValue as? MutableMap<*, *> ?: return@forEach
                 (pool["entries"] as? List<*>)?.forEach { entryValue ->
@@ -271,6 +272,35 @@ fun convertLegacyLootTables(root: File): Int {
             }
         }
     return converted
+}
+
+/**
+ * The loot spellings that changed in 1.20.5: entity targets `attacker`, `direct_attacker` and `attacking_player` were
+ * `killer`, `direct_killer` and `killer_player`, and `minecraft:set_components` has nothing to set before components,
+ * so it is dropped (Golem's stack codec drops a stack's components there too).
+ */
+fun convertLegacyLootTerms(node: Any?): Boolean {
+    var changed = false
+    when (node) {
+        is MutableList<*> -> {
+            @Suppress("UNCHECKED_CAST")
+            val list = node as MutableList<Any?>
+            if (list.removeIf { (it as? Map<*, *>)?.get("function") == "minecraft:set_components" }) changed = true
+            list.forEach { if (convertLegacyLootTerms(it)) changed = true }
+        }
+        is MutableMap<*, *> -> {
+            @Suppress("UNCHECKED_CAST")
+            val map = node as MutableMap<String, Any?>
+            val legacy = mapOf("attacker" to "killer", "direct_attacker" to "direct_killer", "attacking_player" to "killer_player")
+            val target = map["entity"]
+            if (target is String && legacy.containsKey(target)) {
+                map["entity"] = legacy[target]
+                changed = true
+            }
+            map.values.toList().forEach { if (convertLegacyLootTerms(it)) changed = true }
+        }
+    }
+    return changed
 }
 
 /**

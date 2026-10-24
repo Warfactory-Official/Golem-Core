@@ -10,6 +10,7 @@ import java.util.function.Supplier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.LootPool;
 import net.minecraft.world.level.storage.loot.LootTable;
@@ -76,16 +77,42 @@ public final class ChestLoot {
 
     /** Rolls a chest loot table once at {@code origin}, as a freshly opened chest would. */
     public static List<ItemStack> roll(ServerLevel level, String table, Vec3 origin) {
-        LootParams params = new LootParams.Builder(level)
-                .withParameter(LootContextParams.ORIGIN, origin)
-                .create(LootContextParamSets.CHEST);
+        return new ArrayList<>(table(level, table).getRandomItems(chestParams(level, origin)));
+    }
+
+    /**
+     * Rolls {@code table} once at {@code origin} from {@code seed}, keeping stacks larger than their item's limit whole
+     * for a caller that places them by its own rule.
+     */
+    public static List<ItemStack> rollUnsplit(ServerLevel level, String table, Vec3 origin, long seed) {
+        LootContext.Builder context = new LootContext.Builder(chestParams(level, origin)).withOptionalRandomSeed(seed);
+        List<ItemStack> stacks = new ArrayList<>();
         //? if >=1.20.5 {
-        LootTable loot = level.getServer().reloadableRegistries().getLootTable(net.minecraft.resources.ResourceKey.create(
+        table(level, table).getRandomItemsRaw(context.create(java.util.Optional.empty()), stacks::add);
+        //?} else {
+        /*table(level, table).getRandomItemsRaw(context.create(null), stacks::add);
+        *///?}
+        return stacks;
+    }
+
+    /** Whether a loot table named {@code table} is loaded; a missing one rolls nothing. */
+    public static boolean exists(ServerLevel level, String table) {
+        return table(level, table) != LootTable.EMPTY;
+    }
+
+    static LootTable table(ServerLevel level, String table) {
+        //? if >=1.20.5 {
+        return level.getServer().reloadableRegistries().getLootTable(net.minecraft.resources.ResourceKey.create(
                 net.minecraft.core.registries.Registries.LOOT_TABLE, Ids.parse(table)));
         //?} else {
-        /*LootTable loot = level.getServer().getLootData().getLootTable(Ids.parse(table));
+        /*return level.getServer().getLootData().getLootTable(Ids.parse(table));
         *///?}
-        return new ArrayList<>(loot.getRandomItems(params));
+    }
+
+    private static LootParams chestParams(ServerLevel level, Vec3 origin) {
+        return new LootParams.Builder(level)
+                .withParameter(LootContextParams.ORIGIN, origin)
+                .create(LootContextParamSets.CHEST);
     }
 
     private static void apply(String table, Consumer<LootPool.Builder> sink) {

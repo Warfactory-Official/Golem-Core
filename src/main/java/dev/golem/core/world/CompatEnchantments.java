@@ -80,6 +80,17 @@ public final class CompatEnchantments {
         *///?}
     }
 
+    /** Applies Looting to a weapon (tests and synthesized gear). */
+    public static void enchantLooting(ServerLevel level, ItemStack weapon, int looting) {
+        if (looting <= 0) return;
+        //? if >=1.21.1 {
+        weapon.enchant(level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT)
+                .getOrThrow(Enchantments.LOOTING), looting);
+        //?} else {
+        /*weapon.enchant(Enchantments.MOB_LOOTING, looting);
+        *///?}
+    }
+
     /** Applies Fire Protection to an armor piece (tests and synthesized gear). */
     public static void enchantFireProtection(ServerLevel level, ItemStack armor, int protection) {
         if (protection <= 0) return;

@@ -20,7 +20,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
+import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
 
 /**
@@ -60,7 +62,7 @@ public final class DataMaps {
     private static final Map<String, DataMap<?, ?>> MAPS = new ConcurrentHashMap<>();
 
     static {
-        DataFiles.stackedFolder(FOLDER, DataMaps::apply);
+        DataFiles.stackedFolder(FOLDER, DataMaps::load);
     }
 
     private DataMaps() {}
@@ -72,9 +74,18 @@ public final class DataMaps {
      */
     public static <T, V> DataMap<T, V> map(Class<?> owner, String namespace, String path, String registryPath,
                                            Supplier<? extends Registry<T>> registry, Codec<V> codec) {
-        DataMap<T, V> map = new DataMap<>(namespace, path, registryPath, registry, codec);
+        return declare(owner, new DataMap<>(namespace, path, registryPath, registry, () -> registry.get().key(), codec));
+    }
+
+    /** Declares a map over a datapack registry ({@code () -> Registries.BIOME}, {@code "worldgen/biome"}), read by holder. */
+    public static <T, V> DataMap<T, V> dynamic(Class<?> owner, String namespace, String path, String registryPath,
+                                               Supplier<ResourceKey<? extends Registry<T>>> registryKey, Codec<V> codec) {
+        return declare(owner, new DataMap<>(namespace, path, registryPath, null, registryKey, codec));
+    }
+
+    private static <T, V> DataMap<T, V> declare(Class<?> owner, DataMap<T, V> map) {
         if (MAPS.putIfAbsent(map.fileId(), map) != null) throw new IllegalStateException("Data map " + map.fileId() + " declared twice");
-        String resource = "/data/" + namespace + "/" + FOLDER + "/" + registryPath + "/" + path + ".json";
+        String resource = "/data/" + map.namespace + "/" + FOLDER + "/" + map.registryPath + "/" + map.path + ".json";
         URL url = DataFiles.bundled(owner, resource);
         if (url != null) {
             try (InputStream in = url.openStream()) {
@@ -86,8 +97,11 @@ public final class DataMaps {
         return map;
     }
 
-
-    private static void apply(Map<String, List<JsonElement>> stacks) {
+    /**
+     * Loads every map from {@code stacks} (file id inside {@link #FOLDER} to each pack's copy, lowest priority first), as
+     * a datapack load does; a test adds a pack's file to the stacks a server read and loads them again.
+     */
+    public static void load(Map<String, List<JsonElement>> stacks) {
         for (DataMap<?, ?> map : MAPS.values()) {
             List<JsonElement> stack = stacks.get(map.fileId());
             List<JsonElement> all = new ArrayList<>(stack == null ? List.of() : stack);
@@ -109,6 +123,7 @@ public final class DataMaps {
         private final String path;
         private final String registryPath;
         private final Supplier<? extends Registry<T>> registry;
+        private final Supplier<? extends ResourceKey<? extends Registry<T>>> registryKey;
         private final Codec<V> codec;
         private volatile Map<String, V> byId = Map.of();
         private volatile List<Map.Entry<String, V>> byTag = List.of();
@@ -117,16 +132,17 @@ public final class DataMaps {
         public final Hook<Runnable> changed = Hook.notifying();
 
         private DataMap(String namespace, String path, String registryPath, Supplier<? extends Registry<T>> registry,
-                        Codec<V> codec) {
+                        Supplier<? extends ResourceKey<? extends Registry<T>>> registryKey, Codec<V> codec) {
             this.namespace = namespace;
             this.path = path;
             this.registryPath = registryPath;
             this.registry = registry;
+            this.registryKey = registryKey;
             this.codec = codec;
         }
 
         /** {@code <namespace>:<registry path>/<path>}, the file's id inside {@link #FOLDER}. */
-        String fileId() {
+        public String fileId() {
             return namespace + ":" + registryPath + "/" + path;
         }
 
@@ -158,6 +174,7 @@ public final class DataMaps {
         /** The value for {@code entry}: its own id first, then the last tag given that holds it; null if none. */
         public V get(T entry) {
             if (entry == null) return null;
+            if (registry == null) throw new IllegalStateException("Data map " + id() + " is over a datapack registry: read it by holder");
             Registry<T> reg = registry.get();
             var key = reg.getKey(entry);
             if (key != null) {
@@ -174,6 +191,20 @@ public final class DataMaps {
             return null;
         }
 
+        /** The value for a registry holder: its own id first, then the last tag given that holds it; null if none. */
+        public V get(Holder<T> holder) {
+            var key = holder.unwrapKey();
+            if (key.isPresent()) {
+                V own = byId.get(Ids.keyId(key.get()).toString());
+                if (own != null) return own;
+            }
+            List<Map.Entry<String, V>> tags = byTag;
+            for (int i = tags.size() - 1; i >= 0; i--) {
+                if (holder.is(TagKey.create(registryKey.get(), Ids.parse(tags.get(i).getKey())))) return tags.get(i).getValue();
+            }
+            return null;
+        }
+
         /** Every value given to an entry id (not tags), by id, in file order (lowest-priority pack first). */
         public Map<String, V> byId() {
             return byId;
@@ -184,7 +215,8 @@ public final class DataMaps {
             return byTag;
         }
 
-        private synchronized void load(List<JsonElement> stack) {
+        /** Replaces the values with the merge of {@code stack}, lowest priority first, as a datapack load does. */
+        public synchronized void load(List<JsonElement> stack) {
             Map<String, V> ids = new LinkedHashMap<>();
             Map<String, V> tags = new LinkedHashMap<>();
             for (JsonElement element : stack) {

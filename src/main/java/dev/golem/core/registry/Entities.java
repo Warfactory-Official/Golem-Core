@@ -3,7 +3,6 @@ package dev.golem.core.registry;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.Mob;
 import net.minecraft.server.level.ServerLevel;
 
 /** Entity-type construction, across the change in what {@code Builder.build} is given. */
@@ -79,7 +78,7 @@ public final class Entities {
     }
 
     /** Creates a mob for an entity conversion, preserving the modern creation reason where available. */
-    public static <T extends Mob> T createForConversion(EntityType<T> type, ServerLevel level) {
+    public static <T extends Entity> T createForConversion(EntityType<T> type, ServerLevel level) {
         //? if >=26.1 {
         return type.create(level, net.minecraft.world.entity.EntitySpawnReason.CONVERSION);
         //?} else {
