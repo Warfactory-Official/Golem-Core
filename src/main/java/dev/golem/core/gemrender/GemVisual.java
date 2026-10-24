@@ -9,6 +9,7 @@ import dev.engine_room.flywheel.lib.instance.TransformedInstance;
 import dev.engine_room.flywheel.lib.visual.AbstractBlockEntityVisual;
 import dev.engine_room.flywheel.lib.visual.SimpleDynamicVisual;
 import dev.golem.core.GolemCore;
+import dev.golem.core.client.ShaderPacks;
 import dev.golem.core.render.CompatRenderState;
 import dev.golem.core.render.Renderers;
 import dev.golem.core.render.gem.Gem;
@@ -93,8 +94,10 @@ final class GemVisual<T extends BlockEntity, S extends CompatRenderState>
     /**
      * Where vanilla would draw it: within its view distance unless off screen, and on 26.1 short of the render-distance
      * fog, which GemRender's 26.1 fog lacks. From the camera alone, so vanilla and this visual agree each frame.
+     * Never under a shader pack: GemRender's 26.1 Flywheel does not see Iris and draws outside the pack's targets.
      */
     private boolean drawsAt(Vec3 camera) {
+        if (ShaderPacks.inUse()) return false;
         Vec3 centre = Vec3.atCenterOf(pos);
         if (!model.isOffScreen() && !centre.closerThan(camera, model.viewDistance())) return false;
         //? if >=26.1 {

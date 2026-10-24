@@ -2,6 +2,7 @@ package dev.golem.core.harness;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import dev.golem.core.client.ShaderPacks;
 import dev.golem.core.harness.mixin.HarnessContainerScreenAccessor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
@@ -250,6 +251,7 @@ final class HarnessQueries {
         json.addProperty("visualizing", minecraft.level != null
                 && dev.golem.core.render.Instancing.isVisualizing(minecraft.level));
         json.addProperty("backend", report.backend());
+        json.addProperty("shaderPack", ShaderPacks.inUse());
         json.addProperty("visuals", report.visuals());
         json.addProperty("healthy", report.healthy());
         json.addProperty("instances", report.instances());
