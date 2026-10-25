@@ -3,6 +3,38 @@
 Each release has a `## <version>` section; the release workflow uploads only the section matching
 `mod.version` in gradle.properties.
 
+## 1.0.2
+
+### Added
+- Item data on scripted recipe outputs: `ItemPatch` (components from 1.20.5, NBT on 1.20.1) and
+  `RecipeFields.ItemOut.data`, filled by both KubeJS adapters, so a scripted output such as a vehicle crate keeps its data.
+- Facades for configurable data: the `golemcore:looting` loot condition and `LootFunctions`, dynamic data maps
+  (`DataMaps.dynamic`), `BlockChanges`, and item use and click hooks (`ItemUses`, `ItemClicks`) that also reach vanilla items.
+- Item automation on faces (`ItemExposure.exposeAutomation`): a face query gets a hopper's access, so Refined Storage
+  importers, AE2 buses and item pipes can reach a mod's machines on NeoForge and Forge.
+- `ItemExposure.FaceView`: a multiblock part lists every slot but moves only its own, so Holo Inventory does not count
+  items twice.
+- `ItemStacks.fitsInContainerItem` (nothing that carries items goes into a container item) and carried-data helpers
+  (`setCarriedLong`, `carriedLong`, `removeCarried`, `isPlain`) for 1.7-style stack locks.
+- `world.OrderedShape`: a voxel shape that picks its first box in declaration order, with no access widening.
+- Recipe viewer tab-order queries for JEI and REI.
+
+### Fixed
+- Gem machines were invisible under a shader pack on 26.1 with GemRender; `GemBER` draws them while a pack is in use.
+- World fluid blocks (`FluidBlock`) are `LiquidBlock`s, so Voxy can bake them instead of crashing; vanilla fluid ticks
+  and lava mixing stay off.
+- EMI hid every `CompatCustomRecipe`; it is a plain `CraftingRecipe` now and `ComponentShapedRecipe` reports its grid size
+  below 26.1.
+- First-person items under an Iris shader pack below 26.1 were drawn off screen (`HandSpace`).
+- Legacy item models keep a gun's base model below 1.21.4; player skin layers on `HumanoidPose`.
+- GameTest helpers count Golem payloads exactly on Forge 1.20.1.
+
+### Changed
+- GemRender comes from CurseForge on every node; the 0.1.14 refmap reflection is gone (0.1.14 is refused).
+- Release jars are named without the version prefix. GitHub releases also carry `<name>-dev.jar` (with the harness) and
+  `golem-harness.jar` for addon developers; the harness spec moved to `gradle/mod/`.
+- Pre-release build numbers restart at 1 for each version.
+
 ## 1.0.1
 
 ### Added
