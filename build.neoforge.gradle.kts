@@ -37,7 +37,7 @@ val mergeAccessTransformers = tasks.register("mergeAccessTransformers") {
 
 group = prop("mod.group")
 version = "${prop("mod.version")}+$mcVersion"
-base.archivesName = "${prop("mod.id")}-neoforge-$mcVersion"
+base.archivesName = "${prop("mod.id")}-neoforge"
 
 java {
     toolchain.languageVersion = JavaLanguageVersion.of(javaVersion)
@@ -239,7 +239,7 @@ tasks.named("createMinecraftArtifacts") { dependsOn(tasks.named("stonecutterGene
 publishing {
     publications {
         create<MavenPublication>("mavenJava") {
-            artifactId = base.archivesName.get()
+            artifactId = "${base.archivesName.get()}-$mcVersion"
             from(components["java"])
         }
     }

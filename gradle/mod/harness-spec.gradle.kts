@@ -4,7 +4,7 @@ import org.gradle.jvm.toolchain.JavaToolchainService
  * Launch-spec capture for the Golem Core visual test harness. Shared by every Golem Core mod: apply it
  * from each loader buildscript with
  *
- *     apply(from = rootProject.file("../Golem-Core/gradle/harness-spec.gradle.kts"))
+ *     apply(from = rootProject.file("../Golem-Core/gradle/mod/harness-spec.gradle.kts"))
  *
  * `gradlew :<node>:runClient -Pharness.spec=<file>` then runs every preparation step the real client
  * run needs (ModDev's `prepareClientRun` and `syncDevMods`, Loom's remap and jar-freshness guards) and

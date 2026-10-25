@@ -13,7 +13,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** The JSON written by the capture main embedded in {@code Golem-Core/gradle/harness-spec.gradle.kts}. */
+/** The JSON written by the capture main embedded in {@code Golem-Core/gradle/mod/harness-spec.gradle.kts}. */
 public record LaunchSpec(String javaExecutable, String javaHome, String mainClass, String workingDir,
                          List<String> jvmArgs, List<String> classpath, List<String> programArgs,
                          Map<String, String> env) {

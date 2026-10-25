@@ -13,7 +13,7 @@ val javaVersion = prop("java_version").toInt()
 
 group = prop("mod.group")
 version = "${prop("mod.version")}+$mcVersion"
-base.archivesName = "${prop("mod.id")}-forge-$mcVersion"
+base.archivesName = "${prop("mod.id")}-forge"
 
 java {
     toolchain.languageVersion = JavaLanguageVersion.of(javaVersion)
@@ -245,7 +245,7 @@ tasks.jar {
 publishing {
     publications {
         create<MavenPublication>("mavenJava") {
-            artifactId = base.archivesName.get()
+            artifactId = "${base.archivesName.get()}-$mcVersion"
             from(components["java"])
         }
     }

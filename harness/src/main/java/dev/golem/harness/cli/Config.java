@@ -19,7 +19,7 @@ import java.util.List;
  * {
  *   "name": "mymod",                       // label for the CLI and the world name
  *   "mod": ".",                            // Stonecutter mod project (has gradlew, versions/<node>)
- *   "golemCore": "../Golem-Core",          // Golem Core checkout used by the composite build
+ *   "golemCore": "../Golem-Core",          // Golem Core checkout used by the composite build; null without one
  *   "scenarios": "harness/scenarios",      // where `run` looks for bare scenario names
  *   "fixtures": "harness/fixtures",        // .nbt templates published into the harness world
  *   "out": "harness/out",                  // screenshots, logs, reports
@@ -43,6 +43,7 @@ public final class Config {
     public final Path dir;
     public final String name;
     public final Path mod;
+    /** Null when the mod builds against released Golem Core jars instead of a checkout. */
     public final Path golemCore;
     public final Path scenarios;
     public final Path fixtures;
@@ -63,7 +64,8 @@ public final class Config {
         dir = file.toAbsolutePath().getParent();
         name = str(json, "name", "mod");
         mod = dir.resolve(str(json, "mod", ".")).normalize();
-        golemCore = dir.resolve(str(json, "golemCore", "../Golem-Core")).normalize();
+        golemCore = json.has("golemCore") && json.get("golemCore").isJsonNull() ? null
+                : dir.resolve(str(json, "golemCore", "../Golem-Core")).normalize();
         scenarios = dir.resolve(str(json, "scenarios", "harness/scenarios")).normalize();
         fixtures = dir.resolve(str(json, "fixtures", "harness/fixtures")).normalize();
         out = dir.resolve(str(json, "out", "harness/out")).normalize();

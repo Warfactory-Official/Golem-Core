@@ -124,6 +124,12 @@ jobs:
           mkdir -p dist
           # build/release holds the uploaded jars, without the test harness (gradle/release-jar.gradle.kts).
           find versions/*/build/release -maxdepth 1 -name '*.jar' -exec cp {} dist/ \;
+          # The same jars with the harness, as <name>-dev.jar, and the harness CLI: GitHub only, never Modrinth or
+          # CurseForge. Addons built from released jars load the dev jar in harness runs (harness/README.md).
+          for jar in versions/*/build/release/*.jar; do
+            cp "${jar%/release/*}/libs/${jar##*/}" "dist/$(basename "$jar" .jar)-dev.jar"
+          done
+          (cd harness && bash ./gradlew -q jar --no-daemon) && cp harness/build/libs/golem-harness.jar dist/
           ls -l dist
 
       - name: GitHub release

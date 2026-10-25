@@ -15,6 +15,8 @@ supplies one `harness.json` plus its own scenarios.
 - All six nodes are supported: 26.1 NeoForge/Fabric, 1.21.1 NeoForge/Fabric, 1.20.1 Forge/Fabric.
 - Dev builds only. The uploaded Golem Core jars (`releaseJar`, `gradle/release-jar.gradle.kts`) leave the listener,
   its mixins and its registrations out; `HarnessQueryRegistry` stays, so a mod's query registrations still compile and run.
+  Each GitHub release also carries the unstripped jars (`<name>-dev.jar`) and the CLI (`golem-harness.jar`) for mods
+  built from released jars (see "Mods without a Golem Core checkout").
 
 ## What is where
 
@@ -24,7 +26,7 @@ supplies one `harness.json` plus its own scenarios.
 | `Golem-Core/src/main/java/dev/golem/core/harness/` | The in-game listener: commands, input, queries, screenshots, worlds, log buffer; `HarnessSetup` (NeoForge/Forge) and `HarnessFabricClient` start it | Golem Core |
 | `Golem-Core/src/main/java/dev/golem/core/harness/mixin/` + `golemcore.harness.mixins.json` | `MixinHarnessWindow`, `MixinHarnessMouseGrab` and the accessor mixins, in their own config | Golem Core |
 | `Golem-Core/gradle/release-jar.gradle.kts` | `releaseJar`: the uploaded jar, with everything above except `HarnessQueryRegistry` and `HarnessHooks` removed | Golem Core |
-| `Golem-Core/gradle/harness-spec.gradle.kts` | Captures a node's real `runClient` launch as a JSON spec | Golem Core |
+| `Golem-Core/gradle/mod/harness-spec.gradle.kts` | Captures a node's real `runClient` launch as a JSON spec | Golem Core |
 | `<mod>/harness.json` | The mod's configuration: nodes, ports, paths | the mod |
 | `<mod>/harness/scenarios/*.java` | The mod's scenarios | the mod |
 | `<mod>/harness/fixtures/*.nbt` | Structure templates, published into the world as `harness:<name>` | the mod |
@@ -84,7 +86,7 @@ The CLI finds `harness.json` by walking up from the working directory, so run it
 1. In each loader buildscript (`build.neoforge.gradle.kts`, `build.fabric.gradle.kts`, `build.forge.gradle.kts`):
 
    ```kotlin
-   apply(from = rootProject.file("../Golem-Core/gradle/harness-spec.gradle.kts"))
+   apply(from = rootProject.file("../Golem-Core/gradle/mod/harness-spec.gradle.kts"))
    ```
 
    It needs the `java_version` extra property that the Stonecutter nodes already set.
@@ -126,6 +128,22 @@ The CLI finds `harness.json` by walking up from the working directory, so run it
 
    A query runs on the client thread. If it needs server data, read only chunks that are already fully loaded
    and answer `pending` otherwise — a query that waits on chunk generation can freeze the client.
+
+## Mods without a Golem Core checkout
+
+An addon built from released jars (the wiki's template generator takes Golem Core and NTM - Continuum from their GitHub
+releases) has no checkout to build the listener from. It gets it from the same Golem Core release; the template sets
+this up:
+
+- `harness.json` has `"golemCore": null`, so the CLI builds and watches only the mod.
+- Each loader buildscript reads Golem Core from an Ivy repository over
+  `https://github.com/Warfactory-Official/Golem-Core/releases/download` (pattern
+  `v[revision]/[module]-[revision]+[classifier].[ext]`, coordinates `github.golem-core:golemcore-<loader>:<version>`
+  with classifier `<mc>`; a second pattern reads the `<module>-<mc>-<version>+<mc>.jar` names of releases up to 1.0.1) and applies `gradle/mod/harness-spec.gradle.kts` (copied into the project). Only when
+  `-Pharness.spec` is set, the run classpath takes classifier `<mc>-dev` instead, the release's `<name>-dev.jar`. Every
+  node is configured in that run, so the release must carry all six dev jars.
+- `harness/harness` (and `harness.cmd`) download `golem-harness.jar` from the release named by `deps.golemcore` in
+  `gradle.properties` into `.harness/` and run it.
 
 ## Multiplayer (dedicated server)
 

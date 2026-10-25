@@ -35,7 +35,7 @@ report with a result per node and every screenshot.
 |---|---|
 | `harness/` | The CLI, the scenario API, wrappers and default client options |
 | `src/main/java/dev/golem/core/harness/` | The in-game listener: commands, input, queries, screenshots |
-| `gradle/harness-spec.gradle.kts` | Captures a node's `runClient` launch as a JSON spec |
+| `gradle/mod/harness-spec.gradle.kts` | Captures a node's `runClient` launch as a JSON spec |
 
 The listener only runs on a development client started with `-Dgolem.harness.port=<port>`. Release builds
 never open it.

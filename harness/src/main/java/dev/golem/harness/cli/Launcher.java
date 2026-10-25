@@ -65,7 +65,7 @@ public final class Launcher {
      * One Gradle run that captures the launch spec of several nodes. Gradle pays its JVM start and
      * configuration once instead of once per node, and runs in the background so the caller can
      * launch each client the moment its spec lands ({@link #await}) while the next node still builds.
-     * Fabric nodes first build Golem Core (synchronously, one invocation for all of them).
+     * With a Golem Core checkout, Fabric nodes first build it (synchronously, one invocation for all of them).
      */
     public static final class Capture {
         private final Map<String, Long> before = new HashMap<>();
@@ -95,7 +95,7 @@ public final class Launcher {
 
         public static Capture start(List<Nodes.Node> nodes, Path log) {
             List<Nodes.Node> fabric = nodes.stream().filter(Nodes.Node::fabric).toList();
-            if (!fabric.isEmpty()) {
+            if (!fabric.isEmpty() && Paths.golemCore() != null) {
                 // Loom refuses to remap a Golem Core jar older than its sources; build it first. `build`,
                 // not `jar`: Loom's `jar` writes a dev jar under devlibs, and the guard (and the composite
                 // build) look at the remapped jar under libs.
@@ -151,8 +151,8 @@ public final class Launcher {
     /**
      * True when no build input of the node is newer than its captured spec, so Gradle would only
      * confirm that everything is up to date (half a minute or more of JVM start and configuration).
-     * Inputs are both projects' {@code src}, {@code gradle} and top-level build files plus the node's
-     * own {@code versions/<node>} folder (outputs, run directories and logs excluded). Stonecutter 0.9
+     * Inputs are the mod's and any Golem Core checkout's {@code src}, {@code gradle} and top-level build
+     * files plus the node's own {@code versions/<node>} folder (outputs, run directories and logs excluded). Stonecutter 0.9
      * generates each node into its own build directory, so building another node does not touch
      * {@code src} and does not defeat this check.
      */
@@ -161,7 +161,8 @@ public final class Launcher {
         if (!Files.exists(spec)) return false;
         try {
             long specTime = Files.getLastModifiedTime(spec).toMillis();
-            for (Path project : List.of(Paths.mod(), Paths.golemCore())) {
+            List<Path> projects = Paths.golemCore() == null ? List.of(Paths.mod()) : List.of(Paths.mod(), Paths.golemCore());
+            for (Path project : projects) {
                 if (newerThan(project.resolve("src"), specTime) || newerThan(project.resolve("gradle"), specTime)
                         || newerThan(project.resolve("versions").resolve(node.name()), specTime)) {
                     return false;

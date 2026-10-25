@@ -89,7 +89,7 @@ public final class Main {
         if (args.command.equals("config")) {
             System.out.println("config: " + config.dir.resolve("harness.json"));
             System.out.println("mod: " + config.mod);
-            System.out.println("golemCore: " + config.golemCore);
+            System.out.println("golemCore: " + (config.golemCore == null ? "none (released jars)" : config.golemCore));
             System.out.println("scenarios: " + config.scenarios);
             System.out.println("fixtures: " + config.fixtures);
             System.out.println("out: " + config.out);
