@@ -651,6 +651,22 @@ public final class ItemStacks {
         *///?}
     }
 
+    /** Whether {@code stack} may go into an item store: vanilla's shulker-box rule, and nothing that carries items. */
+    public static boolean fitsInContainerItem(ItemStack stack) {
+        if (!stack.getItem().canFitInsideContainerItems()) return false;
+        //? if >=1.20.5 {
+        net.minecraft.world.item.component.BundleContents bundle =
+                stack.get(net.minecraft.core.component.DataComponents.BUNDLE_CONTENTS);
+        return (bundle == null || bundle.isEmpty())
+                && stack.getOrDefault(net.minecraft.core.component.DataComponents.CONTAINER,
+                        net.minecraft.world.item.component.ItemContainerContents.EMPTY)
+                        .equals(net.minecraft.world.item.component.ItemContainerContents.EMPTY);
+        //?} else {
+        /*net.minecraft.nbt.CompoundTag tag = stack.getTag();
+        return tag == null || !tag.contains("Items", 9) && !legacyCarriedData(stack).contains("Items", 9);
+        *///?}
+    }
+
     /**
      * Every slot a block entity's item form carries, for block entities that save their inventory under a
      * child key ({@code legacyInventoryKey}, vanilla's {@code "Items"} list inside it): the CONTAINER component
