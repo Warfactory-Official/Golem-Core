@@ -459,19 +459,74 @@ public final class ItemStacks {
 
     /** Writes a boolean into an item's carried block custom data, where {@link #carriedBoolean} reads it; false removes it. */
     public static void setCarriedBoolean(ItemStack carrier, String key, boolean value) {
+        if (!value) {
+            removeCarried(carrier, key);
+            return;
+        }
         //? if >=1.20.5 {
         net.minecraft.world.item.component.CustomData data =
                 carrier.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
         net.minecraft.nbt.CompoundTag tag = data == null ? new net.minecraft.nbt.CompoundTag() : data.copyTag();
-        if (value) tag.putBoolean(key, true);
-        else tag.remove(key);
+        tag.putBoolean(key, true);
+        carrier.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
+                net.minecraft.world.item.component.CustomData.of(tag));
+        //?} else {
+        /*carrier.getOrCreateTagElement("BlockEntityTag").putBoolean(key, true);
+        *///?}
+    }
+
+    /** Writes a long into an item's carried block custom data, where {@link #carriedLong} reads it. */
+    public static void setCarriedLong(ItemStack carrier, String key, long value) {
+        //? if >=1.20.5 {
+        net.minecraft.world.item.component.CustomData data =
+                carrier.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+        net.minecraft.nbt.CompoundTag tag = data == null ? new net.minecraft.nbt.CompoundTag() : data.copyTag();
+        tag.putLong(key, value);
+        carrier.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
+                net.minecraft.world.item.component.CustomData.of(tag));
+        //?} else {
+        /*carrier.getOrCreateTagElement("BlockEntityTag").putLong(key, value);
+        *///?}
+    }
+
+    /** Reads a long from an item's carried block custom data. */
+    public static long carriedLong(ItemStack carrier, String key) {
+        //? if >=1.20.5 {
+        net.minecraft.world.item.component.CustomData data =
+                carrier.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+        return data == null ? 0L : dev.golem.core.data.Tags.getLongOr(data.copyTag(), key, 0L);
+        //?} else {
+        /*return legacyCarriedData(carrier).getLong(key);
+        *///?}
+    }
+
+    /** Removes a key from an item's carried block custom data, and the data itself once it is empty. */
+    public static void removeCarried(ItemStack carrier, String key) {
+        //? if >=1.20.5 {
+        net.minecraft.world.item.component.CustomData data =
+                carrier.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+        if (data == null) return;
+        net.minecraft.nbt.CompoundTag tag = data.copyTag();
+        tag.remove(key);
         if (tag.isEmpty()) carrier.remove(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
         else carrier.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
                 net.minecraft.world.item.component.CustomData.of(tag));
         //?} else {
-        /*net.minecraft.nbt.CompoundTag data = carrier.getOrCreateTagElement("BlockEntityTag");
-        if (value) data.putBoolean(key, true);
-        else data.remove(key);
+        /*net.minecraft.nbt.CompoundTag root = carrier.getTag();
+        if (root == null) return;
+        net.minecraft.nbt.CompoundTag data = root.getCompound("BlockEntityTag");
+        data.remove(key);
+        data.getCompound(dev.golem.core.data.CompatBlockEntity.LEGACY_CARRIED_KEY).remove(key);
+        dropEmptyCarriedData(carrier);
+        *///?}
+    }
+
+    /** Whether a stack differs from a fresh stack of its item (any component patch; any tag before 1.20.5). */
+    public static boolean isPlain(ItemStack stack) {
+        //? if >=1.20.5 {
+        return stack.getComponentsPatch().isEmpty();
+        //?} else {
+        /*return !stack.hasTag();
         *///?}
     }
 
@@ -495,6 +550,19 @@ public final class ItemStacks {
         String carried = dev.golem.core.data.CompatBlockEntity.LEGACY_CARRIED_KEY;
         // a mined block's collectCarriedData() arrives nested (loot copy_nbt); read it like the flat keys
         return data.contains(carried, 10) ? data.copy().merge(data.getCompound(carried)) : data;
+    }
+
+    /^* Drops carried-data compounds left empty, and the tag itself, so the stack stacks with a fresh one again. ^/
+    private static void dropEmptyCarriedData(ItemStack carrier) {
+        net.minecraft.nbt.CompoundTag root = carrier.getTag();
+        if (root == null) return;
+        if (root.contains("BlockEntityTag", 10)) {
+            net.minecraft.nbt.CompoundTag data = root.getCompound("BlockEntityTag");
+            String carried = dev.golem.core.data.CompatBlockEntity.LEGACY_CARRIED_KEY;
+            if (data.contains(carried, 10) && data.getCompound(carried).isEmpty()) data.remove(carried);
+            if (data.isEmpty()) root.remove("BlockEntityTag");
+        }
+        if (root.isEmpty()) carrier.setTag(null);
     }
     *///?}
 
@@ -685,12 +753,30 @@ public final class ItemStacks {
         *///?}
     }
 
-    /** Writes {@code items} the way {@link #carriedItems(ItemStack, String, int)} reads them. */
+    /**
+     * Writes {@code items} the way {@link #carriedItems(ItemStack, String, int)} reads them. All-empty items leave
+     * no inventory on the carrier, so an emptied carrier stacks with a fresh one.
+     */
     public static void setCarriedItems(ItemStack carrier, String legacyInventoryKey, List<ItemStack> items) {
+        boolean empty = items.stream().allMatch(ItemStack::isEmpty);
         //? if >=1.20.5 {
-        setCarriedItems(carrier, items);
+        if (!empty) {
+            setCarriedItems(carrier, items);
+        } else if (carrier.getItem().components().has(net.minecraft.core.component.DataComponents.CONTAINER)) {
+            carrier.set(net.minecraft.core.component.DataComponents.CONTAINER,
+                    net.minecraft.world.item.component.ItemContainerContents.EMPTY);
+        } else {
+            carrier.remove(net.minecraft.core.component.DataComponents.CONTAINER);
+        }
         //?} else {
-        /*NonNullList<ItemStack> list = NonNullList.withSize(items.size(), ItemStack.EMPTY);
+        /*if (empty) {
+            net.minecraft.nbt.CompoundTag root = carrier.getTag();
+            if (root == null) return;
+            root.getCompound("BlockEntityTag").remove(legacyInventoryKey);
+            dropEmptyCarriedData(carrier);
+            return;
+        }
+        NonNullList<ItemStack> list = NonNullList.withSize(items.size(), ItemStack.EMPTY);
         for (int i = 0; i < items.size(); i++) list.set(i, items.get(i));
         net.minecraft.nbt.CompoundTag data = carrier.getOrCreateTagElement("BlockEntityTag");
         net.minecraft.nbt.CompoundTag inventory = new net.minecraft.nbt.CompoundTag();
