@@ -11,7 +11,9 @@ import net.minecraft.client.Minecraft;
  *
  * <ul>
  *   <li><b>1.21 and up</b>: the view transform lives outside the pose stack (in the render system's
- *       modelview), so an identity pose is world space and the camera's rotation has to be applied.
+ *       modelview), so an identity pose is world space and the camera's rotation has to be applied. Below
+ *       26.1 that is the inverse of the modelview the hand pass set: an Iris shader pack draws the hand
+ *       with an identity modelview, where the camera rotation would turn the weapon out of view.
  *   <li><b>1.20.1</b>: the view rotation is inside the pose stack vanilla hands down, so an identity
  *       pose is already camera space. Applying the camera rotation there rotates the weapon twice and
  *       it counter-rotates as the player looks around.
@@ -26,8 +28,10 @@ public final class HandSpace {
     /** Resets {@code pose} to camera space. */
     public static void enterCameraSpace(PoseStack pose) {
         pose.setIdentity();
-        //? if >=1.21 {
+        //? if >=26.1 {
         pose.mulPose(Minecraft.getInstance().gameRenderer.getMainCamera().rotation());
-        //?}
+        //?} else if >=1.21 {
+        /*pose.mulPose(new org.joml.Matrix4f(com.mojang.blaze3d.systems.RenderSystem.getModelViewMatrix()).invert());
+        *///?}
     }
 }

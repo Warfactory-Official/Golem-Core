@@ -353,12 +353,10 @@ fun parentModelOf(definition: File): String? {
             } else if (isMachineObjSpecial(fallback) || cases.any { isMachineObjSpecial(it["model"]) }) {
                 MACHINE_OBJ_LEGACY_MODEL
             } else if ((fallback as? Map<String, Any?>)?.get("type") == "$ns:gun") {
-                // A gun whose slot icon is a sprite and whose model is only drawn in hand: below 1.21.4
-                // nothing reads the definition, so the item resolves models/item/<id>.json. Point it at
-                // the sprite branch, which is what the slot shows on legacy versions too.
+                // A gun whose slot icon is a sprite and whose model is drawn in hand: the gun's own base, so
+                // the item reaches the render hook in every slot. The mod's hook draws the sprite cases itself.
                 @Suppress("UNCHECKED_CAST")
-                val cases2 = model["cases"] as? List<Map<String, Any?>> ?: emptyList()
-                ((cases2.firstOrNull()?.get("model") as? Map<String, Any?>)?.get("model") as? String)
+                ((fallback as Map<String, Any?>)["base"] as? String)
             } else {
                 // A select over ordinary sprite models still needs a model at the ITEM's own path.
                 // Nothing below 1.21.4 reads the definition, so the item resolves

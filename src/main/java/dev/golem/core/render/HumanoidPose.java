@@ -1,8 +1,15 @@
 package dev.golem.core.render;
 
+import java.util.List;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.world.entity.player.Player;
+
+//? if >=26.1 {
+import net.minecraft.client.model.player.PlayerModel;
+//?} else {
+/*import net.minecraft.client.model.PlayerModel;
+*///?}
 
 /**
  * The posed skeleton of the humanoid a layer is drawing on, for renderers that supply their own
@@ -82,5 +89,15 @@ public final class HumanoidPose {
 
     public Player player() {
         return player;
+    }
+
+    /**
+     * A player model's outer skin layer (jacket, sleeves, trousers), empty for other models. Below 26.1 the layer is
+     * not a child of the limbs, so hiding a limb leaves its sleeve.
+     */
+    @SuppressWarnings("rawtypes")
+    public static List<ModelPart> skinLayers(HumanoidModel<?> model) {
+        if (!(model instanceof PlayerModel player)) return List.of();
+        return List.of(player.jacket, player.leftSleeve, player.rightSleeve, player.leftPants, player.rightPants);
     }
 }

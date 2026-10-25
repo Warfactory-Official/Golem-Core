@@ -224,6 +224,11 @@ public class ComponentShapedRecipe extends CompatCustomRecipe {
 
     //? if <26.1 {
     /*@Override
+    public boolean canCraftInDimensions(int gridWidth, int gridHeight) {
+        return width <= gridWidth && height <= gridHeight;
+    }
+
+    @Override
     public net.minecraft.core.NonNullList<Ingredient> getIngredients() {
         net.minecraft.core.NonNullList<Ingredient> copy = net.minecraft.core.NonNullList.create();
         for (ComponentIngredient ingredient : ingredients) copy.add(ingredient.displayIngredient());

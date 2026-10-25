@@ -250,6 +250,11 @@ public final class GameTestHelpers {
 
     /** A survival-mode server player placed in the level. Works on Forge 1.20.1, whose login hooks need a channel. */
     public static ServerPlayer survivalServerPlayerInLevel(GameTestHelper helper) {
+        return serverPlayerInLevel(helper, GameType.SURVIVAL);
+    }
+
+    /** A server player placed in the level in {@code gameType}, with that mode's abilities (creative is invulnerable). */
+    public static ServerPlayer serverPlayerInLevel(GameTestHelper helper, GameType gameType) {
         ServerLevel level = helper.getLevel();
         //? if >=1.21 {
         CommonListenerCookie cookie = CommonListenerCookie.createInitial(
@@ -259,8 +264,8 @@ public final class GameTestHelpers {
                 super(level.getServer(), level, cookie.gameProfile(), cookie.clientInformation());
             }
 
-            @Override public boolean isSpectator() { return false; }
-            @Override public boolean isCreative() { return false; }
+            @Override public boolean isSpectator() { return gameType == GameType.SPECTATOR; }
+            @Override public boolean isCreative() { return gameType == GameType.CREATIVE; }
         }
         ServerPlayer player = new SurvivalPlayer();
         Connection connection = new Connection(PacketFlow.SERVERBOUND);
@@ -273,15 +278,15 @@ public final class GameTestHelpers {
                         new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(), "test-mock-player"));
             }
 
-            @Override public boolean isSpectator() { return false; }
-            @Override public boolean isCreative() { return false; }
+            @Override public boolean isSpectator() { return gameType == GameType.SPECTATOR; }
+            @Override public boolean isCreative() { return gameType == GameType.CREATIVE; }
         }
         ServerPlayer player = new SurvivalPlayer();
         Connection connection = new Connection(PacketFlow.SERVERBOUND);
         new EmbeddedChannel(connection);
         level.getServer().getPlayerList().placeNewPlayer(connection, player);
         *///?}
-        player.setGameMode(GameType.SURVIVAL);
+        player.setGameMode(gameType);
         long[] seen = {level.getGameTime()};
         synchronized (SURVIVAL_PLAYERS) {
             SURVIVAL_PLAYERS.put(player, seen);

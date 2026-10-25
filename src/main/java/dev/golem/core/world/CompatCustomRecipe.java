@@ -3,7 +3,8 @@ package dev.golem.core.world;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.CustomRecipe;
+import net.minecraft.world.item.crafting.CraftingBookCategory;
+import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.level.Level;
 
@@ -12,25 +13,66 @@ import net.minecraft.world.item.crafting.CraftingInput;
 //?} else {
 /*import net.minecraft.world.inventory.CraftingContainer;
 *///?}
-//? if <26.1
-//import net.minecraft.world.item.crafting.CraftingBookCategory;
 
 /**
  * A custom crafting recipe with version-neutral item input and result hooks.
  *
  * <p>The recipe interfaces changed twice between the supported targets; recipes only implement the
- * two hooks below while this class owns the vanilla bridge methods.
+ * two hooks below while this class owns the vanilla bridge methods. It is not a vanilla {@code CustomRecipe}:
+ * EMI lists no crafting recipe of that class, so a non-special subclass would be invisible there.
  */
-public abstract class CompatCustomRecipe extends CustomRecipe {
+public abstract class CompatCustomRecipe implements CraftingRecipe {
+
+    //? if <1.21.1
+    /*private final net.minecraft.resources.ResourceLocation id;*/
 
     protected CompatCustomRecipe(String namespace, String path) {
-        //? if >=26.1 {
-        //?} else if >=1.21.1 {
-        /*super(CraftingBookCategory.MISC);
-        *///?} else {
-        /*super(dev.golem.core.Ids.of(namespace, path), CraftingBookCategory.MISC);
-        *///?}
+        //? if <1.21.1
+        /*this.id = dev.golem.core.Ids.of(namespace, path);*/
     }
+
+    @Override
+    public CraftingBookCategory category() {
+        return CraftingBookCategory.MISC;
+    }
+
+    /** Hidden from recipe books and viewers unless a subclass describes its grid. */
+    @Override
+    public boolean isSpecial() {
+        return true;
+    }
+
+    //? if >=26.1 {
+    @Override
+    public boolean showNotification() {
+        return false;
+    }
+
+    @Override
+    public String group() {
+        return "";
+    }
+
+    @Override
+    public net.minecraft.world.item.crafting.PlacementInfo placementInfo() {
+        return net.minecraft.world.item.crafting.PlacementInfo.NOT_PLACEABLE;
+    }
+    //?} else if >=1.21.1 {
+    /*@Override
+    public ItemStack getResultItem(net.minecraft.core.HolderLookup.Provider registries) {
+        return ItemStack.EMPTY;
+    }
+    *///?} else {
+    /*@Override
+    public net.minecraft.resources.ResourceLocation getId() {
+        return id;
+    }
+
+    @Override
+    public ItemStack getResultItem(net.minecraft.core.RegistryAccess registries) {
+        return ItemStack.EMPTY;
+    }
+    *///?}
 
     protected abstract boolean matchesItems(List<ItemStack> input, Level level);
 
@@ -78,7 +120,7 @@ public abstract class CompatCustomRecipe extends CustomRecipe {
 
     //? if <26.1 {
     /*@Override
-    public final boolean canCraftInDimensions(int width, int height) {
+    public boolean canCraftInDimensions(int width, int height) {
         return true;
     }
     *///?}
