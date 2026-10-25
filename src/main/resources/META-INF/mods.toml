@@ -26,9 +26,10 @@ ordering = "NONE"
 side = "BOTH"
 
 # GemRender instances gem-declared machines when installed; without it they draw through their vanilla renderers.
+# 0.1.14 names no refmap for its mixins here, so it crashes outside a dev run.
 [[dependencies.${mod_id}]]
 modId = "gemrender"
 mandatory = false
-versionRange = "[0.1.14,)"
+versionRange = "(0.1.14,)"
 ordering = "NONE"
 side = "CLIENT"

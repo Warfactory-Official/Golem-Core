@@ -117,7 +117,7 @@ tasks.processResources {
         // Clouds: Forge's only seam is the effects object's renderClouds (see MixinLegacyCloudRender).
         "cloud_mixins" to ", \"MixinLegacyCloudRender\", \"MixinLegacyWeatherRender\"",
         "gemrender_mixins" to "",
-        "gemrender_mixin_plugin" to "dev.golem.core.gemrender.mixin.GemRenderRefmapPlugin",
+        "gemrender_mixin_plugin" to "dev.golem.core.gemrender.mixin.GemRenderMixinPlugin",
         "pack_format" to prop("pack_format"),
         "pack_format_entry" to "\"pack_format\": ${prop("pack_format")}",
     )
