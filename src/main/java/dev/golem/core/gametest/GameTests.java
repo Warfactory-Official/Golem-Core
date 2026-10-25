@@ -222,10 +222,10 @@ public final class GameTests {
 
     /**
      * Holds the chunks under {@code origin + (minX..maxX, minZ..maxZ)} (blocks, relative to the test's origin)
-     * entity-ticking, generating them and the ring around them, until the returned action runs. For a test whose
-     * entity leaves its plot (a rocket's flight corridor): every test's own plot is already held before it starts (26.1)
-     * or covered by its padded template (older versions). Holds are counted per chunk, so tests that share a chunk never
-     * release it from under each other; on 26.1 a hold also ends with its test.
+     * entity-ticking, generating them and the ring around them, until the returned action runs. On 26.1 every test's
+     * own padded plot is already held before it starts; older versions only tick the chunks near the plot's corner, so a
+     * test whose entity sits at the padded centre or leaves its plot needs a hold. Holds are counted per chunk, so
+     * tests that share a chunk never release it from under each other; on 26.1 a hold also ends with its test.
      */
     public static Runnable holdChunks(GameTestHelper helper, int minX, int maxX, int minZ, int maxZ) {
         net.minecraft.core.BlockPos origin = helper.absolutePos(net.minecraft.core.BlockPos.ZERO);

@@ -28,6 +28,7 @@ import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -196,9 +197,26 @@ public final class JeiViewer {
                     all.add(row);
                 }
                 out.add("categories", all);
+                // the order JEI shows tabs in: its recipe-category-sort-order.ini, else crafting, minecraft, then by id
+                JsonArray order = new JsonArray();
+                runtime.getRecipeManager().createRecipeCategoryLookup().get()
+                        .forEach(c -> order.add(c.getRecipeType().getUid().toString()));
+                out.add("order", order);
                 return out;
             }
             String category = params.get("category").getAsString();
+            if (category.contains(",")) {
+                // several categories on one recipe screen, so its tab bar shows JEI's order among them
+                List shown = new ArrayList();
+                for (String id : category.split(",")) {
+                    for (ViewerType<?> type : TYPES.keySet()) if (type.id().equals(id)) shown.add(type(type).unwrap());
+                }
+                runtime.getRecipesGui().showTypes(shown);
+                out.addProperty("opened", !shown.isEmpty());
+                out.addProperty("title", category);
+                out.addProperty("recipes", shown.size());
+                return out;
+            }
             for (ViewerType<?> type : TYPES.keySet()) {
                 if (!type.id().equals(category)) continue;
                 var jeiType = type(type).unwrap();

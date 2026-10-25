@@ -90,11 +90,13 @@ public abstract class ReiClientPlugin implements REIClientPlugin {
             com.google.gson.JsonObject out = new com.google.gson.JsonObject();
             String op = params.has("op") ? params.get("op").getAsString() : "status";
             if (op.equals("open")) {
-                String category = params.get("category").getAsString();
-                int colon = category.indexOf(':');
-                boolean opened = ViewSearchBuilder.builder()
-                        .addCategory(CategoryIdentifier.of(category.substring(0, colon), category.substring(colon + 1)))
-                        .open();
+                // a comma list opens several, in REI's own tab order
+                ViewSearchBuilder search = ViewSearchBuilder.builder();
+                for (String category : params.get("category").getAsString().split(",")) {
+                    int colon = category.indexOf(':');
+                    search.addCategory(CategoryIdentifier.of(category.substring(0, colon), category.substring(colon + 1)));
+                }
+                boolean opened = search.open();
                 out.addProperty("opened", opened);
                 return out;
             }
@@ -154,6 +156,12 @@ public abstract class ReiClientPlugin implements REIClientPlugin {
                 out.addProperty("entries", me.shedaniel.rei.api.client.registry.entry.EntryRegistry.getInstance().getEntryStacks()
                         .filter(entry -> entry.getValue() instanceof ItemStack stack && stack.is(item)).count());
             }
+            // REI's tab order: registration order, unless its categoryOrdering config lists categories first
+            com.google.gson.JsonArray order = new com.google.gson.JsonArray();
+            for (var configuration : me.shedaniel.rei.api.client.registry.category.CategoryRegistry.getInstance()) {
+                order.add(configuration.getCategoryIdentifier().toString());
+            }
+            out.add("order", order);
             out.addProperty("categories", categories);
             out.addProperty("displays", displays);
             out.add("ids", ids);

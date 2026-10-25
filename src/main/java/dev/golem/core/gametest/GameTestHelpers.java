@@ -114,9 +114,8 @@ public final class GameTestHelpers {
     /**
      * How many of these packets are Golem play payloads on the named channel.
      *
-     * <p>Where the vanilla payload registry exists the packet names the payload's own id, so this counts exactly
-     * that payload. Forge 1.20.1 has no such registry and every Golem payload rides one {@code SimpleChannel},
-     * so there the count is of Golem payloads in general: a test that must tell two apart provokes one at a time.
+     * <p>Forge 1.20.1 carries every Golem payload on one {@code SimpleChannel}; there the index byte before the
+     * body names the payload.
      */
     public static int golemPayloads(List<Packet<?>> packets, String channelId) {
         int count = 0;
@@ -204,8 +203,12 @@ public final class GameTestHelpers {
         /*return packet instanceof net.minecraft.network.protocol.game.ClientboundCustomPayloadPacket custom
                 && custom.getIdentifier().toString().equals(channelId);
         *///?} else {
-        /*return packet instanceof net.minecraft.network.protocol.game.ClientboundCustomPayloadPacket custom
-                && custom.getIdentifier().getNamespace().equals(dev.golem.core.GolemCore.MOD_ID);
+        /*if (!(packet instanceof net.minecraft.network.protocol.game.ClientboundCustomPayloadPacket custom)) return false;
+        if (!custom.getIdentifier().equals(dev.golem.core.net.GolemNetwork.forgeChannel()))
+            return custom.getIdentifier().toString().equals(channelId);
+        // the SimpleChannel index byte before the body names the payload, as in readChannel
+        io.netty.buffer.ByteBuf data = custom.getData();
+        return channelId.equals(dev.golem.core.net.GolemNetwork.forgePayloadId(data.getByte(data.readerIndex()) & 0xff));
         *///?}
     }
 
