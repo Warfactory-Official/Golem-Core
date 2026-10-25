@@ -1,6 +1,5 @@
 package dev.golem.core.fluid;
 
-import dev.golem.core.world.CompatBlock;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -9,24 +8,24 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.BucketPickup;
 import net.minecraft.world.level.block.DoorBlock;
+import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.PushReaction;
+import net.minecraft.world.level.pathfinder.PathComputationType;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -40,20 +39,18 @@ import org.jspecify.annotations.Nullable;
  * <ul>
  *   <li>{@link #canDisplace} / {@link #displaceIfPossible}: what the fluid may flow into (and destroy);</li>
  *   <li>{@link #afterFlow}: the part of a 1.7 {@code updateTick} override after {@code super.updateTick};</li>
- *   <li>{@code onEntityInside}, {@code onNeighborChanged} (call super: it schedules the flow), {@code animateTick},
- *       {@code randomTick} as on any {@code CompatBlock}.</li>
+ *   <li>{@link #onEntityInside}, {@link #onNeighborChanged} (call super: it schedules the flow), {@code animateTick},
+ *       {@code randomTick}.</li>
  * </ul>
  *
  * <p>State: {@code level} 0 is a full block (a classic source, a full finite block, and the default state, so
  * {@code defaultBlockState()} places a source); {@code level n} holds {@code quanta - n} quanta. The 1.7
  * metadata is {@code level} for a classic fluid and {@code quanta - 1 - level} for a finite one.
  *
- * <p>The block has no shape, so no tool can target or break it; it has no collision and drops nothing.
- * {@link #properties} gives the rest of 1.7's block properties.
+ * <p>A {@link LiquidBlock}, so other mods take it for a liquid and not a waterlogged block, with vanilla's fluid
+ * ticks and lava mixing overridden away. No shape, no collision, no drops; {@link #properties} gives the rest.
  */
-public class FluidBlock extends CompatBlock implements BucketPickup {
-
-    public static final IntegerProperty LEVEL = BlockStateProperties.LEVEL;
+public class FluidBlock extends LiquidBlock {
 
     private final WorldFluids.Handle fluid;
     private final int quanta;
@@ -64,13 +61,16 @@ public class FluidBlock extends CompatBlock implements BucketPickup {
     private final FluidState[] states = new FluidState[16];
 
     public FluidBlock(Properties properties, WorldFluids.Handle fluid) {
-        super(properties);
+        //? if forge {
+        /*super(fluid::source, properties);
+        *///?} else {
+        super(fluid.source(), properties);
+        //?}
         this.fluid = fluid;
         this.quanta = fluid.spec().quanta();
         this.density = fluid.spec().density();
         this.densityDir = density > 0 ? -1 : 1;
         this.tickRate = fluid.spec().tickDelay();
-        registerDefaultState(stateDefinition.any().setValue(LEVEL, 0));
     }
 
     /**
@@ -103,11 +103,6 @@ public class FluidBlock extends CompatBlock implements BucketPickup {
 
     public WorldFluids.Handle fluid() {
         return fluid;
-    }
-
-    @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(LEVEL);
     }
 
     // State and the fluid it stands for
@@ -151,20 +146,84 @@ public class FluidBlock extends CompatBlock implements BucketPickup {
         return Shapes.empty();
     }
 
+    @Override
+    public boolean skipRendering(BlockState state, BlockState neighbourState, Direction direction) {
+        return neighbourState.getFluidState().getType().isSame(fluid.source());
+    }
+
+    /** {@code Block}'s answer for a block without collision; {@code LiquidBlock} opens every non-lava liquid. */
+    //? if >=1.21.1 {
+    @Override
+    protected boolean isPathfindable(BlockState state, PathComputationType type) {
+        return type != PathComputationType.WATER || state.getFluidState().is(FluidTags.WATER);
+    }
+    //?} else {
+    /*@Override
+    public boolean isPathfindable(BlockState state, BlockGetter level, BlockPos pos, PathComputationType type) {
+        return type != PathComputationType.WATER || state.getFluidState().is(FluidTags.WATER);
+    }
+    *///?}
+
     // Ticks (1.7 BlockFluidBase)
+
+    /** From the properties (1.7 {@code setTickRandomly}), not the fluid. */
+    @Override
+    public boolean isRandomlyTicking(BlockState state) {
+        return isRandomlyTicking;
+    }
 
     /** 1.7 {@code onBlockAdded}: a fluid block arriving schedules its first flow. */
     @Override
     public void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean movedByPiston) {
-        super.onPlace(state, level, pos, oldState, movedByPiston);
         if (!level.isClientSide() && !oldState.is(this)) level.scheduleTick(pos, this, tickRate);
     }
 
     /** 1.7 {@code onNeighborBlockChange}: any neighbour change schedules a flow. Subclasses call super. */
-    @Override
     protected void onNeighborChanged(BlockState state, Level level, BlockPos pos, Block neighbourBlock, boolean movedByPiston) {
         if (!level.isClientSide()) level.scheduleTick(pos, this, tickRate);
     }
+
+    protected void onEntityInside(BlockState state, Level level, BlockPos pos, Entity entity) {}
+
+    //? if >=26.1 {
+    @Override
+    protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighbourBlock,
+                                   net.minecraft.world.level.redstone.@Nullable Orientation orientation, boolean movedByPiston) {
+        onNeighborChanged(state, level, pos, neighbourBlock, movedByPiston);
+    }
+
+    @Override
+    protected BlockState updateShape(BlockState state, LevelReader level, net.minecraft.world.level.ScheduledTickAccess ticks,
+                                     BlockPos pos, Direction direction, BlockPos neighbourPos, BlockState neighbourState,
+                                     RandomSource random) {
+        return state;
+    }
+
+    @Override
+    protected void entityInside(BlockState state, Level level, BlockPos pos, Entity entity,
+                                net.minecraft.world.entity.InsideBlockEffectApplier effects, boolean precise) {
+        super.entityInside(state, level, pos, entity, effects, precise);
+        onEntityInside(state, level, pos, entity);
+    }
+    //?} else {
+    /*@Override
+    public void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighbourBlock, BlockPos fromPos,
+                                boolean movedByPiston) {
+        onNeighborChanged(state, level, pos, neighbourBlock, movedByPiston);
+    }
+
+    @Override
+    public BlockState updateShape(BlockState state, Direction direction, BlockState neighbourState, LevelAccessor level,
+                                  BlockPos pos, BlockPos neighbourPos) {
+        return state;
+    }
+
+    @Override
+    public void entityInside(BlockState state, Level level, BlockPos pos, Entity entity) {
+        super.entityInside(state, level, pos, entity);
+        onEntityInside(state, level, pos, entity);
+    }
+    *///?}
 
     @Override
     public final void tick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
