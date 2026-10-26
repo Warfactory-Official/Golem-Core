@@ -163,6 +163,8 @@ tasks.processResources {
         // dev.golem.core.gametest.TestChunks: a 26.1 test waits until its whole plot is entity-ticking.
         "gametest_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinGameTestChunks\"" else "",
         "rail_mixins" to ", \"MixinMinecartRails\"",
+        // 1.21.1 only: the world-exit unload spin (MixinChunkMapUnloadDrain).
+        "unload_mixins" to if (mcVersion == "1.21.1") ", \"MixinChunkMapUnloadDrain\"" else "",
         // Gliders: fabric-api's EntityElytraEvents.CUSTOM grants the flight; only the wings mixins (always listed) apply.
         "glider_mixins" to "",
         "glider_client_mixins" to "",

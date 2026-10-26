@@ -103,6 +103,8 @@ tasks.processResources {
         // dev.golem.core.gametest.TestChunks: a 26.1 test waits until its whole plot is entity-ticking.
         "gametest_mixins" to "",
         "rail_mixins" to "",
+        // 1.21.1 only: the world-exit unload spin (MixinChunkMapUnloadDrain).
+        "unload_mixins" to "",
         // Gliders: the chest item's canElytraFly/elytraFlightTick (flight + server start) and the client start check.
         "glider_mixins" to ", \"MixinGliderFlight\", \"MixinGliderStart\"",
         "glider_client_mixins" to ", \"MixinGliderClientStart\"",

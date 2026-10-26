@@ -188,6 +188,8 @@ tasks.processResources {
         // dev.golem.core.gametest.TestChunks: a 26.1 test waits until its whole plot is entity-ticking.
         "gametest_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinGameTestChunks\"" else "",
         "rail_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinMinecartRails\"" else "",
+        // 1.21.1 only: the world-exit unload spin (MixinChunkMapUnloadDrain).
+        "unload_mixins" to if (mcVersion == "1.21.1") ", \"MixinChunkMapUnloadDrain\"" else "",
         // Gliders: 26.1 has canGlide (covers the starts too); 1.21.1 asks the chest item at three points.
         "glider_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinGliderFlight\"" else ", \"MixinGliderFlight\", \"MixinGliderStart\"",
         "glider_client_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) "" else ", \"MixinGliderClientStart\"",
