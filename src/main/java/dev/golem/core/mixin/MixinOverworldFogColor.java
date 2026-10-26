@@ -21,8 +21,10 @@ public abstract class MixinOverworldFogColor {
 
     @ModifyReturnValue(method = "getBrightnessDependentFogColor", at = @At("RETURN"))
     private Vec3 golem$fogColor(Vec3 color) {
-        var level = Minecraft.getInstance().level;
-        return level != null && Skies.active(level) ? Skies.fogColor(level, color) : color;
+        var mc = Minecraft.getInstance();
+        var level = mc.level;
+        return level != null && Skies.active(level)
+                ? Skies.fogColor(level, color, mc.gameRenderer.getMainCamera().getPosition(), 0.0F) : color;
     }
 }
 *///?} else {

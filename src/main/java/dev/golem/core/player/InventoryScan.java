@@ -209,6 +209,12 @@ public final class InventoryScan<T> {
         return batch.size();
     }
 
+    /** Waits for the current resolve batch without draining pending edits or starting another batch. */
+    public void awaitResolution() {
+        var current = resolving;
+        current.join();
+    }
+
     /** Runs the application over this player's memo once, outside the cadence. */
     public void applyNow(Player player) {
         Memo<T> memo = memos.get(player.getUUID());
@@ -226,7 +232,7 @@ public final class InventoryScan<T> {
         }
     }
 
-    private static void offer(Player player, Slot slot, ItemStack stack) {
+    public static void offer(Player player, Slot slot, ItemStack stack) {
         if (slot.container != player.getInventory()) return;
         int index = slot.getContainerSlot();
         if (index < 0) return;
@@ -282,7 +288,7 @@ public final class InventoryScan<T> {
         return every <= 1 || Math.floorMod(player.level().getGameTime() + player.getId(), (long) every) == 0L;
     }
 
-    private void dispatch(MinecraftServer server) {
+    public void dispatch(MinecraftServer server) {
         if (!resolving.isDone()) return;
         if (stale) {
             stale = false;

@@ -205,7 +205,7 @@ public final class GuiCanvas {
         for (Op op : ops) {
             if (op.shader != null) {
                 Sky.Shader s = op.shader;
-                SkyShaders.drawGui(s.namespace(), s.name(), s.samplers(), op.blend, op.textures,
+                SkyShaders.drawGui(s.namespace(), s.name(), s.samplers(), op.blend, s.usesPremultipliedAlpha(), op.textures,
                         new Matrix4f(base).mul(op.local), op.params, op.v, op.vertices / 4);
             } else {
                 drawPlain(base, op, p);

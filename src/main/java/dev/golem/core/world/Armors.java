@@ -1,5 +1,18 @@
 package dev.golem.core.world;
 
+import dev.golem.core.Ids;
+//? if >=1.21 {
+import net.minecraft.core.component.DataComponents;
+//?}
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.item.Item;
+//? if >=26.1 {
+import net.minecraft.world.item.equipment.EquipmentAssets;
+//?}
+//? if >=26.1 {
+import net.minecraft.world.item.equipment.Equippable;
+//?}
+
 import net.minecraft.world.item.ItemStack;
 
 /**
@@ -50,6 +63,21 @@ public final class Armors {
             case BOOTS -> ArmorSlot.BOOTS;
             default -> null;
         };
+        *///?}
+    }
+
+    /** Humanoid equipment data for an ordinary item; pre-component targets retain their existing item form. */
+    public static Item.Properties equippable(
+            Item.Properties properties, ArmorSlot slot, String asset) {
+        //? if >=26.1 {
+        return properties.component(DataComponents.EQUIPPABLE,
+                Equippable.builder(equipmentSlot(slot))
+                        .setAsset(ResourceKey.create(
+                                EquipmentAssets.ROOT_ID,
+                                Ids.parse(asset)))
+                        .build());
+        //?} else {
+        /*return properties;
         *///?}
     }
 

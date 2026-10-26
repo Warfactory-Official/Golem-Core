@@ -45,6 +45,11 @@ public class RegistryObject<T> implements Supplier<T> {
         this(source.registryKey, source.key);
     }
 
+    /** A lazy reference to an existing registration, without declaring or replacing a value. */
+    public static <T> RegistryObject<T> reference(Registry<T> registry, ResourceKey<T> key) {
+        return new RegistryObject<>(registry::key, () -> key);
+    }
+
     /** The id ({@code namespace:path}) this object is registered under. */
     public
             //? if >=26.1 {

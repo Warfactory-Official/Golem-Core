@@ -1,7 +1,10 @@
 package dev.golem.core.rei;
 
+import dev.architectury.fluid.FluidStack;
+
 //? if rei {
 
+import dev.golem.core.fluid.FluidUnits;
 import dev.golem.core.viewer.Drawable;
 import dev.golem.core.viewer.Role;
 import dev.golem.core.viewer.SlotLayout;
@@ -9,8 +12,10 @@ import dev.golem.core.viewer.ViewerCategory;
 import me.shedaniel.rei.api.common.category.CategoryIdentifier;
 import me.shedaniel.rei.api.common.display.Display;
 import me.shedaniel.rei.api.common.entry.EntryIngredient;
-import me.shedaniel.rei.api.common.util.EntryIngredients;
+import me.shedaniel.rei.api.common.entry.EntryStack;
+import me.shedaniel.rei.api.common.util.EntryStacks;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.material.Fluid;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -31,7 +36,7 @@ public final class ReiDisplay<T> implements Display {
     static final class RecordedSlot implements SlotLayout.Slot {
         final Role role;
         final int x, y;
-        final List<ItemStack> stacks = new ArrayList<>();
+        final List<EntryStack<?>> entries = new ArrayList<>();
         Drawable background;
         int backgroundX, backgroundY;
         final List<SlotLayout.TooltipCallback> tooltips = new ArrayList<>();
@@ -44,7 +49,15 @@ public final class ReiDisplay<T> implements Display {
 
         @Override
         public SlotLayout.Slot addItemStacks(List<ItemStack> list) {
-            for (ItemStack stack : list) if (stack != null && !stack.isEmpty()) stacks.add(stack);
+            for (var stack : list) if (stack != null && !stack.isEmpty()) entries.add(EntryStacks.of(stack));
+            return this;
+        }
+
+        @Override
+        public SlotLayout.Slot addFluidStack(Fluid fluid, long milliBuckets) {
+            var amount = Math.multiplyExact(milliBuckets,
+                    FluidStack.bucketAmount() / FluidUnits.MB_PER_BUCKET);
+            entries.add(EntryStacks.of(fluid, amount));
             return this;
         }
 
@@ -91,8 +104,8 @@ public final class ReiDisplay<T> implements Display {
         List<RecordedSlot> all = new ArrayList<>(slots);
         all.addAll(invisible);
         for (RecordedSlot slot : all) {
-            if (slot.role == Role.INPUT) inputs.add(EntryIngredients.ofItemStacks(slot.stacks));
-            else if (slot.role == Role.OUTPUT) outputs.add(EntryIngredients.ofItemStacks(slot.stacks));
+            if (slot.role == Role.INPUT) inputs.add(EntryIngredient.of(slot.entries));
+            else if (slot.role == Role.OUTPUT) outputs.add(EntryIngredient.of(slot.entries));
         }
     }
 

@@ -178,6 +178,37 @@ public final class BiomeModifiers {
         }
     }
 
+    /** An explicit removal applied after spawn additions, with ids resolved only when biomes load. */
+    public record SpawnRemovalDeclaration(String namespace, String name, String biomes, List<String> entities) {}
+
+    private static final List<SpawnRemovalDeclaration> SPAWN_REMOVALS = Collections.synchronizedList(new ArrayList<>());
+
+    /** Removes only the named entity types from the selected biomes, on every loader. */
+    public static void removeSpawns(String namespace, String name, String biomes, List<String> entities) {
+        Models.requireId(namespace + ":" + name, "biome modifier");
+        Models.requireId(biomes.startsWith("#") ? biomes.substring(1) : biomes, "biome");
+        if (entities.isEmpty()) throw new DejsonException(name + " removes no entity spawn");
+        var removals = new JsonArray();
+        for (var entity : entities) {
+            Models.requireId(entity, "entity");
+            removals.add(entity);
+        }
+        for (var loader : new String[] {"neoforge", "forge"}) {
+            var modifier = new JsonObject();
+            modifier.addProperty("type", loader + ":remove_spawns");
+            modifier.addProperty("biomes", biomes);
+            modifier.add("entity_types", removals.deepCopy());
+            Data.declare("data/" + namespace + "/" + loader + "/biome_modifier/" + name + ".json", modifier);
+        }
+        SPAWN_REMOVALS.add(new SpawnRemovalDeclaration(namespace, name, biomes, List.copyOf(entities)));
+    }
+
+    public static List<SpawnRemovalDeclaration> declaredSpawnRemovals() {
+        synchronized (SPAWN_REMOVALS) {
+            return List.copyOf(SPAWN_REMOVALS);
+        }
+    }
+
     /** Everything declared so far, in declaration order. */
     public static List<Declaration> declared() {
         synchronized (DECLARED) {

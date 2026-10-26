@@ -11,8 +11,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class ItemModelPropertiesTest {
     @Test
     void propertyRetainsCallbackAndValueCodec() {
-        ItemModelProperties.VariantProperty registered =
-                new ItemModelProperties.VariantProperty(stack -> 37);
+        ItemModelProperties.SelectProperty registered =
+                new ItemModelProperties.SelectProperty(stack -> "37");
 
         assertEquals("37", registered.get(ItemStack.EMPTY, null, null, 0, null));
         assertEquals("37", registered.valueCodec()

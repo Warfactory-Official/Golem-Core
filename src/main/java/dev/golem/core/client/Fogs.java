@@ -1,5 +1,12 @@
 package dev.golem.core.client;
 
+import net.minecraft.client.Minecraft;
+//? if >=26.1 {
+import net.minecraft.client.renderer.fog.FogData;
+//?}
+import net.minecraft.tags.FluidTags;
+import net.minecraft.world.level.material.FogType;
+
 import dev.golem.core.hook.Hook;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -41,6 +48,23 @@ public final class Fogs {
 
     }
 
+    /** Optional metadata on a loader RenderFog event, bound only by its native construction path. */
+    public interface CallerDistance {
+        float golem$callerDistanceBlocks();
+        void golem$callerDistanceBlocks(float blocks);
+    }
+
+    /** Attaches the real caller distance before the unchanged loader hook posts this same event. */
+    public static <T> T bindCallerDistance(T event, float blocks) {
+        ((CallerDistance) event).golem$callerDistanceBlocks(blocks);
+        return event;
+    }
+
+    /** NaN means an external/manual event has no native caller metadata and remains its poster's. */
+    private static float callerDistanceBlocks(Object event) {
+        return ((CallerDistance) event).golem$callerDistanceBlocks();
+    }
+
     /** Every listener, in phase order; register through the {@code on...} method or directly, with a phase. */
     public static final Hook<Modifier> MODIFIERS = Hook.notifying();
     private static boolean hooked;
@@ -61,11 +85,13 @@ public final class Fogs {
                 });
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(net.neoforged.bus.api.EventPriority.LOW,
                 (net.neoforged.neoforge.client.event.ViewportEvent.RenderFog event) -> {
+                    float blocks = callerDistanceBlocks(event);
+                    if (Float.isNaN(blocks)) return;
                     Entity camera = net.minecraft.client.Minecraft.getInstance().getCameraEntity();
-                    float far = far(camera, renderDistanceBlocks());
+                    float far = far(camera, blocks);
                     if (Float.isNaN(far)) return;
                     //? if >=26.1 {
-                    applyDistances(event.getFogData(), camera);
+                    applyDistances(event.getFogData(), camera, blocks);
                     //?} else {
                     /*event.setNearPlaneDistance(0.0F);
                     event.setFarPlaneDistance(far);
@@ -85,8 +111,10 @@ public final class Fogs {
                 });
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(net.minecraftforge.eventbus.api.EventPriority.LOW,
                 (net.minecraftforge.client.event.ViewportEvent.RenderFog event) -> {
+                    float blocks = callerDistanceBlocks(event);
+                    if (Float.isNaN(blocks)) return;
                     Entity camera = net.minecraft.client.Minecraft.getInstance().getCameraEntity();
-                    float far = far(camera, renderDistanceBlocks());
+                    float far = far(camera, blocks);
                     if (Float.isNaN(far)) return;
                     event.setNearPlaneDistance(0.0F);
                     event.setFarPlaneDistance(far);
@@ -102,9 +130,10 @@ public final class Fogs {
     }
 
     //? if >=26.1 {
-    /** 26.1: writes the active modifiers' distances into vanilla's fog data (NeoForge's event and Fabric's mixin). */
-    public static void applyDistances(net.minecraft.client.renderer.fog.FogData data, Entity camera) {
-        float far = far(camera, renderDistanceBlocks());
+    /** Writes the active modifiers' distances using this invocation's caller distance, in blocks. */
+    public static void applyDistances(FogData data, Entity camera,
+                                      float renderDistanceBlocks) {
+        float far = far(camera, renderDistanceBlocks);
         if (Float.isNaN(far)) return;
         data.environmentalStart = 0.0F;
         data.environmentalEnd = far;
@@ -112,6 +141,17 @@ public final class Fogs {
         data.cloudEnd = Math.min(data.cloudEnd, far);
     }
     //?}
+
+    /** Whether the client's camera sits in water (26.1 fluid-in-camera; earlier the camera entity's eye). */
+    public static boolean cameraInWater() {
+        //? if >=26.1 {
+        return Minecraft.getInstance().gameRenderer.getMainCamera().getFluidInCamera()
+                == FogType.WATER;
+        //?} else {
+        /*var camera = Minecraft.getInstance().getCameraEntity();
+        return camera != null && camera.isEyeInFluid(FluidTags.WATER);
+        *///?}
+    }
 
     public static boolean active(Entity camera) {
         if (MODIFIERS.isEmpty() || camera == null) return false;

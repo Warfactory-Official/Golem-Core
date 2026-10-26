@@ -1,5 +1,9 @@
 package dev.golem.core.world;
 
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.animal.Animal;
+import net.minecraft.world.entity.monster.Monster;
+
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Mob;
 
@@ -243,6 +247,10 @@ public final class Spawns {
     public enum Rule {
         /** {@code Monster.checkMonsterSpawnRules}: not peaceful, dark enough, a valid block below. */
         MONSTER,
+        /** Chunk generation bypasses the animal rule; later natural spawns require grass and light. */
+        GENERATION_ANIMAL,
+        /** Chunk generation bypasses monster difficulty and darkness checks. */
+        GENERATION_MONSTER,
         /** {@code Mob.checkMobSpawnRules}: a valid block below. */
         MOB,
         /** A liquid below the spawn position (1.7 {@code SpawnerAnimals} for water creatures). */
@@ -288,6 +296,14 @@ public final class Spawns {
     @SuppressWarnings("unchecked")
     private static <T extends Mob> net.minecraft.world.entity.SpawnPlacements.SpawnPredicate<T> predicate(Rule rule) {
         return switch (rule) {
+            case GENERATION_ANIMAL -> (type, level, spawnReason, pos, random) -> reason(spawnReason) == Reason.CHUNK_GENERATION
+                    || Animal.checkAnimalSpawnRules(
+                            (EntityType<? extends Animal>)
+                                    (EntityType<?>) type, level, spawnReason, pos, random);
+            case GENERATION_MONSTER -> (type, level, spawnReason, pos, random) -> reason(spawnReason) == Reason.CHUNK_GENERATION
+                    || Monster.checkMonsterSpawnRules(
+                            (EntityType<? extends Monster>)
+                                    (EntityType<?>) type, level, spawnReason, pos, random);
             case MONSTER -> (type, level, reason, pos, random) -> net.minecraft.world.entity.monster.Monster.checkMonsterSpawnRules(
                     (net.minecraft.world.entity.EntityType<? extends net.minecraft.world.entity.monster.Monster>)
                             (net.minecraft.world.entity.EntityType<?>) type, level, reason, pos, random);

@@ -291,6 +291,10 @@ fun convertLegacyLootTerms(node: Any?): Boolean {
         is MutableMap<*, *> -> {
             @Suppress("UNCHECKED_CAST")
             val map = node as MutableMap<String, Any?>
+            if (map["type"] == "minecraft:loot_table" && map.containsKey("value")) {
+                map["name"] = map.remove("value")
+                changed = true
+            }
             val legacy = mapOf("attacker" to "killer", "direct_attacker" to "direct_killer", "attacking_player" to "killer_player")
             val target = map["entity"]
             if (target is String && legacy.containsKey(target)) {

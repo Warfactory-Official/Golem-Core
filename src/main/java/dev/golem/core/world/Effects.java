@@ -1,5 +1,6 @@
 package dev.golem.core.world;
 
+import dev.golem.core.hook.Hook;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.Entity;
@@ -9,6 +10,25 @@ import net.minecraft.world.entity.LivingEntity;
 public final class Effects {
 
     private Effects() {}
+
+    @FunctionalInterface
+    public interface Removed {
+        void removed(LivingEntity entity, MobEffectInstance effect);
+    }
+
+    /** Natural expiry and explicit removal, after vanilla has removed the effect. Refreshing does not fire it. */
+    public static final Hook<Removed> REMOVED = Hook.of(listeners -> (entity, effect) -> {
+        for (var listener : listeners) listener.removed(entity, effect);
+    });
+
+    public static void onRemoved(Removed listener) {
+        REMOVED.register(listener);
+    }
+
+    /** Called by the vanilla living-effect removal bridge. */
+    public static void removed(LivingEntity entity, MobEffectInstance effect) {
+        REMOVED.invoker().removed(entity, effect);
+    }
 
     /**
      * The strength effect, whatever this version calls it.

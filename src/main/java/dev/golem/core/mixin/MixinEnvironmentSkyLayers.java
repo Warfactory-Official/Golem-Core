@@ -1,5 +1,7 @@
 package dev.golem.core.mixin;
 
+import dev.golem.core.client.Clouds;
+
 //? if >=26.1 {
 import dev.golem.core.world.Skies;
 import net.minecraft.world.attribute.EnvironmentAttributeSystem;
@@ -14,7 +16,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * 26.1's half of {@link Skies#addModifier}: one time-based layer per sky attribute, appended after the level's
  * default layers (dimension, biome, timelines, weather) on both the server and the client level.
  *
- * <p>Why a mixin (AGENTS.md section 7): (1) the attribute system is built inside {@code ServerLevel}/{@code
+ * <p>Construction constraints: (1) the attribute system is built inside {@code ServerLevel}/{@code
  * ClientLevel} construction with no vanilla extension point; (2) NeoForge 26.1 and Fabric offer no event to add an
  * environment attribute layer; (3) widening the builder would still need a call at construction time. The inject
  * is one TAIL call on {@code addDefaultLayers}. The layers return their input unchanged unless a modifier is active
@@ -36,17 +38,19 @@ public abstract class MixinEnvironmentSkyLayers {
     @Inject(method = "addDefaultLayers(Lnet/minecraft/world/attribute/EnvironmentAttributeSystem$Builder;Lnet/minecraft/world/level/Level;)V",
             at = @At("TAIL"))
     private static void golem$skyModifiers(EnvironmentAttributeSystem.Builder builder, Level level, CallbackInfo ci) {
+        builder.addTimeBasedLayer(EnvironmentAttributes.SUN_ANGLE, (value, tick) ->
+                Skies.active(level) ? Skies.sunAngle(level, value) : value);
         builder.addTimeBasedLayer(EnvironmentAttributes.SKY_LIGHT_LEVEL, (value, tick) -> {
             if (!Skies.active(level)) return value;
             float daylight = (value - 4F) / 11F;
             return 4F + 11F * Skies.daylight(level, daylight);
         });
-        builder.addTimeBasedLayer(EnvironmentAttributes.SKY_COLOR, (value, tick) ->
-                Skies.active(level) ? Skies.argb(value, c -> Skies.skyColor(level, c)) : value);
-        builder.addTimeBasedLayer(EnvironmentAttributes.FOG_COLOR, (value, tick) ->
-                Skies.active(level) ? Skies.argb(value, c -> Skies.fogColor(level, c)) : value);
+        builder.addPositionalLayer(EnvironmentAttributes.SKY_COLOR, (value, pos, biomes) ->
+                Skies.active(level) ? Skies.argb(value, c -> Skies.skyColor(level, c, pos, 0.0F)) : value);
+        builder.addPositionalLayer(EnvironmentAttributes.FOG_COLOR, (value, pos, biomes) ->
+                Skies.active(level) ? Skies.argb(value, c -> Skies.fogColor(level, c, pos, 0.0F)) : value);
         builder.addTimeBasedLayer(EnvironmentAttributes.CLOUD_COLOR, (value, tick) ->
-                Skies.active(level) ? Skies.argb(value, c -> Skies.cloudColor(level, c)) : value);
+                Skies.active(level) ? Skies.cloudColorArgb(level, value) : value);
         builder.addTimeBasedLayer(EnvironmentAttributes.STAR_BRIGHTNESS, (value, tick) ->
                 Skies.active(level) ? Skies.starBrightness(level, value) : value);
         // the factor is pre-26.1's sun-brightness * 0.95 + 0.05 and the colour follows the same brightness (Skies)
@@ -62,7 +66,7 @@ public abstract class MixinEnvironmentSkyLayers {
                 dev.golem.core.client.Clouds.cloudColorAttribute(level, value));
         //? if neoforge {
         builder.addTimeBasedLayer(net.neoforged.neoforge.common.world.NeoForgeEnvironmentAttributes.CUSTOM_CLOUDS,
-                (value, tick) -> dev.golem.core.client.Clouds.has(level)
+                (value, tick) -> Clouds.replaces(level)
                         ? dev.golem.core.Ids.of(dev.golem.core.client.Clouds.NAMESPACE, dev.golem.core.client.Clouds.PATH)
                         : value);
         // dev.golem.core.client.Precipitation: Golem's CustomWeatherEffectRenderer for a registered level

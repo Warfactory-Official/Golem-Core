@@ -425,8 +425,7 @@ public final class RecipeTables {
             > {
 
         final Table<T> table;
-        final T value;
-        //? if <1.20.5
+        final T value;        //? if <1.20.5
         //private final net.minecraft.resources.ResourceLocation id;
 
         TableRecipe(Table<T> table, T value
@@ -437,6 +436,11 @@ public final class RecipeTables {
             this.value = value;
             //? if <1.20.5
             //this.id = id;
+        }
+
+        /** The table's own row behind this recipe-manager entry. */
+        public T value() {
+            return value;
         }
 
         @Override

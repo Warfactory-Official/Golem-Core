@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
  * Fabric's half of {@link Fogs}: the final fog colour and the linear fog distance, where Forge-like loaders fire
  * {@code ViewportEvent.ComputeFogColor} and {@code ViewportEvent.RenderFog}.
  *
- * <p>Why a mixin (AGENTS.md section 7): (1) vanilla computes both inside {@code FogRenderer} with no extension point
+ * <p>Why a mixin: (1) vanilla computes both inside {@code FogRenderer} with no extension point
  * (26.1's environment attributes feed the colour <i>before</i> the sky, weather and fluid blend, and the legacy
  * behaviour changes the final colour); (2) Fabric API has no fog event (Forge and NeoForge use their events, so this
  * class is listed only in {@code golemcore.fabric.mixins.json}); (3) widening cannot help, the values must change inside
@@ -22,7 +22,11 @@ import org.spongepowered.asm.mixin.injection.Inject;
 @Mixin(net.minecraft.client.renderer.fog.FogRenderer.class)
 public abstract class MixinFogRendererModifiers {
 
+    //? if fabric {
+    /*@Inject(method = "setupFog", at = @At("RETURN"), order = 900)
+    *///?} else {
     @Inject(method = "setupFog", at = @At("RETURN"))
+    //?}
     private void golem$fogs(net.minecraft.client.Camera camera, int renderDistanceInChunks,
                             net.minecraft.client.DeltaTracker deltaTracker, float darkenWorldAmount,
                             net.minecraft.client.multiplayer.ClientLevel level,
@@ -32,7 +36,7 @@ public abstract class MixinFogRendererModifiers {
         net.minecraft.client.renderer.fog.FogData data = cir.getReturnValue();
         Vec3 color = Fogs.color(entity, new Vec3(data.color.x(), data.color.y(), data.color.z()));
         data.color.set((float) color.x, (float) color.y, (float) color.z, data.color.w());
-        Fogs.applyDistances(data, entity);
+        Fogs.applyDistances(data, entity, renderDistanceInChunks * 16.0F);
     }
 }
 //?} else {
@@ -63,7 +67,7 @@ public abstract class MixinFogRendererModifiers {
                                           boolean thickFog, float partialTick,
                                           org.spongepowered.asm.mixin.injection.callback.CallbackInfo ci) {
         Entity entity = Minecraft.getInstance().getCameraEntity();
-        float far = Fogs.far(entity, Fogs.renderDistanceBlocks());
+        float far = Fogs.far(entity, farPlaneDistance);
         if (Float.isNaN(far)) return;
         com.mojang.blaze3d.systems.RenderSystem.setShaderFogStart(0.0F);
         com.mojang.blaze3d.systems.RenderSystem.setShaderFogEnd(far);

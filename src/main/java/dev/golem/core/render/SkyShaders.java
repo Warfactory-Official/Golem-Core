@@ -1,5 +1,7 @@
 package dev.golem.core.render;
 
+import java.util.Locale;
+
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -91,9 +93,9 @@ final class SkyShaders {
     }
 
     /** One sky draw; {@code v} holds 5 floats per vertex (position before {@code local}, UV), {@code quads} quads. */
-    static void draw(String namespace, String name, int samplers, Sky.Blend blend, boolean cull, String[] textures,
+    static void draw(String namespace, String name, int samplers, Sky.Blend blend, boolean cull, boolean premultiplied, String[] textures,
                      Matrix4f local, float[] params, float[] v, int quads) {
-        render(namespace, name, samplers, blend, cull, false, textures, local, params, v, quads);
+        render(namespace, name, samplers, blend, cull, false, premultiplied, textures, local, params, v, quads);
         count(DRAWS, namespace, name);
     }
 
@@ -101,9 +103,9 @@ final class SkyShaders {
      * One {@link GuiCanvas} draw: as {@link #draw}, never culled; on 26.1 into the canvas' picture-in-picture texture with
      * the picture blend ({@code blend(.., true)}), before 26.1 straight onto the screen with 1.7's blend.
      */
-    static void drawGui(String namespace, String name, int samplers, Sky.Blend blend, String[] textures,
+    static void drawGui(String namespace, String name, int samplers, Sky.Blend blend, boolean premultiplied, String[] textures,
                         Matrix4f local, float[] params, float[] v, int quads) {
-        render(namespace, name, samplers, blend, false, true, textures, local, params, v, quads);
+        render(namespace, name, samplers, blend, false, true, premultiplied, textures, local, params, v, quads);
         count(GUI_DRAWS, namespace, name);
     }
 
@@ -116,6 +118,10 @@ final class SkyShaders {
     /** 1.7's additive colour factors, the coverage left as it is (see {@link #blend}). */
     private static final BlendFunction PICTURE_ADDITIVE = new BlendFunction(SourceFactor.SRC_ALPHA, DestFactor.ONE,
             SourceFactor.ZERO, DestFactor.ONE);
+    private static final BlendFunction PREMULTIPLIED_ADDITIVE = new BlendFunction(SourceFactor.ONE, DestFactor.ONE,
+            SourceFactor.ONE, DestFactor.ZERO);
+    private static final BlendFunction PICTURE_PREMULTIPLIED_ADDITIVE = new BlendFunction(SourceFactor.ONE, DestFactor.ONE,
+            SourceFactor.ZERO, DestFactor.ONE);
 
     /**
      * The blend of a draw. In the sky ({@code picture} false): 1.7's colour factors with vanilla's alpha factors
@@ -126,6 +132,14 @@ final class SkyShaders {
      * drawing the same sequence onto the screen as 1.7 did, up to 8-bit rounding.
      */
     static BlendFunction blend(Sky.Blend blend, boolean picture) {
+        return blend(blend, picture, false);
+    }
+
+    private static BlendFunction blend(Sky.Blend blend, boolean picture, boolean premultiplied) {
+        if (premultiplied) {
+            if (blend == Sky.Blend.ALPHA) return BlendFunction.TRANSLUCENT_PREMULTIPLIED_ALPHA;
+            return picture ? PICTURE_PREMULTIPLIED_ADDITIVE : PREMULTIPLIED_ADDITIVE;
+        }
         if (picture) return blend == Sky.Blend.ALPHA ? PICTURE_ALPHA : PICTURE_ADDITIVE;
         return blend == Sky.Blend.ALPHA ? BLEND_ALPHA : BlendFunction.OVERLAY;
     }
@@ -138,18 +152,19 @@ final class SkyShaders {
     private static int slotBytes;
     private static int slot;
 
-    private static RenderPipeline pipeline(String namespace, String name, int samplers, Sky.Blend blend, boolean cull,
-                                           boolean picture) {
-        String key = namespace + ":" + name + "|" + blend + "|" + cull + "|" + picture;
+    static RenderPipeline pipeline(String namespace, String name, int samplers, Sky.Blend blend, boolean cull,
+                                   boolean picture, boolean premultiplied) {
+        String key = namespace + ":" + name + "|" + blend + "|" + cull + "|" + picture + "|" + premultiplied;
         return PIPELINES.computeIfAbsent(key, k -> {
             RenderPipeline.Builder builder = RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET)
                     .withLocation(dev.golem.core.Ids.of(namespace, "pipeline/golem_sky/" + name + "_"
-                            + blend.name().toLowerCase(java.util.Locale.ROOT) + (cull ? "" : "_no_cull") + (picture ? "_gui" : "")))
+                            + blend.name().toLowerCase(Locale.ROOT) + (cull ? "" : "_no_cull") + (picture ? "_gui" : "")
+                            + (premultiplied ? "_premultiplied" : "")))
                     .withVertexShader(dev.golem.core.Ids.of("golemcore", "core/sky_shader"))
                     .withFragmentShader(dev.golem.core.Ids.of(namespace, "core/" + name))
                     .withShaderDefine("GOLEM_SKY_UBO")
                     .withUniform("GolemSkyShader", UniformType.UNIFORM_BUFFER)
-                    .withColorTargetState(new ColorTargetState(blend(blend, picture)))
+                    .withColorTargetState(new ColorTargetState(blend(blend, picture, premultiplied)))
                     .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.QUADS)
                     .withCull(cull);
             for (int i = 0; i < samplers; i++) builder.withSampler("Sampler" + i);
@@ -177,8 +192,8 @@ final class SkyShaders {
     }
 
     private static void render(String namespace, String name, int samplers, Sky.Blend blend, boolean cull, boolean picture,
-                               String[] textures, Matrix4f local, float[] params, float[] v, int quads) {
-        RenderPipeline pipeline = pipeline(namespace, name, samplers, blend, cull, picture);
+                               boolean premultiplied, String[] textures, Matrix4f local, float[] params, float[] v, int quads) {
+        RenderPipeline pipeline = pipeline(namespace, name, samplers, blend, cull, picture, premultiplied);
         BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
         for (int i = 0; i < quads * 4; i++) {
             int o = i * 5;
@@ -236,6 +251,7 @@ final class SkyShaders {
     //?} else {
     /*private static final Map<String, ShaderInstance> PROGRAMS = new ConcurrentHashMap<>();
     private static Sky.Blend applying = Sky.Blend.ALPHA;
+    private static boolean applyingPremultiplied;
 
     /^* The program JSON {@code ShaderInstance} reads; the fragment is the mod's {@code <namespace>:shaders/core/<name>.fsh}. ^/
     private static String programJson(String namespace, String name, int samplers) {
@@ -277,14 +293,15 @@ final class SkyShaders {
 
     private static void applyBlend() {
         RenderSystem.enableBlend();
-        RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA,
+        RenderSystem.blendFuncSeparate(applyingPremultiplied ? GlStateManager.SourceFactor.ONE : GlStateManager.SourceFactor.SRC_ALPHA,
                 applying == Sky.Blend.ALPHA ? GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA : GlStateManager.DestFactor.ONE,
-                GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
+                GlStateManager.SourceFactor.ONE, applyingPremultiplied && applying == Sky.Blend.ALPHA
+                        ? GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA : GlStateManager.DestFactor.ZERO);
     }
 
     /^* {@code picture} is 26.1's; before it every draw goes straight onto the screen. ^/
     private static void render(String namespace, String name, int samplers, Sky.Blend blend, boolean cull, boolean picture,
-                               String[] textures, Matrix4f local, float[] params, float[] v, int quads) {
+                               boolean premultiplied, String[] textures, Matrix4f local, float[] params, float[] v, int quads) {
         ShaderInstance program = program(namespace, name, samplers);
         for (int i = 0; i < samplers; i++) {
             ResourceLocation id = dev.golem.core.Ids.parse(textures[i]);
@@ -300,6 +317,7 @@ final class SkyShaders {
         Uniform paramsUniform = program.getUniform("GolemSkyParams");
         if (paramsUniform != null) paramsUniform.set(params);
         applying = blend;
+        applyingPremultiplied = premultiplied;
         RenderSystem.setShader(() -> program);
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
         applyBlend();

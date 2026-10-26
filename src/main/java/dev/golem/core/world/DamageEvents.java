@@ -45,14 +45,16 @@ public final class DamageEvents {
         }
     }
 
-    private static DamageEvent event(LivingEntity entity, DamageSource source, float amount) {
+    /** Captures the active piercing context without applying damage. */
+    public static DamageEvent event(LivingEntity entity, DamageSource source, float amount) {
         Piercing piercing = PIERCING.get();
         return new DamageEvent(entity, source, amount,
                 piercing == null ? 0F : piercing.threshold,
                 piercing == null ? 0F : piercing.resistance);
     }
 
-    private static void dispatchAttack(DamageEvent event) {
+    /** Runs attack filters without invoking hurt filters or native damage. */
+    public static void dispatchAttack(DamageEvent event) {
         for (Consumer<DamageEvent> handler : ATTACK) handler.accept(event);
     }
 

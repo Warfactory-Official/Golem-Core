@@ -1,5 +1,7 @@
 package dev.golem.core.data;
 
+import net.minecraft.world.item.Item;
+
 import com.mojang.serialization.Codec;
 import dev.golem.core.GolemCore;
 import dev.golem.core.Ids;
@@ -56,7 +58,7 @@ public final class GolemComponent<T> {
     // The registered type may hold a different value class than T: a component whose natural value
     // is mutable (an ItemStack) is stored as an immutable wrapper, since the platform validates that
     // component values implement equals/hashCode. toStored/fromStored bridge the two; identity by default.
-    private final RegistryObject<DataComponentType<Object>> component;
+    private final Supplier<DataComponentType<Object>> component;
     private final java.util.function.Function<T, Object> toStored;
     private final java.util.function.Function<Object, T> fromStored;
     //?} else {
@@ -81,7 +83,8 @@ public final class GolemComponent<T> {
         // The registry is named on first use, as every Golem register's is (see RegistryObject).
         DeferredRegister<DataComponentType<?>> register = REGISTERS.computeIfAbsent(namespace,
                 ns -> DeferredRegister.create(() -> Registries.DATA_COMPONENT_TYPE, ns));
-        component = register.register(name, () -> (DataComponentType) componentType(storedCodec.get()));
+        component = memoize(() -> (DataComponentType) componentType(storedCodec.get()));
+        register.register(name, component);
         this.toStored = (java.util.function.Function) toStored;
         this.fromStored = (java.util.function.Function) fromStored;
         //?} else {
@@ -90,7 +93,7 @@ public final class GolemComponent<T> {
         *///?}
     }
 
-    /** Memoises {@code source}; a race computes the same codec twice, which is harmless. */
+    /** Creates one value even when an item factory and the component registry resolve it concurrently. */
     private static <C> Supplier<C> memoize(Supplier<C> source) {
         return new Supplier<>() {
             private volatile C value;
@@ -99,7 +102,10 @@ public final class GolemComponent<T> {
             public C get() {
                 C resolved = value;
                 if (resolved == null) {
-                    value = resolved = Objects.requireNonNull(source.get(), "codec");
+                    synchronized (this) {
+                        resolved = value;
+                        if (resolved == null) value = resolved = Objects.requireNonNull(source.get());
+                    }
                 }
                 return resolved;
             }
@@ -199,12 +205,28 @@ public final class GolemComponent<T> {
     //? if >=1.21.1 {
     /**
      * Native component handle for integrations that explicitly consume vanilla component types. Its value
-     * class is the stored one, which differs from {@code T} only for {@link #itemStack}.
+     * class is the stored one, which differs from {@code T} only for {@link #itemStack}. The same native type
+     * can be used by item properties before its registry is filled.
      */
     public DataComponentType<T> type() {
         return (DataComponentType) component.get();
     }
-    //?}
+
+    /**
+     * Applies this component with {@code value} to item {@code properties}; below 1.21.1 components do not exist
+     * and the properties pass through unchanged.
+     */
+    public Item.Properties appliedTo(
+            Item.Properties properties, T value) {
+        return properties.component(type(), value);
+    }
+    //?} else {
+    /*// Below 1.21.1 components do not exist; the properties pass through unchanged.
+    public Item.Properties appliedTo(
+            Item.Properties properties, T value) {
+        return properties;
+    }
+    *///?}
 
     /**
      * A component holding one stack, including all of its item data.

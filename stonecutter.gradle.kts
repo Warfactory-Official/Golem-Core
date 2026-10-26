@@ -55,6 +55,10 @@ stonecutter parameters {
         string(current.parsed < "26.1") {
             replace("PayloadTypeRegistry.clientboundPlay()", "PayloadTypeRegistry.playS2C()")
             replace("PayloadTypeRegistry.serverboundPlay()", "PayloadTypeRegistry.playC2S()")
+            replace("PayloadTypeRegistry.clientboundConfiguration()", "PayloadTypeRegistry.configurationS2C()")
+            replace("PayloadTypeRegistry.serverboundConfiguration()", "PayloadTypeRegistry.configurationC2S()")
+            replace("configurationContext.packetListener()", "configurationContext.networkHandler()")
+            replace("FabricServerConfigurationPacketListenerImpl", "FabricServerConfigurationNetworkHandler")
         }
         string(current.parsed < "26.1") {
             replace("BuiltInRegistries.ITEM.getValue(Ids.parse(", "BuiltInRegistries.ITEM.get(Ids.parse(")

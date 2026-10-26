@@ -20,7 +20,8 @@ public abstract class MixinLegacyFabricGravity {
 
     @ModifyConstant(method = "travel", constant = @Constant(doubleValue = 0.08D))
     private double golem$gravity(double original) {
-        return Physics.gravity((LivingEntity) (Object) this).getValue();
+        var entity = (LivingEntity) (Object) this;
+        return Physics.effectiveGravity(entity, Physics.gravity(entity).getValue());
     }
 }
 *///?}

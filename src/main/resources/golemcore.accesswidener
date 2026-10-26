@@ -1,4 +1,8 @@
 accessWidener v2 official
+accessible field net/minecraft/client/Minecraft rightClickDelay I
+accessible field net/minecraft/server/network/ServerGamePacketListenerImpl awaitingPositionFromClient Lnet/minecraft/world/phys/Vec3;
+accessible field net/minecraft/client/particle/ParticleEngine particles Ljava/util/Map;
+accessible field net/minecraft/client/particle/ParticleEngine particlesToAdd Ljava/util/Queue;
 accessible field net/minecraft/client/renderer/item/properties/select/SelectItemModelProperties ID_MAPPER Lnet/minecraft/util/ExtraCodecs$LateBoundIdMapper;
 # Fabric GameTest API exposes this field through its own class tweaker, but that widener is not
 # inherited by Core's compile classpath. The modern Fabric bridge reads the current dynamic registry.
@@ -22,3 +26,49 @@ mutable field net/minecraft/world/entity/ai/attributes/RangedAttribute maxValue 
 accessible field net/minecraft/client/multiplayer/PlayerInfo skinLookup Ljava/util/function/Supplier;
 # RecipeTables.removeListedRecipes: recipe_removals take any recipe out of the server's recipe manager; 26.1 has no public setter.
 accessible field net/minecraft/world/item/crafting/RecipeManager recipes Lnet/minecraft/world/item/crafting/RecipeMap;
+# War-behemoth yaw pull (26.1 only): nudge the active interpolation's yaw endpoint without restarting position/pitch.
+accessible class net/minecraft/world/entity/InterpolationHandler$InterpolationData
+accessible field net/minecraft/world/entity/InterpolationHandler interpolationData Lnet/minecraft/world/entity/InterpolationHandler$InterpolationData;
+accessible field net/minecraft/world/entity/InterpolationHandler$InterpolationData yRot F
+
+# Chunks.loadEntityTicking: promote the caller's ticket before waiting for the visible holder's entity future.
+accessible method net/minecraft/server/level/ServerChunkCache runDistanceManagerUpdates ()Z
+accessible method net/minecraft/server/level/ServerChunkCache getVisibleChunkIfPresent (J)Lnet/minecraft/server/level/ChunkHolder;
+
+# Private state exposed to the GameTest and living-travel facades.
+accessible field net/minecraft/gametest/framework/GameTestHelper testInfo Lnet/minecraft/gametest/framework/GameTestInfo;
+accessible field net/minecraft/world/entity/LivingEntity jumping Z
+
+accessible field com/mojang/blaze3d/audio/Channel source I
+accessible field net/minecraft/client/renderer/LevelRenderer skyRenderer Lnet/minecraft/client/renderer/SkyRenderer;
+accessible field net/minecraft/client/renderer/SkyRenderer starBuffer Lcom/mojang/blaze3d/buffers/GpuBuffer;
+accessible field com/mojang/blaze3d/opengl/GlBuffer handle I
+
+accessible class com/mojang/blaze3d/opengl/GlRenderPass
+
+# RenderOps.terrainBusy reads discovery and leased buffers beyond the public compile-queue count.
+accessible field net/minecraft/client/renderer/SectionOcclusionGraph needsFullUpdate Z
+accessible field net/minecraft/client/renderer/SectionOcclusionGraph fullUpdateTask Ljava/util/concurrent/Future;
+accessible field net/minecraft/client/renderer/SectionOcclusionGraph currentGraph Ljava/util/concurrent/atomic/AtomicReference;
+accessible field net/minecraft/client/renderer/SectionOcclusionGraph needsFrustumUpdate Ljava/util/concurrent/atomic/AtomicBoolean;
+accessible class net/minecraft/client/renderer/SectionOcclusionGraph$GraphState
+accessible class net/minecraft/client/renderer/SectionOcclusionGraph$GraphEvents
+accessible field net/minecraft/client/renderer/SectionBufferBuilderPool freeBuffers Ljava/util/concurrent/ArrayBlockingQueue;
+
+accessible field net/minecraft/world/entity/ai/goal/UseItemGoal item Lnet/minecraft/world/item/ItemStack;
+accessible field net/minecraft/world/entity/Entity stuckSpeedMultiplier Lnet/minecraft/world/phys/Vec3;
+accessible field net/minecraft/client/particle/Particle x D
+accessible field net/minecraft/client/particle/Particle y D
+accessible field net/minecraft/client/particle/Particle z D
+accessible class net/minecraft/world/entity/animal/fox/Fox$SleepGoal
+accessible class net/minecraft/world/entity/animal/fox/Fox$FoxBehaviorGoal
+accessible field net/minecraft/world/entity/animal/fox/Fox$SleepGoal countdown I
+accessible method net/minecraft/world/entity/animal/fox/Fox$FoxBehaviorGoal hasShelter ()Z
+accessible method net/minecraft/world/entity/animal/fox/Fox$FoxBehaviorGoal alertable ()Z
+accessible field net/minecraft/world/entity/InterpolationHandler previousTickPosition Lnet/minecraft/world/phys/Vec3;
+accessible field net/minecraft/world/entity/InterpolationHandler previousTickRot Lnet/minecraft/world/phys/Vec2;
+accessible field net/minecraft/world/entity/InterpolationHandler$InterpolationData steps I
+accessible field net/minecraft/world/entity/InterpolationHandler$InterpolationData position Lnet/minecraft/world/phys/Vec3;
+accessible field net/minecraft/world/entity/InterpolationHandler$InterpolationData xRot F
+accessible field net/minecraft/client/gui/components/ChatComponent allMessages Ljava/util/List;
+accessible field net/minecraft/client/gui/components/BossHealthOverlay events Ljava/util/Map;

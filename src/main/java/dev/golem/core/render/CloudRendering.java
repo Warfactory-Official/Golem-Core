@@ -1,5 +1,14 @@
 package dev.golem.core.render;
 
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.PoseStack;
+//? if fabric && <26.1 {
+/*import net.fabricmc.fabric.api.client.rendering.v1.DimensionRenderingRegistry;
+*///?}
+import net.minecraft.client.CloudStatus;
+import net.minecraft.world.phys.Vec3;
+import org.joml.Matrix4f;
+
 import dev.golem.core.client.Clouds;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -10,22 +19,10 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
 
 /**
- * Client half of {@link Clouds}: installs each node's hook and draws a registered level's layers through that node's own
- * vanilla cloud renderer, so a layer looks like vanilla's clouds on the same node, only at the layer's height, colour,
- * alpha and texture position.
- *
- * <ul>
- *   <li>26.1: one vanilla {@code CloudRenderer} per layer index (its mesh cache, uniform ring and texel buffer are per
- *       instance, so layers drawn in one frame never overwrite each other's buffers), loaded from the same
- *       {@code clouds.png} and reloaded with the resources. Each is called as vanilla calls its own, with
- *       {@code gameTime} and the partial tick 0 so that vanilla's drift is not added; {@code endFrame} rotates its uniform
- *       ring after the draw, as vanilla does once a frame for its own.</li>
- *   <li>1.21.1 / 1.20.1: a port of vanilla's {@code LevelRenderer.renderClouds} / {@code buildClouds} with the layer's
- *       values in place of the dimension's cloud height, {@code getCloudColor}, the 0.8 alpha and the tick drift. The
- *       vertex buffer of each layer index is rebuilt only when vanilla would rebuild its own (cell, height step, colour,
- *       alpha or cloud setting changed). Drawn with vanilla's own cloud shader state, fog and clouds target.</li>
- * </ul>
+ * Draws registered cloud layers through native renderers with separate mesh caches.
+ * Replacements own the pass; additions follow the native first layer with its color, height and clock.
  */
+// port: Older nodes retain native cloud geometry and shader state for their rendering API.
 public final class CloudRendering {
 
     private CloudRendering() {}
@@ -34,10 +31,10 @@ public final class CloudRendering {
     private static final Set<ResourceKey<Level>> INSTALLED = new HashSet<>();
 
     /** Installs the node's hook (once) and, where the hook is per dimension, for {@code dimension}. */
-    public static synchronized void install(ResourceKey<Level> dimension) {
+    public static synchronized void install(ResourceKey<Level> dimension, boolean replacement) {
         if (!INSTALLED.add(dimension)) return;
         //? if fabric && <26.1 {
-        /*net.fabricmc.fabric.api.client.rendering.v1.DimensionRenderingRegistry.registerCloudRenderer(dimension, context -> {
+        /*if (replacement) DimensionRenderingRegistry.registerCloudRenderer(dimension, context -> {
             var camera = context.camera().getPosition();
             //? if >=1.21 {
             com.mojang.blaze3d.vertex.PoseStack pose = new com.mojang.blaze3d.vertex.PoseStack();
@@ -85,6 +82,33 @@ public final class CloudRendering {
         return layersDrawn;
     }
 
+    private static ResourceKey<Level> nativeDimension;
+    private static Clouds.NativeLayer lastNativeLayer;
+    private static List<Clouds.Layer> nativeExtras = List.of();
+    private static long nativeLayersDrawn;
+
+    /** Actual last native first layer and its additions, captured at the renderer's return. */
+    public static List<Clouds.Layer> renderedNativeLayers(Level level) {
+        if (level.dimension() != nativeDimension) return List.of();
+        var argb = lastNativeLayer.argb();
+        var frame = new ArrayList<Clouds.Layer>(nativeExtras.size() + 1);
+        frame.add(new Clouds.Layer(lastNativeLayer.height(), ((argb >> 16) & 255) / 255F,
+                ((argb >> 8) & 255) / 255F, (argb & 255) / 255F, (argb >>> 24) / 255F, 0, 0));
+        frame.addAll(nativeExtras);
+        return frame;
+    }
+
+    public static long nativeLayersDrawn() { return nativeLayersDrawn; }
+
+    private static List<Clouds.Layer> nativeFrame(Level level, Clouds.NativeLayer nativeLayer) {
+        var extras = Clouds.additions(level, nativeLayer);
+        nativeDimension = level.dimension();
+        lastNativeLayer = nativeLayer;
+        nativeExtras = extras;
+        nativeLayersDrawn++;
+        return extras;
+    }
+
     private static void reload() {
         reloadPending = true;
     }
@@ -108,8 +132,23 @@ public final class CloudRendering {
      */
     public static boolean render(net.minecraft.client.CloudStatus status, int range, net.minecraft.world.phys.Vec3 camera) {
         net.minecraft.client.multiplayer.ClientLevel level = Minecraft.getInstance().level;
-        if (!Clouds.has(level)) return false;
+        if (!Clouds.replaces(level)) return false;
         List<Clouds.Layer> layers = Clouds.layers(level, dev.golem.core.client.FrameTime.partialTick());
+        renderLayers(layers, status, range, camera, 0L, 0F);
+        return true;
+    }
+
+    /** Called after the native renderer, with its actual color, height and clock; no second color transform. */
+    public static void renderAdditions(int color, CloudStatus status, float bottomY, int range,
+                                       Vec3 camera, long gameTime, float partialTick) {
+        var level = Minecraft.getInstance().level;
+        if (!Clouds.additive(level) || (color >>> 24) == 0) return;
+        var nativeLayer = new Clouds.NativeLayer(bottomY - 0.33F, color, gameTime, partialTick);
+        renderLayers(nativeFrame(level, nativeLayer), status, range, camera, gameTime, partialTick);
+    }
+
+    private static void renderLayers(List<Clouds.Layer> layers, CloudStatus status, int range,
+                                     Vec3 camera, long gameTime, float partialTick) {
         if (reloadPending) {
             reloadPending = false;
             for (LayerRenderer renderer : RENDERERS) renderer.load();
@@ -125,12 +164,11 @@ public final class CloudRendering {
             int argb = net.minecraft.util.ARGB.colorFromFloat(layer.alpha(), layer.red(), layer.green(), layer.blue());
             net.minecraft.world.phys.Vec3 shifted = new net.minecraft.world.phys.Vec3(camera.x + layer.shiftX(), camera.y,
                     camera.z + layer.shiftZ());
-            // bottom: vanilla's cloud_height attribute carries the 0.33 lift (192.33); gameTime and partial tick 0: no drift
-            renderer.render(argb, status, layer.height() + 0.33F, range, shifted, 0L, 0.0F);
+            // Replacement clocks are zero; additions retain the native clock and apply only their relative drift.
+            renderer.render(argb, status, layer.height() + 0.33F, range, shifted, gameTime, partialTick);
             renderer.endFrame();
             layersDrawn++;
         }
-        return true;
     }
     //?} else {
     /*private static final List<LegacyLayer> LEGACY = new ArrayList<>();
@@ -158,7 +196,45 @@ public final class CloudRendering {
         net.minecraft.client.multiplayer.ClientLevel level = mc.level;
         if (!Clouds.has(level)) return;
         List<Clouds.Layer> layers = Clouds.layers(level, partialTick);
+        renderLegacyLayers(layers, pose, modelView, projection, camX, camY, camZ);
+    }
+
+    /^* Older native clouds use their effects height, level color and renderer tick clock. ^/
+    public static void renderAdditionsLegacy(PoseStack pose, Matrix4f modelView,
+                                             Matrix4f projection, float partialTick, double camX, double camY,
+                                             double camZ, float height, Vec3 color, int ticks) {
+        var level = Minecraft.getInstance().level;
+        if (!Clouds.additive(level)) return;
+        // LevelRenderer.buildClouds uses a native alpha of 0.8 on both older versions.
+        int argb = 0xCC000000 | ((int) (color.x * 255) << 16) | ((int) (color.y * 255) << 8) | (int) (color.z * 255);
+        var nativeLayer = new Clouds.NativeLayer(height, argb, ticks, partialTick);
+        var extras = nativeFrame(level, nativeLayer);
+        if (extras.isEmpty()) return;
+        var layers = new ArrayList<Clouds.Layer>(extras.size());
+        double drift = ((float) ticks + partialTick) * 0.03F;
+        for (var layer : extras) {
+            layers.add(new Clouds.Layer(layer.height(), layer.red(), layer.green(), layer.blue(), layer.alpha(),
+                    layer.shiftX() + drift, layer.shiftZ()));
+        }
+        // Sodium's native pass leaves its RGB/alpha in the shader color; our vertices already contain that color.
+        var shaderColor = RenderSystem.getShaderColor();
+        var red = shaderColor[0];
+        var green = shaderColor[1];
+        var blue = shaderColor[2];
+        var alpha = shaderColor[3];
+        RenderSystem.setShaderColor(1, 1, 1, 1);
+        try {
+            renderLegacyLayers(layers, pose, modelView, projection, camX, camY, camZ);
+        } finally {
+            RenderSystem.setShaderColor(red, green, blue, alpha);
+        }
+    }
+
+    private static void renderLegacyLayers(List<Clouds.Layer> layers, PoseStack pose,
+                                           Matrix4f modelView, Matrix4f projection,
+                                           double camX, double camY, double camZ) {
         if (layers.isEmpty()) return;
+        var mc = Minecraft.getInstance();
         if (reloadPending) {
             reloadPending = false;
             for (LegacyLayer cache : LEGACY) cache.status = null; // rebuild

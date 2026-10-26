@@ -18,6 +18,11 @@ import org.jspecify.annotations.Nullable;
  */
 public interface Geometry {
 
+    /** Named mesh groups supplied by a consumer's model loader. */
+    interface Groups {
+        Geometry parts(String... names);
+    }
+
     /** Floats per vertex in {@link #vertices}: three positions, two texture coordinates, three normals. */
     int FLOATS_PER_VERTEX = 8;
 

@@ -1,6 +1,7 @@
 package dev.golem.core.world;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import org.jspecify.annotations.Nullable;
 
@@ -18,6 +19,29 @@ import org.jspecify.annotations.Nullable;
  * simulate flag asks the question without changing anything and neither is called.
  */
 public interface EnergySource {
+
+    /** Binds one real face, or refuses it. Position-only sources retain their existing behavior. */
+    default @Nullable EnergySource forFace(ServerLevel level, BlockPos pos, @Nullable Direction side) { return this; }
+
+    /** Resolves the exact owner for one mutation; retained views may observe a new owner on the next call. */
+    default @Nullable EnergySource forOperation(ServerLevel level, BlockPos pos) { return this; }
+
+    /** Releases one loader-owned snapshot after its rollback, promotion or final commit is complete. */
+    default void releaseSnapshot(ServerLevel level, BlockPos pos, Object state) {}
+
+    /** Applies staged work on final commit; immediate sources have no additional work. */
+    default void commit(ServerLevel level, BlockPos pos) {}
+
+    /** Shared owner identity for transactional snapshots; null retains a journal per exposed view. */
+    default @Nullable Object transactionKey() { return null; }
+
+    /** Quotes a bounded request; face sources can retain indivisible conversion quanta. */
+    default long insertableFe(ServerLevel level, BlockPos pos, long maximumFe) {
+        return Math.max(0L, Math.min(maximumFe, insertableFe(level, pos)));
+    }
+    default long extractableFe(ServerLevel level, BlockPos pos, long maximumFe) {
+        return Math.max(0L, Math.min(maximumFe, extractableFe(level, pos)));
+    }
 
     /** What this position holds, as a peer reads it. */
     long amountFe(ServerLevel level, BlockPos pos);

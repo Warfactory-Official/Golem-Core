@@ -11,6 +11,14 @@ val mcVersion = stonecutter.current.version
 apply(from = rootProject.file("gradle/mod/gemrender-local.gradle.kts"))
 val localGemRender = extra.properties["golem.gemrender.local"]
 val javaVersion = prop("java_version").toInt()
+val modelEra = if (stonecutter.eval(mcVersion, ">=26.1")) "modern" else "legacy"
+val modelRoots = if (modelEra == "modern") listOf("models-modern")
+    else listOf("models-legacy", "models-legacy-neoforge")
+for (modelRoot in modelRoots) {
+    val modelSources = sourceSets.create(modelRoot)
+    sourceSets["main"].java.source(modelSources.java)
+}
+
 
 // Sable (see the dependency block below) on the nodes that declare its coordinates.
 val sableMc = (findProperty("deps.sable_mc") as String?)?.takeIf { it.isNotBlank() }
@@ -23,6 +31,10 @@ val hasSable = sableMc != null && sableVer != null && sableCompanionVer != null
 val accessTransformerFiles = listOfNotNull(
     file("../../src/main/resources/META-INF/golemcore.neoforge.accesstransformer.cfg")
         .takeIf { it.exists() },
+    file("../../src/main/resources/META-INF/golemcore.legacy.neoforge.accesstransformer.cfg")
+        .takeIf { stonecutter.eval(mcVersion, "<26.1") && it.exists() },
+    file("../../src/main/resources/META-INF/golemcore.modern.neoforge.accesstransformer.cfg")
+        .takeIf { stonecutter.eval(mcVersion, ">=26.1") && it.exists() },
 )
 val mergedAccessTransformer = layout.buildDirectory.file("golemcore-at/accesstransformer.cfg")
 val mergeAccessTransformers = tasks.register("mergeAccessTransformers") {
@@ -183,8 +195,8 @@ tasks.processResources {
         "legacy_item_owner_mixins" to if (mcVersion.substringBefore('.').toInt() < 26)
             ", \"MixinItemRenderer\"" else "",
         // NeoForge 1.21.1 still calls getRailMaxSpeed/onMinecartPass; 26.1 declares but no longer calls them.
-        // The 1.20.5 physics attributes, backported on 1.20.1 only (dev.golem.core.world.Physics).
-        "physics_mixins" to "",
+        // NeoForge Pre runs before TickRateManager.tick; simulation uses the tickChildren entry instead.
+        "physics_mixins" to ", \"MixinBeforeLevelTicks\"",
         // dev.golem.core.gametest.TestChunks: a 26.1 test waits until its whole plot is entity-ticking.
         "gametest_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinGameTestChunks\"" else "",
         "rail_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinMinecartRails\"" else "",
@@ -198,11 +210,13 @@ tasks.processResources {
         "world_effect_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinWorldEffects\"" else "",
         // Skies.Modifier: 26.1 appends environment-attribute layers; older nodes wrap the sky darkening and the
         // client colour getters (the mixin classes are empty stubs on the other era).
+        "client_gametest_mixins" to "",
+        "render_validation_mixins" to "",
         "sky_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinEnvironmentSkyLayers\"" else ", \"MixinLevelSkyDarken\"",
         "sky_client_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) "" else
             ", \"MixinClientLevelSky\", \"MixinDimensionEffectsSky\", \"MixinOverworldFogColor\"",
-        // Clouds: NeoForge 26.1 uses CustomCloudsRenderer; 1.21.1 has only the effects object's renderClouds.
-        "cloud_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) "" else ", \"MixinLegacyCloudRender\", \"MixinLegacyWeatherRender\"",
+        // Replacement clouds use NeoForge's hook; additions append after the native renderer on both eras.
+        "cloud_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinCloudRender\"" else ", \"MixinLegacyCloudRender\", \"MixinLegacyWeatherRender\"",
         // GemRender 0.1.14 patches (26.1 only, applied by version; see GemRenderMixinPlugin)
         "gemrender_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) "\"GameRendererBob\", \"MixinRenderContextBob\"" else "",
         "gemrender_mixin_plugin" to "dev.golem.core.gemrender.mixin.GemRenderMixinPlugin",

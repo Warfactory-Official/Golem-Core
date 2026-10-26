@@ -1,5 +1,7 @@
 package dev.golem.core.platform;
 
+import dev.golem.core.client.UnbakedModels;
+
 //? if forge {
 /*import dev.golem.core.GolemCore;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -19,6 +21,7 @@ public final class ForgeEntrypoint {
         dev.golem.core.world.RecipeTables.init();
         dev.golem.core.data.DataFiles.init();
         if (Platform.isClient()) dev.golem.core.data.DataFiles.initClient();
+        if (Platform.isClient()) UnbakedModels.initialize();
         if (Platform.isClient()) dev.golem.core.world.RecipeTables.initClient();
         // Every Golem-based mod's registers and payloads, filled once by Golem Core (see ModEntries). Payloads wait
         // for common setup, after every mod is constructed: Forge numbers them as they are registered.

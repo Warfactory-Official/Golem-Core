@@ -2,7 +2,9 @@ package dev.golem.core.data;
 
 import com.mojang.serialization.Codec;
 import java.util.List;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 /** Immutable fixed-slot contents with item/data equality, suitable for an item component. */
 public final class ItemContents {
@@ -13,6 +15,11 @@ public final class ItemContents {
 
     public ItemContents(List<ItemStack> stacks) {
         this.stacks = stacks.stream().map(ItemStack::copy).toList();
+    }
+
+    /** Reads only the item identity of a slot, without copying or exposing the stored mutable stack. */
+    public Item itemAt(int slot) {
+        return slot >= stacks.size() ? Items.AIR : stacks.get(slot).getItem();
     }
 
     public List<ItemStack> copies() {

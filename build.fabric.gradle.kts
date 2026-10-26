@@ -10,6 +10,15 @@ val mcVersion = stonecutter.current.version
 apply(from = rootProject.file("gradle/mod/gemrender-local.gradle.kts"))
 val localGemRender = extra.properties["golem.gemrender.local"]
 val javaVersion = prop("java_version").toInt()
+val modelEra = if (stonecutter.eval(mcVersion, ">=26.1")) "modern" else "legacy"
+val modelRoots = if (modelEra == "modern") listOf("models-modern")
+    else listOf("models-legacy", "models-legacy-fabric")
+val nativeRoots = modelRoots + if (modelEra == "modern") listOf("render-fabric", "client-gametest-fabric") else emptyList()
+for (nativeRoot in nativeRoots) {
+    val nativeSources = sourceSets.create(nativeRoot)
+    sourceSets["main"].java.source(nativeSources.java)
+}
+
 
 group = prop("mod.group")
 version = "${prop("mod.version")}+$mcVersion"
@@ -173,11 +182,13 @@ tasks.processResources {
         "world_effect_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinWorldEffects\"" else "",
         // Skies.Modifier: 26.1 appends environment-attribute layers; older nodes wrap the sky darkening and the
         // client colour getters (the mixin classes are empty stubs on the other era).
+        "client_gametest_mixins" to if (stonecutter.eval(mcVersion, ">=26.1")) ", \"MixinClientTestTimeout\"" else "",
+        "render_validation_mixins" to if (stonecutter.eval(mcVersion, ">=26.1")) ", \"MixinGlValidation\"" else "",
         "sky_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinEnvironmentSkyLayers\"" else ", \"MixinLevelSkyDarken\"",
         "sky_client_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) "" else
             ", \"MixinClientLevelSky\", \"MixinDimensionEffectsSky\", \"MixinOverworldFogColor\"",
-        // Clouds: Fabric 26.1 has no cloud hook (DimensionRenderingRegistry serves 1.20.1/1.21.1).
-        "cloud_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinCloudRender\", \"MixinWeatherRender\"" else "",
+        // Older replacements use DimensionRenderingRegistry; additions append after the native renderer on both eras.
+        "cloud_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinCloudRender\", \"MixinWeatherRender\"" else ", \"MixinLegacyCloudRender\"",
         // GemRender 0.1.14 patches (26.1 only, applied by version; see GemRenderMixinPlugin)
         "gemrender_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) "\"GameRendererBob\", \"MixinRenderContextBob\"" else "",
         "gemrender_mixin_plugin" to "dev.golem.core.gemrender.mixin.GemRenderMixinPlugin",

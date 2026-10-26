@@ -1,5 +1,7 @@
 package dev.golem.core.world;
 
+import dev.golem.core.Ids;
+
 import net.minecraft.core.Holder;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -163,6 +165,15 @@ public final class Attributes {
         return attribute.getModifier(dev.golem.core.Ids.parse(id)) != null;
         //?} else {
         /*return attribute.getModifier(uuid(id)) != null;
+        *///?}
+    }
+
+    /** The amount of an existing modifier; callers establish presence with {@link #has}. */
+    public static double modifierAmount(AttributeInstance attribute, String id) {
+        //? if >=1.21 {
+        return attribute.getModifier(Ids.parse(id)).amount();
+        //?} else {
+        /*return attribute.getModifier(uuid(id)).getAmount();
         *///?}
     }
 

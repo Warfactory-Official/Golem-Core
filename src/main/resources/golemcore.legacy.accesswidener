@@ -1,4 +1,8 @@
 accessWidener v2 named
+accessible field net/minecraft/client/Minecraft rightClickDelay I
+accessible field net/minecraft/server/network/ServerGamePacketListenerImpl awaitingPositionFromClient Lnet/minecraft/world/phys/Vec3;
+accessible field net/minecraft/client/particle/ParticleEngine particles Ljava/util/Map;
+accessible field net/minecraft/client/particle/ParticleEngine particlesToAdd Ljava/util/Queue;
 accessible field net/minecraft/server/network/ServerGamePacketListenerImpl aboveGroundTickCount I
 # 1.20.1: AbstractMinecart.getDropItem is package-private abstract in vanilla (Forge patches it protected);
 # a minecart outside net.minecraft cannot implement it without this. 1.21.1 moved it to VehicleEntity (see the -1.21 file).
@@ -24,3 +28,30 @@ accessible field net/minecraft/client/multiplayer/PlayerInfo textureLocations Lj
 # CompatParticle: vanilla's ParticleEngine draws only the types in RENDER_ORDER (NeoForge/Forge draw every type); Core appends its own layers.
 accessible field net/minecraft/client/particle/ParticleEngine RENDER_ORDER Ljava/util/List;
 mutable field net/minecraft/client/particle/ParticleEngine RENDER_ORDER Ljava/util/List;
+
+# Chunks.loadEntityTicking: promote the caller's ticket and wait for its chunk and stored entities.
+accessible method net/minecraft/server/level/ServerChunkCache runDistanceManagerUpdates ()Z
+accessible method net/minecraft/server/level/ServerChunkCache getVisibleChunkIfPresent (J)Lnet/minecraft/server/level/ChunkHolder;
+accessible field net/minecraft/server/level/ServerLevel entityManager Lnet/minecraft/world/level/entity/PersistentEntitySectionManager;
+accessible method net/minecraft/world/level/entity/PersistentEntitySectionManager processPendingLoads ()V
+
+# EntityInterpolation: adjust the active yaw target without restarting its position interpolation.
+accessible field net/minecraft/world/entity/LivingEntity lerpSteps I
+accessible field net/minecraft/world/entity/LivingEntity lerpYRot D
+
+# Private state exposed to the GameTest and living-travel facades.
+accessible field net/minecraft/gametest/framework/GameTestHelper testInfo Lnet/minecraft/gametest/framework/GameTestInfo;
+accessible field net/minecraft/world/entity/LivingEntity jumping Z
+
+accessible field com/mojang/blaze3d/audio/Channel source I
+
+accessible field net/minecraft/world/entity/ai/goal/UseItemGoal item Lnet/minecraft/world/item/ItemStack;
+accessible field net/minecraft/world/entity/Entity stuckSpeedMultiplier Lnet/minecraft/world/phys/Vec3;
+accessible field net/minecraft/client/particle/Particle x D
+accessible field net/minecraft/client/particle/Particle y D
+accessible field net/minecraft/client/particle/Particle z D
+accessible class net/minecraft/world/entity/animal/Fox$SleepGoal
+accessible class net/minecraft/world/entity/animal/Fox$FoxBehaviorGoal
+accessible field net/minecraft/world/entity/animal/Fox$SleepGoal countdown I
+accessible method net/minecraft/world/entity/animal/Fox$FoxBehaviorGoal hasShelter ()Z
+accessible method net/minecraft/world/entity/animal/Fox$FoxBehaviorGoal alertable ()Z

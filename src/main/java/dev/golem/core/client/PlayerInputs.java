@@ -3,12 +3,17 @@ package dev.golem.core.client;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 
-/** Reads the local movement key state across the ClientInput/Input split. */
+/** Reads local movement and interaction input state across native input APIs. */
 public final class PlayerInputs {
 
     private PlayerInputs() {}
 
     public record State(float forward, float strafe, boolean jump, boolean sneak, boolean sprint) {}
+
+    /** Native ticks remaining before another held use input is accepted. */
+    public static int useDelay(Minecraft client) {
+        return client.rightClickDelay;
+    }
 
     public static State read(LocalPlayer player) {
         //? if >=26.1 {

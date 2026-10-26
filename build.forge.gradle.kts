@@ -10,6 +10,14 @@ val mcVersion = stonecutter.current.version
 apply(from = rootProject.file("gradle/mod/gemrender-local.gradle.kts"))
 val localGemRender = extra.properties["golem.gemrender.local"]
 val javaVersion = prop("java_version").toInt()
+val modelEra = if (stonecutter.eval(mcVersion, ">=26.1")) "modern" else "legacy"
+val modelRoots = if (modelEra == "modern") listOf("models-modern")
+    else listOf("models-legacy", "models-legacy-forge")
+for (modelRoot in modelRoots) {
+    val modelSources = sourceSets.create(modelRoot)
+    sourceSets["main"].java.source(modelSources.java)
+}
+
 
 group = prop("mod.group")
 version = "${prop("mod.version")}+$mcVersion"
@@ -113,6 +121,8 @@ tasks.processResources {
         "world_effect_mixins" to "",
         // Skies.Modifier: 26.1 appends environment-attribute layers; older nodes wrap the sky darkening and the
         // client colour getters (the mixin classes are empty stubs on the other era).
+        "client_gametest_mixins" to "",
+        "render_validation_mixins" to "",
         "sky_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinEnvironmentSkyLayers\"" else ", \"MixinLevelSkyDarken\"",
         "sky_client_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) "" else
             ", \"MixinClientLevelSky\", \"MixinDimensionEffectsSky\", \"MixinOverworldFogColor\"",

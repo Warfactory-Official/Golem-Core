@@ -39,7 +39,9 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 public final class GolemNetwork {
 
     /** Client state supplied after the payload has been dispatched to the client main thread. */
-    public record ClientContext(Level level, Player player) {}
+    public record ClientContext(Level level, Player player, ClientSessions.Session session) {
+        public ClientContext(Level level, Player player) { this(level, player, ClientSessions.current()); }
+    }
 
     record ClientRegistration<P extends GolemPayload>(GolemCodec<P> codec,
             BiConsumer<P, ClientContext> handler) {}
@@ -177,6 +179,7 @@ public final class GolemNetwork {
     }
 
     public static void flushCommonRegistrations() {
+        Configurations.flushFabric();
         CLIENT_DECLARATIONS.forEach(GolemNetwork::registerFabricClientCodec);
         CLIENT_DECLARATIONS.clear();
         flushServerRegistrations();
@@ -184,6 +187,9 @@ public final class GolemNetwork {
 
     public static void flushClientRegistrations() {
         GolemClientNetwork.install();
+        //? if >=1.20.5 {
+        Configurations.installFabricClient();
+        //?}
     }
 
     public static void flushServerRegistrations() {
@@ -239,6 +245,9 @@ public final class GolemNetwork {
 
     public static void flushClientRegistrations() {
         GolemClientNetwork.install();
+        //? if >=1.20.5 {
+        Configurations.installFabricClient();
+        //?}
     }
 
     public static void flushServerRegistrations() {
@@ -344,8 +353,17 @@ public final class GolemNetwork {
             }).add();
             return;
         }
-        builder.consumerMainThread((payload, context) -> dispatchClient(codec, payload,
-                clientContextSupplier == null ? null : clientContextSupplier.get())).add();
+        builder.consumerNetworkThread((payload, context) -> {
+            var packetContext = context.get();
+            var session = ClientSessions.current(packetContext.getNetworkManager());
+            if (session != null) packetContext.enqueueWork(() -> {
+                if (!session.active()) return;
+                var client = clientContextSupplier == null ? null : clientContextSupplier.get();
+                if (client == null || client.level() == null || client.player() == null) return;
+                dispatchClient(codec, payload, new ClientContext(client.level(), client.player(), session));
+            });
+            packetContext.setPacketHandled(true);
+        }).add();
     }
 
     private static <P extends GolemPayload> void registerForgeServer(ServerRegistration<P> registration) {
@@ -389,6 +407,9 @@ public final class GolemNetwork {
     }
     *///?} elif neoforge {
     public static void flushRegistrations(RegisterPayloadHandlersEvent event) {
+        //? if >=1.20.5 {
+        Configurations.flushNeoForge(event);
+        //?}
         CLIENT_DECLARATIONS.forEach(registration -> registerNeoForgeClient(event, registration));
         SERVER_REGISTRATIONS.forEach(registration -> registerNeoForgeServer(event, registration));
         CLIENT_DECLARATIONS.clear();
@@ -405,7 +426,10 @@ public final class GolemNetwork {
                         dispatchClientOffThread(codec, payload);
                         return;
                     }
+                    var session = ClientSessions.forListener(context.listener());
+                    if (session == null) return;
                     context.enqueueWork(() -> {
+                        if (!session.active()) return;
                         // A play payload can still sit in the main-thread queue when the connection has already gone
                         // back to configuration (leaving/joining a world): its session is over and there is no player
                         // to hand it to; vanilla drops its own play packets at that switch too.
@@ -414,7 +438,7 @@ public final class GolemNetwork {
                         net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
                         if (mc.player == null || mc.getConnection() == null
                                 || mc.getConnection().getConnection() != context.connection()) return;
-                        dispatchClient(codec, payload, new ClientContext(context.player().level(), context.player()));
+                        dispatchClient(codec, payload, new ClientContext(context.player().level(), context.player(), session));
                     });
                 });
     }

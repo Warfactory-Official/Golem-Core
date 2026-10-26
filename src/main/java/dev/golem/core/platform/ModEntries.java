@@ -1,5 +1,12 @@
 package dev.golem.core.platform;
 
+//? if >=1.20.5 {
+import dev.golem.core.registry.ComponentPatches;
+//?}
+//? if fabric && >=1.21 {
+/*import net.fabricmc.fabric.api.item.v1.DefaultItemComponentEvents;
+*///?}
+
 import dev.golem.core.GolemCore;
 import java.util.ArrayList;
 import java.util.List;
@@ -175,6 +182,13 @@ public final class ModEntries {
         for (ModEntry entry : entries) entry.substitute();
         for (ModEntry entry : entries) entry.declare();
         dev.golem.core.registry.DeferredRegister.flushAllToVanilla();
+        //? if >=1.20.5 {
+        DefaultItemComponentEvents.MODIFY.register(context -> {
+            for (var patch : ComponentPatches.all()) {
+                context.modify(patch.getKey().get().asItem(), patch.getValue());
+            }
+        });
+        //?}
         dev.golem.core.registry.LivingAttributes.flushFabric();
         dev.golem.core.world.Spawns.flushFabricPlacements();
         dev.golem.core.net.GolemNetwork.flushCommonRegistrations();

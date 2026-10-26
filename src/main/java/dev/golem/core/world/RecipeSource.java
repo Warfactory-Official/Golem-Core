@@ -1,5 +1,7 @@
 package dev.golem.core.world;
 
+import java.util.function.ToIntFunction;
+
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import java.util.Collections;
@@ -31,6 +33,15 @@ public abstract class RecipeSource<R> extends DataSource<R> {
 
     public final RecipeTables.Table<R> table() {
         return table;
+    }
+
+    /** An addon's authored rows follow all loaded rows owned by the base table, in registration order. */
+    protected final int orderAfterBase(ToIntFunction<R> order) {
+        String owner = table.id().substring(0, table.id().indexOf(':') + 1);
+        int last = table.entries().stream().filter(entry -> entry.id().startsWith(owner))
+                .mapToInt(entry -> order.applyAsInt(entry.value())).max().orElse(-1);
+        if (last == Integer.MAX_VALUE) throw new IllegalStateException(table.id() + " has an unordered base row");
+        return Math.addExact(last, Math.addExact(1, nextOrder()));
     }
 
     @Override

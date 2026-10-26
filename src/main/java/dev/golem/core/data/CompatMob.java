@@ -5,6 +5,8 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.player.Player;
+import org.jspecify.annotations.Nullable;
 
 //? if >=1.21.1 {
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -231,8 +233,29 @@ public abstract class CompatMob extends net.minecraft.world.entity.Mob {
     }
     *///?}
 
+    //? if >=26.1 {
+    //?} else {
+    /*protected void dropFromLootTable(ServerLevel level, DamageSource source, boolean killedByPlayer) {
+        super.dropFromLootTable(source, killedByPlayer);
+    }
+
+    @Override
+    protected final void dropFromLootTable(DamageSource source, boolean killedByPlayer) {
+        dropFromLootTable((ServerLevel) level(), source, killedByPlayer);
+    }
+    *///?}
+
+    /** The player credited by vanilla's recent-damage tracking, independent of the final damage source. */
+    protected final @Nullable Player compatLastHurtByPlayer() {
+        //? if >=26.1 {
+        return getLastHurtByPlayer();
+        //?} else {
+        /*return lastHurtByPlayer;
+        *///?}
+    }
+
     /** Passenger seat height above the feet, or null for vanilla's (1.20.5 attachment points vs the old riding offset). */
-    protected @org.jspecify.annotations.Nullable Double compatPassengerHeight() {
+    protected @Nullable Double compatPassengerHeight() {
         return null;
     }
 
@@ -266,7 +289,7 @@ public abstract class CompatMob extends net.minecraft.world.entity.Mob {
     }
 
     @Override
-    public boolean canBeLeashed(net.minecraft.world.entity.player.Player player) {
+    public boolean canBeLeashed(Player player) {
         return compatCanBeLeashed();
     }
     *///?}

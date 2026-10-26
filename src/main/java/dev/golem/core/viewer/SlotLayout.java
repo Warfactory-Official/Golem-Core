@@ -2,6 +2,7 @@ package dev.golem.core.viewer;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.material.Fluid;
 
 import java.util.List;
 
@@ -27,6 +28,9 @@ public interface SlotLayout {
         default Slot addItemStack(ItemStack stack) {
             return addItemStacks(List.of(stack));
         }
+
+        /** Adds an actual fluid ingredient. Amounts are always in millibuckets, independent of the loader. */
+        Slot addFluidStack(Fluid fluid, long milliBuckets);
 
         /** A frame drawn under the slot at {@code (x + dx, y + dy)}. */
         Slot setBackground(Drawable background, int dx, int dy);

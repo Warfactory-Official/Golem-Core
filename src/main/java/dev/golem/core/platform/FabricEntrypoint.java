@@ -1,5 +1,7 @@
 package dev.golem.core.platform;
 
+import dev.golem.core.client.UnbakedModels;
+
 //? if fabric {
 /*import dev.golem.core.GolemCore;
 import net.fabricmc.api.ModInitializer;
@@ -20,6 +22,7 @@ public class FabricEntrypoint implements ModInitializer {
      ^/
     static void initialize() {
         if (!INITIALIZED.compareAndSet(false, true)) return;
+        if (Platform.isClient()) UnbakedModels.initialize();
         GolemCore.LOG.info("Golem Core loaded on {} for MC {}", GolemCore.loader(), GolemCore.MC_VERSION);
         dev.golem.core.registry.RegistryDump.install(); // dev only: GOLEM_REGISTRY_DUMP=<file>
         dev.golem.core.world.Physics.init();

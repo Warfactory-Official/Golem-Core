@@ -1,5 +1,11 @@
 package dev.golem.core.world;
 
+import java.util.UUID;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerBossEvent;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.BossEvent;
+
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
@@ -672,8 +678,14 @@ public final class Compat {
     /** A boss bar owned by {@code owner}; 26.1 keys it by the owner's UUID, older versions mint their own. */
     public static net.minecraft.server.level.ServerBossEvent bossEvent(Entity owner, net.minecraft.network.chat.Component name,
             net.minecraft.world.BossEvent.BossBarColor color, net.minecraft.world.BossEvent.BossBarOverlay overlay) {
+        return bossEvent(owner.getUUID(), name, color, overlay);
+    }
+
+    /** A bar owned by persistent world state rather than an entity. */
+    public static ServerBossEvent bossEvent(UUID id, Component name,
+            BossEvent.BossBarColor color, BossEvent.BossBarOverlay overlay) {
         //? if >=26.1 {
-        return new net.minecraft.server.level.ServerBossEvent(owner.getUUID(), name, color, overlay);
+        return new ServerBossEvent(id, name, color, overlay);
         //?} else {
         /*return new net.minecraft.server.level.ServerBossEvent(name, color, overlay);
         *///?}
@@ -687,6 +699,15 @@ public final class Compat {
         return f == b ? 0 : f ? 1 : -1;
         //?} else {
         /*return player.zza > 0 ? 1 : player.zza < 0 ? -1 : 0;
+        *///?}
+    }
+
+    /** Whether the server player holds sneak (1.21.2 {@code getLastClientInput}; earlier {@code isShiftKeyDown}). */
+    public static boolean clientSneakHeld(ServerPlayer player) {
+        //? if >=1.21.2 {
+        return player.getLastClientInput().shift();
+        //?} else {
+        /*return player.isShiftKeyDown();
         *///?}
     }
 

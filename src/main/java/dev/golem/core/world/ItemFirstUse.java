@@ -59,6 +59,12 @@ public final class ItemFirstUse {
         install();
     }
 
+    /** Offers a context-based block action through the shared empty-hand-capable click hook. */
+    public static synchronized void registerBlock(Handler handler) {
+        registerBlockClick((player, hand, hit) -> handler.use(player.getItemInHand(hand),
+                new UseOnContext(player, hand, hit)));
+    }
+
     private static void install() {
         if (installed) return;
         installed = true;

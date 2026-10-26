@@ -128,6 +128,16 @@ public final class Data {
         return content;
     }
 
+    /**
+     * Replaces one immediate declaration, or creates it when an addon generates its pack without the host's
+     * declarations. Call after the host's declaration in a shared run. Ordinary declarations still reject duplicates.
+     */
+    static void replace(String path, Runnable declaration) {
+        FILES.remove(path);
+        declaration.run();
+        if (!FILES.containsKey(path)) throw new DejsonException(path + " replacement declared no content");
+    }
+
     public static JsonObject file(String path) {
         return files().get(path);
     }

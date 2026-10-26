@@ -1,5 +1,10 @@
 package dev.golem.core.client;
 
+import dev.golem.core.world.Skies;
+//? if >=26.1 {
+import net.minecraft.world.attribute.EnvironmentAttributes;
+//?}
+
 import dev.golem.core.hook.Hook;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -35,6 +40,17 @@ public final class Lightmaps {
 
     private Lightmaps() {}
 
+    /** The sky input actually consumed by this node's light map and its additive tints. */
+    // port: Older nodes retain native brightness and classic lightmap cells for their rendering API.
+    public static float skyInput(ClientLevel level, float partialTick) {
+        //? if >=26.1 {
+        return Minecraft.getInstance().gameRenderer.getMainCamera().attributeProbe()
+                .getValue(EnvironmentAttributes.SKY_LIGHT_FACTOR, partialTick);
+        //?} else {
+        /*return level.getSkyDarken(partialTick);
+        *///?}
+    }
+
     public interface Modifier {
         /** Whether this modifier changes {@code level}'s light map now. */
         boolean active(ClientLevel level);
@@ -66,6 +82,7 @@ public final class Lightmaps {
     /** Whether {@code level}'s light map follows the classic formula ({@link #useClassicFormula}). */
     public static boolean classic(ClientLevel level) {
         if (level == null) return false;
+        if (Skies.rawSkyLightFactor(level)) return false;
         for (Predicate<ClientLevel> p : CLASSIC) if (p.test(level)) return true;
         return false;
     }

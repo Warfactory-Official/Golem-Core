@@ -199,12 +199,12 @@ public final class EntityData<T> {
     // CompoundTag bridge for the backends that store a plain compound (Fabric, Forge)
 
     //? if >=26.1 {
-    private static DataIn dataIn(CompoundTag tag, HolderLookup.Provider registries) {
+    public static DataIn dataIn(CompoundTag tag, HolderLookup.Provider registries) {
         return new ValueDataIn(net.minecraft.world.level.storage.TagValueInput.create(
                 net.minecraft.util.ProblemReporter.DISCARDING, registries, tag));
     }
 
-    private CompoundTag writeTag(T value, HolderLookup.@Nullable Provider registries) {
+    public CompoundTag writeTag(T value, HolderLookup.@Nullable Provider registries) {
         net.minecraft.world.level.storage.TagValueOutput output = registries != null
                 ? net.minecraft.world.level.storage.TagValueOutput.createWithContext(
                         net.minecraft.util.ProblemReporter.DISCARDING, registries)
@@ -214,11 +214,11 @@ public final class EntityData<T> {
         return output.buildResult();
     }
     //?} else {
-    /*private static DataIn dataIn(CompoundTag tag, HolderLookup.Provider registries) {
+    /*public static DataIn dataIn(CompoundTag tag, HolderLookup.Provider registries) {
         return new TagDataIn(tag, registries);
     }
 
-    private CompoundTag writeTag(T value, HolderLookup.@Nullable Provider registries) {
+    public CompoundTag writeTag(T value, HolderLookup.@Nullable Provider registries) {
         CompoundTag tag = new CompoundTag();
         writer.save(value, new TagDataOut(tag, registries));
         return tag;

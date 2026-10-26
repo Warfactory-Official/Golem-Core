@@ -253,6 +253,11 @@ public final class Drops {
         return "data/" + namespace + "/loot_table/blocks/" + block + ".json";
     }
 
+    /** A deliberate addon override of this exact block's loot; the addon may generate its pack on its own. */
+    public static void replace(String namespace, String block, BiConsumer<String, String> declaration) {
+        Data.replace(path(namespace, block), () -> declaration.accept(namespace, block));
+    }
+
     private static JsonObject silkOr(String namespace, String block, String drop, JsonArray dropFunctions) {
         JsonObject silk = new JsonObject();
         silk.addProperty("type", ITEM);

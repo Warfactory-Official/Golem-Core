@@ -1,8 +1,12 @@
 package dev.golem.core.data;
 
+import dev.golem.core.net.ClientSessions;
+
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import dev.golem.core.GolemCore;
+import dev.golem.core.hook.Hook;
+import java.util.function.BiConsumer;
 import dev.golem.core.Ids;
 import dev.golem.core.net.GolemCodec;
 import dev.golem.core.net.GolemNetwork;
@@ -36,7 +40,9 @@ import net.minecraft.server.packs.resources.ResourceManager;
 public final class DataFiles {
 
     private record Folder(String path, Consumer<Map<String, JsonElement>> apply,
-                          Consumer<Map<String, List<JsonElement>>> applyStacks) {
+                          Consumer<Map<String, List<JsonElement>>> applyStacks,
+                          BiConsumer<Map<String, JsonElement>, ClientSessions.Session> applyClient,
+                          BiConsumer<Map<String, List<JsonElement>>, ClientSessions.Session> applyClientStacks) {
 
         boolean stacked() {
             return applyStacks != null;
@@ -45,6 +51,8 @@ public final class DataFiles {
 
     private static final Map<String, Folder> FOLDERS = new ConcurrentHashMap<>();
     private static volatile Object source;
+    public static final Hook<Consumer<MinecraftServer>> AFTER_REFRESH = Hook.notifying();
+    public static final Hook<BiConsumer<MinecraftServer, List<ServerPlayer>>> AFTER_SYNC = Hook.notifying();
 
     private DataFiles() {}
 
@@ -62,7 +70,13 @@ public final class DataFiles {
 
     /** Declares {@code folder}: {@code apply} receives its files after every load. Call at mod construction. */
     public static void folder(String folder, Consumer<Map<String, JsonElement>> apply) {
-        if (FOLDERS.putIfAbsent(folder, new Folder(folder, apply, null)) != null) {
+        folder(folder, apply, (files, session) -> apply.accept(files));
+    }
+
+    /** Separate authoritative-server application from the connected client's metadata mirror. */
+    public static void folder(String folder, Consumer<Map<String, JsonElement>> apply,
+                              BiConsumer<Map<String, JsonElement>, ClientSessions.Session> applyClient) {
+        if (FOLDERS.putIfAbsent(folder, new Folder(folder, apply, null, applyClient, null)) != null) {
             throw new IllegalStateException("Data folder " + folder + " declared twice");
         }
     }
@@ -72,7 +86,12 @@ public final class DataFiles {
      * vanilla's tags are read), so contributions from several mods to one file merge instead of the top pack winning.
      */
     public static void stackedFolder(String folder, Consumer<Map<String, List<JsonElement>>> apply) {
-        if (FOLDERS.putIfAbsent(folder, new Folder(folder, null, apply)) != null) {
+        stackedFolder(folder, apply, (files, session) -> apply.accept(files));
+    }
+
+    public static void stackedFolder(String folder, Consumer<Map<String, List<JsonElement>>> apply,
+                                     BiConsumer<Map<String, List<JsonElement>>, ClientSessions.Session> applyClient) {
+        if (FOLDERS.putIfAbsent(folder, new Folder(folder, null, apply, null, applyClient)) != null) {
             throw new IllegalStateException("Data folder " + folder + " declared twice");
         }
     }
@@ -87,6 +106,7 @@ public final class DataFiles {
                 SyncPayload payload = payload(folder, server.getResourceManager());
                 for (ServerPlayer player : players) GolemNetwork.sendToPlayer(player, SyncPayload.CODEC, payload);
             }
+            for (var listener : AFTER_SYNC) listener.accept(server, players);
         });
     }
 
@@ -102,14 +122,14 @@ public final class DataFiles {
                     for (JsonElement element : JsonParser.parseString(payload.rows().get(i + 1)).getAsJsonArray()) stack.add(element);
                     stacks.put(payload.rows().get(i), stack);
                 }
-                folder.applyStacks().accept(stacks);
+                folder.applyClientStacks().accept(stacks, context.session());
                 return;
             }
             Map<String, JsonElement> files = new TreeMap<>();
             for (int i = 0; i + 1 < payload.rows().size(); i += 2) {
                 files.put(payload.rows().get(i), JsonParser.parseString(payload.rows().get(i + 1)));
             }
-            folder.apply().accept(files);
+            folder.applyClient().accept(files, context.session());
         });
     }
 
@@ -121,6 +141,7 @@ public final class DataFiles {
             if (folder.stacked()) folder.applyStacks().accept(readStacks(folder.path(), manager));
             else folder.apply().accept(read(folder.path(), manager));
         }
+        for (var listener : AFTER_REFRESH) listener.accept(server);
     }
 
     /** Every file of {@code folder} in {@code manager}, by {@code <namespace>:<path>}, sorted. */

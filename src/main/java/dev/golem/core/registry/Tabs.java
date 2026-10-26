@@ -1,6 +1,15 @@
 package dev.golem.core.registry;
 
+//? if neoforge {
+import dev.golem.core.platform.NeoForgeEntrypoint;
+//?}
+//? if neoforge {
+import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
+//?}
+
+import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.CreativeModeTab;
@@ -49,6 +58,40 @@ public final class Tabs {
                 (net.minecraftforge.event.BuildCreativeModeTabContentsEvent event) -> {
                     if (event.getTabKey().equals(tab)) contents.accept(event::accept);
                 });
+        *///?}
+    }
+
+    /**
+     * Registers a callback that inserts stacks right before the anchor stack in one tab (1.7 addons slotting
+     * vanilla-tab entries at authored positions). Handles resolve when the tab builds, not here. Copies of the
+     * stacks already in the tab are moved, not duplicated.
+     */
+    public static void insertBefore(ResourceKey<CreativeModeTab> tab, Supplier<ItemStack> anchor,
+            Supplier<List<ItemStack>> stacks) {
+        //? if neoforge {
+        // Golem Core's own mod bus, the same one Tints subscribes to.
+        NeoForgeEntrypoint.modBus().addListener(
+                (BuildCreativeModeTabContentsEvent event) -> {
+                    if (!event.getTabKey().equals(tab)) return;
+                    ItemStack before = anchor.get();
+                    for (ItemStack stack : stacks.get()) {
+                        // The tab pre-populates spawn eggs and the like: take the existing copy out first,
+                        // or the positional insert refuses the duplicate.
+                        event.remove(stack, CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
+                        event.insertBefore(before, stack,
+                                CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
+                    }
+                });
+        //?} elif forge {
+        /*// Forge 1.20.1's tab event has no positional hook: appended in order, after the tab's own contents.
+        modifyEntries(tab, entries -> {
+            for (ItemStack stack : stacks.get()) entries.accept(stack);
+        });
+        *///?} else {
+        /*// No positional hook on this loader: appended in order, after the tab's own contents.
+        modifyEntries(tab, entries -> {
+            for (ItemStack stack : stacks.get()) entries.accept(stack);
+        });
         *///?}
     }
 }
