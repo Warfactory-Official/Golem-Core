@@ -1,9 +1,12 @@
 package dev.golem.core.world;
 
+import net.minecraft.world.level.LevelReader;
+
 import dev.golem.core.GolemCore;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.TicketType;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.chunk.LevelChunk;
 
 import java.util.Comparator;
 import java.util.HashMap;
@@ -14,6 +17,15 @@ import java.util.WeakHashMap;
 public final class Chunks {
 
     private Chunks() {}
+
+    /** The lowest buildable y of {@code level} (1.21.2 {@code getMinY}; earlier {@code getMinBuildHeight}). */
+    public static int minY(LevelReader level) {
+        //? if >=1.21.2 {
+        return level.getMinY();
+        //?} else {
+        /*return level.getMinBuildHeight();
+        *///?}
+    }
 
     /**
      * Ownership that vanilla's set-like ticket collection does not retain. Multiple bulk operations may
@@ -37,12 +49,12 @@ public final class Chunks {
      * claim that outlives a crash disappears, which is the right failure mode for one.
      */
     //? if >=26.1 {
-    private static final net.minecraft.server.level.TicketType LOAD_ONLY =
+    public static final TicketType LOAD_ONLY =
             new net.minecraft.server.level.TicketType(
                     net.minecraft.server.level.TicketType.NO_TIMEOUT,
                     net.minecraft.server.level.TicketType.FLAG_LOADING);
     //?} else {
-    /*private static final net.minecraft.server.level.TicketType<ChunkPos> LOAD_ONLY =
+    /*public static final TicketType<ChunkPos> LOAD_ONLY =
             net.minecraft.server.level.TicketType.create("golem_load_only",
                     java.util.Comparator.comparingLong(ChunkPos::toLong));
     *///?}
@@ -105,10 +117,65 @@ public final class Chunks {
         *///?}
     }
     /**
+     * Waits until a chunk held by the caller ticks entities and has read its stored entities. The caller retains
+     * ownership of its ticket; this wait neither takes nor releases a claim.
+     */
+    public static void loadEntityTicking(ServerLevel level, int chunkX, int chunkZ) {
+        var cache = level.getChunkSource();
+        // A FULL chunk can already be cached while its newly claimed entity-ticking future is still unloaded.
+        cache.runDistanceManagerUpdates();
+        level.getChunk(chunkX, chunkZ);
+        var pos = new ChunkPos(chunkX, chunkZ);
+        var ticking = cache.getVisibleChunkIfPresent(pack(chunkX, chunkZ)).getEntityTickingChunkFuture();
+        level.getServer().managedBlock(() -> {
+            if (ticking.isDone()) return true;
+            // The server's ordinary chunk polling is budgeted by its tick deadline; this blocking wait is not.
+            cache.pollTask();
+            return ticking.isDone();
+        });
+        var result = ticking.join();
+        //? if >=1.21.1 {
+        result.orElseThrow(() -> new IllegalStateException("Entity-ticking chunk " + pos + ": " + result.getError()));
+        //?} else {
+        /*result.left().orElseThrow(() -> new IllegalStateException(
+                "Entity-ticking chunk " + pos + ": " + result.right().orElseThrow()));
+        *///?}
+        //? if >=26.1 {
+        level.waitForEntities(pos, 0);
+        //?} else {
+        /*level.getServer().managedBlock(() -> {
+            level.entityManager.processPendingLoads();
+            return level.areEntitiesLoaded(pack(chunkX, chunkZ));
+        });
+        *///?}
+    }
+
+    /** Waits for a caller-held chunk's native send dependencies, including lighting, before a player send. */
+    public static LevelChunk loadForSending(ServerLevel level, int chunkX, int chunkZ) {
+        loadEntityTicking(level, chunkX, chunkZ);
+        var cache = level.getChunkSource();
+        var holder = cache.getVisibleChunkIfPresent(pack(chunkX, chunkZ));
+        //? if >=1.21.1 {
+        level.getServer().managedBlock(() -> {
+            var sending = holder.getSendSyncFuture();
+            if (sending.isDone()) {
+                sending.join();
+                if (holder.getChunkToSend() != null) return true;
+            }
+            cache.pollTask();
+            return false;
+        });
+        return holder.getChunkToSend();
+        //?} else {
+        /*return holder.getTickingChunk();
+        *///?}
+    }
+
+    /**
      * Loads or generates a chunk on the calling server thread and returns it, blocking until it is a full
      * chunk. The synchronous fallback for a claim the chunk system does not answer.
      */
-    public static net.minecraft.world.level.chunk.LevelChunk loadNow(ServerLevel level, int chunkX, int chunkZ) {
+    public static LevelChunk loadNow(ServerLevel level, int chunkX, int chunkZ) {
         //? if >=1.21 {
         net.minecraft.world.level.chunk.ChunkAccess chunk = level.getChunkSource().getChunk(chunkX, chunkZ,
                 net.minecraft.world.level.chunk.status.ChunkStatus.FULL, true);
@@ -116,7 +183,7 @@ public final class Chunks {
         /*net.minecraft.world.level.chunk.ChunkAccess chunk = level.getChunkSource().getChunk(chunkX, chunkZ,
                 net.minecraft.world.level.chunk.ChunkStatus.FULL, true);
         *///?}
-        return chunk instanceof net.minecraft.world.level.chunk.LevelChunk full ? full : null;
+        return chunk instanceof LevelChunk full ? full : null;
     }
 
     /** Drops a claim taken by {@link #claimForLoading}. */

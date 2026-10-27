@@ -1,5 +1,6 @@
 package dev.golem.core.world;
 
+import dev.golem.core.hook.Hook;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 
@@ -16,6 +17,41 @@ import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 public final class Physics {
 
     private Physics() {}
+
+    @FunctionalInterface
+    public interface EffectiveGravity {
+        double gravity(LivingEntity entity, double gravity);
+    }
+
+    /** Transforms the pull read by living travel; modern vanilla applies Slow Falling after this read. */
+    public static final Hook<EffectiveGravity> EFFECTIVE_GRAVITY = Hook.of(listeners -> (entity, gravity) -> {
+        for (var listener : listeners) gravity = listener.gravity(entity, gravity);
+        return gravity;
+    });
+
+    @FunctionalInterface
+    public interface VerticalAirDrag {
+        double drag(LivingEntity entity, double vertical, double horizontal);
+    }
+
+    /** The vertical air drag and vanilla's already-computed horizontal drag, including ground friction. */
+    public static final Hook<VerticalAirDrag> VERTICAL_AIR_DRAG = Hook.of(listeners -> (entity, vertical, horizontal) -> {
+        for (var listener : listeners) vertical = listener.drag(entity, vertical, horizontal);
+        return vertical;
+    });
+
+    public static double effectiveGravity(LivingEntity entity, double gravity) {
+        return EFFECTIVE_GRAVITY.invoker().gravity(entity, gravity);
+    }
+
+    public static double verticalAirDrag(LivingEntity entity, double vertical, double horizontal) {
+        return VERTICAL_AIR_DRAG.invoker().drag(entity, vertical, horizontal);
+    }
+
+    /** The jump flag used by living travel, including an airborne player's held jump input. */
+    public static boolean isJumping(LivingEntity entity) {
+        return entity.jumping;
+    }
 
     /** Golem Core's entrypoints call this first: on 1.20.1 the backported attributes' register must exist early. */
     public static void init() {

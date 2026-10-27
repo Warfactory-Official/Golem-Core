@@ -19,7 +19,23 @@ The goal is identical behaviour on every target, not just similar behaviour.
 Golem Core is a required dependency: install the jar matching your Minecraft version and loader alongside
 any mod built on it.
 
+## Rendering contracts
+
+`Fogs.Modifier` supplies native linear fog ranges and colors without replacing vanilla shader includes.
+`Clouds.registerAdditions` keeps the native first cloud layer and appends layers using that pass's height,
+color, alpha and clock. A mod that retains native cloud or lightmap differences between targets documents
+those exceptions beside its registration.
+
+Development launches retain native OpenGL validation by default. On 26.1 Fabric, opt into production
+validation behavior with `-Dgolemcore.disableGlValidation=true`; NeoForge provides
+`-Dneoforge.disableGlValidation=true`. These switches apply at startup, and
+`RenderOps.validationEnabled()` reports the actual native flag.
+
 ## In-game test harness
+
+For 26.1 Fabric client GameTests, `-Dgolemcore.client.gametest.serverTickRate=<rate>` adjusts positive
+wait budgets for the server rate chosen by the launch, using whole multiples of the native 20 TPS budget.
+The default is 20; nonpositive timeout values keep their native meaning.
 
 `harness/` holds a mod-neutral test harness. It starts real development clients of a Golem Core mod and
 drives them like a player would: it presses keys, clicks slots, places blocks, runs commands, reads blocks

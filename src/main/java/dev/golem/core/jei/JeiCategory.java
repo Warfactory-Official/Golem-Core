@@ -2,6 +2,7 @@ package dev.golem.core.jei;
 
 //? if jei {
 
+import dev.golem.core.fluid.FluidUnits;
 import dev.golem.core.viewer.Drawable;
 import dev.golem.core.viewer.Role;
 import dev.golem.core.viewer.SlotLayout;
@@ -11,6 +12,7 @@ import mezz.jei.api.gui.builder.IRecipeSlotBuilder;
 import mezz.jei.api.gui.drawable.IDrawable;
 import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.helpers.IGuiHelper;
+import mezz.jei.api.helpers.IJeiHelpers;
 import mezz.jei.api.recipe.IFocusGroup;
 import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.category.AbstractRecipeCategory;
@@ -21,6 +23,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 *///?}
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.material.Fluid;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,12 +37,14 @@ final class JeiCategory<T> extends AbstractRecipeCategory<T> {
 
     private final ViewerCategory<T> category;
     private final IGuiHelper helper;
+    private final long fluidUnitsPerMb;
 
-    JeiCategory(IGuiHelper helper, ViewerCategory<T> category) {
-        super(JeiViewer.type(category.type()).unwrap(), category.title(), helper.createDrawableItemStack(category.icon()),
+    JeiCategory(IJeiHelpers helpers, ViewerCategory<T> category) {
+        super(JeiViewer.type(category.type()).unwrap(), category.title(), helpers.getGuiHelper().createDrawableItemStack(category.icon()),
                 category.width(), category.height());
         this.category = category;
-        this.helper = helper;
+        this.helper = helpers.getGuiHelper();
+        this.fluidUnitsPerMb = helpers.getPlatformFluidHelper().bucketVolume() / FluidUnits.MB_PER_BUCKET;
     }
 
     @Override
@@ -86,6 +91,12 @@ final class JeiCategory<T> extends AbstractRecipeCategory<T> {
         @Override
         public SlotLayout.Slot addItemStacks(List<ItemStack> stacks) {
             slot.addItemStacks(stacks);
+            return this;
+        }
+
+        @Override
+        public SlotLayout.Slot addFluidStack(Fluid fluid, long milliBuckets) {
+            slot.addFluidStack(fluid, Math.multiplyExact(milliBuckets, fluidUnitsPerMb));
             return this;
         }
 

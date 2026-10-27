@@ -1,13 +1,34 @@
 package dev.golem.core.client;
 
+//? if neoforge {
+import dev.golem.core.platform.NeoForgeEntrypoint;
+//?}
+//? if neoforge && >=26.1 {
+import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
+//?}
+
 import dev.golem.core.GolemCore;
+import dev.golem.core.Ids;
+import java.util.function.ToIntFunction;
+import java.util.function.Function;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import com.google.gson.JsonParseException;
+import java.io.IOException;
+import net.minecraft.world.item.ItemStack;
+//? if >=26.1 {
+import com.mojang.serialization.MapCodec;
+import net.minecraft.client.color.item.ItemTintSource;
+import net.minecraft.client.color.item.ItemTintSources;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.world.entity.LivingEntity;
+//?}
 
 //? if <26.1 {
 /*import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import dev.golem.core.Ids;
 import dev.golem.core.data.ModelData;
 import net.minecraft.client.color.item.ItemColor;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -15,33 +36,21 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
 
 import java.io.BufferedReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 *///?}
 
 /**
- * Item tint colours, as 26.1 does them, on versions that have no way to express them.
- *
- * <p>From 1.21.4 an item definition declares its own tints, one entry per tint index:
- * {@code "tints": [{"type":"minecraft:constant","value":-1}, {"type":"minecraft:custom_model_data","index":0,"default":16777215}]}
- * Layer 0 is left alone and layer 1 takes the colour {@code ModelData.setColor} stored. Below that there is no
- * item-definition layer, only the per-item {@code ItemColor} registry, reached differently on each loader. A mod calls
- * {@link #install(String)} once from shared code.
- *
- * <p>The tint array is read from the same item definitions 26.1 reads. Assuming index 0 is tinted inverts every
- * two-layer item: the container gets the fluid's colour and the fluid stays white. Vanilla never opens these files
- * below 1.21.4, so they are parsed here.
- *
- * <p>On 26.1 everything here is a no-op.
+ * Item and block tints through native declarations and legacy color callbacks.
+ * Legacy callbacks read selected leaves from the same item definitions and keep component colors opaque.
  */
 public final class Tints {
 
     private Tints() {}
+    private static final Map<String, ToIntFunction<ItemStack>> SOURCES = new ConcurrentHashMap<>();
 
     /** 26.1's declared tint default: plain white RGB, which leaves the texture alone. */
     public static final int UNTINTED = 0xFFFFFF;
@@ -61,15 +70,16 @@ public final class Tints {
      * both eras, so full alpha is added. {@code colorIndex} picks the colour: index 0 is the one
      * {@code ModelData.setColor} stores, higher indices come from {@code ModelData.setColors}.
      ^/
-    private record Tint(boolean constant, int value, int colorIndex, int defaultColor) {
+    private record Tint(boolean constant, int value, int colorIndex, int defaultColor, ToIntFunction<ItemStack> source) {
 
         int resolve(ItemStack stack) {
+            if (source != null) return source.applyAsInt(stack);
             return constant ? value : OPAQUE | (ModelData.color(stack, colorIndex, defaultColor) & 0xFFFFFF);
         }
     }
 
     /^* Item id -> its tints, by tint index. Rebuilt on every resource reload. ^/
-    private static Map<ResourceLocation, List<Tint>> tints = Map.of();
+    private static Map<ResourceLocation, Function<ItemStack, List<Tint>>> tints = Map.of();
     *///?}
 
     /**
@@ -80,7 +90,8 @@ public final class Tints {
     public static void install(String namespace) {
         //? if <26.1 {
         /*ItemColor color = (stack, tintIndex) -> {
-            List<Tint> declared = tints.get(BuiltInRegistries.ITEM.getKey(stack.getItem()));
+            var selector = tints.get(BuiltInRegistries.ITEM.getKey(stack.getItem()));
+            var declared = selector == null ? List.<Tint>of() : selector.apply(stack);
             // Past the end of the declared array, or on an item that declares none, vanilla's own
             // answer, which is bit-identical to having registered no handler at all.
             if (declared == null || tintIndex < 0 || tintIndex >= declared.size()) return NO_TINT;
@@ -141,6 +152,41 @@ public final class Tints {
         ^///?}
         *///?}
     }
+
+    /** The same item tint source resolves native declarations and selected legacy model leaves. */
+    public static void registerItemSource(String namespace, String name, ToIntFunction<ItemStack> color) {
+        if (SOURCES.putIfAbsent(namespace + ":" + name, color) != null) {
+            throw new IllegalArgumentException("Item tint source already registered: " + namespace + ":" + name);
+        }
+        //? if >=26.1 {
+        var source = new CallbackTint(color);
+        //? if fabric {
+        /*ItemTintSources.ID_MAPPER.put(Ids.of(namespace, name), source.type());
+        *///?} elif neoforge {
+        NeoForgeEntrypoint.modBus().addListener(
+                (RegisterColorHandlersEvent.ItemTintSources event) ->
+                        event.register(Ids.of(namespace, name), source.type()));
+        //?}
+        //?}
+    }
+
+    //? if >=26.1 {
+    private static final class CallbackTint implements ItemTintSource {
+        private final ToIntFunction<ItemStack> color;
+        private final MapCodec<CallbackTint> codec;
+
+        private CallbackTint(ToIntFunction<ItemStack> color) {
+            this.color = color;
+            codec = MapCodec.unit(this);
+        }
+
+        @Override public int calculate(ItemStack stack, ClientLevel level, LivingEntity owner) {
+            return color.applyAsInt(stack);
+        }
+
+        @Override public MapCodec<CallbackTint> type() { return codec; }
+    }
+    //?}
 
     /**
      * Registers a {@link BlockTint} for the given blocks, on whichever colour API this node has.
@@ -258,46 +304,57 @@ public final class Tints {
     //? if <26.1 {
     /*/^* Reparses every item definition's tint declarations. ^/
     private static void reload(ResourceManager resources) {
-        Map<ResourceLocation, List<Tint>> built = new HashMap<>();
-        for (Map.Entry<ResourceLocation, Resource> entry :
-                resources.listResources("items", path -> path.getPath().endsWith(".json")).entrySet()) {
-            ResourceLocation file = entry.getKey();
-            try (BufferedReader reader = entry.getValue().openAsReader()) {
-                List<Tint> parsed = tintsOf(JsonParser.parseReader(reader));
-                if (parsed.isEmpty()) continue;
-                String path = file.getPath();
-                String name = path.substring("items/".length(), path.length() - ".json".length());
-                built.put(Ids.of(file.getNamespace(), name), parsed);
-            } catch (Exception e) {
-                // A malformed definition costs that item its tint, not the whole reload.
-                GolemCore.LOG.warn("Skipping tints for {}: {}", file, e.toString());
+        var built = new HashMap<ResourceLocation, Function<ItemStack, List<Tint>>>();
+        var definitions = new HashMap<ResourceLocation, JsonObject>();
+        for (var entry : resources.listResources("items", path -> path.getPath().endsWith(".json")).entrySet()) {
+            var file = entry.getKey();
+            try (var reader = entry.getValue().openAsReader()) {
+                var definition = JsonParser.parseReader(reader).getAsJsonObject();
+                var path = file.getPath();
+                var name = path.substring("items/".length(), path.length() - ".json".length());
+                var id = Ids.of(file.getNamespace(), name);
+                definitions.put(id, definition);
+                var parsed = tintsOf(definition);
+                if (parsed != null) built.put(id, parsed);
+            } catch (IOException | JsonParseException malformed) {
+                // Unreadable or malformed item definitions retain vanilla's untinted result.
+                GolemCore.LOG.warn("Skipping tints for {}: {}", file, malformed.toString());
             }
         }
+        ItemModelProperties.definitions(definitions);
         tints = Map.copyOf(built);
         GolemCore.LOG.info("Tint emulation loaded declarations for {} item(s)", tints.size());
     }
 
-    /^*
-     * The tints an item definition declares, in tint-index order; empty if it declares none.
-     *
-     * <p>A `minecraft:condition` selects between two models that each carry their own tints. This era
-     * cannot switch tint arrays per condition, so the false branch wins. Both branches of such a pair
-     * declare the same tints and differ only in the texture they draw.
-     ^/
-    private static List<Tint> tintsOf(JsonElement root) {
-        if (!root.isJsonObject()) return List.of();
-        JsonElement model = root.getAsJsonObject().get("model");
-        if (model == null || !model.isJsonObject()) return List.of();
-        JsonObject object = model.getAsJsonObject();
-
-        JsonElement onFalse = object.get("on_false");
-        if (onFalse != null && onFalse.isJsonObject()) {
-            List<Tint> branch = tintsIn(onFalse.getAsJsonObject());
-            if (!branch.isEmpty()) return branch;
-            JsonElement onTrue = object.get("on_true");
-            if (onTrue != null && onTrue.isJsonObject()) return tintsIn(onTrue.getAsJsonObject());
+    private static Function<ItemStack, List<Tint>> tintsOf(JsonObject root) {
+        var model = root.getAsJsonObject("model");
+        if (model == null) return null;
+        if (model.has("type") && model.get("type").getAsString().equals("minecraft:select")) {
+            var property = model.get("property").getAsString();
+            if (!ItemModelProperties.registeredSelect(property)) return null;
+            var fallback = tintsIn(model.getAsJsonObject("fallback"));
+            var cases = new HashMap<String, List<Tint>>();
+            var hasTint = !fallback.isEmpty();
+            for (var entry : model.getAsJsonArray("cases")) {
+                var branch = entry.getAsJsonObject();
+                var selected = tintsIn(branch.getAsJsonObject("model"));
+                cases.put(branch.get("when").getAsString(), selected);
+                hasTint |= !selected.isEmpty();
+            }
+            if (!hasTint) return null;
+            var branches = Map.copyOf(cases);
+            return stack -> {
+                var value = ItemModelProperties.selected(property, stack);
+                return value == null ? fallback : branches.getOrDefault(value, fallback);
+            };
         }
-        return tintsIn(object);
+        var selected = tintsIn(model);
+        if (model.has("on_false")) {
+            selected = tintsIn(model.getAsJsonObject("on_false"));
+            if (selected.isEmpty() && model.has("on_true")) selected = tintsIn(model.getAsJsonObject("on_true"));
+        }
+        var result = selected;
+        return result.isEmpty() ? null : stack -> result;
     }
 
     private static List<Tint> tintsIn(JsonObject model) {
@@ -309,14 +366,16 @@ public final class Tints {
             JsonObject tint = element.getAsJsonObject();
             String type = tint.get("type").getAsString();
             if ("minecraft:constant".equals(type)) {
-                parsed.add(new Tint(true, tint.get("value").getAsInt(), 0, 0));
+                parsed.add(new Tint(true, tint.get("value").getAsInt(), 0, 0, null));
             } else if ("minecraft:custom_model_data".equals(type)) {
                 int index = tint.has("index") ? tint.get("index").getAsInt() : 0;
                 int fallback = tint.has("default") ? tint.get("default").getAsInt() : UNTINTED;
-                parsed.add(new Tint(false, 0, index, fallback));
+                parsed.add(new Tint(false, 0, index, fallback, null));
+            } else if (SOURCES.containsKey(type)) {
+                parsed.add(new Tint(false, 0, 0, 0, SOURCES.get(type)));
             } else {
                 // An unknown source leaves that index untinted rather than guessing at its meaning.
-                parsed.add(new Tint(true, NO_TINT, 0, 0));
+                parsed.add(new Tint(true, NO_TINT, 0, 0, null));
             }
         }
         return List.copyOf(parsed);

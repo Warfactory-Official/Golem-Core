@@ -1,9 +1,16 @@
 package dev.golem.core.world;
 
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.item.PrimedTnt;
+import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.level.Explosion;
 import net.minecraft.world.level.ExplosionDamageCalculator;
 import net.minecraft.world.level.Level;
@@ -18,6 +25,71 @@ public final class Explosions {
     private static final double LEGACY_FACTOR = 8.0D;
 
     private Explosions() {}
+
+    /** One native callback context whose identity survives allocation and block processing. */
+    public abstract static class Context
+            //? if >=26.1 {
+            implements Explosion
+            //?} else {
+            /*extends Explosion
+            *///?}
+    {
+        protected Context(Level level, @Nullable Entity source, double x, double y, double z, float radius) {
+            //? if >=1.21 && <26.1 {
+            /*super(level, source, level.damageSources().explosion(source, sourceOwner(source)), null,
+                    x, y, z, radius, false, BlockInteraction.DESTROY_WITH_DECAY,
+                    ParticleTypes.EXPLOSION, ParticleTypes.EXPLOSION_EMITTER, SoundEvents.GENERIC_EXPLODE);
+            *///?} elif <1.21 {
+            /*super(level, source, level.damageSources().explosion(source, sourceOwner(source)), null,
+                    x, y, z, radius, false, BlockInteraction.DESTROY_WITH_DECAY);
+            *///?}
+        }
+
+        public abstract ServerLevel level();
+        public abstract BlockInteraction getBlockInteraction();
+        public abstract @Nullable Entity getDirectSourceEntity();
+        public abstract float radius();
+        public abstract Vec3 center();
+        public abstract boolean canTriggerBlocks();
+        public abstract boolean shouldAffectBlocklikeEntities();
+
+        @Override
+        public final @Nullable LivingEntity getIndirectSourceEntity() {
+            return sourceOwner(getDirectSourceEntity());
+        }
+
+        private static @Nullable LivingEntity sourceOwner(@Nullable Entity source) {
+            if (source instanceof PrimedTnt tnt) return tnt.getOwner();
+            if (source instanceof LivingEntity living) return living;
+            return source instanceof Projectile projectile && projectile.getOwner() instanceof LivingEntity owner ? owner : null;
+        }
+
+        public final float blockResistance(Level level, BlockPos pos, BlockState state) {
+            var resistance = Math.max(state.getBlock().getExplosionResistance(), level.getFluidState(pos).getExplosionResistance());
+            var source = getDirectSourceEntity();
+            return source == null ? resistance
+                    : source.getBlockExplosionResistance(this, level, pos, state, state.getFluidState(), resistance);
+        }
+
+        public final boolean blockExplodes(Level level, BlockPos pos, BlockState state, float power) {
+            var source = getDirectSourceEntity();
+            return source == null || source.shouldBlockExplode(this, level, pos, state, power);
+        }
+
+        //? if <26.1 {
+        /*@Override
+        public final boolean interactsWithBlocks() {
+            return getBlockInteraction() != BlockInteraction.KEEP;
+        }
+        *///?}
+
+        //? if <1.21 {
+        /*@Override
+        public final DamageSource getDamageSource() {
+            return level().damageSources().explosion(getDirectSourceEntity(), getIndirectSourceEntity());
+        }
+        *///?}
+    }
 
     /** {@link Level#explode} without fire, with 1.7 damage. */
     public static void explode(Level level, @Nullable Entity source, double x, double y, double z, float radius,

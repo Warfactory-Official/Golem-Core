@@ -101,22 +101,27 @@ final class ReiCategory<T> implements DisplayCategory<ReiDisplay<T>> {
         return widgets;
     }
 
-    /** The slot's stacks, each carrying the slot's extra tooltip lines. */
-    private static List<EntryStack<ItemStack>> entries(ReiDisplay.RecordedSlot recorded) {
-        List<EntryStack<ItemStack>> entries = new ArrayList<>(recorded.stacks.size());
-        for (ItemStack stack : recorded.stacks) {
-            EntryStack<ItemStack> entry = EntryStacks.of(stack);
-            if (!recorded.tooltips.isEmpty()) {
-                entry = entry.copy().tooltipProcessor((shown, tooltip) -> {
-                    List<Component> lines = new ArrayList<>();
-                    for (SlotLayout.TooltipCallback callback : recorded.tooltips) callback.addLines(shown.getValue(), lines);
-                    for (Component line : lines) tooltip.add(line);
-                    return tooltip;
-                });
+    /** The slot's native ingredients, retaining item tooltip callbacks and native fluid rendering. */
+    private static List<EntryStack<?>> entries(ReiDisplay.RecordedSlot recorded) {
+        var entries = new ArrayList<EntryStack<?>>(recorded.entries.size());
+        for (var original : recorded.entries) {
+            EntryStack<?> entry = original;
+            if (!recorded.tooltips.isEmpty() && entry.getValue() instanceof ItemStack) {
+                entry = itemTooltips(entry.cast(), recorded.tooltips);
             }
             entries.add(entry);
         }
         return entries;
+    }
+
+    private static EntryStack<ItemStack> itemTooltips(EntryStack<ItemStack> entry,
+                                                     List<SlotLayout.TooltipCallback> callbacks) {
+        return entry.copy().tooltipProcessor((shown, tooltip) -> {
+            var lines = new ArrayList<Component>();
+            for (var callback : callbacks) callback.addLines(shown.getValue(), lines);
+            for (var line : lines) tooltip.add(line);
+            return tooltip;
+        });
     }
 }
 //?}

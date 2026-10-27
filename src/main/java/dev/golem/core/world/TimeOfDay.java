@@ -37,6 +37,8 @@ import net.minecraft.world.level.Level;
  * arrive, once a second, and whenever it is {@link #set}. A client derives the time between updates from its own game
  * time. 26.1's world clocks are not used: the older nodes have no registry for a {@code world_clock} entry, and
  * timelines, the bed rule and environment attributes would follow that clock too, so the nodes would disagree.
+ * Mods with authored native clocks and timelines instead register {@link #nativeClock}; their modern gameplay
+ * and rendering then share the same clock while older nodes retain the saved counter backend.
  */
 public final class TimeOfDay {
 
@@ -44,6 +46,7 @@ public final class TimeOfDay {
 
     private static final String DATA_ID = "golemcore:time_of_day";
     private static final Set<ResourceKey<Level>> OWN = ConcurrentHashMap.newKeySet();
+    private static final Set<ResourceKey<Level>> NATIVE = ConcurrentHashMap.newKeySet();
     /** Client: each own-clock dimension's last update, as (day time, client game time at receipt, advancing). */
     private static final Map<ResourceKey<Level>, long[]> CLIENT = new ConcurrentHashMap<>();
     private static boolean hooked;
@@ -53,7 +56,12 @@ public final class TimeOfDay {
      * calling it again for the same dimension does nothing.
      */
     public static synchronized void ownClock(ResourceKey<Level> dimension) {
+        if (NATIVE.contains(dimension)) throw new IllegalStateException(dimension + " already uses its native world clock");
         OWN.add(dimension);
+        hook();
+    }
+
+    private static void hook() {
         if (hooked) return;
         hooked = true;
         GolemNetwork.declarePlayToClient(SyncPayload.CODEC);
@@ -70,14 +78,46 @@ public final class TimeOfDay {
         });
     }
 
-    /** Whether {@code level} keeps its own time of day ({@link #ownClock}). */
+    /** Uses the dimension type's own native world clock; Minecraft saves, ticks and synchronizes it. */
+    public static synchronized void nativeClock(ResourceKey<Level> dimension) {
+        //? if >=26.1 {
+        if (OWN.contains(dimension)) throw new IllegalStateException(dimension + " already uses a saved time-of-day counter");
+        NATIVE.add(dimension);
+        hook();
+        //?} else {
+        /*throw new UnsupportedOperationException("Native world clocks require Minecraft 26.1");
+        *///?}
+    }
+
+    /** Whether {@code level} keeps its own time of day ({@link #ownClock} or {@link #nativeClock}). */
     public static boolean hasOwnClock(Level level) {
-        return OWN.contains(level.dimension());
+        return OWN.contains(level.dimension()) || NATIVE.contains(level.dimension());
+    }
+
+    /**
+     * Gives {@code dimension} the modern native world clock where one exists, else the saved counter backend.
+     * Call at mod construction on both sides; calling it again for the same dimension does nothing.
+     */
+    public static synchronized void autoClock(ResourceKey<Level> dimension) {
+        //? if >=26.1 {
+        nativeClock(dimension);
+        //?} else {
+        /*ownClock(dimension);
+        *///?}
+    }
+
+    /** Whether {@code level} runs on its dimension type's native world clock (false on every node below 26.1). */
+    public static boolean isNative(Level level) {
+        //? if >=26.1 {
+        return NATIVE.contains(level.dimension());
+        //?} else {
+        /*return false;
+        *///?}
     }
 
     /** Whether the dimension {@code dimension} keeps its own time of day ({@link #ownClock}). */
     public static boolean hasOwnClock(ResourceKey<Level> dimension) {
-        return OWN.contains(dimension);
+        return OWN.contains(dimension) || NATIVE.contains(dimension);
     }
 
     /**
@@ -86,11 +126,17 @@ public final class TimeOfDay {
      */
     public static void release(ResourceKey<Level> dimension) {
         OWN.remove(dimension);
+        NATIVE.remove(dimension);
         CLIENT.remove(dimension);
     }
 
     /** The level's time of day in ticks: its own clock when it has one, otherwise vanilla's day time. */
     public static long get(Level level) {
+        //? if >=26.1 {
+        if (NATIVE.contains(level.dimension())) {
+            return level.clockManager().getTotalTicks(level.dimensionType().defaultClock().orElseThrow());
+        }
+        //?}
         if (OWN.contains(level.dimension())) {
             if (level instanceof ServerLevel server) return data(server).time;
             long[] state = CLIENT.get(level.dimension());
@@ -105,6 +151,12 @@ public final class TimeOfDay {
      * day time (before 26.1 shared by all dimensions with the overworld; on 26.1 the dimension type's default clock).
      */
     public static void set(ServerLevel level, long time) {
+        //? if >=26.1 {
+        if (NATIVE.contains(level.dimension())) {
+            level.getServer().clockManager().setTotalTicks(level.dimensionType().defaultClock().orElseThrow(), time);
+            return;
+        }
+        //?}
         if (OWN.contains(level.dimension())) {
             Data data = data(level);
             data.time = time;

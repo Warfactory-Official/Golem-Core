@@ -2,6 +2,11 @@ package dev.golem.core.world;
 
 import dev.golem.core.Ids;
 import dev.golem.core.data.GolemComponent;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntity;
+//? if >=1.20.5 {
+import net.minecraft.core.component.DataComponents;
+//?}
 
 //? if >=1.20.5 {
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -659,11 +664,26 @@ public final class ItemStacks {
     /**
      * Applies a stack's stored block-entity data to a block entity the item did not place directly. Vanilla
      * applies it at the clicked position, which a folded multiblock has already removed by the time its real
-     * core exists elsewhere. Below 1.20.5 the same data is the item's {@code BlockEntityTag}, merged into the block
+     * core exists elsewhere. BLOCK_STATE properties follow the relocated core before its block-entity components.
+     * Below 1.20.5 the same data is the item's {@code BlockEntityTag}, merged into the block
      * entity exactly as vanilla's {@code BlockItem.updateCustomBlockEntityTag} does at the clicked position.
      */
-    public static void applyComponents(net.minecraft.world.level.block.entity.BlockEntity blockEntity, ItemStack stack) {
+    public static void applyComponents(BlockEntity blockEntity, ItemStack stack) {
         //? if >=1.20.5 {
+        var properties = stack.get(DataComponents.BLOCK_STATE);
+        if (properties != null) {
+            var current = blockEntity.getBlockState();
+            var state = properties.apply(current);
+            if (state != current) {
+                var level = blockEntity.getLevel();
+                var pos = blockEntity.getBlockPos();
+                if (level != null && level.getBlockEntity(pos) == blockEntity) {
+                    level.setBlock(pos, state, Block.UPDATE_CLIENTS | Block.UPDATE_KNOWN_SHAPE);
+                } else {
+                    blockEntity.setBlockState(state);
+                }
+            }
+        }
         blockEntity.applyComponentsFromItemStack(stack);
         //?} else {
         /*net.minecraft.nbt.CompoundTag data = net.minecraft.world.item.BlockItem.getBlockEntityData(stack);

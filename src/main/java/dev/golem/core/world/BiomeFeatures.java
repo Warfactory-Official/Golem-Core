@@ -1,5 +1,24 @@
 package dev.golem.core.world;
 
+import dev.golem.core.Ids;
+import dev.golem.core.registry.Entities;
+import java.util.function.Predicate;
+//? if fabric {
+/*import net.fabricmc.fabric.api.biome.v1.BiomeModifications;
+*///?}
+//? if fabric {
+/*import net.fabricmc.fabric.api.biome.v1.BiomeSelectionContext;
+*///?}
+//? if fabric {
+/*import net.fabricmc.fabric.api.biome.v1.BiomeSelectors;
+*///?}
+//? if fabric {
+/*import net.fabricmc.fabric.api.biome.v1.ModificationPhase;
+*///?}
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.tags.TagKey;
+
 import dev.golem.core.dejson.BiomeModifiers;
 
 /**
@@ -15,6 +34,7 @@ public final class BiomeFeatures {
     /** How many declarations earlier calls handed over; a later call (another mod's) hands over only the newer ones. */
     private static int installedFeatures;
     private static int installedSpawns;
+    private static int installedSpawnRemovals;
 
     private BiomeFeatures() {}
 
@@ -26,28 +46,16 @@ public final class BiomeFeatures {
         //? if fabric {
         /*java.util.List<BiomeModifiers.Declaration> features = BiomeModifiers.declared();
         java.util.List<BiomeModifiers.SpawnDeclaration> spawns = BiomeModifiers.declaredSpawns();
+        var spawnRemovals = BiomeModifiers.declaredSpawnRemovals();
         int fromFeature = installedFeatures;
         int fromSpawn = installedSpawns;
+        int fromSpawnRemoval = installedSpawnRemovals;
         installedFeatures = features.size();
         installedSpawns = spawns.size();
+        installedSpawnRemovals = spawnRemovals.size();
         for (BiomeModifiers.Declaration declaration : features.subList(fromFeature, features.size())) {
-            java.util.function.Predicate<net.fabricmc.fabric.api.biome.v1.BiomeSelectionContext> selector;
-            String biomes = declaration.biomes();
-            if (biomes.startsWith("#")) {
-                selector = net.fabricmc.fabric.api.biome.v1.BiomeSelectors.tag(net.minecraft.tags.TagKey.create(
-                        net.minecraft.core.registries.Registries.BIOME, dev.golem.core.Ids.parse(biomes.substring(1))));
-            } else {
-                selector = net.fabricmc.fabric.api.biome.v1.BiomeSelectors.includeByKey(net.minecraft.resources.ResourceKey.create(
-                        net.minecraft.core.registries.Registries.BIOME, dev.golem.core.Ids.parse(biomes)));
-            }
-            String excluded = declaration.excluded();
-            if (excluded != null && excluded.startsWith("#")) {
-                selector = selector.and(net.fabricmc.fabric.api.biome.v1.BiomeSelectors.tag(net.minecraft.tags.TagKey.create(
-                        net.minecraft.core.registries.Registries.BIOME, dev.golem.core.Ids.parse(excluded.substring(1)))).negate());
-            } else if (excluded != null) {
-                selector = selector.and(net.fabricmc.fabric.api.biome.v1.BiomeSelectors.excludeByKey(net.minecraft.resources.ResourceKey.create(
-                        net.minecraft.core.registries.Registries.BIOME, dev.golem.core.Ids.parse(excluded))));
-            }
+            var selector = selectBiomes(declaration.biomes());
+            if (declaration.excluded() != null) selector = selector.and(selectBiomes(declaration.excluded()).negate());
             net.minecraft.world.level.levelgen.GenerationStep.Decoration step =
                     net.minecraft.world.level.levelgen.GenerationStep.Decoration.valueOf(
                             declaration.step().toUpperCase(java.util.Locale.ROOT));
@@ -67,19 +75,8 @@ public final class BiomeFeatures {
                     });
         }
         for (BiomeModifiers.SpawnDeclaration spawn : spawns.subList(fromSpawn, spawns.size())) {
-            java.util.function.Predicate<net.fabricmc.fabric.api.biome.v1.BiomeSelectionContext> selector;
-            String biomes = spawn.biomes();
-            if (BiomeModifiers.ALL_BIOMES.equals(biomes)) {
-                selector = spawn.excluded() == null ? net.fabricmc.fabric.api.biome.v1.BiomeSelectors.all()
-                        : net.fabricmc.fabric.api.biome.v1.BiomeSelectors.excludeByKey(net.minecraft.resources.ResourceKey.create(
-                                net.minecraft.core.registries.Registries.BIOME, dev.golem.core.Ids.parse(spawn.excluded())));
-            } else if (biomes.startsWith("#")) {
-                selector = net.fabricmc.fabric.api.biome.v1.BiomeSelectors.tag(net.minecraft.tags.TagKey.create(
-                        net.minecraft.core.registries.Registries.BIOME, dev.golem.core.Ids.parse(biomes.substring(1))));
-            } else {
-                selector = net.fabricmc.fabric.api.biome.v1.BiomeSelectors.includeByKey(net.minecraft.resources.ResourceKey.create(
-                        net.minecraft.core.registries.Registries.BIOME, dev.golem.core.Ids.parse(biomes)));
-            }
+            var selector = selectBiomes(spawn.biomes());
+            if (spawn.excluded() != null) selector = selector.and(selectBiomes(spawn.excluded()).negate());
             // The entity type is resolved when the modification runs (world load), after registration.
             net.fabricmc.fabric.api.biome.v1.BiomeModifications.create(dev.golem.core.Ids.of(spawn.namespace(), spawn.name()))
                     .add(net.fabricmc.fabric.api.biome.v1.ModificationPhase.ADDITIONS, selector, context -> {
@@ -94,6 +91,31 @@ public final class BiomeFeatures {
                         ^///?}
                     });
         }
+        for (var removal : spawnRemovals.subList(fromSpawnRemoval, spawnRemovals.size())) {
+            BiomeModifications.create(Ids.of(removal.namespace(), removal.name()))
+                    .add(ModificationPhase.REMOVALS, selectBiomes(removal.biomes()), context -> {
+                        for (var entity : removal.entities()) {
+                            var type = Entities.byId(entity);
+                            //? if >=26.1 {
+                            context.getMobSpawnSettings().removeSpawnsOfEntityType(type);
+                            //?} else {
+                            /^context.getSpawnSettings().removeSpawnsOfEntityType(type);
+                            ^///?}
+                        }
+                    });
+        }
         *///?}
     }
+
+    //? if fabric {
+    /*private static Predicate<BiomeSelectionContext> selectBiomes(String biomes) {
+        if (BiomeModifiers.ALL_BIOMES.equals(biomes)) return BiomeSelectors.all();
+        if (biomes.startsWith("#")) {
+            return BiomeSelectors.tag(TagKey.create(
+                    Registries.BIOME, Ids.parse(biomes.substring(1))));
+        }
+        return BiomeSelectors.includeByKey(ResourceKey.create(
+                Registries.BIOME, Ids.parse(biomes)));
+    }
+    *///?}
 }

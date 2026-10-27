@@ -48,6 +48,17 @@ public final class Platform {
         *///?}
     }
 
+    /** Tests availability without running the target class's initializer. */
+    public static boolean isClassLoadable(String name, ClassLoader loader) {
+        try {
+            Class.forName(name, false, loader);
+            return true;
+        } catch (ClassNotFoundException | LinkageError unavailable) {
+            // Missing classes and incomplete linkage both make an optional API unavailable.
+            return false;
+        }
+    }
+
     /** The loaded version of {@code modId}, or null when it is not loaded. */
     public static @Nullable String modVersion(String modId) {
         //? if fabric {

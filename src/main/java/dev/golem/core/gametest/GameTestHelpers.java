@@ -1,5 +1,7 @@
 package dev.golem.core.gametest;
 
+import net.minecraft.world.phys.AABB;
+
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.buffer.Unpooled;
 import net.minecraft.core.BlockPos;
@@ -8,6 +10,12 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.gametest.framework.GameTestInfo;
+import net.minecraft.gametest.framework.GameTestListener;
+import dev.golem.core.net.GolemNetwork;
+//? if >=1.21.1 {
+import net.minecraft.gametest.framework.GameTestRunner;
+//?}
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.network.chat.Component;
@@ -41,6 +49,33 @@ import net.minecraft.server.network.CommonListenerCookie;
 public final class GameTestHelpers {
 
     private GameTestHelpers() {}
+
+    /** Structure bounds with half-open maxima, matching modern GameTestHelper.getBounds. */
+    public static AABB bounds(GameTestHelper helper) {
+        var bounds = helper.testInfo.getStructureBounds();
+        //? if <1.21.1 {
+        /*// 1.20.1 exposes the inclusive last block as AABB.max, making an authored 24-cube report size 23.
+        return new AABB(bounds.minX, bounds.minY, bounds.minZ,
+                bounds.maxX + 1, bounds.maxY + 1, bounds.maxZ + 1);
+        *///?} else {
+        return bounds;
+        //?}
+    }
+
+    /** Runs cleanup against the actual outcome, including a timeout or a failure in a scheduled callback. */
+    public static void onCompletion(GameTestHelper helper, Runnable passed, Runnable failed) {
+        helper.testInfo.addListener(new GameTestListener() {
+            @Override public void testStructureLoaded(GameTestInfo info) {}
+            //? if >=1.21.1 {
+            @Override public void testPassed(GameTestInfo info, GameTestRunner runner) { passed.run(); }
+            @Override public void testFailed(GameTestInfo info, GameTestRunner runner) { failed.run(); }
+            @Override public void testAddedForRerun(GameTestInfo original, GameTestInfo copy, GameTestRunner runner) {}
+            //?} else {
+            /*@Override public void testPassed(GameTestInfo info) { passed.run(); }
+            @Override public void testFailed(GameTestInfo info) { failed.run(); }
+            *///?}
+        });
+    }
 
     /**
      * The block entity at a relative position, asserted to be of the given type.
@@ -134,7 +169,8 @@ public final class GameTestHelpers {
     public static int golemPayloads(Outbound outbound, String channelId) {
         int count = golemPayloads(outbound.packets(), channelId);
         for (byte[] wire : outbound.wires()) {
-            if (readChannel(wire) != null && readChannel(wire).equals(channelId)) count++;
+            var channel = readChannel(wire);
+            if (channelId.equals(channel)) count++;
         }
         return count;
     }
@@ -150,11 +186,10 @@ public final class GameTestHelpers {
             //? if >=26.1 {
             return new FriendlyByteBuf(buffer).readIdentifier().toString();
             //?} elif forge {
-            /*FriendlyByteBuf reader = new FriendlyByteBuf(buffer);
-            net.minecraft.resources.ResourceLocation channel = reader.readResourceLocation();
-            // Forge carries every payload on one SimpleChannel; the index byte after it names the payload
-            if (!channel.equals(dev.golem.core.net.GolemNetwork.forgeChannel())) return channel.toString();
-            return dev.golem.core.net.GolemNetwork.forgePayloadId(reader.readByte() & 0xff);
+            /*var reader = new FriendlyByteBuf(buffer);
+            var channel = reader.readResourceLocation();
+            if (!channel.equals(GolemNetwork.forgeChannel())) return channel.toString();
+            return GolemNetwork.forgePayloadId(reader.readByte() & 0xff);
             *///?} else {
             /*return new FriendlyByteBuf(buffer).readResourceLocation().toString();
             *///?}

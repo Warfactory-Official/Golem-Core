@@ -17,8 +17,9 @@
 // never reached this node. Logs "generatedData: packed N generated file(s) in M folder(s)".
 
 val generatedDataGenerator = findProperty("golem.build.generatedData.generator")?.toString() ?: ":26.1-neoforge:runGenerateData"
-val generatedDataRoot = rootProject.layout.projectDirectory.dir(
-    findProperty("golem.build.generatedData.root")?.toString() ?: "build/generated/data")
+val generatedDataRoot = findProperty("golem.build.generatedData.root")?.toString()?.let {
+    rootProject.layout.projectDirectory.dir(it)
+} ?: rootProject.layout.buildDirectory.dir("generated/data").get()
 
 // An authored file at a generated path would silently win over (or merge with) the generated one, so it fails the build,
 // naming the file. While a folder is being migrated to Java (its authored files kept until the generated ones are proven

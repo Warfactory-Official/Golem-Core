@@ -11,6 +11,14 @@ public interface Loot {
 
     void declare(String namespace, String block);
 
+    /**
+     * Declares an addon's replacement for one host block's loot table. In a shared declaration run call this after
+     * the host; in addon-only generation the same call creates the override without loading the host's classes.
+     */
+    static void replace(String namespace, String block, Loot replacement) {
+        Drops.replace(namespace, block, replacement::declare);
+    }
+
     /** The block drops itself (survives explosion). */
     static Loot self() {
         return Drops::self;

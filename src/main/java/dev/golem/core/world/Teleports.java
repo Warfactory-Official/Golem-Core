@@ -1,6 +1,19 @@
 package dev.golem.core.world;
 
+import java.util.function.Consumer;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.TicketType;
+import net.minecraft.world.level.ChunkPos;
+//? if >=1.21 && <26.1 {
+/*import net.minecraft.world.level.portal.DimensionTransition;
+*///?}
+//? if >=26.1 {
+import net.minecraft.world.level.portal.TeleportTransition;
+//?}
+import net.minecraft.world.phys.Vec3;
+
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 
 /**
@@ -13,6 +26,11 @@ import net.minecraft.world.entity.Entity;
 public final class Teleports {
 
     private Teleports() {}
+
+    /** Whether the server is still waiting for this player to acknowledge a teleport. */
+    public static boolean awaitingAcknowledgement(ServerPlayer player) {
+        return player.connection.awaitingPositionFromClient != null;
+    }
 
     /**
      * Teleports {@code entity} to {@code (x, y, z)} in {@code level}, which may be the level it is in.
@@ -38,6 +56,60 @@ public final class Teleports {
         return passenger.startRiding(vehicle, true, true);
         //?} else {
         /*return passenger.startRiding(vehicle, true);
+        *///?}
+    }
+
+    /**
+     * Whether cross-level moves must be deferred to the end-of-tick worker: true where vanilla has no passenger
+     * transition (below 1.21.1), so callers queue instead of moving immediately.
+     */
+    public static boolean defersTransfers() {
+        //? if >=1.21.1 {
+        return false;
+        //?} else {
+        /*return true;
+        *///?}
+    }
+
+    /**
+     * Moves the root vehicle and its passengers to {@code target} at {@code pos}, keeping velocity and rotation, and
+     * calls {@code afterPassengers} once vanilla has put the passengers back aboard. Returns false where vanilla has
+     * no passenger transition (below 1.21.1): the caller keeps its legacy separate-move path.
+     */
+    public static boolean transferRoot(Entity root, ServerLevel target, Vec3 pos,
+                                       Consumer<Entity> afterPassengers) {
+        //? if >=26.1 {
+        root.teleport(new TeleportTransition(target, pos, root.getDeltaMovement(),
+                root.getYRot(), root.getXRot(), afterPassengers::accept));
+        return true;
+        //?} elif >=1.21.1 {
+        /*root.changeDimension(new DimensionTransition(target, pos, root.getDeltaMovement(),
+                root.getYRot(), root.getXRot(), afterPassengers::accept));
+        return true;
+        *///?} else {
+        /*return false;
+        *///?}
+    }
+
+    /**
+     * Cross-level move that keeps velocity and leaves a portal ticket at the arrival, as a teleporter crossing does.
+     */
+    public static void transferWithTicket(Entity entity, ServerLevel destination, Vec3 pos) {
+        //? if >=26.1 {
+        entity.teleport(new TeleportTransition(destination, pos, entity.getDeltaMovement(),
+                entity.getYRot(), entity.getXRot(),
+                TeleportTransition.PLACE_PORTAL_TICKET));
+        //?} elif >=1.21.1 {
+        /*entity.changeDimension(new DimensionTransition(destination, pos, entity.getDeltaMovement(),
+                entity.getYRot(), entity.getXRot(),
+                DimensionTransition.PLACE_PORTAL_TICKET));
+        *///?} else {
+        /*var arrival = BlockPos.containing(pos.x, pos.y, pos.z);
+        destination.getChunk(arrival);
+        if (toLevel(entity, destination, pos.x, pos.y, pos.z)) {
+            destination.getChunkSource().addRegionTicket(TicketType.PORTAL,
+                    new ChunkPos(arrival), 3, arrival);
+        }
         *///?}
     }
 

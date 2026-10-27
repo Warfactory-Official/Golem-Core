@@ -74,6 +74,7 @@ public abstract class CompatEntityRenderer<T extends Entity, S extends CompatEnt
     /** Bridges vanilla's submit signature to {@link #submit}. */
     @Override
     public void submit(S state, PoseStack poseStack, SubmitNodeCollector collector, CameraRenderState camera) {
+        super.submit(state, poseStack, collector, camera);
         submit(state, poseStack, new VanillaSubmitSink(collector, camera),
                 new CameraInfo(camera.pos, camera.yRot, camera.orientation));
     }
@@ -94,6 +95,7 @@ public abstract class CompatEntityRenderer<T extends Entity, S extends CompatEnt
     @Override
     public void render(T entity, float entityYaw, float partialTicks, PoseStack poseStack,
                        MultiBufferSource bufferSource, int packedLight) {
+        super.render(entity, entityYaw, partialTicks, poseStack, bufferSource, packedLight);
         S state = createRenderState();
         // 26.1's vanilla extraction fills this before the subclass sees the state; do the same here so
         // a renderer can read state.lightCoords on either era.

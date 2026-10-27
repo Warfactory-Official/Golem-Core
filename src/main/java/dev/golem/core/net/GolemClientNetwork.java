@@ -1,5 +1,11 @@
 package dev.golem.core.net;
 
+import java.util.HashSet;
+import java.util.Set;
+//? if fabric {
+/*import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+*///?}
+
 //? if fabric && >=1.20.5 {
 /*import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 *///?} elif fabric {
@@ -17,12 +23,19 @@ final class GolemClientNetwork {
 
     private GolemClientNetwork() {}
 
-    //? if fabric
-    /*private static final java.util.Set<String> INSTALLED = new java.util.HashSet<>();*/
+    //? if fabric {
+    /*private static final Set<String> INSTALLED = new HashSet<>();
+    private static boolean playOwnerHooked;
+    *///?}
 
     //? if fabric && >=1.20.5 {
     /*static synchronized void install() {
         // Called more than once (each mod's client init, then Golem Core at client start); each channel once.
+        if (!playOwnerHooked) {
+            playOwnerHooked = true;
+            ClientPlayConnectionEvents.JOIN.register(
+                    (listener, sender, client) -> ClientSessions.bindPlayOwner(sender, listener));
+        }
         for (GolemNetwork.ClientRegistration<?> registration : new java.util.ArrayList<>(GolemNetwork.clientRegistrations())) {
             if (INSTALLED.add(registration.codec().id().toString())) register(registration);
         }
@@ -40,8 +53,13 @@ final class GolemClientNetwork {
             // Handing it to client().execute() again is not a no-op: inside a packet task the client queues the
             // runnable behind every packet already received, so a payload sent just before a vanilla packet ran after
             // it (the crucible's cut arrived after the victim's removal, and found no entity to slice).
-            Runnable dispatch = () -> GolemNetwork.dispatchClient(registration.codec(), payload,
-                    new GolemNetwork.ClientContext(context.client().level, context.client().player));
+            var session = ClientSessions.forPlayOwner(context.responseSender());
+            if (session == null) return;
+            Runnable dispatch = () -> {
+                if (!session.active() || context.client().level == null || context.client().player == null) return;
+                GolemNetwork.dispatchClient(registration.codec(), payload,
+                        new GolemNetwork.ClientContext(context.client().level, context.client().player, session));
+            };
             if (context.client().isSameThread()) dispatch.run();
             else context.client().execute(dispatch);
         });
@@ -53,6 +71,11 @@ final class GolemClientNetwork {
     *///?} elif fabric {
     /*static synchronized void install() {
         // Called more than once (each mod's client init, then Golem Core at client start); each channel once.
+        if (!playOwnerHooked) {
+            playOwnerHooked = true;
+            ClientPlayConnectionEvents.JOIN.register(
+                    (listener, sender, client) -> ClientSessions.bindPlayOwner(sender, listener));
+        }
         for (GolemNetwork.ClientRegistration<?> registration : new java.util.ArrayList<>(GolemNetwork.clientRegistrations())) {
             if (INSTALLED.add(registration.codec().id().toString())) register(registration);
         }
@@ -67,8 +90,13 @@ final class GolemClientNetwork {
                 GolemNetwork.dispatchClientOffThread(codec, payload);
                 return;
             }
-            client.execute(() -> GolemNetwork.dispatchClient(codec, payload,
-                    new GolemNetwork.ClientContext(client.level, client.player)));
+            var session = ClientSessions.forListener(ignored);
+            if (session == null) return;
+            client.execute(() -> {
+                if (!session.active() || client.level == null || client.player == null) return;
+                GolemNetwork.dispatchClient(registration.codec(), payload,
+                        new GolemNetwork.ClientContext(client.level, client.player, session));
+            });
         });
     }
 

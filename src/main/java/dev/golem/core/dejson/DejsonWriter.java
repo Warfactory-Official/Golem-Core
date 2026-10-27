@@ -59,7 +59,8 @@ public final class DejsonWriter {
             Files.writeString(target, GSON.toJson(entry.getValue()) + "\n", StandardCharsets.UTF_8);
             written++;
         }
-        return new Report(written, deferred);
+        var textures = Textures.write(out, authored);
+        return new Report(written + textures.written(), deferred + textures.deferred());
     }
 
     /**
@@ -89,6 +90,7 @@ public final class DejsonWriter {
                         + " but the file says " + GSON.toJson(shipped)));
             }
         });
+        mismatches.addAll(Textures.verify(authored));
         return mismatches;
     }
 
@@ -119,7 +121,7 @@ public final class DejsonWriter {
             if ("minecraft".equals(namespace) || !Files.isDirectory(textures)) {
                 continue;
             }
-            if (!Files.exists(textures.resolve(path + ".png")) && !missing.contains(sprite)) {
+            if (!Files.exists(textures.resolve(path + ".png")) && !Textures.dependencySource(declared) && !missing.contains(sprite)) {
                 missing.add(sprite);
             }
         }

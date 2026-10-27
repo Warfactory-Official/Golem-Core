@@ -1,7 +1,9 @@
 package dev.golem.core.render;
 
+import java.util.function.Consumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.particle.Particle;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 
 //? if >=26.1 {
@@ -35,6 +37,23 @@ public final class Particles {
     }
 
     private Particles() {}
+
+    public static Vec3 position(Particle particle) {
+        return new Vec3(particle.x, particle.y, particle.z);
+    }
+
+    /** Visits pending then active particles on the client thread; the action must not alter their collections. */
+    public static void forEach(Minecraft client, Consumer<Particle> action) {
+        var engine = client.particleEngine;
+        engine.particlesToAdd.forEach(action);
+        for (var group : engine.particles.values()) {
+            //? if >=26.1 {
+            group.getAll().forEach(action);
+            //?} else {
+            /*group.forEach(action);
+            *///?}
+        }
+    }
 
     /**
      * Adds an already-constructed particle to the client particle engine.

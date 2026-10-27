@@ -1,5 +1,7 @@
 package dev.golem.core.gametest;
 
+import dev.golem.core.Ids;
+
 import net.minecraft.gametest.framework.GameTestHelper;
 
 import java.util.function.Consumer;
@@ -70,14 +72,20 @@ public final class GameTests {
         private final String name;
         private final int timeoutTicks;
         private final int padding;
+        private final String structure;
+        private final boolean skyAccess;
+        private final String environment;
         private final Supplier<Consumer<GameTestHelper>> body;
 
-        private Function(String namespace, String name, int timeoutTicks, int padding,
+        private Function(String namespace, String name, int timeoutTicks, int padding, String structure, boolean skyAccess, String environment,
                          Supplier<Consumer<GameTestHelper>> body) {
             this.namespace = namespace;
             this.name = name;
             this.timeoutTicks = timeoutTicks;
             this.padding = padding;
+            this.structure = structure;
+            this.skyAccess = skyAccess;
+            this.environment = environment;
             this.body = body;
         }
 
@@ -110,6 +118,20 @@ public final class GameTests {
         public Function function(String name, int timeoutTicks, int padding,
                                  Supplier<Consumer<GameTestHelper>> body) {
             Function function = GameTests.function(namespace, name, timeoutTicks, padding, body);
+            functions.add(function);
+            return function;
+        }
+
+        /** Uses an authored structure template; padding and ticking reach remain separate properties. */
+        public Function function(String name, int timeoutTicks, int padding, String structure, boolean skyAccess,
+                                 Supplier<Consumer<GameTestHelper>> body) {
+            return function(name, timeoutTicks, padding, structure, skyAccess, namespace + ":test_environment", body);
+        }
+
+        /** A named empty environment gives a test family its own scheduling batch. */
+        public Function function(String name, int timeoutTicks, int padding, String structure, boolean skyAccess,
+                                 String environment, Supplier<Consumer<GameTestHelper>> body) {
+            var function = GameTests.function(namespace, name, timeoutTicks, padding, structure, skyAccess, environment, body);
             functions.add(function);
             return function;
         }
@@ -165,7 +187,28 @@ public final class GameTests {
 
     public static Function function(String namespace, String name, int timeoutTicks, int padding,
                                     Supplier<Consumer<GameTestHelper>> body) {
-        Function function = new Function(namespace, name, timeoutTicks, padding, body);
+        //? if >=26.1 {
+        var structure = "minecraft:" + EMPTY_STRUCTURE;
+        var skyAccess = false;
+        //?} else {
+        /*var structure = namespace + ":" + EMPTY_STRUCTURE;
+        if (padding > 64) structure += "_184";
+        else if (padding > 28) structure += "_152";
+        else if (padding > 8) structure += "_80";
+        var skyAccess = true;
+        *///?}
+        return function(namespace, name, timeoutTicks, padding, structure, skyAccess, body);
+    }
+
+    public static Function function(String namespace, String name, int timeoutTicks, int padding,
+                                    String structure, boolean skyAccess, Supplier<Consumer<GameTestHelper>> body) {
+        return function(namespace, name, timeoutTicks, padding, structure, skyAccess, namespace + ":test_environment", body);
+    }
+
+    public static Function function(String namespace, String name, int timeoutTicks, int padding,
+                                    String structure, boolean skyAccess, String environment,
+                                    Supplier<Consumer<GameTestHelper>> body) {
+        var function = new Function(namespace, name, timeoutTicks, padding, structure, skyAccess, environment, body);
         //? if >=26.1 {
         REGISTERS.computeIfAbsent(namespace, ns -> DeferredRegister.create(Registries.TEST_FUNCTION, ns))
                 .register(name, body);
@@ -262,13 +305,13 @@ public final class GameTests {
             // Per event: one environment per namespace within THIS registry load. See ENVIRONMENTS.
             Holder<TestEnvironmentDefinition<?>> environment = ENVIRONMENTS
                     .computeIfAbsent(event, e -> new HashMap<>())
-                    .computeIfAbsent(function.namespace,
-                            ns -> event.registerEnvironment(dev.golem.core.Ids.of(ns, "test_environment"),
+                    .computeIfAbsent(function.environment,
+                            id -> event.registerEnvironment(Ids.parse(id),
                                     new TestEnvironmentDefinition.Functions(Optional.empty(), Optional.empty())));
 
             TestData<Holder<TestEnvironmentDefinition<?>>> data = new TestData<>(
-                    environment, net.minecraft.resources.Identifier.withDefaultNamespace(EMPTY_STRUCTURE),
-                    function.timeoutTicks, 0, true, Rotation.NONE, false, 1, 1, false, function.padding);
+                    environment, Ids.parse(function.structure),
+                    function.timeoutTicks, 0, true, Rotation.NONE, false, 1, 1, function.skyAccess, function.padding);
 
             ResourceKey<Consumer<GameTestHelper>> key =
                     ResourceKey.create(Registries.TEST_FUNCTION, dev.golem.core.Ids.of(function.namespace, function.name));
@@ -345,14 +388,14 @@ public final class GameTests {
         Map<String, Holder<TestEnvironmentDefinition<?>>> environments = new HashMap<>();
         for (Function function : FUNCTIONS) {
             if (!selected(function)) continue;
-            Holder<TestEnvironmentDefinition<?>> environment = environments.computeIfAbsent(function.namespace,
-                    namespace -> Registry.registerForHolder(environmentRegistry,
-                            dev.golem.core.Ids.of(namespace, "test_environment"),
+            Holder<TestEnvironmentDefinition<?>> environment = environments.computeIfAbsent(function.environment,
+                    id -> Registry.registerForHolder(environmentRegistry,
+                            Ids.parse(id),
                             new TestEnvironmentDefinition.Functions(Optional.empty(), Optional.empty())));
 
             TestData<Holder<TestEnvironmentDefinition<?>>> data = new TestData<>(
-                    environment, Identifier.withDefaultNamespace(EMPTY_STRUCTURE),
-                    function.timeoutTicks, 0, true, Rotation.NONE, false, 1, 1, false, function.padding);
+                    environment, Ids.parse(function.structure),
+                    function.timeoutTicks, 0, true, Rotation.NONE, false, 1, 1, function.skyAccess, function.padding);
             ResourceKey<Consumer<GameTestHelper>> key = ResourceKey.create(
                     Registries.TEST_FUNCTION, dev.golem.core.Ids.of(function.namespace, function.name));
             Registry.register(testInstances, dev.golem.core.Ids.of(function.namespace, function.name),
@@ -376,10 +419,8 @@ public final class GameTests {
     private static void addLegacy(Function function, List<TestFunction> into) {
         // Spacers follow their test through the filter.
         if (!selected(function)) return;
-        String structure = function.namespace + ":" + EMPTY_STRUCTURE;
-        if (function.padding > 64) structure = function.namespace + ":" + EMPTY_STRUCTURE + "_184";
-        else if (function.padding > 28) structure = function.namespace + ":" + EMPTY_STRUCTURE + "_152";
-        else if (function.padding > 8) structure = function.namespace + ":" + EMPTY_STRUCTURE + "_80";
+        String structure = function.structure;
+        String batch = function.environment.equals(function.namespace + ":test_environment") ? "defaultBatch" : function.environment;
         // The short TestFunction constructor hard-codes skyAccess=false. That is harmless for 26.1's
         // 1x1x1 minecraft:empty (its enclosure is outside the test body), but 1.21.1's legacy padding
         // templates are large so their synthetic roof/walls would land inside the test
@@ -388,7 +429,7 @@ public final class GameTests {
         if (function.padding > 8) {
             //? if >=1.21.1 {
             into.add(new TestFunction(
-                    "defaultBatch",
+                    batch,
                     function.id() + "_spacer",
                     structure,
                     Rotation.NONE,
@@ -398,11 +439,11 @@ public final class GameTests {
                     false,
                     1,
                     1,
-                    true,
+                    function.skyAccess,
                     GameTestHelper::succeed));
             //?} else {
             /^into.add(new TestFunction(
-                    "defaultBatch",
+                    batch,
                     function.id() + "_spacer",
                     structure,
                     Rotation.NONE,
@@ -415,7 +456,7 @@ public final class GameTests {
         }
         //? if >=1.21.1 {
         into.add(new TestFunction(
-                "defaultBatch",
+                batch,
                 function.id(),
                 structure,
                 Rotation.NONE,
@@ -425,11 +466,11 @@ public final class GameTests {
                 false,
                 1,
                 1,
-                true,
+                function.skyAccess,
                 function.body.get()));
         //?} else {
         /^into.add(new TestFunction(
-                "defaultBatch",
+                batch,
                 function.id(),
                 structure,
                 Rotation.NONE,

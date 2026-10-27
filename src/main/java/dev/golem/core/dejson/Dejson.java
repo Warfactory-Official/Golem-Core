@@ -156,6 +156,10 @@ public final class Dejson {
         }
     }
 
+    static void generatedSprite(String target, String source) {
+        GENERATED_SPRITES.put(target, source);
+    }
+
     /** Generated sprite id to the source it is computed from. */
     public static Map<String, String> generatedSprites() {
         return Collections.unmodifiableMap(GENERATED_SPRITES);
@@ -183,6 +187,7 @@ public final class Dejson {
         ITEM_DEFINITIONS.clear();
         GENERATED_SPRITES.clear();
         STANDALONE_MODELS.clear();
+        Textures.reset();
         States.reset();
         Data.reset();
     }

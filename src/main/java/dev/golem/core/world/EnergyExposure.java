@@ -1,5 +1,15 @@
 package dev.golem.core.world;
 
+//? if forge {
+/*import net.minecraftforge.common.util.LazyOptional;
+*///?}
+//? if neoforge && >=26.1 {
+import net.neoforged.neoforge.transfer.energy.EnergyHandler;
+//?}
+//? if neoforge && >=26.1 {
+import net.neoforged.neoforge.transfer.transaction.SnapshotJournal;
+//?}
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -47,15 +57,21 @@ public final class EnergyExposure {
         dev.golem.core.platform.NeoForgeEntrypoint.modBus().addListener(
                 (net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent event) ->
                         event.registerBlock(net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK,
-                                (level, pos, state, be, side) -> level instanceof ServerLevel server
-                                        ? new Journalled(source, server, pos.immutable(), side) : null,
+                                (level, pos, state, be, side) -> {
+                                    if (!(level instanceof ServerLevel server)) return null;
+                                    var face = source.forFace(server, pos, side);
+                                    return face == null ? null : new Journalled(face, server, pos.immutable(), side);
+                                },
                                 blocks.get()));
         //?} elif neoforge {
         /*dev.golem.core.platform.NeoForgeEntrypoint.modBus().addListener(
                 (net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent event) ->
                         event.registerBlock(net.neoforged.neoforge.capabilities.Capabilities.EnergyStorage.BLOCK,
-                                (level, pos, state, be, side) -> level instanceof ServerLevel server
-                                        ? new Simulated(source, server, pos.immutable(), side) : null,
+                                (level, pos, state, be, side) -> {
+                                    if (!(level instanceof ServerLevel server)) return null;
+                                    var face = source.forFace(server, pos, side);
+                                    return face == null ? null : new Simulated(face, server, pos.immutable(), side);
+                                },
                                 blocks.get()));
         *///?} elif forge {
         /*Block[][] carriers = new Block[1][];
@@ -85,9 +101,9 @@ public final class EnergyExposure {
      * A handler whose every mutation is journalled, because 26.1 lets a caller open a transaction,
      * take energy, and then abort, at which point what we handed over has to come back.
      */
-    private static final class Journalled
-            extends net.neoforged.neoforge.transfer.transaction.SnapshotJournal<Object>
-            implements net.neoforged.neoforge.transfer.energy.EnergyHandler {
+    private static final class Journalled implements EnergyHandler {
+        private static final EnergyJournalCache<Journal> JOURNALS = new EnergyJournalCache<>();
+        private final Journal journal;
 
         private final EnergySource source;
         private final ServerLevel level;
@@ -100,10 +116,25 @@ public final class EnergyExposure {
             this.level = level;
             this.pos = pos;
             this.side = side;
+            this.journal = JOURNALS.get(source, () -> new Journal(source, level, pos));
         }
 
-        @Override protected Object createSnapshot() { return source.snapshot(level, pos); }
-        @Override protected void revertToSnapshot(Object state) { source.restore(level, pos, state); }
+        private Journal journal(EnergySource owner) {
+            return owner == source ? journal : JOURNALS.get(owner, () -> new Journal(owner, level, pos));
+        }
+
+        private static final class Journal extends SnapshotJournal<Object> {
+            private final EnergySource source;
+            private final ServerLevel level;
+            private final BlockPos pos;
+            Journal(EnergySource source, ServerLevel level, BlockPos pos) {
+                this.source = source; this.level = level; this.pos = pos;
+            }
+            @Override protected Object createSnapshot() { return source.snapshot(level, pos); }
+            @Override protected void revertToSnapshot(Object state) { source.restore(level, pos, state); }
+            @Override protected void releaseSnapshot(Object state) { source.releaseSnapshot(level, pos, state); }
+            @Override protected void onRootCommit(Object originalState) { source.commit(level, pos); }
+        }
 
         @Override public long getAmountAsLong() { return source.amountFe(level, pos); }
         @Override public long getCapacityAsLong() { return source.capacityFe(level, pos); }
@@ -111,15 +142,19 @@ public final class EnergyExposure {
         @Override
         public int insert(int amount, net.neoforged.neoforge.transfer.transaction.TransactionContext transaction) {
             if (amount <= 0) return 0;
-            updateSnapshots(transaction);
-            return (int) source.insertFe(level, pos, side == null ? null : pos.relative(side), amount);
+            var owner = source.forOperation(level, pos);
+            if (owner == null) return 0;
+            journal(owner).updateSnapshots(transaction);
+            return (int) owner.insertFe(level, pos, side == null ? null : pos.relative(side), amount);
         }
 
         @Override
         public int extract(int amount, net.neoforged.neoforge.transfer.transaction.TransactionContext transaction) {
             if (amount <= 0) return 0;
-            updateSnapshots(transaction);
-            return (int) source.extractFe(level, pos, amount);
+            var owner = source.forOperation(level, pos);
+            if (owner == null) return 0;
+            journal(owner).updateSnapshots(transaction);
+            return (int) owner.extractFe(level, pos, amount);
         }
     }
     //?}
@@ -148,15 +183,19 @@ public final class EnergyExposure {
         @Override
         public int receiveEnergy(int maxReceive, boolean simulate) {
             if (maxReceive <= 0) return 0;
-            if (simulate) return saturate(Math.min(maxReceive, source.insertableFe(level, pos)));
-            return saturate(source.insertFe(level, pos, side == null ? null : pos.relative(side), maxReceive));
+            if (simulate) return saturate(source.insertableFe(level, pos, maxReceive));
+            var moved = source.insertFe(level, pos, side == null ? null : pos.relative(side), maxReceive);
+            source.commit(level, pos);
+            return saturate(moved);
         }
 
         @Override
         public int extractEnergy(int maxExtract, boolean simulate) {
             if (maxExtract <= 0) return 0;
-            if (simulate) return saturate(Math.min(maxExtract, source.extractableFe(level, pos)));
-            return saturate(source.extractFe(level, pos, maxExtract));
+            if (simulate) return saturate(source.extractableFe(level, pos, maxExtract));
+            var moved = source.extractFe(level, pos, maxExtract);
+            source.commit(level, pos);
+            return saturate(moved);
         }
     }
     *///?}
@@ -180,8 +219,9 @@ public final class EnergyExposure {
                     || !(be.getLevel() instanceof ServerLevel server)) {
                 return net.minecraftforge.common.util.LazyOptional.empty();
             }
-            return net.minecraftforge.common.util.LazyOptional
-                    .of(() -> new Storage(source, server, be.getBlockPos(), side)).cast();
+            var face = source.forFace(server, be.getBlockPos(), side);
+            return face == null ? LazyOptional.empty()
+                    : LazyOptional.of(() -> new Storage(face, server, be.getBlockPos(), side)).cast();
         }
     }
 
@@ -208,15 +248,19 @@ public final class EnergyExposure {
         @Override
         public int receiveEnergy(int maxReceive, boolean simulate) {
             if (maxReceive <= 0) return 0;
-            if (simulate) return saturate(Math.min(maxReceive, source.insertableFe(level, pos)));
-            return saturate(source.insertFe(level, pos, side == null ? null : pos.relative(side), maxReceive));
+            if (simulate) return saturate(source.insertableFe(level, pos, maxReceive));
+            var moved = source.insertFe(level, pos, side == null ? null : pos.relative(side), maxReceive);
+            source.commit(level, pos);
+            return saturate(moved);
         }
 
         @Override
         public int extractEnergy(int maxExtract, boolean simulate) {
             if (maxExtract <= 0) return 0;
-            if (simulate) return saturate(Math.min(maxExtract, source.extractableFe(level, pos)));
-            return saturate(source.extractFe(level, pos, maxExtract));
+            if (simulate) return saturate(source.extractableFe(level, pos, maxExtract));
+            var moved = source.extractFe(level, pos, maxExtract);
+            source.commit(level, pos);
+            return saturate(moved);
         }
     }
     *///?}

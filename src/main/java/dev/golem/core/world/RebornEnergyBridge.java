@@ -1,5 +1,12 @@
 package dev.golem.core.world;
 
+//? if fabric {
+/*import net.fabricmc.fabric.api.transfer.v1.transaction.base.SnapshotParticipant;
+import team.reborn.energy.api.EnergyStorage;
+*///?}
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+
 /**
  * The Team Reborn Energy half of {@link RebornEnergy}, in its own class so that nothing names a {@code team.reborn} type
  * until {@link RebornEnergy#present()} has said the mod is loaded. Merging them broke every Fabric game without the
@@ -14,11 +21,11 @@ final class RebornEnergyBridge {
     //? if fabric {
     /*static @org.jspecify.annotations.Nullable EnergyView find(net.minecraft.world.level.Level level,
             net.minecraft.core.BlockPos pos, net.minecraft.core.@org.jspecify.annotations.Nullable Direction side) {
-        team.reborn.energy.api.EnergyStorage storage = team.reborn.energy.api.EnergyStorage.SIDED.find(level, pos, side);
+        EnergyStorage storage = EnergyStorage.SIDED.find(level, pos, side);
         return storage == null ? null : view(storage);
     }
 
-    private static EnergyView view(team.reborn.energy.api.EnergyStorage storage) {
+    private static EnergyView view(EnergyStorage storage) {
         return new EnergyView() {
             @Override public Object handlerIdentity() { return storage; }
             @Override public long amount() { return storage.getAmount(); }
@@ -72,17 +79,18 @@ final class RebornEnergyBridge {
      ^/
     static void expose(EnergySource source, java.util.function.Supplier<net.minecraft.world.level.block.Block[]> blocks) {
         java.util.Set<net.minecraft.world.level.block.Block>[] carriers = new java.util.Set[1];
-        team.reborn.energy.api.EnergyStorage.SIDED.registerFallback((level, pos, state, be, side) -> {
+        EnergyStorage.SIDED.registerFallback((level, pos, state, be, side) -> {
             if (!(level instanceof net.minecraft.server.level.ServerLevel server)) return null;
             if (carriers[0] == null) carriers[0] = java.util.Set.of(blocks.get());
             if (!carriers[0].contains(state.getBlock())) return null;
-            return new Journalled(source, server, pos.immutable(), side);
+            var face = source.forFace(server, pos, side);
+            return face == null ? null : new Journalled(face, server, pos.immutable(), side);
         });
     }
 
-    private static final class Journalled
-            extends net.fabricmc.fabric.api.transfer.v1.transaction.base.SnapshotParticipant<Object>
-            implements team.reborn.energy.api.EnergyStorage {
+    private static final class Journalled implements EnergyStorage {
+        private static final EnergyJournalCache<Journal> JOURNALS = new EnergyJournalCache<>();
+        private final Journal journal;
 
         private final EnergySource source;
         private final net.minecraft.server.level.ServerLevel level;
@@ -95,10 +103,25 @@ final class RebornEnergyBridge {
             this.level = level;
             this.pos = pos;
             this.side = side;
+            this.journal = JOURNALS.get(source, () -> new Journal(source, level, pos));
         }
 
-        @Override protected Object createSnapshot() { return source.snapshot(level, pos); }
-        @Override protected void readSnapshot(Object state) { source.restore(level, pos, state); }
+        private Journal journal(EnergySource owner) {
+            return owner == source ? journal : JOURNALS.get(owner, () -> new Journal(owner, level, pos));
+        }
+
+        private static final class Journal extends SnapshotParticipant<Object> {
+            private final EnergySource source;
+            private final ServerLevel level;
+            private final BlockPos pos;
+            Journal(EnergySource source, ServerLevel level, BlockPos pos) {
+                this.source = source; this.level = level; this.pos = pos;
+            }
+            @Override protected Object createSnapshot() { return source.snapshot(level, pos); }
+            @Override protected void readSnapshot(Object state) { source.restore(level, pos, state); }
+            @Override protected void releaseSnapshot(Object state) { source.releaseSnapshot(level, pos, state); }
+            @Override protected void onFinalCommit() { source.commit(level, pos); }
+        }
 
         @Override public long getAmount() { return source.amountFe(level, pos); }
         @Override public long getCapacity() { return source.capacityFe(level, pos); }
@@ -108,15 +131,19 @@ final class RebornEnergyBridge {
         @Override
         public long insert(long maxAmount, net.fabricmc.fabric.api.transfer.v1.transaction.TransactionContext transaction) {
             if (maxAmount <= 0) return 0;
-            updateSnapshots(transaction);
-            return source.insertFe(level, pos, side == null ? null : pos.relative(side), maxAmount);
+            var owner = source.forOperation(level, pos);
+            if (owner == null) return 0;
+            journal(owner).updateSnapshots(transaction);
+            return owner.insertFe(level, pos, side == null ? null : pos.relative(side), maxAmount);
         }
 
         @Override
         public long extract(long maxAmount, net.fabricmc.fabric.api.transfer.v1.transaction.TransactionContext transaction) {
             if (maxAmount <= 0) return 0;
-            updateSnapshots(transaction);
-            return source.extractFe(level, pos, maxAmount);
+            var owner = source.forOperation(level, pos);
+            if (owner == null) return 0;
+            journal(owner).updateSnapshots(transaction);
+            return owner.extractFe(level, pos, maxAmount);
         }
     }
     *///?}

@@ -1,3 +1,5 @@
+import java.util.function.BiFunction
+
 // Shared by every Golem Core mod built on Fabric. Apply it from the Fabric buildscript, before the dependencies block:
 //
 //     apply(from = rootProject.file("../Golem-Core/gradle/mod/composite-freshness.gradle.kts"))
@@ -7,6 +9,10 @@
 //   golem.build.composite.roots   List of "<path>=<maven group path>" pairs, one per composite build this mod
 //                                 compiles against, e.g. "../Golem-Core=dev/golem,../new-hbm=com/hbm".
 //                                 Default: "../Golem-Core=dev/golem".
+//   golem.build.composite.artifactDirectory
+//                                 Optional BiFunction<File, String, File>: upstream checkout and node name
+//                                 (e.g. 1.21.1-fabric) -> its actual jar directory. Defaults to
+//                                 <checkout>/versions/<node>/build/libs. Set before applying this script.
 //   mc_version                    The node's Minecraft version (the Fabric buildscript sets it).
 //
 // Why. Loom caches its remap of a mod jar under .gradle/loom-cache/remapped_mods/remapped/<group>/<artifact>/<version>,
@@ -31,6 +37,21 @@ val compositeRoots: List<Pair<File, String>> = (findProperty("golem.build.compos
     rootProject.file(path.trim()) to group.trim()
 }
 
+val compositeArtifactResolver = findProperty("golem.build.composite.artifactDirectory")?.let { resolver ->
+    require(resolver is BiFunction<*, *, *>) {
+        "golem.build.composite.artifactDirectory must be a BiFunction<File, String, File>"
+    }
+    @Suppress("UNCHECKED_CAST")
+    resolver as BiFunction<File, String, File>
+}
+
+/** The same artifact location feeds remap invalidation and the stale-jar check. */
+fun compositeJarDirectory(root: File): File {
+    val resolver = compositeArtifactResolver
+    return if (resolver == null) root.resolve("versions/$compositeMcVersion-fabric/build/libs")
+        else resolver.apply(root, "$compositeMcVersion-fabric")
+}
+
 fun compositeNewest(root: File): Long? = sequence {
     yieldAll(root.resolve("src").walkTopDown().filter { it.isFile || it.isDirectory })
     yield(root.resolve("build.fabric.gradle.kts"))
@@ -38,7 +59,7 @@ fun compositeNewest(root: File): Long? = sequence {
     yield(root.resolve("stonecutter.gradle.kts"))
     yield(root.resolve("gradle.properties"))
     yield(root.resolve("versions/$compositeMcVersion-fabric/gradle.properties"))
-    yieldAll(root.resolve("versions/$compositeMcVersion-fabric/build/libs").listFiles()
+    yieldAll(compositeJarDirectory(root).listFiles()
         ?.filter { it.name.endsWith(".jar") && !it.name.endsWith("-sources.jar") }.orEmpty())
 }.filter { it.isFile || it.isDirectory }.maxOfOrNull { it.lastModified() }
 
@@ -53,7 +74,12 @@ if (compositeObfuscated) {
                 val cachedAt = entry.walkTopDown().filter { it.isFile }.maxOfOrNull { it.lastModified() }
                 if (cachedAt != null && upstream > cachedAt) {
                     logger.lifecycle("${root.name} changed since its cached remap; invalidating ${entry.name}.")
-                    entry.deleteRecursively()
+                    val cachePath = cacheRoot.toPath().toRealPath()
+                    val entryPath = entry.toPath().toRealPath()
+                    require(entryPath != cachePath && entryPath.startsWith(cachePath)) {
+                        "Refusing to invalidate a remap outside $cacheRoot: $entryPath"
+                    }
+                    check(entry.deleteRecursively()) { "Could not invalidate stale remap $entry" }
                 }
             }
     }
@@ -63,7 +89,7 @@ val checkCompositeJarFreshness = tasks.register("checkCompositeJarFreshness") {
     doLast {
         if (!compositeObfuscated) return@doLast
         for ((root, _) in compositeRoots) {
-            val jar = root.resolve("versions/$compositeMcVersion-fabric/build/libs")
+            val jar = compositeJarDirectory(root)
                 .listFiles { file -> file.name.endsWith(".jar") && !file.name.endsWith("-sources.jar") }
                 ?.maxByOrNull { it.lastModified() } ?: continue
             val newestSource = root.resolve("src").walkTopDown().filter { it.isFile || it.isDirectory }

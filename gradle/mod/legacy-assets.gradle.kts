@@ -270,10 +270,13 @@ fun itemVariantSelectOf(definition: File): Pair<String, List<Pair<Float, String>
     (model["fallback"] as? Map<String, Any?>)?.get("model") as? String ?: return null
     @Suppress("UNCHECKED_CAST")
     val cases = model["cases"] as? List<Map<String, Any?>> ?: return null
-    val parsed = cases.mapNotNull { entry ->
-        val value = (entry["when"] as? String)?.toFloatOrNull() ?: return@mapNotNull null
+    val values = cases.map { entry -> entry["when"] as String }
+    val numeric = values.map { value -> value.toFloatOrNull() }
+    val ordinal = numeric.any { it == null }
+    val parsed = cases.mapIndexed { index, entry ->
+        val value = if (ordinal) (index + 1).toFloat() else numeric[index]!!
         @Suppress("UNCHECKED_CAST")
-        val selected = (entry["model"] as? Map<String, Any?>)?.get("model") as? String ?: return@mapNotNull null
+        val selected = (entry["model"] as Map<String, Any?>)["model"] as String
         value to selected
     }
     return property to (parsed.takeIf { it.isNotEmpty() } ?: return null)
@@ -393,3 +396,41 @@ if (needsLegacyItemAssets(extra.properties["mc_version"] as String)) {
 
 // Exported for the mod's own resource checks (see the parameter block at the top).
 extra["golem.legacyAssets.parentModelOf"] = { definition: File -> parentModelOf(definition) }
+
+// Fabric's legacy hook reads the descriptor before baking; native geometry loaders use their loader key.
+fun nativeUnbakedModelDispatch(source: String, mcVersion: String, loader: String): String? {
+    if (!source.contains("\"golem:loader\"")) return null
+    @Suppress("UNCHECKED_CAST")
+    val model = JsonSlurper().parseText(source) as MutableMap<String, Any?>
+    val customLoader = model.remove("golem:loader") ?: error("Missing unbaked model loader")
+    require(customLoader is String) { "Unbaked model loader must be a string" }
+    require(!model.containsKey("fabric:type") && !model.containsKey("loader")) {
+        "Conflicting unbaked model loader keys"
+    }
+    if (mcVersion.substringBefore('.').toInt() >= 26) {
+        val dispatch = when (loader) {
+            "fabric" -> "fabric:type"
+            "neoforge" -> "loader"
+            else -> error("Unsupported unbaked model loader: $loader")
+        }
+        model[dispatch] = customLoader
+    } else if (loader == "fabric") {
+        model["golem:loader"] = customLoader
+    } else {
+        require(loader == "forge" || loader == "neoforge") { "Unsupported unbaked model loader: $loader" }
+        model["golem:loader"] = customLoader
+        model["loader"] = "golemcore:groups"
+    }
+    return JsonOutput.prettyPrint(JsonOutput.toJson(model))
+}
+
+val nativeModelAssetsVersion = extra.properties["mc_version"] as String
+val nativeModelAssetsLoader = extra.properties["loader"] as String
+tasks.named<ProcessResources>("processResources").configure {
+    doLast {
+        fileTree(File(destinationDir, "assets")) { include("*/models/**/*.json") }.forEach { file ->
+            nativeUnbakedModelDispatch(file.readText(), nativeModelAssetsVersion, nativeModelAssetsLoader)
+                ?.let(file::writeText)
+        }
+    }
+}

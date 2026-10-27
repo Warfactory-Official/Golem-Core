@@ -1,5 +1,9 @@
 package dev.golem.core.world;
 
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import java.util.function.Consumer;
+import net.minecraft.commands.CommandSourceStack;
+
 import dev.golem.core.hook.Hook;
 import java.util.Map;
 import java.util.WeakHashMap;
@@ -54,6 +58,35 @@ public final class Weathers {
             if (state != null) return state;
         }
         return null;
+    }
+
+    /** A provided level's players all slept; handlers clear their own saved cycle before vanilla tests for rain. */
+    public static final Hook<Consumer<ServerLevel>> SLEPT_THROUGH = Hook.notifying();
+
+    public static void sleptThrough(ServerLevel level) {
+        for (var handler : SLEPT_THROUGH) handler.accept(level);
+    }
+
+    public enum Mode { CLEAR, RAIN, THUNDER }
+
+    @FunctionalInterface
+    public interface WeatherCommand {
+        /** Null leaves vanilla's command in charge; duration is in ticks, or -1 for the vanilla default. */
+        @Nullable Integer set(CommandSourceStack source, Mode mode, int duration)
+                throws CommandSyntaxException;
+    }
+
+    public static final Hook<WeatherCommand> COMMANDS = Hook.of(listeners -> (source, mode, duration) -> {
+        for (var handler : listeners) {
+            var result = handler.set(source, mode, duration);
+            if (result != null) return result;
+        }
+        return null;
+    });
+
+    public static @Nullable Integer command(CommandSourceStack source, Mode mode, int duration)
+            throws CommandSyntaxException {
+        return COMMANDS.invoker().set(source, mode, duration);
     }
 
     // Hook (MixinServerLevelWeather only)

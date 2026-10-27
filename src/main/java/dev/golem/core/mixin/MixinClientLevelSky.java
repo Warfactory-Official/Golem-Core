@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.At;
  * map factor are read from these four {@code ClientLevel} getters, 1.7's {@code WorldProvider.getSkyColor},
  * {@code drawClouds}, {@code getStarBrightness} and {@code getSunBrightness}.
  *
- * <p>Why a mixin (AGENTS.md section 7): (1) vanilla takes these from the dimension's fixed effects and the biome;
+ * <p>Why a mixin: (1) vanilla takes these from the dimension's fixed effects and the biome;
  * (2) no loader has events for them (Forge-likes have one for the fog colour only, see
  * {@code MixinOverworldFogColor}); (3) widening cannot change a computed return value. Four MixinExtras
  * {@code @ModifyReturnValue}s that only act when a modifier is active; unlike a cancellable RETURN inject they chain
@@ -23,9 +23,9 @@ import org.spongepowered.asm.mixin.injection.At;
 public abstract class MixinClientLevelSky {
 
     @ModifyReturnValue(method = "getSkyColor", at = @At("RETURN"))
-    private Vec3 golem$skyColor(Vec3 color) {
+    private Vec3 golem$skyColor(Vec3 color, Vec3 position, float partialTick) {
         ClientLevel self = (ClientLevel) (Object) this;
-        return Skies.active(self) ? Skies.skyColor(self, color) : color;
+        return Skies.active(self) ? Skies.skyColor(self, color, position, partialTick) : color;
     }
 
     @ModifyReturnValue(method = "getCloudColor", at = @At("RETURN"))

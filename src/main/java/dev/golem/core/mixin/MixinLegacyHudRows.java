@@ -1,12 +1,10 @@
 package dev.golem.core.mixin;
 
-// VanillaHud on Fabric before 26.1. Ladder (AGENTS.md §7): vanilla has no per-row HUD hook (1); NeoForge and Forge
-// cancel their named layers and 26.1 Fabric replaces its named HudElementRegistry elements (2), but Fabric API
-// before 26.1 offers only a post-HUD callback that cannot stop a vanilla row; an access widener (3) cannot add a
-// condition. So: cancel Gui.renderHearts at its head, and for the armour row cancel 1.21.1's renderArmor at its head
-// or, on 1.20.1 where the row is drawn inline in renderPlayerHealth, answer 0 to its single getArmorValue() read
-// (the row draws nothing for 0 armour) - a MixinExtras @ModifyExpressionValue on that read only because 1.20.1 has no
-// method boundary to inject at (it chains with other mods' hooks on the read, which a @Redirect would not).
+import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
+
+// Fabric before 26.1 has only a post-HUD callback. Cancel the dedicated heart and armour methods where available.
+// Armour on 1.20.1 and air on both older versions are inline in Gui.renderPlayerHealth: zero at their individual
+// scalar reads draws no icons. ModifyExpressionValue composes with other consumers without changing entity state.
 //? if fabric && <26.1 {
 
 /*import dev.golem.core.client.VanillaHud;
@@ -18,6 +16,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(Gui.class)
 public abstract class MixinLegacyHudRows {
+
+    // Both older versions inline air in renderPlayerHealth. Its only air-supply read controls the
+    // number of bubbles: zero produces no full or bursting bubbles, without changing the entity's air.
+    @ModifyExpressionValue(method = "renderPlayerHealth", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/entity/player/Player;getAirSupply()I"))
+    private int golem$airSupply(int air) {
+        return VanillaHud.hideAir() ? 0 : air;
+    }
 
     @Inject(method = "renderHearts", at = @At("HEAD"), cancellable = true)
     private void golem$hideHearts(CallbackInfo callback) {

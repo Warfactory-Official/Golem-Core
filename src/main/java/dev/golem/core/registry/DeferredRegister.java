@@ -26,7 +26,7 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
  * instances of this class. Each entry is stored as a deferred factory. Golem Core fills the registries itself, once,
  * from every mod's registers ({@link dev.golem.core.platform.ModEntries}): per {@code RegisterEvent} through
  * {@link #flushRegistry} on NeoForge and Forge, all at once through {@link #flushAllToVanilla} on Fabric. A mod never
- * flushes; a register is flushed at most once, and an entry added after its register was flushed is reported, since it
+ * flushes; a register is flushed at most once, and an entry added after its register was flushed is refused, since it
  * will never exist.
  *
  * <p>Every entry's id is set on its {@link Item.Properties}/{@link BlockBehaviour.Properties} before
@@ -159,12 +159,11 @@ public class DeferredRegister<T> {
      * id on properties) and must return a <em>new</em> instance.
      */
     public <I extends T> RegistryObject<I> register(String name, Function<ResourceKey<T>, ? extends I> factory) {
+        if (flushed) {
+            throw new IllegalStateException("Registration is closed: " + namespace + ":" + name);
+        }
         if (entries.putIfAbsent(name, factory) != null) {
             throw new IllegalArgumentException("Duplicate registration: " + namespace + ":" + name);
-        }
-        if (flushed) {
-            dev.golem.core.GolemCore.LOG.error("{}:{} was registered after its registry was filled; it will not exist",
-                    namespace, name);
         }
         Supplier<ResourceKey<T>> key = lazy(() -> ResourceKey.create(getRegistryKey(), dev.golem.core.Ids.of(namespace, name)));
         keys.put(name, key);

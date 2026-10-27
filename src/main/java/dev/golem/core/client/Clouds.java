@@ -10,28 +10,9 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
 
 /**
- * A dimension's clouds, the stand-in for 1.7's {@code WorldProvider.getCloudRenderer()} / {@code getCloudHeight()}: for a
- * registered dimension vanilla's clouds are replaced, on every node, by the layers its {@link Provider} returns each
- * frame (none at all when the list is empty, see {@link #off}). Dimensions nobody registers keep vanilla's clouds.
- *
- * <p>Each {@link Layer} is drawn by the node's own vanilla cloud renderer with the layer's height, colour, alpha and
- * texture position, so it keeps vanilla's cloud texture, cells, face shading, depth pre-pass, Fabulous render target,
- * fog and the player's cloud setting. Vanilla's own drift ({@code ticks * 0.03} along x) is <b>not</b> added: the
- * layer's {@link Layer#shiftX shift} is the whole texture offset, so every node draws a layer at the same place for
- * the same inputs. Layers draw in list order.
- *
- * <p>How each node is hooked ({@code dev.golem.core.render.CloudRendering}):
- * <ul>
- *   <li>26.1 NeoForge: NeoForge's {@code CustomCloudsRenderer}, selected for the level by an attribute layer on
- *       {@code neoforge:visual/custom_clouds} ({@code MixinEnvironmentSkyLayers}).</li>
- *   <li>26.1 Fabric: {@code MixinCloudRender} (Fabric 26.1 has no cloud renderer hook).</li>
- *   <li>Both 26.1 loaders: vanilla adds no cloud pass when the {@code visual/cloud_color} alpha is 0, so the same attribute
- *       layer makes it opaque while a registered dimension has layers and transparent while it has none.</li>
- *   <li>1.21.1 / 1.20.1 Fabric: Fabric API's {@code DimensionRenderingRegistry.registerCloudRenderer}.</li>
- *   <li>1.21.1 NeoForge / 1.20.1 Forge: {@code MixinLegacyCloudRender} at the head of {@code LevelRenderer.renderClouds}.</li>
- * </ul>
- *
- * <p>Client only: {@link #register} on a dedicated server stores nothing that is ever read.
+ * Cloud replacements and native-first additions rendered through the node's cloud renderer.
+ * Replacement shifts supply the whole drift; additions shift relative to the untouched native pass.
+ * Native caches, texture reloads, fog and cloud settings retain their ownership.
  */
 public final class Clouds {
 
@@ -61,20 +42,42 @@ public final class Clouds {
     public static final String NAMESPACE = "golemcore";
     public static final String PATH = "clouds";
 
-    private static final Map<ResourceKey<Level>, Provider> PROVIDERS = new ConcurrentHashMap<>();
+    /** Extra layers drawn after the native first layer; the native call supplies its height, ARGB and clock. */
+    @FunctionalInterface
+    public interface AdditionalProvider {
+        List<Layer> layers(Level level, NativeLayer nativeLayer);
+
+        /** Whether the native first layer is visible. Older nodes have no cloud alpha environment attribute. */
+        default boolean visible(Level level) { return true; }
+    }
+
+    /** Native cloud bottoms before the engine's 0.33 lift, and the exact input to its renderer this frame. */
+    public record NativeLayer(float height, int argb, long gameTime, float partialTick) {}
+
+    private record Registration(Provider replacement, AdditionalProvider additions) {}
+    private static final Map<ResourceKey<Level>, Registration> PROVIDERS = new ConcurrentHashMap<>();
 
     /**
      * Replaces vanilla's clouds in {@code dimension} by {@code provider}'s layers. Call during client init. One provider
      * per dimension: a second registration for the same dimension (another mod's, or {@link #off}) is refused with an
-     * {@link IllegalStateException} naming the dimension and the provider already there, never a silent replacement.
+     * {@link IllegalStateException} naming the dimension, never a silent replacement.
      */
     public static void register(ResourceKey<Level> dimension, Provider provider) {
-        Provider existing = PROVIDERS.putIfAbsent(dimension, provider);
+        register(dimension, new Registration(provider, null));
+    }
+
+    /** Keeps vanilla's first layer and appends the provider's extra layers after it, using the native pass's inputs. */
+    public static void registerAdditions(ResourceKey<Level> dimension, AdditionalProvider provider) {
+        register(dimension, new Registration(null, provider));
+    }
+
+    private static void register(ResourceKey<Level> dimension, Registration registration) {
+        var existing = PROVIDERS.putIfAbsent(dimension, registration);
         if (existing != null) {
-            throw new IllegalStateException("The clouds of " + Ids.keyId(dimension) + " are already drawn by "
-                    + existing.getClass().getName() + "; one mod draws a dimension's clouds");
+            throw new IllegalStateException("The clouds of " + Ids.keyId(dimension) + " are already registered; "
+                    + "one mod draws a dimension's clouds");
         }
-        if (Platform.isClient()) CloudRendering.install(dimension);
+        if (Platform.isClient()) CloudRendering.install(dimension, registration.replacement() != null);
     }
 
     /** No clouds at all in {@code dimension} (1.7 {@code getCloudHeight()} of -99999). */
@@ -90,17 +93,38 @@ public final class Clouds {
     /** The layers {@code level}'s provider returns now; empty without one. */
     public static List<Layer> layers(Level level, float partialTick) {
         if (!has(level)) return List.of();
-        List<Layer> layers = PROVIDERS.get(level.dimension()).layers(level, partialTick);
+        var provider = PROVIDERS.get(level.dimension()).replacement();
+        if (provider == null) return List.of();
+        List<Layer> layers = provider.layers(level, partialTick);
         return layers == null ? List.of() : layers;
+    }
+
+    /** Whether this level replaces the native pass rather than adding layers after it. */
+    public static boolean replaces(Level level) {
+        return has(level) && PROVIDERS.get(level.dimension()).replacement() != null;
+    }
+
+    public static boolean additive(Level level) {
+        return has(level) && PROVIDERS.get(level.dimension()).additions() != null;
+    }
+
+    public static boolean nativeVisible(Level level) {
+        return !additive(level) || PROVIDERS.get(level.dimension()).additions().visible(level);
+    }
+
+    /** Extra layers only. Their shifts are relative to the native renderer's drift. */
+    public static List<Layer> additions(Level level, NativeLayer nativeLayer) {
+        return PROVIDERS.get(level.dimension()).additions().layers(level, nativeLayer);
     }
 
     /**
      * 26.1: the level's {@code visual/cloud_color} attribute as vanilla's cloud pass needs it for a registered level -
      * opaque while it has layers (the pass runs and the renderer draws them), transparent while it has none (vanilla adds
-     * no pass). Unchanged for every other level. The RGB is never used for a registered level's layers.
+     * no pass). Additive providers preserve the native alpha unless the first layer is hidden. RGB remains unchanged.
      */
     public static int cloudColorAttribute(Level level, int argb) {
-        if (!has(level)) return argb;
+        if (additive(level)) return nativeVisible(level) ? argb : argb & 0x00FFFFFF;
+        if (!replaces(level)) return argb;
         return layers(level, 0.0F).isEmpty() ? argb & 0x00FFFFFF : argb | 0xFF000000;
     }
 }

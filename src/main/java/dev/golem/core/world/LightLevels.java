@@ -3,6 +3,11 @@ package dev.golem.core.world;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.LevelReader;
+//? if >=1.21 {
+import net.minecraft.world.level.chunk.status.ChunkStatus;
+//?} else {
+/*import net.minecraft.world.level.chunk.ChunkStatus;
+*///?}
 
 /**
  * Legacy light queries: {@code World.getBlockLightValue} and {@code World.getBlockLightOpacity}.
@@ -31,6 +36,25 @@ public final class LightLevels {
         //?} else {
         /*return state.getLightBlock(net.minecraft.world.level.EmptyBlockGetter.INSTANCE, BlockPos.ZERO);
         *///?}
+    }
+
+    /** The first position above a live light-blocking column, as the 1.7 chunk heightmap measured it. */
+    public static int lightBlockingHeight(LevelReader level, int x, int z) {
+        var chunk = level.getChunk(x >> 4, z >> 4, ChunkStatus.EMPTY, false);
+        var highest = chunk.getHighestFilledSectionIndex();
+        //? if >=26.1 {
+        var min = chunk.getMinY();
+        var max = chunk.getMaxY();
+        //?} else {
+        /*var min = chunk.getMinBuildHeight();
+        var max = chunk.getMaxBuildHeight();
+        *///?}
+        var top = highest < 0 ? min : Math.min((chunk.getSectionYFromSectionIndex(highest) << 4) + 15, max);
+        var pos = new BlockPos.MutableBlockPos(x, top, z);
+        for (int y = top; y >= min; y--) {
+            if (opacity(chunk, pos.setY(y)) > 0) return y + 1;
+        }
+        return min;
     }
 
     /** Whether sky light passes down through {@code state} at full strength (vanilla's per-state cache). */

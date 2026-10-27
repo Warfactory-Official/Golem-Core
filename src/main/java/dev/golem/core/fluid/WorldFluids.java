@@ -1,5 +1,12 @@
 package dev.golem.core.fluid;
 
+//? if forge {
+/*import net.minecraftforge.common.ForgeMod;
+*///?}
+//? if neoforge {
+import net.neoforged.neoforge.common.NeoForgeMod;
+//?}
+
 import dev.golem.core.registry.DeferredRegister;
 import dev.golem.core.registry.RegistryObject;
 import java.util.ArrayList;
@@ -39,6 +46,15 @@ import org.jspecify.annotations.Nullable;
  * {@link #installClient} from client init.
  */
 public final class WorldFluids {
+
+    /** Enables the loader's milk fluid and milk-bucket handler; call during construction before fluid registration. */
+    public static void enableMilk() {
+        //? if neoforge {
+        NeoForgeMod.enableMilkFluid();
+        //?} elif forge {
+        /*ForgeMod.enableMilkFluid();
+        *///?}
+    }
 
     private WorldFluids() {}
 

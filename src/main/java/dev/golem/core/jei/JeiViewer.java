@@ -12,7 +12,7 @@ import dev.golem.core.viewer.ViewerPlugin;
 import dev.golem.core.viewer.ViewerType;
 import mezz.jei.api.constants.RecipeTypes;
 import mezz.jei.api.constants.VanillaTypes;
-import mezz.jei.api.helpers.IGuiHelper;
+import mezz.jei.api.helpers.IJeiHelpers;
 import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.registration.IExtraIngredientRegistration;
 import mezz.jei.api.registration.IGuiHandlerRegistration;
@@ -72,13 +72,13 @@ public final class JeiViewer {
     }
 
     public static void categories(IRecipeCategoryRegistration registration, ViewerPlugin plugin) {
-        IGuiHelper helper = registration.getJeiHelpers().getGuiHelper();
+        var helper = registration.getJeiHelpers();
         plugin.categories(categories -> {
             for (ViewerCategory<?> category : categories) registration.addRecipeCategories(wrap(helper, category));
         });
     }
 
-    private static <T> JeiCategory<T> wrap(IGuiHelper helper, ViewerCategory<T> category) {
+    private static <T> JeiCategory<T> wrap(IJeiHelpers helper, ViewerCategory<T> category) {
         return new JeiCategory<>(helper, category);
     }
 

@@ -1,5 +1,15 @@
 package dev.golem.core.platform;
 
+//? if fabric {
+/*import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+*///?}
+//? if forge {
+/*import net.minecraftforge.common.MinecraftForge;
+*///?}
+//? if forge {
+/*import net.minecraftforge.event.TickEvent;
+*///?}
+
 import dev.golem.core.hook.Hook;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -64,6 +74,27 @@ public final class Lifecycle {
 
     private static void entityLoaded(net.minecraft.world.entity.Entity entity, ServerLevel level) {
         for (BiConsumer<net.minecraft.world.entity.Entity, ServerLevel> listener : ENTITY_LOAD) listener.accept(entity, level);
+    }
+
+    private static final Hook<Consumer<MinecraftServer>> BEFORE_LEVEL_TICKS = Hook.notifying();
+
+    /** Before levels tick, after vanilla has computed this tick's simulation/step eligibility. */
+    public static void onBeforeLevelTicks(Consumer<MinecraftServer> handler) {
+        //? if fabric {
+        /*ServerTickEvents.START_SERVER_TICK.register(handler::accept);
+        *///?} elif neoforge {
+        BEFORE_LEVEL_TICKS.register(handler);
+        //?} elif forge {
+        /*MinecraftForge.EVENT_BUS.addListener(
+                (TickEvent.ServerTickEvent event) -> {
+                    if (event.phase == TickEvent.Phase.START) handler.accept(event.getServer());
+                });
+        *///?}
+    }
+
+    /** NeoForge's Pre event precedes TickRateManager.tick; the tickChildren entry supplies the later phase. */
+    public static void beforeLevelTicks(MinecraftServer server) {
+        for (var handler : BEFORE_LEVEL_TICKS) handler.accept(server);
     }
 
     /** Runs at the end of every server tick. */
