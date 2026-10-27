@@ -1,13 +1,9 @@
 package dev.golem.core.data;
 
 import dev.golem.core.world.ItemStacks;
-//? if >=1.21 {
+//? if >=1.21.1 {
 import net.minecraft.core.component.DataComponentMap;
-//?}
-//? if >=1.21 {
 import net.minecraft.core.component.DataComponents;
-//?}
-//? if >=1.21 {
 import net.minecraft.world.item.component.BlockItemStateProperties;
 //?}
 
@@ -45,15 +41,4 @@ public final class CarriedState {
         /*return ItemStacks.carriedBoolean(stack, key);
         *///?}
     }
-
-    /** Writes {@code property=value} into a persistent-drop builder when true; a false writes nothing. */
-    //? if >=1.21.1 {
-    public static void writeFlag(DataComponentMap.Builder components,
-                                 BooleanProperty property, boolean value) {
-        if (value) {
-            components.set(DataComponents.BLOCK_STATE,
-                    BlockItemStateProperties.EMPTY.with(property, true));
-        }
-    }
-    //?}
 }

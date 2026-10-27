@@ -116,10 +116,7 @@ public final class Chunks {
         /*level.getChunkSource().removeRegionTicket(TICKING, pos, TICKING_RADIUS, pos);
         *///?}
     }
-    /**
-     * Waits until a chunk held by the caller ticks entities and has read its stored entities. The caller retains
-     * ownership of its ticket; this wait neither takes nor releases a claim.
-     */
+    /** Waits until a caller-held chunk ticks entities and has read its stored ones; takes and releases no claim. */
     public static void loadEntityTicking(ServerLevel level, int chunkX, int chunkZ) {
         var cache = level.getChunkSource();
         // A FULL chunk can already be cached while its newly claimed entity-ticking future is still unloaded.
@@ -144,6 +141,8 @@ public final class Chunks {
         level.waitForEntities(pos, 0);
         //?} else {
         /*level.getServer().managedBlock(() -> {
+            // the chunk's status change that requests its entities runs on the chunk executor, not the server's
+            cache.pollTask();
             level.entityManager.processPendingLoads();
             return level.areEntitiesLoaded(pack(chunkX, chunkZ));
         });

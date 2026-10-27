@@ -59,10 +59,7 @@ public final class Teleports {
         *///?}
     }
 
-    /**
-     * Whether cross-level moves must be deferred to the end-of-tick worker: true where vanilla has no passenger
-     * transition (below 1.21.1), so callers queue instead of moving immediately.
-     */
+    /** Whether callers must queue cross-level moves: below 1.21.1 vanilla has no passenger transition. */
     public static boolean defersTransfers() {
         //? if >=1.21.1 {
         return false;
@@ -72,9 +69,8 @@ public final class Teleports {
     }
 
     /**
-     * Moves the root vehicle and its passengers to {@code target} at {@code pos}, keeping velocity and rotation, and
-     * calls {@code afterPassengers} once vanilla has put the passengers back aboard. Returns false where vanilla has
-     * no passenger transition (below 1.21.1): the caller keeps its legacy separate-move path.
+     * Moves a root vehicle with its passengers, keeping motion; {@code afterPassengers} runs once they are aboard.
+     * False below 1.21.1, where the caller moves each entity itself.
      */
     public static boolean transferRoot(Entity root, ServerLevel target, Vec3 pos,
                                        Consumer<Entity> afterPassengers) {
@@ -91,9 +87,7 @@ public final class Teleports {
         *///?}
     }
 
-    /**
-     * Cross-level move that keeps velocity and leaves a portal ticket at the arrival, as a teleporter crossing does.
-     */
+    /** Cross-level move that keeps velocity and leaves a portal ticket at the arrival. */
     public static void transferWithTicket(Entity entity, ServerLevel destination, Vec3 pos) {
         //? if >=26.1 {
         entity.teleport(new TeleportTransition(destination, pos, entity.getDeltaMovement(),

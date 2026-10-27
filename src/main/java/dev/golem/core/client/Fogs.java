@@ -3,7 +3,9 @@ package dev.golem.core.client;
 import net.minecraft.client.Minecraft;
 //? if >=26.1 {
 import net.minecraft.client.renderer.fog.FogData;
-//?}
+//?} else {
+/*import net.minecraft.client.renderer.FogRenderer;
+*///?}
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.level.material.FogType;
 
@@ -48,23 +50,6 @@ public final class Fogs {
 
     }
 
-    /** Optional metadata on a loader RenderFog event, bound only by its native construction path. */
-    public interface CallerDistance {
-        float golem$callerDistanceBlocks();
-        void golem$callerDistanceBlocks(float blocks);
-    }
-
-    /** Attaches the real caller distance before the unchanged loader hook posts this same event. */
-    public static <T> T bindCallerDistance(T event, float blocks) {
-        ((CallerDistance) event).golem$callerDistanceBlocks(blocks);
-        return event;
-    }
-
-    /** NaN means an external/manual event has no native caller metadata and remains its poster's. */
-    private static float callerDistanceBlocks(Object event) {
-        return ((CallerDistance) event).golem$callerDistanceBlocks();
-    }
-
     /** Every listener, in phase order; register through the {@code on...} method or directly, with a phase. */
     public static final Hook<Modifier> MODIFIERS = Hook.notifying();
     private static boolean hooked;
@@ -85,8 +70,11 @@ public final class Fogs {
                 });
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(net.neoforged.bus.api.EventPriority.LOW,
                 (net.neoforged.neoforge.client.event.ViewportEvent.RenderFog event) -> {
-                    float blocks = callerDistanceBlocks(event);
-                    if (Float.isNaN(blocks)) return;
+                    //? if >=26.1 {
+                    float blocks = event.getFogData().renderDistanceEnd;
+                    //?} else {
+                    /*float blocks = legacyFogDistance(event.getMode() == FogRenderer.FogMode.FOG_TERRAIN);
+                    *///?}
                     Entity camera = net.minecraft.client.Minecraft.getInstance().getCameraEntity();
                     float far = far(camera, blocks);
                     if (Float.isNaN(far)) return;
@@ -111,8 +99,7 @@ public final class Fogs {
                 });
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(net.minecraftforge.eventbus.api.EventPriority.LOW,
                 (net.minecraftforge.client.event.ViewportEvent.RenderFog event) -> {
-                    float blocks = callerDistanceBlocks(event);
-                    if (Float.isNaN(blocks)) return;
+                    float blocks = legacyFogDistance(event.getMode() == FogRenderer.FogMode.FOG_TERRAIN);
                     Entity camera = net.minecraft.client.Minecraft.getInstance().getCameraEntity();
                     float far = far(camera, blocks);
                     if (Float.isNaN(far)) return;
@@ -127,6 +114,11 @@ public final class Fogs {
     /** The render distance in blocks, as the fog code reads it ({@code options.renderDistance * 16}). */
     public static float renderDistanceBlocks() {
         return net.minecraft.client.Minecraft.getInstance().options.getEffectiveRenderDistance() * 16.0F;
+    }
+
+    /** The distance vanilla passed to the legacy setupFog: the terrain pass uses at least 32 blocks. */
+    private static float legacyFogDistance(boolean terrain) {
+        return terrain ? Math.max(renderDistanceBlocks(), 32.0F) : renderDistanceBlocks();
     }
 
     //? if >=26.1 {

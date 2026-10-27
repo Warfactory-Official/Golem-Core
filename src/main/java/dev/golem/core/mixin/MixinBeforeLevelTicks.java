@@ -9,8 +9,9 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Vanilla has no ticket-to-level-tick callback. Fabric exposes this phase; NeoForge lacks it.
- * Widening cannot add a phase, so dispatch immediately before native level ticks.
+ * Vanilla has no callback between TickRateManager.tick and the level ticks. Every loader's start-of-tick event
+ * (Fabric START_SERVER_TICK, NeoForge ServerTickEvent.Pre, Forge Phase.START) fires before TickRateManager.tick,
+ * and widening cannot add a phase, so dispatch at the head of tickChildren.
  */
 @Mixin(MinecraftServer.class)
 public abstract class MixinBeforeLevelTicks {

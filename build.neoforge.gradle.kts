@@ -194,11 +194,10 @@ tasks.processResources {
         "mixin_compatibility" to if (javaVersion <= 17) "JAVA_17" else "JAVA_21",
         "legacy_item_owner_mixins" to if (mcVersion.substringBefore('.').toInt() < 26)
             ", \"MixinItemRenderer\"" else "",
-        // NeoForge 1.21.1 still calls getRailMaxSpeed/onMinecartPass; 26.1 declares but no longer calls them.
-        // NeoForge Pre runs before TickRateManager.tick; simulation uses the tickChildren entry instead.
-        "physics_mixins" to ", \"MixinBeforeLevelTicks\"",
+        "physics_mixins" to "",
         // dev.golem.core.gametest.TestChunks: a 26.1 test waits until its whole plot is entity-ticking.
         "gametest_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinGameTestChunks\"" else "",
+        // NeoForge 1.21.1 still calls getRailMaxSpeed/onMinecartPass; 26.1 declares but no longer calls them.
         "rail_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinMinecartRails\"" else "",
         // 1.21.1 only: the world-exit unload spin (MixinChunkMapUnloadDrain).
         "unload_mixins" to if (mcVersion == "1.21.1") ", \"MixinChunkMapUnloadDrain\"" else "",

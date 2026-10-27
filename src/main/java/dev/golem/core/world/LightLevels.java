@@ -1,8 +1,12 @@
 package dev.golem.core.world;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.lighting.LightEngine;
+import net.minecraft.world.phys.shapes.Shapes;
 //? if >=1.21 {
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 //?} else {
@@ -63,6 +67,19 @@ public final class LightLevels {
         return state.propagatesSkylightDown();
         //?} else {
         /*return state.propagatesSkylightDown(net.minecraft.world.level.EmptyBlockGetter.INSTANCE, BlockPos.ZERO);
+        *///?}
+    }
+
+    /** Whether sky light stops at {@code lower} ({@code pos}) under {@code upper}: vanilla's ChunkSkyLightSources rule. */
+    public static boolean stopsSkylight(BlockGetter level, BlockPos pos, BlockState upper, BlockState lower) {
+        //? if >=1.21.2 {
+        return opacity(lower) != 0 || Shapes.faceShapeOccludes(
+                LightEngine.getOcclusionShape(upper, Direction.DOWN),
+                LightEngine.getOcclusionShape(lower, Direction.UP));
+        //?} else {
+        /*return opacity(level, pos) != 0 || Shapes.faceShapeOccludes(
+                LightEngine.getOcclusionShape(level, pos.above(), upper, Direction.DOWN),
+                LightEngine.getOcclusionShape(level, pos, lower, Direction.UP));
         *///?}
     }
 

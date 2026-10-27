@@ -7,7 +7,7 @@ import java.util.function.BiFunction
 // Parameters (project properties, set in gradle.properties or as extra[...] before the apply line):
 //
 //   golem.build.composite.roots   List of "<path>=<maven group path>" pairs, one per composite build this mod
-//                                 compiles against, e.g. "../Golem-Core=dev/golem,../new-hbm=com/hbm".
+//                                 compiles against, e.g. "../Golem-Core=dev/golem,../NTM-Continuum=com/hbm".
 //                                 Default: "../Golem-Core=dev/golem".
 //   golem.build.composite.artifactDirectory
 //                                 Optional BiFunction<File, String, File>: upstream checkout and node name

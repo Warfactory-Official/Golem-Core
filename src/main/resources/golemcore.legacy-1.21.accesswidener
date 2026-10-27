@@ -1,6 +1,9 @@
 accessWidener v2 named
+# PlayerInputs.useDelay: the held-use cooldown has no getter.
 accessible field net/minecraft/client/Minecraft rightClickDelay I
+# Teleports: whether the server still waits for a teleport acknowledgement; no getter.
 accessible field net/minecraft/server/network/ServerGamePacketListenerImpl awaitingPositionFromClient Lnet/minecraft/world/phys/Vec3;
+# Particles.forEach: the engine exposes no view of its pending or active particles.
 accessible field net/minecraft/client/particle/ParticleEngine particles Ljava/util/Map;
 accessible field net/minecraft/client/particle/ParticleEngine particlesToAdd Ljava/util/Queue;
 accessible field net/minecraft/server/network/ServerGamePacketListenerImpl aboveGroundTickCount I
@@ -44,13 +47,18 @@ accessible field net/minecraft/world/entity/LivingEntity lerpYRot D
 accessible field net/minecraft/gametest/framework/GameTestHelper testInfo Lnet/minecraft/gametest/framework/GameTestInfo;
 accessible field net/minecraft/world/entity/LivingEntity jumping Z
 
+# client.Sounds.source: the OpenAL source of a live channel, for per-source parameters; no getter.
 accessible field com/mojang/blaze3d/audio/Channel source I
 
+# Mobs.usedItem: the goal keeps its item private with no getter.
 accessible field net/minecraft/world/entity/ai/goal/UseItemGoal item Lnet/minecraft/world/item/ItemStack;
+# Movement: the web/berry-bush slowdown is private and reset each tick, with no accessor.
 accessible field net/minecraft/world/entity/Entity stuckSpeedMultiplier Lnet/minecraft/world/phys/Vec3;
+# Particles.position: a particle's position is protected with no getter.
 accessible field net/minecraft/client/particle/Particle x D
 accessible field net/minecraft/client/particle/Particle y D
 accessible field net/minecraft/client/particle/Particle z D
+# Mobs.fox*: mobs that reuse fox AI read these private goals' state.
 accessible class net/minecraft/world/entity/animal/Fox$SleepGoal
 accessible class net/minecraft/world/entity/animal/Fox$FoxBehaviorGoal
 accessible field net/minecraft/world/entity/animal/Fox$SleepGoal countdown I

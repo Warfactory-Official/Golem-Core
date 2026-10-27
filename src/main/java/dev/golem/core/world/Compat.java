@@ -313,6 +313,8 @@ public final class Compat {
      * back the {@code Item} itself. Returns {@link ItemStack#EMPTY} when there is no remainder.
      */
     public static ItemStack craftingRemainder(ItemStack stack) {
+        Item added = Remainders.of(stack.getItem());
+        if (added != null) return new ItemStack(added);
         // The accessor itself was renamed (getCraftingRemainder / getCraftingRemainingItem), so the
         // whole call sits inside the guard. A Stonecutter replacement would live in the consuming
         // project's config, and this library has to compile on its own.

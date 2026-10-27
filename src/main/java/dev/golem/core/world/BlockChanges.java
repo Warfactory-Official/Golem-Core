@@ -42,17 +42,6 @@ public final class BlockChanges {
         return false;
     }
 
-    public static void changed(ServerLevel level, BlockPos pos, BlockState oldState, BlockState newState) {
-        if (HANDLERS.isEmpty() || oldState == newState) return;
-        int chunkX = pos.getX() >> 4;
-        int chunkZ = pos.getZ() >> 4;
-        var listeners = HANDLERS.listeners();
-        for (int i = 0; i < listeners.size(); i++) {
-            var handler = listeners.get(i);
-            if (handler.observesChunk(level, chunkX, chunkZ)) handler.onChange(level, pos, oldState, newState);
-        }
-    }
-
     /** Publishes a completed change, without copying the caller's position or loading a chunk. */
     public static void committed(ServerLevel level, BlockPos pos, BlockState before, BlockState after) {
         if (before == after || HANDLERS.isEmpty()) return;

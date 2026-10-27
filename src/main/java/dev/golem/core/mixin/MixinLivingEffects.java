@@ -18,12 +18,12 @@ public abstract class MixinLivingEffects {
 
     //? if >=26.1 {
     @Inject(method = "onEffectsRemoved", at = @At("TAIL"))
-    private void golemcore$effectsRemoved(Collection<MobEffectInstance> effects, CallbackInfo ci) {
+    private void golem$effectsRemoved(Collection<MobEffectInstance> effects, CallbackInfo ci) {
         for (var effect : effects) Effects.removed((LivingEntity) (Object) this, effect);
     }
     //?} else {
     /*@Inject(method = "onEffectRemoved", at = @At("TAIL"))
-    private void golemcore$effectRemoved(MobEffectInstance effect, CallbackInfo ci) {
+    private void golem$effectRemoved(MobEffectInstance effect, CallbackInfo ci) {
         Effects.removed((LivingEntity) (Object) this, effect);
     }
     *///?}

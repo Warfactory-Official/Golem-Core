@@ -4,6 +4,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
+import org.jspecify.annotations.Nullable;
 
 //? if >=1.21.1 {
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -38,6 +39,23 @@ public abstract class CompatEntity extends Entity {
     protected boolean shouldIgnoreExplosion() {
         return false;
     }
+
+    /** Whether {@code other} collides with this entity as with a boat's hull; {@code other} is null below 26.1. */
+    protected boolean isSolidTo(@Nullable Entity other) {
+        return false;
+    }
+
+    //? if >=26.1 {
+    @Override
+    public boolean canBeCollidedWith(@Nullable Entity other) {
+        return isSolidTo(other);
+    }
+    //?} else {
+    /*@Override
+    public boolean canBeCollidedWith() {
+        return isSolidTo(null);
+    }
+    *///?}
 
     //? if >=1.21.1 {
     @Override

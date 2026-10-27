@@ -23,6 +23,8 @@ public abstract class MixinConnection implements ChannelAccess.HasChannel {
     @Shadow
     private Channel channel;
 
+    // Ends the client session for the connection that closed. Loader events cannot: NeoForge and Forge LoggingOut and
+    // Fabric's play DISCONNECT miss a drop during configuration, and NeoForge has no configuration disconnect event.
     @Inject(method = "channelInactive", at = @At("HEAD"))
     private void golem$connectionClosed(ChannelHandlerContext context, CallbackInfo ci) {
         ClientSessions.disconnected((Connection) (Object) this);

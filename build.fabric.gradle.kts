@@ -182,6 +182,7 @@ tasks.processResources {
         "world_effect_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinWorldEffects\"" else "",
         // Skies.Modifier: 26.1 appends environment-attribute layers; older nodes wrap the sky darkening and the
         // client colour getters (the mixin classes are empty stubs on the other era).
+        // Dev-only, listed in the harness mixin config that releaseJar strips.
         "client_gametest_mixins" to if (stonecutter.eval(mcVersion, ">=26.1")) ", \"MixinClientTestTimeout\"" else "",
         "render_validation_mixins" to if (stonecutter.eval(mcVersion, ">=26.1")) ", \"MixinGlValidation\"" else "",
         "sky_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinEnvironmentSkyLayers\"" else ", \"MixinLevelSkyDarken\"",

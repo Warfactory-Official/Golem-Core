@@ -1,6 +1,9 @@
 accessWidener v2 official
+# PlayerInputs.useDelay: the held-use cooldown has no getter.
 accessible field net/minecraft/client/Minecraft rightClickDelay I
+# Teleports: whether the server still waits for a teleport acknowledgement; no getter.
 accessible field net/minecraft/server/network/ServerGamePacketListenerImpl awaitingPositionFromClient Lnet/minecraft/world/phys/Vec3;
+# Particles.forEach: the engine exposes no view of its pending or active particles.
 accessible field net/minecraft/client/particle/ParticleEngine particles Ljava/util/Map;
 accessible field net/minecraft/client/particle/ParticleEngine particlesToAdd Ljava/util/Queue;
 accessible field net/minecraft/client/renderer/item/properties/select/SelectItemModelProperties ID_MAPPER Lnet/minecraft/util/ExtraCodecs$LateBoundIdMapper;
@@ -39,11 +42,13 @@ accessible method net/minecraft/server/level/ServerChunkCache getVisibleChunkIfP
 accessible field net/minecraft/gametest/framework/GameTestHelper testInfo Lnet/minecraft/gametest/framework/GameTestInfo;
 accessible field net/minecraft/world/entity/LivingEntity jumping Z
 
+# client.Sounds.source: the OpenAL source of a live channel, for per-source parameters; no getter.
 accessible field com/mojang/blaze3d/audio/Channel source I
 accessible field net/minecraft/client/renderer/LevelRenderer skyRenderer Lnet/minecraft/client/renderer/SkyRenderer;
 accessible field net/minecraft/client/renderer/SkyRenderer starBuffer Lcom/mojang/blaze3d/buffers/GpuBuffer;
 accessible field com/mojang/blaze3d/opengl/GlBuffer handle I
 
+# RenderOps.validationEnabled: GlRenderPass and its VALIDATION flag are package-private.
 accessible class com/mojang/blaze3d/opengl/GlRenderPass
 
 # RenderOps.terrainBusy reads discovery and leased buffers beyond the public compile-queue count.
@@ -55,11 +60,15 @@ accessible class net/minecraft/client/renderer/SectionOcclusionGraph$GraphState
 accessible class net/minecraft/client/renderer/SectionOcclusionGraph$GraphEvents
 accessible field net/minecraft/client/renderer/SectionBufferBuilderPool freeBuffers Ljava/util/concurrent/ArrayBlockingQueue;
 
+# Mobs.usedItem: the goal keeps its item private with no getter.
 accessible field net/minecraft/world/entity/ai/goal/UseItemGoal item Lnet/minecraft/world/item/ItemStack;
+# Movement: the web/berry-bush slowdown is private and reset each tick, with no accessor.
 accessible field net/minecraft/world/entity/Entity stuckSpeedMultiplier Lnet/minecraft/world/phys/Vec3;
+# Particles.position: a particle's position is protected with no getter.
 accessible field net/minecraft/client/particle/Particle x D
 accessible field net/minecraft/client/particle/Particle y D
 accessible field net/minecraft/client/particle/Particle z D
+# Mobs.fox*: mobs that reuse fox AI read these private goals' state.
 accessible class net/minecraft/world/entity/animal/fox/Fox$SleepGoal
 accessible class net/minecraft/world/entity/animal/fox/Fox$FoxBehaviorGoal
 accessible field net/minecraft/world/entity/animal/fox/Fox$SleepGoal countdown I
@@ -70,5 +79,6 @@ accessible field net/minecraft/world/entity/InterpolationHandler previousTickRot
 accessible field net/minecraft/world/entity/InterpolationHandler$InterpolationData steps I
 accessible field net/minecraft/world/entity/InterpolationHandler$InterpolationData position Lnet/minecraft/world/phys/Vec3;
 accessible field net/minecraft/world/entity/InterpolationHandler$InterpolationData xRot F
+# RenderOps.chatMessages / bossEvents: chat history and boss bars have no public view.
 accessible field net/minecraft/client/gui/components/ChatComponent allMessages Ljava/util/List;
 accessible field net/minecraft/client/gui/components/BossHealthOverlay events Ljava/util/Map;

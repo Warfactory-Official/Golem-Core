@@ -36,11 +36,7 @@ public final class Skies {
         *///?}
     }
 
-    /**
-     * Native server-side light-map input at a position. The raw environment factor exists from 26.1 onward;
-     * older servers expose integer sky darkening, not the client's brightness input, so it is unavailable there.
-     * Client rendering must use its camera attribute probe instead of this world-position sample.
-     */
+    /** The server's sky light factor at a position; empty below 26.1, which has only integer sky darkening. */
     public static OptionalDouble lightInput(Level level, BlockPos pos) {
         //? if >=26.1 {
         return OptionalDouble.of(level.environmentAttributes()
@@ -240,16 +236,20 @@ public final class Skies {
         return (argb & 0xFF000000) | c << 16 | c << 8 | 0xFF;
     }
 
-    /**
-     * Refreshes every level's sky after the time rate changed (the Time Wand): 26.1 caches environment attributes per
-     * tick and the sky brightness, so both are invalidated; older nodes derive both live. No-op below 26.1.
-     */
+    /** Drops 26.1's cached environment attributes and sky brightness after a time-rate change; older nodes read live. */
     public static void refreshAfterRateChange(MinecraftServer server) {
         //? if >=26.1 {
         for (var level : server.getAllLevels()) {
             level.environmentAttributes().invalidateTickCache();
             level.updateSkyBrightness();
         }
+        //?}
+    }
+
+    /** One level's half of {@link #refreshAfterRateChange}, for a client told the new rate. No-op below 26.1. */
+    public static void invalidateEnvironment(Level level) {
+        //? if >=26.1 {
+        level.environmentAttributes().invalidateTickCache();
         //?}
     }
 

@@ -37,8 +37,7 @@ import net.minecraft.world.level.Level;
  * arrive, once a second, and whenever it is {@link #set}. A client derives the time between updates from its own game
  * time. 26.1's world clocks are not used: the older nodes have no registry for a {@code world_clock} entry, and
  * timelines, the bed rule and environment attributes would follow that clock too, so the nodes would disagree.
- * Mods with authored native clocks and timelines instead register {@link #nativeClock}; their modern gameplay
- * and rendering then share the same clock while older nodes retain the saved counter backend.
+ * {@link #nativeClock} uses a dimension type's own 26.1 clock instead.
  */
 public final class TimeOfDay {
 
@@ -94,10 +93,7 @@ public final class TimeOfDay {
         return OWN.contains(level.dimension()) || NATIVE.contains(level.dimension());
     }
 
-    /**
-     * Gives {@code dimension} the modern native world clock where one exists, else the saved counter backend.
-     * Call at mod construction on both sides; calling it again for the same dimension does nothing.
-     */
+    /** {@link #nativeClock} on 26.1, else {@link #ownClock}; call at mod construction on both sides. */
     public static synchronized void autoClock(ResourceKey<Level> dimension) {
         //? if >=26.1 {
         nativeClock(dimension);
