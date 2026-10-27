@@ -16,7 +16,10 @@ import net.minecraft.world.level.storage.ValueOutput;
 /*import net.minecraft.nbt.CompoundTag;
 *///?}
 
-/** Data/save bridge for custom entities that must retain FallingBlockEntity's vanilla renderer contract. */
+/**
+ * Data/save bridge for custom entities that must retain FallingBlockEntity's vanilla renderer contract. Vanilla's own
+ * keys (the carried block, its fall time and drop flags) are saved first, then the subclass's.
+ */
 public abstract class CompatFallingEntity extends FallingBlockEntity {
 
     protected CompatFallingEntity(EntityType<? extends FallingBlockEntity> type, Level level) {
@@ -54,21 +57,25 @@ public abstract class CompatFallingEntity extends FallingBlockEntity {
     //? if >=26.1 {
     @Override
     protected void readAdditionalSaveData(ValueInput input) {
+        super.readAdditionalSaveData(input);
         loadData(new ValueDataIn(input));
     }
 
     @Override
     protected void addAdditionalSaveData(ValueOutput output) {
+        super.addAdditionalSaveData(output);
         saveData(new ValueDataOut(output));
     }
     //?} else {
     /*@Override
     protected void readAdditionalSaveData(CompoundTag tag) {
+        super.readAdditionalSaveData(tag);
         loadData(new TagDataIn(tag, level().registryAccess()));
     }
 
     @Override
     protected void addAdditionalSaveData(CompoundTag tag) {
+        super.addAdditionalSaveData(tag);
         saveData(new TagDataOut(tag, level().registryAccess()));
     }
     *///?}
