@@ -295,6 +295,11 @@ fun convertLegacyLootTerms(node: Any?): Boolean {
                 map["name"] = map.remove("value")
                 changed = true
             }
+            // 1.20.1's set_count caps at the stack size; Golem Core's does not, as later versions do not
+            if (map["function"] == "minecraft:set_count") {
+                map["function"] = "golemcore:set_count"
+                changed = true
+            }
             val legacy = mapOf("attacker" to "killer", "direct_attacker" to "direct_killer", "attacking_player" to "killer_player")
             val target = map["entity"]
             if (target is String && legacy.containsKey(target)) {

@@ -19,6 +19,7 @@ public final class ForgeEntrypoint {
         dev.golem.core.registry.RegistryDump.install(); // dev only: GOLEM_REGISTRY_DUMP=<file>
         dev.golem.core.world.Physics.init();
         dev.golem.core.world.RecipeTables.init();
+        dev.golem.core.world.LootCounts.init();
         dev.golem.core.data.DataFiles.init();
         if (Platform.isClient()) dev.golem.core.data.DataFiles.initClient();
         if (Platform.isClient()) UnbakedModels.initialize();
