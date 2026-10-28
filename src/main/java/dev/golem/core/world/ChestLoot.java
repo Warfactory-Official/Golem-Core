@@ -87,10 +87,12 @@ public final class ChestLoot {
     public static List<ItemStack> rollUnsplit(ServerLevel level, String table, Vec3 origin, long seed) {
         LootContext.Builder context = new LootContext.Builder(chestParams(level, origin)).withOptionalRandomSeed(seed);
         List<ItemStack> stacks = new ArrayList<>();
+        // a count of 0 is an empty stack, which Fabric passes on and NeoForge drops; a chest skips it either way
+        Consumer<ItemStack> sink = stack -> { if (!stack.isEmpty()) stacks.add(stack); };
         //? if >=1.20.5 {
-        table(level, table).getRandomItemsRaw(context.create(java.util.Optional.empty()), stacks::add);
+        table(level, table).getRandomItemsRaw(context.create(java.util.Optional.empty()), sink);
         //?} else {
-        /*table(level, table).getRandomItemsRaw(context.create(null), stacks::add);
+        /*table(level, table).getRandomItemsRaw(context.create(null), sink);
         *///?}
         return stacks;
     }
