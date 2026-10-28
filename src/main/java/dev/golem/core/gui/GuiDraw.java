@@ -295,6 +295,42 @@ public final class GuiDraw {
     }
 
     /**
+     * {@link #nextStratum} for drawing over a menu's slot items once they are drawn. Before 26.1 {@code renderSlot}
+     * lifts each slot by Z 100, so its item sits near 250 and its count at 300; this rises to the count's height.
+     */
+    public static void aboveSlots(
+            //? if >=26.1 {
+            GuiGraphicsExtractor graphics
+            //?} else {
+            /*GuiGraphics graphics
+            *///?}
+            ) {
+        //? if >=26.1 {
+        graphics.nextStratum();
+        //?} else {
+        /*graphics.pose().translate(0.0F, 0.0F, 300.0F);
+        *///?}
+    }
+
+    /**
+     * {@link #nextStratum} for a hand-drawn tooltip panel. Before 26.1 it rises to Z 400 like vanilla's tooltips, past
+     * slot counts, whose glyphs sit just above Z 300.
+     */
+    public static void tooltipStratum(
+            //? if >=26.1 {
+            GuiGraphicsExtractor graphics
+            //?} else {
+            /*GuiGraphics graphics
+            *///?}
+            ) {
+        //? if >=26.1 {
+        graphics.nextStratum();
+        //?} else {
+        /*graphics.pose().translate(0.0F, 0.0F, 400.0F);
+        *///?}
+    }
+
+    /**
      * The text colour rule of 1.7's {@code FontRenderer} and of {@code Font} before 1.21.6: a colour whose top six
      * bits are clear ({@code 0x404040}, {@code 0xFFFFFF}, ...) is drawn opaque. 26.1 takes the int as plain ARGB and
      * skips any text with alpha 0, so the same call drew on 1.20.1/1.21.1 and was invisible on 26.1. Applied by every
