@@ -4,10 +4,12 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import dev.golem.core.client.ContainerClicks;
 import dev.golem.core.world.RecipeTables;
+
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
@@ -27,7 +29,8 @@ final class HarnessCommands {
 
     private static final Map<String, Handler> handlers = new LinkedHashMap<>();
 
-    private HarnessCommands() {}
+    private HarnessCommands() {
+    }
 
     static Object dispatch(Minecraft minecraft, String name, JsonObject req) throws Exception {
         Handler handler = handlers.get(name);
@@ -47,13 +50,15 @@ final class HarnessCommands {
             handlers.keySet().forEach(names::add);
             json.add("commands", names);
             JsonArray kinds = new JsonArray();
-            for (String kind : new String[] {"status", "player", "inventory", "block", "block_entity", "entities", "screen", "log", "gem"}) kinds.add(kind);
+            for (String kind : new String[]{"status", "player", "inventory", "block", "block_entity", "entities", "screen", "log", "gem"})
+                kinds.add(kind);
             HarnessQueryRegistry.kinds().forEach(kinds::add);
             json.add("queries", kinds);
             return json;
         });
         handlers.put("status", (mc, req) -> HarnessQueries.status(mc));
         handlers.put("query", HarnessCommands::query);
+        handlers.put("tick_rate", HarnessCommands::tickRate);
 
         handlers.put("cmd", (mc, req) -> {
             if (mc.player == null) return Json.error("no player");
@@ -69,11 +74,13 @@ final class HarnessCommands {
         });
 
         handlers.put("key_down", (mc, req) -> {
-            HarnessInput.press(mc, HarnessInput.resolve(mc, Json.str(req, "key", "")), true, Json.integer(req, "mods", 0));
+            HarnessInput.press(mc, HarnessInput.resolve(mc, Json.str(req, "key", "")), true,
+                    Json.integer(req, "mods", 0));
             return null;
         });
         handlers.put("key_up", (mc, req) -> {
-            HarnessInput.press(mc, HarnessInput.resolve(mc, Json.str(req, "key", "")), false, Json.integer(req, "mods", 0));
+            HarnessInput.press(mc, HarnessInput.resolve(mc, Json.str(req, "key", "")), false,
+                    Json.integer(req, "mods", 0));
             return null;
         });
         handlers.put("key", (mc, req) -> {
@@ -107,7 +114,8 @@ final class HarnessCommands {
         });
         handlers.put("click", (mc, req) -> {
             int button = Json.integer(req, "button", 0);
-            if (req.has("x") && req.has("y")) HarnessInput.mouseMove(mc, req.get("x").getAsDouble(), req.get("y").getAsDouble());
+            if (req.has("x") && req.has("y"))
+                HarnessInput.mouseMove(mc, req.get("x").getAsDouble(), req.get("y").getAsDouble());
             HarnessInput.Binding binding = new HarnessInput.Binding(true, button);
             int hold = Json.integer(req, "hold_ticks", 1);
             HarnessInput.tap(mc, binding, hold, Json.integer(req, "mods", 0));
@@ -127,7 +135,8 @@ final class HarnessCommands {
             var menu = mc.player.containerMenu;
             int slot = Json.integer(req, "slot", 0);
             int button = Json.integer(req, "button", 0);
-            ContainerClicks.Action action = ContainerClicks.Action.valueOf(Json.str(req, "action", "PICKUP").toUpperCase(Locale.ROOT));
+            ContainerClicks.Action action = ContainerClicks.Action.valueOf(
+                    Json.str(req, "action", "PICKUP").toUpperCase(Locale.ROOT));
             ContainerClicks.send(mc.gameMode, menu.containerId, slot, button, action, mc.player);
             return null;
         });
@@ -143,7 +152,7 @@ final class HarnessCommands {
             float yaw = (float) Json.number(req, "yaw", mc.player.getYRot());
             float pitch = (float) Json.number(req, "pitch", mc.player.getXRot());
             setRotation(mc, yaw, pitch);
-            return null;
+            return HarnessScreenshot.afterFrame(Json.ok());
         });
         handlers.put("look_at", (mc, req) -> {
             if (mc.player == null) return Json.error("no player");
@@ -167,7 +176,12 @@ final class HarnessCommands {
             JsonObject json = Json.ok();
             json.addProperty("yaw", yaw);
             json.addProperty("pitch", pitch);
-            return json;
+            return HarnessScreenshot.afterFrame(json);
+        });
+
+        handlers.put("clear_chat", (mc, req) -> {
+            mc.gui.getChat().clearMessages(true);
+            return null;
         });
 
         handlers.put("wait_ticks", (mc, req) -> {
@@ -185,7 +199,7 @@ final class HarnessCommands {
                 return null;
             };
         });
-        handlers.put("wait_in_world", (mc, req) -> HarnessWorld.untilInWorld(Harness.tick()));
+        handlers.put("wait_in_world", (mc, req) -> HarnessWorld.untilInWorld(System.nanoTime()));
 
         handlers.put("screenshot", (mc, req) -> {
             String path = Json.str(req, "path", "");
@@ -203,12 +217,12 @@ final class HarnessCommands {
         handlers.put("join_world", (mc, req) -> {
             if (mc.level != null) return Json.error("already in a world; leave_world first");
             HarnessWorld.join(mc, Json.str(req, "name", ""));
-            return HarnessWorld.untilInWorld(Harness.tick());
+            return HarnessWorld.untilInWorld(System.nanoTime());
         });
         handlers.put("join_server", (mc, req) -> {
             if (mc.level != null) return Json.error("already in a world; leave_world first");
             HarnessWorld.joinServer(mc, Json.str(req, "host", "127.0.0.1"), Json.integer(req, "port", 25565));
-            return HarnessWorld.untilInWorld(Harness.tick());
+            return HarnessWorld.untilInWorld(System.nanoTime());
         });
         handlers.put("create_world", (mc, req) -> {
             if (mc.level != null) return Json.error("already in a world; leave_world first");
@@ -236,7 +250,8 @@ final class HarnessCommands {
             if (mc.player == null) return Json.error("no player");
             HarnessCamera.stop();
             mc.player.connection.sendCommand(String.format(Locale.ROOT, "tp @s %s %s %s",
-                    Json.number(req, "x", mc.player.getX()), Json.number(req, "y", mc.player.getY()), Json.number(req, "z", mc.player.getZ())));
+                    Json.number(req, "x", mc.player.getX()), Json.number(req, "y", mc.player.getY()),
+                    Json.number(req, "z", mc.player.getZ())));
             double tx = Json.number(req, "x", mc.player.getX());
             double ty = Json.number(req, "y", mc.player.getY());
             double tz = Json.number(req, "z", mc.player.getZ());
@@ -248,7 +263,8 @@ final class HarnessCommands {
                 // for a target within two blocks of the start, before the server had moved the player: the next lookAt
                 // then aimed from the old position, and Fixtures.placeOnTop placed its block into the player's own feet,
                 // which the block refused (VisualScreens, "screens that did not open: [turret_howard]", 1.20.1 Fabric).
-                boolean arrived = m.player.position().distanceToSqr(tx, ty, tz) < 0.25 && m.level.hasChunkAt(m.player.blockPosition());
+                boolean arrived = m.player.position().distanceToSqr(tx, ty, tz) < 0.25 && m.level.hasChunkAt(
+                        m.player.blockPosition());
                 return arrived && Harness.tick() > start ? Json.ok() : null;
             };
         });
@@ -256,6 +272,28 @@ final class HarnessCommands {
             mc.stop();
             return null;
         });
+    }
+
+    private static Object tickRate(Minecraft mc, JsonObject req) {
+        var rate = (float) Json.number(req, "rate", 20);
+        if (!Float.isFinite(rate) || rate < 1F || rate > 1000F)
+            return Json.error("rate must be finite and between 1 and 1000 TPS");
+        var server = mc.getSingleplayerServer();
+        if (server == null) return Json.error("tick_rate requires an integrated server");
+        var applied = server.submit(() -> {
+            var reply = Json.ok();
+            reply.addProperty("previous", HarnessPacing.serverRate(server, rate));
+            reply.addProperty("server_rate", HarnessPacing.serverRate(server));
+            return reply;
+        });
+        return (HarnessServer.Pending) minecraft -> {
+            if (!applied.isDone()) return null;
+            var reply = applied.join();
+            HarnessPacing.clientRate(rate);
+            reply.addProperty("client_rate", 1000F / HarnessPacing.clientMillis(50F));
+            reply.addProperty("milliseconds_per_tick", 1000F / rate);
+            return reply;
+        };
     }
 
     private static Object hold(Minecraft mc, String mapping, int ticks) {
@@ -277,16 +315,25 @@ final class HarnessCommands {
     private static Object query(Minecraft mc, JsonObject req) {
         String kind = Json.str(req, "kind", "status");
         switch (kind) {
-            case "status": return HarnessQueries.status(mc);
-            case "player": return HarnessQueries.player(mc);
-            case "inventory": return HarnessQueries.inventory(mc);
-            case "block": return HarnessQueries.block(mc, req);
-            case "block_entity": return HarnessQueries.blockEntity(mc, req);
-            case "entities": return HarnessQueries.entities(mc, req);
-            case "screen": return HarnessQueries.screen(mc);
-            case "log": return HarnessLog.tail(Json.integer(req, "lines", 50), Json.str(req, "filter", ""),
-                req.has("since") ? req.get("since").getAsLong() : -1L);
-            case "gem": return HarnessQueries.gem(mc, req);
+            case "status":
+                return HarnessQueries.status(mc);
+            case "player":
+                return HarnessQueries.player(mc);
+            case "inventory":
+                return HarnessQueries.inventory(mc);
+            case "block":
+                return HarnessQueries.block(mc, req);
+            case "block_entity":
+                return HarnessQueries.blockEntity(mc, req);
+            case "entities":
+                return HarnessQueries.entities(mc, req);
+            case "screen":
+                return HarnessQueries.screen(mc);
+            case "log":
+                return HarnessLog.tail(Json.integer(req, "lines", 50), Json.str(req, "filter", ""),
+                        req.has("since") ? req.get("since").getAsLong() : -1L);
+            case "gem":
+                return HarnessQueries.gem(mc, req);
             case "recipe_table": {
                 // what the client received in Golem Core's recipe-table sync for {"table": "<ns>:<name>"}
                 JsonObject out = new JsonObject();
@@ -315,11 +362,12 @@ final class HarnessCommands {
                 mc.options.guiScale().set(Integer.parseInt(value));
                 //? if <26.1 {
                 /*mc.resizeDisplay();
-                *///?}
+                 *///?}
                 break;
             case "render_distance":
                 previous = String.valueOf(mc.options.renderDistance().get());
                 mc.options.renderDistance().set(Integer.parseInt(value));
+                mc.options.broadcastOptions();
                 break;
             case "fov":
                 previous = String.valueOf(mc.options.fov().get());
@@ -332,6 +380,11 @@ final class HarnessCommands {
             case "auto_unpause":
                 previous = String.valueOf(HarnessWindow.autoUnpause);
                 HarnessWindow.autoUnpause = Boolean.parseBoolean(value);
+                break;
+            case "paused":
+                previous = String.valueOf(mc.isPaused());
+                if (Boolean.parseBoolean(value)) mc.pauseGame(true);
+                else mc.setScreen(null);
                 break;
             case "hide_gui":
                 previous = String.valueOf(mc.options.hideGui);
@@ -358,7 +411,7 @@ final class HarnessCommands {
                         value.toUpperCase(java.util.Locale.ROOT)));
                 //?} else {
                 /*previous = "none";
-                *///?}
+                 *///?}
                 break;
             case "fabulous":
                 // the split translucency targets ("Improved Transparency" on 26.1, Fabulous graphics before); off = Fancy
@@ -377,7 +430,8 @@ final class HarnessCommands {
             case "clouds":
                 // fancy, fast or off (the bundled options.txt turns clouds off)
                 previous = mc.options.cloudStatus().get().name().toLowerCase(java.util.Locale.ROOT);
-                mc.options.cloudStatus().set(net.minecraft.client.CloudStatus.valueOf(value.toUpperCase(java.util.Locale.ROOT)));
+                mc.options.cloudStatus()
+                          .set(net.minecraft.client.CloudStatus.valueOf(value.toUpperCase(java.util.Locale.ROOT)));
                 break;
             case "view_bobbing":
                 previous = String.valueOf(mc.options.bobView().get());
@@ -385,7 +439,8 @@ final class HarnessCommands {
                 break;
             case "camera":
                 previous = mc.options.getCameraType().name().toLowerCase(java.util.Locale.ROOT);
-                mc.options.setCameraType(net.minecraft.client.CameraType.valueOf(value.toUpperCase(java.util.Locale.ROOT)));
+                mc.options.setCameraType(
+                        net.minecraft.client.CameraType.valueOf(value.toUpperCase(java.util.Locale.ROOT)));
                 break;
             default:
                 // A key binding by its mapping name, to a saved key name: "key.ok_zoomer.zoom" -> "key.keyboard.k".

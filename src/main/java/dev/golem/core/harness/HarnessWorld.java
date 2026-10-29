@@ -13,12 +13,17 @@ import net.minecraft.client.multiplayer.resolver.ServerAddress;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.level.levelgen.presets.WorldPresets;
 
-/** Open, create and leave singleplayer worlds without the vanilla menus. */
+/**
+ * Open, create and leave singleplayer worlds without the vanilla menus.
+ */
 final class HarnessWorld {
 
-    private HarnessWorld() {}
+    private HarnessWorld() {
+    }
 
-    /** In a world with a player, no loading overlay and no loading screen, and the local chunk present. */
+    /**
+     * In a world with a player, no loading overlay and no loading screen, and the local chunk present.
+     */
     static boolean inWorld(Minecraft minecraft) {
         if (minecraft.level == null || minecraft.player == null || minecraft.getOverlay() != null) return false;
         if (minecraft.screen != null) {
@@ -49,26 +54,31 @@ final class HarnessWorld {
         minecraft.createWorldOpenFlows().openWorld(name, () -> minecraft.setScreen(new TitleScreen()));
         //?} else {
         /*minecraft.createWorldOpenFlows().loadLevel(new TitleScreen(), name);
-        *///?}
+         *///?}
     }
 
-    /** Connects to a dedicated server through vanilla's connect screen. */
+    /**
+     * Connects to a dedicated server through vanilla's connect screen.
+     */
     static void joinServer(Minecraft minecraft, String host, int port) {
         String address = host + ":" + port;
         //? if >=1.21 {
         ServerData data = new ServerData("harness", address, ServerData.Type.OTHER);
-        ConnectScreen.startConnecting(new TitleScreen(), minecraft, ServerAddress.parseString(address), data, false, null);
+        ConnectScreen.startConnecting(new TitleScreen(), minecraft, ServerAddress.parseString(address), data, false,
+                null);
         //?} else {
         /*ServerData data = new ServerData("harness", address, false);
         ConnectScreen.startConnecting(new TitleScreen(), minecraft, ServerAddress.parseString(address), data, false);
         *///?}
     }
 
-    /** Pending that resolves once the client is in a world (or errors when it returns to a menu). */
-    static HarnessServer.Pending untilInWorld(long startTick) {
+    /**
+     * Pending that resolves once the client is in a world (or errors when it returns to a menu).
+     */
+    static HarnessServer.Pending untilInWorld(long startNanos) {
         return minecraft -> {
             if (inWorld(minecraft)) return Json.ok();
-            if (Harness.tick() - startTick > 40 && minecraft.level == null && minecraft.getOverlay() == null
+            if (System.nanoTime() - startNanos > 2_000_000_000L && minecraft.level == null && minecraft.getOverlay() == null
                     && minecraft.screen instanceof TitleScreen) {
                 return Json.error("returned to the title screen without joining");
             }
@@ -76,11 +86,14 @@ final class HarnessWorld {
         };
     }
 
-    /** Save folder name of the open singleplayer world, or null. */
+    /**
+     * Save folder name of the open singleplayer world, or null.
+     */
     static String currentSave(Minecraft minecraft) {
         var server = minecraft.getSingleplayerServer();
         if (server == null) return null;
-        java.nio.file.Path root = server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT).toAbsolutePath().normalize();
+        java.nio.file.Path root = server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT)
+                                        .toAbsolutePath().normalize();
         return root.getFileName() == null ? null : root.getFileName().toString();
     }
 
@@ -99,7 +112,7 @@ final class HarnessWorld {
 
     static HarnessServer.Pending create(Minecraft minecraft, String name, String type, long seed) {
         boolean seeded = "seeded".equals(type);
-        long start = Harness.tick();
+        long start = System.nanoTime();
         return new HarnessServer.Pending() {
             boolean opened;
             boolean submitted;
@@ -115,7 +128,7 @@ final class HarnessWorld {
                     CreateWorldScreen.openFresh(mc, () -> mc.setScreen(new TitleScreen()));
                     //?} else {
                     /*CreateWorldScreen.openFresh(mc, new TitleScreen());
-                    *///?}
+                     *///?}
                     return null;
                 }
                 if (!submitted) {
@@ -128,7 +141,7 @@ final class HarnessWorld {
                     state.setAllowCommands(true);
                     //?} else {
                     /*state.setAllowCheats(true);
-                    *///?}
+                     *///?}
                     var wanted = seeded ? WorldPresets.NORMAL : WorldPresets.FLAT;
                     WorldCreationUiState.WorldTypeEntry preset = null;
                     for (WorldCreationUiState.WorldTypeEntry entry : state.getNormalPresetList()) {
@@ -139,7 +152,8 @@ final class HarnessWorld {
                             if (entry.preset() != null && entry.preset().is(wanted)) preset = entry;
                         }
                     }
-                    if (preset == null) return Json.error("no " + (seeded ? "default" : "superflat") + " preset in the world-type list");
+                    if (preset == null) return Json.error(
+                            "no " + (seeded ? "default" : "superflat") + " preset in the world-type list");
                     state.setWorldType(preset);
                     // The seed text is parsed like the vanilla field: a number is used as-is.
                     if (seeded) state.setSeed(Long.toString(seed));
@@ -153,8 +167,8 @@ final class HarnessWorld {
             }
 
             @Override
-            public long timeoutTicks() {
-                return 20L * 180L;
+            public long timeoutMillis() {
+                return 180_000L;
             }
         };
     }

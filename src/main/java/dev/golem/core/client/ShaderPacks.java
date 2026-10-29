@@ -38,7 +38,41 @@ public final class ShaderPacks {
         SHADOW_PASS = shadowPass;
     }
 
-    private ShaderPacks() {}
+    private ShaderPacks() {
+    }
+
+    /**
+     * Writes native world geometry into the pack's current gbuffer, before its composite passes.
+     */
+    public static void bindWorldTarget() {
+        try {
+            Object pipeline = WorldTarget.CURRENT.invokeExact();
+            WorldTarget.BIND.invokeExact(pipeline);
+        } catch (Throwable failure) {
+            throw new IllegalStateException("Cannot bind the active Iris world target", failure);
+        }
+    }
+
+    private static final class WorldTarget {
+        static final MethodHandle CURRENT;
+        static final MethodHandle BIND;
+
+        static {
+            try {
+                var lookup = MethodHandles.publicLookup();
+                var iris = Class.forName("net.irisshaders.iris.Iris");
+                var manager = iris.getMethod("getPipelineManager");
+                var current = manager.getReturnType().getMethod("getPipelineNullable");
+                CURRENT = MethodHandles.filterReturnValue(lookup.unreflect(manager), lookup.unreflect(current))
+                                       .asType(MethodType.methodType(Object.class));
+                BIND = lookup.unreflect(Class.forName("net.irisshaders.iris.pipeline.IrisRenderingPipeline")
+                                             .getMethod("bindDefault"))
+                             .asType(MethodType.methodType(void.class, Object.class));
+            } catch (ReflectiveOperationException failure) {
+                throw new ExceptionInInitializerError(failure);
+            }
+        }
+    }
 
     /**
      * True while the pack renders its shadow map: the world, entities included, drawn again from the sun's view.
@@ -53,7 +87,9 @@ public final class ShaderPacks {
         }
     }
 
-    /** True while Iris or Oculus has a shader pack enabled. */
+    /**
+     * True while Iris or Oculus has a shader pack enabled.
+     */
     public static boolean inUse() {
         if (IN_USE == null) return false;
         try {

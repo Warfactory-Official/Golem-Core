@@ -14,24 +14,25 @@ supplies one `harness.json` plus its own scenarios.
 - Clients start from `java` directly (a launch captured once from Gradle). No Gradle daemon stays alive.
 - All six nodes are supported: 26.1 NeoForge/Fabric, 1.21.1 NeoForge/Fabric, 1.20.1 Forge/Fabric.
 - Dev builds only. The uploaded Golem Core jars (`releaseJar`, `gradle/release-jar.gradle.kts`) leave the listener,
-  its mixins and its registrations out; `HarnessQueryRegistry` stays, so a mod's query registrations still compile and run.
+  its mixins and its registrations out; `HarnessQueryRegistry` stays, so a mod's query registrations still compile and
+  run.
   Each GitHub release also carries the unstripped jars (`<name>-dev.jar`) and the CLI (`golem-harness.jar`) for mods
   built from released jars (see "Mods without a Golem Core checkout").
 
 ## What is where
 
-| Location | What | Owner |
-|---|---|---|
-| `Golem-Core/harness/` (this folder) | The CLI (`cli`), the scenario API (`api`), wrappers, default client options | Golem Core |
-| `Golem-Core/src/main/java/dev/golem/core/harness/` | The in-game listener: commands, input, queries, screenshots, worlds, log buffer; `HarnessSetup` (NeoForge/Forge) and `HarnessFabricClient` start it | Golem Core |
-| `Golem-Core/src/main/java/dev/golem/core/harness/mixin/` + `golemcore.harness.mixins.json` | `MixinHarnessWindow`, `MixinHarnessMouseGrab` and the accessor mixins, in their own config | Golem Core |
-| `Golem-Core/gradle/release-jar.gradle.kts` | `releaseJar`: the uploaded jar, with everything above except `HarnessQueryRegistry` and `HarnessHooks` removed | Golem Core |
-| `Golem-Core/gradle/mod/harness-spec.gradle.kts` | Captures a node's real `runClient` launch as a JSON spec | Golem Core |
-| `<mod>/harness.json` | The mod's configuration: nodes, ports, paths | the mod |
-| `<mod>/harness/scenarios/*.java` | The mod's scenarios | the mod |
-| `<mod>/harness/fixtures/*.nbt` | Structure templates, published into the world as `harness:<name>` | the mod |
-| `<mod>/harness/out/` | Screenshots, client logs, Gradle logs, reports (git-ignored) | the mod |
-| `<mod>/.harness/state.json` | Which clients are running (git-ignored) | the mod |
+| Location                                                                                   | What                                                                                                                                                | Owner      |
+|--------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|------------|
+| `Golem-Core/harness/` (this folder)                                                        | The CLI (`cli`), the scenario API (`api`), wrappers, default client options                                                                         | Golem Core |
+| `Golem-Core/src/main/java/dev/golem/core/harness/`                                         | The in-game listener: commands, input, queries, screenshots, worlds, log buffer; `HarnessSetup` (NeoForge/Forge) and `HarnessFabricClient` start it | Golem Core |
+| `Golem-Core/src/main/java/dev/golem/core/harness/mixin/` + `golemcore.harness.mixins.json` | `MixinHarnessWindow`, `MixinHarnessMouseGrab` and the accessor mixins, in their own config                                                          | Golem Core |
+| `Golem-Core/gradle/release-jar.gradle.kts`                                                 | `releaseJar`: the uploaded jar, with everything above except `HarnessQueryRegistry` and `HarnessHooks` removed                                      | Golem Core |
+| `Golem-Core/gradle/mod/harness-spec.gradle.kts`                                            | Captures a node's real `runClient` launch as a JSON spec                                                                                            | Golem Core |
+| `<mod>/harness.json`                                                                       | The mod's configuration: nodes, ports, paths                                                                                                        | the mod    |
+| `<mod>/harness/scenarios/*.java`                                                           | The mod's scenarios                                                                                                                                 | the mod    |
+| `<mod>/harness/fixtures/*.nbt`                                                             | Structure templates, published into the world as `harness:<name>`                                                                                   | the mod    |
+| `<mod>/harness/out/`                                                                       | Screenshots, client logs, Gradle logs, reports (git-ignored)                                                                                        | the mod    |
+| `<mod>/.harness/state.json`                                                                | Which clients are running (git-ignored)                                                                                                             | the mod    |
 
 The listener is only active on a **development client** started with `-Dgolem.harness.port=<port>`. Release
 jars do not contain it (see `releaseJar` above).
@@ -47,10 +48,10 @@ jars do not contain it (see `releaseJar` above).
    ```
 
 2. **Install the tools.**
-   - A JDK 21 or newer on the `PATH` or in `JAVA_HOME`. The first build also lets Gradle provision the JDKs
-     each node needs (26.1 → 25, 1.21.1 → 21, 1.20.1 → 17).
-   - On Windows, **Git Bash**. Use the POSIX wrapper `./harness`; the `.cmd` wrapper mangles JSON arguments.
-   - About 5 GB of free RAM for two clients.
+    - A JDK 21 or newer on the `PATH` or in `JAVA_HOME`. The first build also lets Gradle provision the JDKs
+      each node needs (26.1 → 25, 1.21.1 → 21, 1.20.1 → 17).
+    - On Windows, **Git Bash**. Use the POSIX wrapper `./harness`; the `.cmd` wrapper mangles JSON arguments.
+    - About 5 GB of free RAM for two clients.
 
 3. **Build the mod once** so every node has its dependencies (this takes a while the first time):
 
@@ -139,7 +140,8 @@ this up:
 - Each loader buildscript reads Golem Core from an Ivy repository over
   `https://github.com/Warfactory-Official/Golem-Core/releases/download` (pattern
   `v[revision]/[module]-[revision]+[classifier].[ext]`, coordinates `github.golem-core:golemcore-<loader>:<version>`
-  with classifier `<mc>`; a second pattern reads the `<module>-<mc>-<version>+<mc>.jar` names of releases up to 1.0.1) and applies `gradle/mod/harness-spec.gradle.kts` (copied into the project). Only when
+  with classifier `<mc>`; a second pattern reads the `<module>-<mc>-<version>+<mc>.jar` names of releases up to 1.0.1)
+  and applies `gradle/mod/harness-spec.gradle.kts` (copied into the project). Only when
   `-Pharness.spec` is set, the run classpath takes classifier `<mc>-dev` instead, the release's `<name>-dev.jar`. Every
   node is configured in that run, so the release must carry all six dev jars.
 - `harness/harness` (and `harness.cmd`) download `golem-harness.jar` from the release named by `deps.golemcore` in
@@ -153,7 +155,8 @@ block-entity sync are tested over the real network.
 1. In the node's `runs/server` folder (the mod's EULA is already accepted there) write a `server.properties` with
    `online-mode=false`, a free `server-port`, `enable-rcon=true`, `rcon.port`, `rcon.password=rc` and
    `pause-when-empty-seconds=-1` (an empty paused server ignores rcon).
-2. Start the server from the mod folder: `./gradlew.bat :<node>:runServer`. Stop it by sending `stop` over rcon, and check
+2. Start the server from the mod folder: `./gradlew.bat :<node>:runServer`. Stop it by sending `stop` over rcon, and
+   check
    that its java process is gone (stopping Gradle does not stop the forked server).
 3. Join it: `harness up --nodes <node> --server 127.0.0.1:<server-port> --username RcServer`. Op the player after its
    first join (`op RcServer` over rcon); opping a never-seen name resolves a different offline profile.
@@ -179,19 +182,19 @@ harness config                           # print the resolved harness.json
 harness help                             # everything
 ```
 
-| `up` option | Effect |
-|---|---|
-| `--nodes a,b` | Any two nodes declared in `harness.json` (default: `defaultNodes`) |
-| `--all` | Every declared node at once, capped by `allNodesMaxClients` (opt-in; see below) |
-| (default) | Run Gradle only for nodes whose build inputs changed since their last captured launch |
-| `--rebuild` | Always run Gradle, even when no input looks newer than the captured launch |
-| `--no-build` | Never run Gradle; reuse the captured launch even if sources changed |
-| `--no-sodium` | Leave out Sodium/Embeddium (and Indium) |
-| `--show` | Keep the windows visible (still unfocused) |
-| `--heap 1500M` | Change the heap per client |
-| `--size 1920x1080` | Window size (default 1280x720). Windows shrinks a window larger than the screen to fit it, *after* boot, so `status` may still show the requested size; `up` warns when the size exceeds the screen. Read the real size from the framebuffer (`Minecraft.getWindow().getWidth()`) when it matters |
-| `--world-type seeded` | Use the seeded normal world (see Worlds) |
-| `--username Name` | Offline player name instead of the dev run's (`Dev` / `Player###`); a singleplayer host keeps one player in `level.dat` whatever the name |
+| `up` option           | Effect                                                                                                                                                                                                                                                                                            |
+|-----------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `--nodes a,b`         | Any two nodes declared in `harness.json` (default: `defaultNodes`)                                                                                                                                                                                                                                |
+| `--all`               | Every declared node at once, capped by `allNodesMaxClients` (opt-in; see below)                                                                                                                                                                                                                   |
+| (default)             | Run Gradle only for nodes whose build inputs changed since their last captured launch                                                                                                                                                                                                             |
+| `--rebuild`           | Always run Gradle, even when no input looks newer than the captured launch                                                                                                                                                                                                                        |
+| `--no-build`          | Never run Gradle; reuse the captured launch even if sources changed                                                                                                                                                                                                                               |
+| `--no-sodium`         | Leave out Sodium/Embeddium (and Indium)                                                                                                                                                                                                                                                           |
+| `--show`              | Keep the windows visible (still unfocused)                                                                                                                                                                                                                                                        |
+| `--heap 1500M`        | Change the heap per client                                                                                                                                                                                                                                                                        |
+| `--size 1920x1080`    | Window size (default 1280x720). Windows shrinks a window larger than the screen to fit it, *after* boot, so `status` may still show the requested size; `up` warns when the size exceeds the screen. Read the real size from the framebuffer (`Minecraft.getWindow().getWidth()`) when it matters |
+| `--world-type seeded` | Use the seeded normal world (see Worlds)                                                                                                                                                                                                                                                          |
+| `--username Name`     | Offline player name instead of the dev run's (`Dev` / `Player###`); a singleplayer host keeps one player in `level.dat` whatever the name                                                                                                                                                         |
 
 How `up` saves time:
 
@@ -203,8 +206,8 @@ How `up` saves time:
 - **One Gradle run for all nodes.** When nodes do need building, one invocation captures every one of them
   (`-Pharness.spec=.../{node}/...`), so Gradle starts and configures once rather than once per node. Fabric
   nodes build Golem Core first, also in one invocation.
-- **Clients boot while Gradle is still working.** Each client launches the moment its own spec is written
-  (in whatever order Gradle finishes them), and all clients wait for their world in parallel.
+- **Clients boot while Gradle is still working.** Each client launches the moment its own spec is written (in whatever
+  order Gradle finishes them), and all clients wait for their world in parallel.
 
 Measured on the 1.21.1 pair (2026-10-03): nothing changed **47 s** to both in world; one touched source
 file **1 min 48 s** (both nodes recompiled).
@@ -254,14 +257,25 @@ public class OpenCrate implements Scenario {
 `report.json` (one row per node, every screenshot, the full command transcript) and a `failure.png` for a
 failing node. The exit code is 1 when any node fails.
 
-- `Fixtures`: `platform`, `give`, `giveOnly`, `placeOnTop`, `interact`, `template`, `setBlock`.
+- `Fixtures`: `platform`, `fill`, `waitForSkylight`, `waitForTarget`, `give`, `giveOnly`, `placeOnTop`, `interact`,
+  `template`, `setBlock`.
 - `Expect`: `screenOpen`, `noScreen`, `screenStaysOpen`, `block`, `slotHolds`, `slotEmpty`, `inventoryHolds`,
   `logMatches`, `logClean`, `logCleanSinceMark`, `equal`, `that`.
 - `Client`: `cmd`, `chat`, `key`, `keyDown/Up`, `type`, `mouseMove`, `click`, `scroll`, `use`, `attack`,
-  `hotbar`, `slotClick`, `clickSlot`, `clickWidget`, `look`, `lookAt`, `teleport`, `waitTicks`, `waitScreen`,
-  `waitInWorld`, `setOption`, `leaveWorld`, `joinWorld`, `createWorld`, `screenshot`, `node()`, and the
+  `hotbar`, `slotClick`, `clickSlot`, `clickWidget`, `look`, `lookAt`, `teleport`, `waitTicks`, `waitServerTicks`,
+  `waitScreen`,
+  `waitInWorld`, `tickRate`, `setOption`, `leaveWorld`, `joinWorld`, `createWorld`, `screenshot`, `node()`, and the
   queries `status`, `player`, `inventory`, `screen`, `block`, `blockEntity` (server-side NBT as SNBT),
-  `entities(radius)` (the raw `entities` query with `server:true` returns server positions, game time and effects), `log`, plus mod queries.
+  `entities(radius)` (the raw `entities` query with `server:true` returns server positions, game time and effects),
+  `log`, plus mod queries.
+
+`tickRate` applies to the client and integrated server and persists across world rejoins. `waitTicks`
+counts client ticks; RPC `timeout_ms` uses elapsed wall time. Screenshot `skip_frames` counts completed
+rendered frames, so captures remain synchronized when ticks run faster than rendering.
+`waitServerTicks` follows the integrated world's game time, so server startup timers retain their duration
+when rendering and server simulation achieve different tick rates.
+View changes complete after a rendered frame, including vanilla's crosshair pick. The raw `clear_chat`
+command removes chat history before a pixel comparison.
 
 **Look at the screenshots.** A passing check proves only what it checks: several real rendering bugs passed
 every assertion and were visible only in the PNG.
@@ -290,17 +304,17 @@ every assertion and were visible only in the PNG.
 
 ## Troubleshooting
 
-| Symptom | Cause and fix |
-|---|---|
-| `no harness.json found` | Run the CLI from inside the mod folder, or pass `--config <file>` / set `HARNESS_CONFIG`. |
-| JSON arguments break on Windows | Use `./harness` from Git Bash, not `harness.cmd`. |
-| `up` reused a launch although something changed | The freshness check only looks at timestamps in `src/`, `gradle/`, build files and `versions/<node>/`. Run `up --rebuild`. |
-| `up` hangs at "building and capturing the client launch" | The capture fell through to a real client. Build the node by hand, then `up --no-build` to reuse `versions/<node>/build/harness/spec.json`. |
-| A Fabric node fails with a stale Golem Core jar | Golem Core sources are newer than its remapped jar. `up` builds Golem Core first; if you build by hand run `../Golem-Core/gradlew chiseledBuild`. Uncommitted broken Golem Core sources stop every Fabric node. |
-| A Gradle build fails while clients are up | Configuring a Fabric node re-remaps the Golem Core jar a running client holds open. Use `--configure-on-demand` (the CLI does) or `harness down` first. |
-| "client thread did not answer in time" | A query or command blocked the client, often on chunk generation after a big `/forceload`. Make the query non-blocking (see "Adding the harness"); restart the clients. |
-| Log checks fail on boot warnings | Scope them with `c.markLog()` and `Expect.logCleanSinceMark`. |
-| 1.21.1 on the wrong Java dies with `ClassNotFoundException: java.lang.Boolean` | Each node must run on its own Java (26.1 → 25, 1.21.1 → 21, 1.20.1 → 17); the captured spec does this. |
+| Symptom                                                                        | Cause and fix                                                                                                                                                                                                   |
+|--------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `no harness.json found`                                                        | Run the CLI from inside the mod folder, or pass `--config <file>` / set `HARNESS_CONFIG`.                                                                                                                       |
+| JSON arguments break on Windows                                                | Use `./harness` from Git Bash, not `harness.cmd`.                                                                                                                                                               |
+| `up` reused a launch although something changed                                | The freshness check only looks at timestamps in `src/`, `gradle/`, build files and `versions/<node>/`. Run `up --rebuild`.                                                                                      |
+| `up` hangs at "building and capturing the client launch"                       | The capture fell through to a real client. Build the node by hand, then `up --no-build` to reuse `versions/<node>/build/harness/spec.json`.                                                                     |
+| A Fabric node fails with a stale Golem Core jar                                | Golem Core sources are newer than its remapped jar. `up` builds Golem Core first; if you build by hand run `../Golem-Core/gradlew chiseledBuild`. Uncommitted broken Golem Core sources stop every Fabric node. |
+| A Gradle build fails while clients are up                                      | Configuring a Fabric node re-remaps the Golem Core jar a running client holds open. Use `--configure-on-demand` (the CLI does) or `harness down` first.                                                         |
+| "client thread did not answer in time"                                         | A query or command blocked the client, often on chunk generation after a big `/forceload`. Make the query non-blocking (see "Adding the harness"); restart the clients.                                         |
+| Log checks fail on boot warnings                                               | Scope them with `c.markLog()` and `Expect.logCleanSinceMark`.                                                                                                                                                   |
+| 1.21.1 on the wrong Java dies with `ClassNotFoundException: java.lang.Boolean` | Each node must run on its own Java (26.1 → 25, 1.21.1 → 21, 1.20.1 → 17); the captured spec does this.                                                                                                          |
 
 ## Running all nodes at once
 

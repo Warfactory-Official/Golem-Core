@@ -13,37 +13,40 @@ import net.minecraft.world.level.storage.loot.functions.LootItemFunction;
  */
 public final class LootFunctions {
 
-    private LootFunctions() {}
+    private LootFunctions() {
+    }
 
     public interface Transform {
         ItemStack apply(ItemStack stack, LootContext context);
     }
 
-    /** Registers {@code namespace:name}, read and written with {@code codec}. Call during mod construction. */
+    /**
+     * Registers {@code namespace:name}, read and written with {@code codec}. Call during mod construction.
+     */
     public static <T extends Transform> void register(String namespace, String name, MapCodec<T> codec) {
         Kind<T> kind = new Kind<>(codec);
         //? if >=26.1 {
         DeferredRegister.create(() -> Registries.LOOT_FUNCTION_TYPE, namespace).register(name, () -> kind.codec);
         //?} else {
         /*DeferredRegister.create(() -> Registries.LOOT_FUNCTION_TYPE, namespace).register(name, () -> kind.type);
-        *///?}
+         *///?}
     }
 
     private static final class Kind<T extends Transform> {
         final MapCodec<Function<T>> codec;
         //? if >=1.20.5 && <26.1 {
         /*final net.minecraft.world.level.storage.loot.functions.LootItemFunctionType<Function<T>> type;
-        *///?} elif <1.20.5 {
+         *///?} elif <1.20.5 {
         /*final net.minecraft.world.level.storage.loot.functions.LootItemFunctionType type;
-        *///?}
+         *///?}
 
         Kind(MapCodec<T> value) {
             codec = value.xmap(transform -> new Function<>(this, transform), function -> function.value);
             //? if >=1.20.5 && <26.1 {
             /*type = new net.minecraft.world.level.storage.loot.functions.LootItemFunctionType<>(codec);
-            *///?} elif <1.20.5 {
+             *///?} elif <1.20.5 {
             /*type = new net.minecraft.world.level.storage.loot.functions.LootItemFunctionType(new LootJson<>(codec));
-            *///?}
+             *///?}
         }
     }
 

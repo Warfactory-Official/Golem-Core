@@ -14,7 +14,7 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 //?} else {
 /*import net.minecraft.client.gui.GuiGraphics;
-*///?}
+ *///?}
 
 /**
  * A container screen that behaves like 26.1's on every version.
@@ -44,14 +44,18 @@ import net.minecraft.client.input.MouseButtonEvent;
  */
 public abstract class CompatContainerScreen<T extends AbstractContainerMenu> extends AbstractContainerScreen<T> {
 
-    /** Direct field for JEI's pre-key focus probe; it cannot discover EditBox instances inside arrays. */
+    /**
+     * Direct field for JEI's pre-key focus probe; it cannot discover EditBox instances inside arrays.
+     */
     protected EditBox focusedEditBoxForInput;
 
     protected CompatContainerScreen(T menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
     }
 
-    /** The sized constructor, which 26.1 has natively and older versions reproduce field by field. */
+    /**
+     * The sized constructor, which 26.1 has natively and older versions reproduce field by field.
+     */
     protected CompatContainerScreen(T menu, Inventory inventory, Component title, int imageWidth, int imageHeight) {
         //? if >=26.1 {
         super(menu, inventory, title, imageWidth, imageHeight);
@@ -67,14 +71,17 @@ public abstract class CompatContainerScreen<T extends AbstractContainerMenu> ext
         *///?}
     }
 
-    /** The 26.1 background hook, backported for subclasses. */
+    /**
+     * The 26.1 background hook, backported for subclasses.
+     */
     public void extractBackground(
             //? if >=26.1 {
             GuiGraphicsExtractor graphics,
             //?} else {
             /*GuiGraphics graphics,
-            *///?}
-            int mouseX, int mouseY, float partialTick) {}
+             *///?}
+            int mouseX, int mouseY, float partialTick) {
+    }
 
     /**
      * The 26.1 label hook, backported for subclasses. The default is vanilla's: the title at
@@ -87,13 +94,13 @@ public abstract class CompatContainerScreen<T extends AbstractContainerMenu> ext
             GuiGraphicsExtractor graphics,
             //?} else {
             /*GuiGraphics graphics,
-            *///?}
+             *///?}
             int mouseX, int mouseY) {
         //? if >=26.1 {
         super.extractLabels(graphics, mouseX, mouseY);
         //?} else {
         /*super.renderLabels(graphics, mouseX, mouseY);
-        *///?}
+         *///?}
     }
 
     /**
@@ -113,11 +120,15 @@ public abstract class CompatContainerScreen<T extends AbstractContainerMenu> ext
             GuiGraphicsExtractor graphics,
             //?} else {
             /*GuiGraphics graphics,
-            *///?}
-            int mouseX, int mouseY) {}
+             *///?}
+            int mouseX, int mouseY) {
+    }
 
     //? if >=26.1 {
-    /** Runs this screen's own tooltips, then vanilla's hovered-item one. See {@link #extractOwnTooltip}. */
+
+    /**
+     * Runs this screen's own tooltips, then vanilla's hovered-item one. See {@link #extractOwnTooltip}.
+     */
     @Override
     protected final void extractTooltip(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
         this.extractOwnTooltip(graphics, mouseX, mouseY);
@@ -125,23 +136,54 @@ public abstract class CompatContainerScreen<T extends AbstractContainerMenu> ext
     }
     //?}
 
-    /** Version-neutral click hook. */
-    protected boolean mouseClicked(MouseInput event, boolean doubleClick) { return false; }
+    /**
+     * Version-neutral click hook.
+     */
+    protected boolean mouseClicked(MouseInput event, boolean doubleClick) {
+        return false;
+    }
 
-    /** Version-neutral release hook. */
-    protected boolean mouseReleased(MouseInput event) { return false; }
+    /**
+     * Version-neutral release hook.
+     */
+    protected boolean mouseReleased(MouseInput event) {
+        return false;
+    }
 
-    /** Version-neutral key hook. */
-    protected boolean keyPressed(KeyInput event) { return false; }
+    /**
+     * A drag uses the same cursor, button and deltas on every node.
+     */
+    protected boolean mouseDragged(MouseInput event, double deltaX, double deltaY) {
+        return false;
+    }
 
-    /** Version-neutral key-release hook. */
-    protected boolean keyReleased(KeyInput event) { return false; }
+    /**
+     * Version-neutral key hook.
+     */
+    protected boolean keyPressed(KeyInput event) {
+        return false;
+    }
 
-    /** Version-neutral character hook. */
-    protected boolean charTyped(CharInput event) { return false; }
+    /**
+     * Version-neutral key-release hook.
+     */
+    protected boolean keyReleased(KeyInput event) {
+        return false;
+    }
 
-    /** Version-neutral wheel hook. */
-    protected boolean mouseScrolledCompat(double mouseX, double mouseY, double scrollX, double scrollY) { return false; }
+    /**
+     * Version-neutral character hook.
+     */
+    protected boolean charTyped(CharInput event) {
+        return false;
+    }
+
+    /**
+     * Version-neutral wheel hook.
+     */
+    protected boolean mouseScrolledCompat(double mouseX, double mouseY, double scrollX, double scrollY) {
+        return false;
+    }
 
     //? if >=26.1 {
     @Override
@@ -155,6 +197,11 @@ public abstract class CompatContainerScreen<T extends AbstractContainerMenu> ext
     @Override
     public boolean mouseReleased(MouseButtonEvent event) {
         return this.mouseReleased(new MouseInput(event)) || super.mouseReleased(event);
+    }
+
+    @Override
+    public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
+        return this.mouseDragged(new MouseInput(event), deltaX, deltaY) || super.mouseDragged(event, deltaX, deltaY);
     }
 
     @Override
@@ -183,7 +230,8 @@ public abstract class CompatContainerScreen<T extends AbstractContainerMenu> ext
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        return this.mouseScrolledCompat(mouseX, mouseY, scrollX, scrollY) || super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+        return this.mouseScrolledCompat(mouseX, mouseY, scrollX, scrollY) || super.mouseScrolled(mouseX, mouseY,
+                scrollX, scrollY);
     }
     //?} else {
     /*@Override
@@ -216,6 +264,12 @@ public abstract class CompatContainerScreen<T extends AbstractContainerMenu> ext
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
         return this.mouseReleased(new MouseInput(mouseX, mouseY, button)) || super.mouseReleased(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+        return this.mouseDragged(new MouseInput(mouseX, mouseY, button), deltaX, deltaY)
+                || super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
     }
 
     @Override

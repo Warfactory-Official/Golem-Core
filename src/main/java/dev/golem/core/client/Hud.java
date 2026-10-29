@@ -1,33 +1,66 @@
 package dev.golem.core.client;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
 //? if >=26.1 {
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 //?} else {
 /*import net.minecraft.client.gui.GuiGraphics;
-*///?}
+ *///?}
 
 /**
- * Draws an overlay above the vanilla HUD.
- *
- * <p>26.1's fabric-api models the HUD as an ordered list of named elements ({@code HudElementRegistry});
- * before that it is a single "after the vanilla HUD" callback with no identity. NeoForge and Forge have
- * their own registries again. All a consumer wants to say is "draw this, on top".
- *
- * <p>The id is taken as namespace and path rather than an {@code Identifier} so this signature does not
- * have to be written twice for that reason as well. The graphics type alone already forces a split,
- * since {@code GuiGraphics} became {@code GuiGraphicsExtractor} when HUD drawing became an extract pass.
- *
- * <p>Client-only: never call this from common initialization.
+ * Client HUD layers share draw order and depth composition while leaving chat above screen effects.
  */
 public final class Hud {
 
-    private Hud() {}
+    private Hud() {
+    }
+
+    //? if fabric && <26.1 {
+    /*private static final List<Consumer<GuiGraphics>> BEFORE_CHAT = new ArrayList<>();
+
+    public static void drawBeforeChat(GuiGraphics graphics) {
+        for (var renderer : BEFORE_CHAT) draw(graphics, renderer);
+    }
+    *///?}
 
     //? if >=26.1 {
-    /** Registers an overlay drawn after the vanilla HUD. */
+
+    /**
+     * Draws a screen effect over the HUD while keeping chat and its backdrop readable above it.
+     */
+    public static void addBeforeChat(String namespace, String path, Consumer<GuiGraphicsExtractor> renderer) {
+        //?} else {
+        /*public static void addBeforeChat(String namespace, String path, Consumer<GuiGraphics> renderer) {
+         *///?}
+        //? if fabric && >=26.1 {
+        /*net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.attachElementBefore(
+                net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements.CHAT,
+                dev.golem.core.Ids.of(namespace, path), (graphics, _) -> renderer.accept(graphics));
+        *///?} elif fabric {
+        /*BEFORE_CHAT.add(renderer);
+         *///?} elif neoforge {
+        dev.golem.core.platform.NeoForgeEntrypoint.modBus().addListener(
+                (net.neoforged.neoforge.client.event.RegisterGuiLayersEvent event) ->
+                        event.registerBelow(net.neoforged.neoforge.client.gui.VanillaGuiLayers.CHAT,
+                                dev.golem.core.Ids.of(namespace, path),
+                                (graphics, deltaTracker) -> draw(graphics, renderer)));
+        //?} elif forge {
+        /*dev.golem.core.platform.ForgeEntrypoint.modBus().addListener(
+                (net.minecraftforge.client.event.RegisterGuiOverlaysEvent event) ->
+                        event.registerBelow(net.minecraftforge.client.gui.overlay.VanillaGuiOverlay.CHAT_PANEL.id(),
+                                namespace + "/" + path, (gui, graphics, partialTick, width, height) -> draw(graphics, renderer)));
+        *///?}
+    }
+
+    //? if >=26.1 {
+
+    /**
+     * Registers an overlay drawn after the vanilla HUD.
+     */
     public static void addLast(String namespace, String path, Consumer<GuiGraphicsExtractor> renderer) {
-    //?} else {
+        //?} else {
     /*/^* Registers an overlay drawn after the vanilla HUD. ^/
     public static void addLast(String namespace, String path, Consumer<GuiGraphics> renderer) {
     *///?}

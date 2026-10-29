@@ -1,8 +1,14 @@
 package dev.golem.core.render;
 
 import java.util.function.Consumer;
+
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.Particle;
+import net.minecraft.client.particle.ParticleProvider;
+import net.minecraft.core.particles.ParticleOptions;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 
@@ -10,23 +16,10 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.resources.Identifier;
 //?} else {
 /*import net.minecraft.resources.ResourceLocation;
-*///?}
+ *///?}
 
 /**
- * Spawning a mod-authored particle, and looking up the sprite it draws with.
- *
- * <p>A mod that registers its particles as vanilla {@code ParticleType}s does not need this; it can
- * call {@code level.addParticle(options, ...)}. This is for the other model, which HBM uses: the
- * server sends one packet naming an <i>effect</i> plus an arbitrary NBT payload, and the client
- * constructs however many particles that effect implies. Vanilla {@code ParticleOptions} cannot carry
- * that payload without one registered type per effect, so those particles are built directly and
- * handed to the engine.
- *
- * <p>The sprite lookup is the part that actually moved between eras: 26.1 routes every atlas through
- * {@code AtlasManager} keyed by a {@code SpriteId}, while older versions register the particle engine's
- * atlas in {@code TextureManager} under its texture location.
- *
- * <p>Client-only.
+ * Particle factories and sprite lookups use the 26.1 contract across client backends.
  */
 public final class Particles {
 
@@ -36,13 +29,38 @@ public final class Particles {
         MINIMAL
     }
 
-    private Particles() {}
+    private Particles() {
+    }
+
+    /**
+     * Particle factories receive the engine's random source through one signature.
+     */
+    public abstract static class Provider<T extends ParticleOptions> implements ParticleProvider<T> {
+        protected abstract Particle create(T options, ClientLevel level, double x, double y, double z,
+                                           double motionX, double motionY, double motionZ, RandomSource random);
+
+        //? if >=26.1 {
+        @Override
+        public final Particle createParticle(T options, ClientLevel level, double x, double y, double z,
+                                             double motionX, double motionY, double motionZ, RandomSource random) {
+            return create(options, level, x, y, z, motionX, motionY, motionZ, random);
+        }
+        //?} else {
+        /*@Override
+        public final Particle createParticle(T options, ClientLevel level, double x, double y, double z,
+                                             double motionX, double motionY, double motionZ) {
+            return create(options, level, x, y, z, motionX, motionY, motionZ, level.getRandom());
+        }
+        *///?}
+    }
 
     public static Vec3 position(Particle particle) {
         return new Vec3(particle.x, particle.y, particle.z);
     }
 
-    /** Visits pending then active particles on the client thread; the action must not alter their collections. */
+    /**
+     * Visits pending then active particles on the client thread; the action must not alter their collections.
+     */
     public static void forEach(Minecraft client, Consumer<Particle> action) {
         var engine = client.particleEngine;
         engine.particlesToAdd.forEach(action);
@@ -51,7 +69,7 @@ public final class Particles {
             group.getAll().forEach(action);
             //?} else {
             /*group.forEach(action);
-            *///?}
+             *///?}
         }
     }
 
@@ -68,7 +86,9 @@ public final class Particles {
         minecraft.particleEngine.add(particle);
     }
 
-    /** Applies a particle tint across the particle-class hierarchy used by each era. */
+    /**
+     * Applies a particle tint across the particle-class hierarchy used by each era.
+     */
     public static void color(Particle particle, float red, float green, float blue) {
         //? if >=26.1 {
         if (particle instanceof net.minecraft.client.particle.SingleQuadParticle quad) {
@@ -76,16 +96,18 @@ public final class Particles {
         }
         //?} else {
         /*particle.setColor(red, green, blue);
-        *///?}
+         *///?}
     }
 
-    /** The user's particle-density setting, whose vanilla enum moved packages in 26.1. */
+    /**
+     * The user's particle-density setting, whose vanilla enum moved packages in 26.1.
+     */
     public static Quality quality() {
         //? if >=26.1 {
         net.minecraft.server.level.ParticleStatus status = Minecraft.getInstance().options.particles().get();
         //?} else {
         /*net.minecraft.client.ParticleStatus status = Minecraft.getInstance().options.particles().get();
-        *///?}
+         *///?}
         return switch (status) {
             case ALL -> Quality.ALL;
             case DECREASED -> Quality.DECREASED;
@@ -110,19 +132,19 @@ public final class Particles {
     public static TextureAtlasSprite sprite(
             //? if >=26.1 {
             Identifier
-            //?} else {
-            /*ResourceLocation
-            *///?}
-            texture) {
+                    //?} else {
+                    /*ResourceLocation
+                     *///?}
+                    texture) {
         //? if >=26.1 {
         // The SpriteId's first field is the atlas TEXTURE location
         // (minecraft:textures/atlas/particles.png), not the atlas definition id (minecraft:particles).
         // AtlasManager keeps two maps and get() consults the by-texture one; handing it the definition
         // id throws "Invalid atlas texture id". getAtlasOrThrow is the method that takes the other one.
         return Minecraft.getInstance()
-                .getAtlasManager()
-                .get(new net.minecraft.client.resources.model.sprite.SpriteId(
-                        net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_PARTICLES, texture));
+                        .getAtlasManager()
+                        .get(new net.minecraft.client.resources.model.sprite.SpriteId(
+                                net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_PARTICLES, texture));
         //?} else {
         /*return ((net.minecraft.client.renderer.texture.TextureAtlas) Minecraft.getInstance()
                 .getTextureManager()
@@ -131,18 +153,30 @@ public final class Particles {
         *///?}
     }
 
-    /** Spawns a coloured vanilla dust particle, hiding its constructor's colour-shape change. */
-    public static void dust(net.minecraft.world.level.Level level, double x, double y, double z,
-            float red, float green, float blue, float size, double motionX, double motionY, double motionZ) {
+    /**
+     * Creates an explicitly requested particle without a second density or distance lottery.
+     */
+    public static Particle spawn(ParticleOptions type, double x, double y, double z,
+                                 double motionX, double motionY, double motionZ) {
+        return Minecraft.getInstance().particleEngine.createParticle(type, x, y, z, motionX, motionY, motionZ);
+    }
+
+    /**
+     * Spawns a coloured vanilla dust particle, hiding its constructor's colour-shape change.
+     */
+    public static void dust(Level level, double x, double y, double z,
+                            float red, float green, float blue, float size, double motionX, double motionY,
+                            double motionZ) {
         int color = ((int) (Math.max(0F, Math.min(1F, red)) * 255F) << 16)
                 | ((int) (Math.max(0F, Math.min(1F, green)) * 255F) << 8)
                 | (int) (Math.max(0F, Math.min(1F, blue)) * 255F);
         //? if >=26.1 {
-        level.addParticle(new net.minecraft.core.particles.DustParticleOptions(color, size),
+        var particle = spawn(new net.minecraft.core.particles.DustParticleOptions(color, size),
                 x, y, z, motionX, motionY, motionZ);
         //?} else {
-        /*level.addParticle(new net.minecraft.core.particles.DustParticleOptions(
+        /*var particle = spawn(new net.minecraft.core.particles.DustParticleOptions(
                         new org.joml.Vector3f(red, green, blue), size), x, y, z, motionX, motionY, motionZ);
         *///?}
+        particle.setParticleSpeed(motionX, motionY, motionZ);
     }
 }

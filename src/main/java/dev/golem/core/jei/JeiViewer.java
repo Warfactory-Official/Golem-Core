@@ -44,9 +44,12 @@ public final class JeiViewer {
 
     private static final Map<ViewerType<?>, JeiRecipeType<?>> TYPES = new ConcurrentHashMap<>();
 
-    private JeiViewer() {}
+    private JeiViewer() {
+    }
 
-    /** The JEI recipe type of a viewer category (one per category, created on first use). */
+    /**
+     * The JEI recipe type of a viewer category (one per category, created on first use).
+     */
     @SuppressWarnings("unchecked")
     public static <T> JeiRecipeType<T> type(ViewerType<T> type) {
         return (JeiRecipeType<T>) TYPES.computeIfAbsent(type,
@@ -110,7 +113,8 @@ public final class JeiViewer {
             @Override
             public void add(Class<? extends AbstractContainerScreen<?>> screen, int x, int y, int width, int height,
                             ViewerType<?>... types) {
-                for (ViewerType<?> type : types) Jei.addRecipeClickArea(registration, screen, x, y, width, height, type(type));
+                for (ViewerType<?> type : types)
+                    Jei.addRecipeClickArea(registration, screen, x, y, width, height, type(type));
             }
         });
     }
@@ -119,23 +123,27 @@ public final class JeiViewer {
         plugin.transfers(new ViewerPlugin.Transfers() {
             @Override
             public <C extends AbstractContainerMenu, R> void add(Class<? extends C> menuClass, MenuType<C> menuType,
-                    ViewerType<R> type, int recipeSlotStart, int recipeSlotCount,
-                    int inventorySlotStart, int inventorySlotCount) {
+                                                                 ViewerType<R> type, int recipeSlotStart,
+                                                                 int recipeSlotCount,
+                                                                 int inventorySlotStart, int inventorySlotCount) {
                 Jei.addRecipeTransferHandler(registration, menuClass, menuType, type(type), recipeSlotStart,
                         recipeSlotCount, inventorySlotStart, inventorySlotCount);
             }
 
             @Override
             public <C extends AbstractContainerMenu, R> void addSelective(Class<? extends C> menuClass,
-                    MenuType<C> menuType, ViewerType<R> type, int[] recipeSlots, int inventorySlotStart,
-                    int inventorySlotCount, Predicate<R> canHandle) {
+                                                                          MenuType<C> menuType, ViewerType<R> type,
+                                                                          int[] recipeSlots, int inventorySlotStart,
+                                                                          int inventorySlotCount,
+                                                                          Predicate<R> canHandle) {
                 Jei.addSelectiveRecipeTransferHandler(registration, menuClass, menuType, type(type), recipeSlots,
                         inventorySlotStart, inventorySlotCount, canHandle);
             }
 
             @Override
             public <C extends AbstractContainerMenu, R> void addAction(Class<? extends C> menuClass,
-                    MenuType<C> menuType, ViewerType<R> type, TransferAction<C, R> action) {
+                                                                       MenuType<C> menuType, ViewerType<R> type,
+                                                                       TransferAction<C, R> action) {
                 Jei.addRecipeTransferAction(registration, menuClass, menuType, type(type), action);
             }
         });
@@ -164,7 +172,10 @@ public final class JeiViewer {
 
     /**
      * The harness query {@code jei} (dev clients only): {@code op=open category=ns:path} opens JEI's recipe screen on
-     * one category, as clicking its tab would, and answers the category's title and recipe count; without a category it lists every category with its title, recipe and catalyst counts.
+     * one category, as clicking its tab would, and answers the category's title and recipe count; without a category
+     * it lists every category with its title, recipe count, and visible and registered catalyst counts.
+     * Registered categories can be hidden by JEI's recipe or ingredient visibility rules. An open request succeeds
+     * only when the requested category is visible and JEI's actual recipe screen becomes the current screen.
      */
     private static void registerHarnessQuery(IJeiRuntime runtime) {
         HarnessQueryRegistry.register("jei", (mc, params) -> {
@@ -174,33 +185,40 @@ public final class JeiViewer {
                 ItemStack held = mc.player.getMainHandItem();
                 boolean output = params.get("focus").getAsString().equals("output");
                 var focus = runtime.getJeiHelpers().getFocusFactory().createFocus(
-                        output ? RecipeIngredientRole.OUTPUT : RecipeIngredientRole.INPUT, VanillaTypes.ITEM_STACK, held);
+                        output ? RecipeIngredientRole.OUTPUT : RecipeIngredientRole.INPUT, VanillaTypes.ITEM_STACK,
+                        held);
                 JsonObject counts = new JsonObject();
                 for (ViewerType<?> type : TYPES.keySet()) {
                     long count = runtime.getRecipeManager().createRecipeLookup(type(type).unwrap())
-                            .limitFocus(List.of(focus)).get().count();
+                                        .limitFocus(List.of(focus)).get().count();
                     if (count > 0) counts.addProperty(type.id(), count);
                 }
                 out.addProperty("stack", held.toString());
                 out.add("counts", counts);
                 return out;
             }
+            var visibleTypes = runtime.getRecipeManager().createRecipeCategoryLookup().get()
+                                      .map(category -> category.getRecipeType()).toList();
             if (!params.has("category")) {
                 JsonArray all = new JsonArray();
                 for (ViewerType<?> type : TYPES.keySet()) {
                     var jeiType = type(type).unwrap();
                     JsonObject row = new JsonObject();
                     row.addProperty("id", type.id());
-                    row.addProperty("title", runtime.getRecipeManager().getRecipeCategory(jeiType).getTitle().getString());
+                    row.addProperty("title",
+                            runtime.getRecipeManager().getRecipeCategory(jeiType).getTitle().getString());
                     row.addProperty("recipes", runtime.getRecipeManager().createRecipeLookup(jeiType).get().count());
-                    row.addProperty("catalysts", runtime.getRecipeManager().createRecipeCatalystLookup(jeiType).get().count());
+                    row.addProperty("catalysts",
+                            runtime.getRecipeManager().createRecipeCatalystLookup(jeiType).get().count());
+                    row.addProperty("registered_catalysts", runtime.getRecipeManager()
+                                                                   .createRecipeCatalystLookup(jeiType).includeHidden()
+                                                                   .get().count());
                     all.add(row);
                 }
                 out.add("categories", all);
                 // the order JEI shows tabs in: its recipe-category-sort-order.ini, else crafting, minecraft, then by id
                 JsonArray order = new JsonArray();
-                runtime.getRecipeManager().createRecipeCategoryLookup().get()
-                        .forEach(c -> order.add(c.getRecipeType().getUid().toString()));
+                visibleTypes.forEach(type -> order.add(type.getUid().toString()));
                 out.add("order", order);
                 return out;
             }
@@ -209,10 +227,19 @@ public final class JeiViewer {
                 // several categories on one recipe screen, so its tab bar shows JEI's order among them
                 List shown = new ArrayList();
                 for (String id : category.split(",")) {
-                    for (ViewerType<?> type : TYPES.keySet()) if (type.id().equals(id)) shown.add(type(type).unwrap());
+                    for (ViewerType<?> type : TYPES.keySet()) {
+                        if (type.id().equals(id) && visibleTypes.contains(type(type).unwrap())) {
+                            shown.add(type(type).unwrap());
+                        }
+                    }
                 }
-                runtime.getRecipesGui().showTypes(shown);
-                out.addProperty("opened", !shown.isEmpty());
+                boolean opened = false;
+                if (!shown.isEmpty()) {
+                    var gui = runtime.getRecipesGui();
+                    gui.showTypes(shown);
+                    opened = mc.screen == gui;
+                }
+                out.addProperty("opened", opened);
                 out.addProperty("title", category);
                 out.addProperty("recipes", shown.size());
                 return out;
@@ -222,8 +249,16 @@ public final class JeiViewer {
                 var jeiType = type(type).unwrap();
                 out.addProperty("title", runtime.getRecipeManager().getRecipeCategory(jeiType).getTitle().getString());
                 out.addProperty("recipes", runtime.getRecipeManager().createRecipeLookup(jeiType).get().count());
-                runtime.getRecipesGui().showTypes(List.of(jeiType));
-                out.addProperty("opened", true);
+                out.addProperty("registered_catalysts", runtime.getRecipeManager()
+                                                               .createRecipeCatalystLookup(jeiType).includeHidden()
+                                                               .get().count());
+                boolean opened = false;
+                if (visibleTypes.contains(jeiType)) {
+                    var gui = runtime.getRecipesGui();
+                    gui.showTypes(List.of(jeiType));
+                    opened = mc.screen == gui;
+                }
+                out.addProperty("opened", opened);
                 return out;
             }
             out.addProperty("opened", false);

@@ -38,6 +38,7 @@ fun golemBuildList(name: String): List<String> = when (val value = golemBuild(na
     is Collection<*> -> value.map { it.toString() }
     else -> value.toString().split(',').map { it.trim() }.filter { it.isNotEmpty() }
 }
+
 fun golemBuildFile(name: String, default: String): File = when (val value = golemBuild(name)) {
     null -> rootProject.file(default)
     is File -> value
@@ -73,8 +74,13 @@ val dejsonVerify = tasks.register<JavaExec>("dejsonVerify") {
     dependsOn(tasks.named("compileJava"))
     classpath = dejsonClasspath
     mainClass = "dev.golem.core.dejson.DejsonMain"
-    args("verify", generatedResources.get().asFile.absolutePath, authoredResources.absolutePath,
-        *DECLARATION_CLASSES)
+    args(
+        "verify",
+        generatedResources.get().asFile.absolutePath,
+        authoredResources.absolutePath,
+        project.property("mod.id").toString(),
+        *DECLARATION_CLASSES
+    )
 }
 
 val dejsonGenerate = tasks.register<JavaExec>("dejsonGenerate") {
@@ -86,8 +92,13 @@ val dejsonGenerate = tasks.register<JavaExec>("dejsonGenerate") {
     outputs.dir(generatedResources)
     classpath = dejsonClasspath
     mainClass = "dev.golem.core.dejson.DejsonMain"
-    args("write", generatedResources.get().asFile.absolutePath, authoredResources.absolutePath,
-        *DECLARATION_CLASSES)
+    args(
+        "write",
+        generatedResources.get().asFile.absolutePath,
+        authoredResources.absolutePath,
+        project.property("mod.id").toString(),
+        *DECLARATION_CLASSES
+    )
 }
 
 tasks.named<org.gradle.language.jvm.tasks.ProcessResources>("processResources") {
@@ -106,9 +117,12 @@ tasks.register<JavaExec>("dejsonGenerateAll") {
     dependsOn(tasks.named("compileJava"))
     classpath = dejsonClasspath
     mainClass = "dev.golem.core.dejson.DejsonMain"
-    args("write", layout.buildDirectory.dir("generated/dejson-all").get().asFile.absolutePath,
+    args(
+        "write", layout.buildDirectory.dir("generated/dejson-all").get().asFile.absolutePath,
         layout.buildDirectory.dir("generated/dejson-nothing").get().asFile.absolutePath,
-        *DECLARATION_CLASSES)
+        project.property("mod.id").toString(),
+        *DECLARATION_CLASSES
+    )
 }
 
 // Every JSON file in these resource folders is a declaration's output. A hand-written file here is not an
@@ -144,26 +158,27 @@ val dejsonOwnership = tasks.register("dejsonOwnership") {
         val stale = DEJSON_AUTHORED_EXCEPTIONS.filter { !File(root, it).exists() }.sorted()
         check(stale.isEmpty()) {
             "${stale.size} path(s) in $dejsonAuthoredName do not exist under src/main/resources:\n  " +
-                stale.joinToString("\n  ")
+                    stale.joinToString("\n  ")
         }
         val offenders = root.walkTopDown()
             .filter { it.isFile && it.extension == "json" }
             .map { it.relativeTo(root).invariantSeparatorsPath }
             .filter { path ->
                 DEJSON_AUTHORED_EXCEPTIONS.none { path == it || (it.endsWith("/") && path.startsWith(it)) } &&
-                    DEJSON_UNOWNED_MODELS.none { path.startsWith(it) } &&
-                    DEJSON_OWNED_FOLDERS.any { folder ->
-                        val pattern = folder.split('/')
-                        val parts = path.split('/')
-                        parts.size > pattern.size && pattern.indices.all { pattern[it] == "*" || pattern[it] == parts[it] }
-                    }
+                        DEJSON_UNOWNED_MODELS.none { path.startsWith(it) } &&
+                        DEJSON_OWNED_FOLDERS.any { folder ->
+                            val pattern = folder.split('/')
+                            val parts = path.split('/')
+                            parts.size > pattern.size && pattern.indices.all { pattern[it] == "*" || pattern[it] == parts[it] }
+                        }
             }
             .sorted().toList()
         check(offenders.isEmpty()) {
             "${offenders.size} JSON file(s) are hand-written in folders Dejson owns; declare uniform boilerplate " +
-                "(Dejson.block/item/model, States, ItemModels, Tags, Drops, Equipment, ...), or list hand-tuned " +
-                "geometry/display transforms in $dejsonAuthoredName:\n  " + offenders.take(30).joinToString("\n  ") +
-                (if (offenders.size > 30) "\n  ... and ${offenders.size - 30} more" else "")
+                    "(Dejson.block/item/model, States, ItemModels, Tags, Drops, Equipment, ...), or list hand-tuned " +
+                    "geometry/display transforms in $dejsonAuthoredName:\n  " + offenders.take(30)
+                .joinToString("\n  ") +
+                    (if (offenders.size > 30) "\n  ... and ${offenders.size - 30} more" else "")
         }
     }
 }

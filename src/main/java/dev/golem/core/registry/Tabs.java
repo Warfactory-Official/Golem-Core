@@ -1,6 +1,7 @@
 package dev.golem.core.registry;
 
 //? if neoforge {
+
 import dev.golem.core.platform.NeoForgeEntrypoint;
 //?}
 //? if neoforge {
@@ -10,10 +11,12 @@ import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
+import dev.golem.core.world.ItemStacks;
 
 /**
  * Adds entries to a creative tab without naming the loader's event.
@@ -28,15 +31,20 @@ import net.minecraft.world.item.ItemStack;
  */
 public final class Tabs {
 
-    private Tabs() {}
+    private Tabs() {
+    }
 
-    /** Somewhere to put items, without exposing vanilla's protected {@code Output}. */
+    /**
+     * Somewhere to put items, without exposing vanilla's protected {@code Output}.
+     */
     @FunctionalInterface
     public interface Entries {
         void accept(ItemStack stack);
     }
 
-    /** Registers a callback that contributes entries to one tab. */
+    /**
+     * Registers a callback that contributes entries to one tab.
+     */
     public static void modifyEntries(ResourceKey<CreativeModeTab> tab, Consumer<Entries> contents) {
         //? if fabric && >=26.1 {
         /*net.fabricmc.fabric.api.creativetab.v1.CreativeModeTabEvents.modifyOutputEvent(tab)
@@ -67,7 +75,7 @@ public final class Tabs {
      * stacks already in the tab are moved, not duplicated.
      */
     public static void insertBefore(ResourceKey<CreativeModeTab> tab, Supplier<ItemStack> anchor,
-            Supplier<List<ItemStack>> stacks) {
+                                    Supplier<List<ItemStack>> stacks) {
         //? if neoforge {
         // Golem Core's own mod bus, the same one Tints subscribes to.
         NeoForgeEntrypoint.modBus().addListener(
@@ -82,16 +90,44 @@ public final class Tabs {
                                 CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
                     }
                 });
-        //?} elif forge {
-        /*// Forge 1.20.1's tab event has no positional hook: appended in order, after the tab's own contents.
-        modifyEntries(tab, entries -> {
-            for (ItemStack stack : stacks.get()) entries.accept(stack);
-        });
+        //?} elif fabric && >=26.1 {
+        /*net.fabricmc.fabric.api.creativetab.v1.CreativeModeTabEvents.modifyOutputEvent(tab)
+                .register(output -> {
+                    var moved = stacks.get();
+                    removeCopies(output.getDisplayStacks(), moved);
+                    removeCopies(output.getSearchTabStacks(), moved);
+                    output.insertBefore(anchor.get(), moved);
+                });
+        *///?} elif forge {
+        /*dev.golem.core.platform.ForgeEntrypoint.modBus().addListener(
+                (net.minecraftforge.event.BuildCreativeModeTabContentsEvent event) -> {
+                    if (!event.getTabKey().equals(tab)) return;
+                    var entries = event.getEntries();
+                    var before = anchor.get();
+                    for (var stack : stacks.get()) {
+                        entries.remove(stack);
+                        entries.putBefore(before, stack, CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
+                    }
+                });
         *///?} else {
-        /*// No positional hook on this loader: appended in order, after the tab's own contents.
-        modifyEntries(tab, entries -> {
-            for (ItemStack stack : stacks.get()) entries.accept(stack);
-        });
+        /*net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents.modifyEntriesEvent(tab)
+                .register(output -> {
+                    var moved = stacks.get();
+                    removeCopies(output.getDisplayStacks(), moved);
+                    removeCopies(output.getSearchTabStacks(), moved);
+                    output.addBefore(anchor.get(), moved);
+                });
         *///?}
+    }
+
+    private static void removeCopies(List<ItemStack> entries, List<ItemStack> moved) {
+        for (var iterator = entries.iterator(); iterator.hasNext(); ) {
+            var entry = iterator.next();
+            for (var stack : moved)
+                if (ItemStacks.sameItemAndData(entry, stack)) {
+                    iterator.remove();
+                    break;
+                }
+        }
     }
 }

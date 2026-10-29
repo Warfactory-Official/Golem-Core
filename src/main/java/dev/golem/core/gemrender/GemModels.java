@@ -2,6 +2,7 @@ package dev.golem.core.gemrender;
 
 import dev.engine_room.flywheel.api.material.CardinalLightingMode;
 import dev.engine_room.flywheel.api.material.FogShader;
+import dev.engine_room.flywheel.api.material.LightShader;
 import dev.engine_room.flywheel.api.material.Material;
 import dev.engine_room.flywheel.api.material.MaterialShaders;
 import dev.engine_room.flywheel.api.material.Transparency;
@@ -13,14 +14,17 @@ import dev.engine_room.flywheel.api.vertex.MutableVertexList;
 import dev.engine_room.flywheel.lib.material.CutoutShaders;
 import dev.engine_room.flywheel.lib.material.FogShaders;
 import dev.engine_room.flywheel.lib.material.SimpleFogShader;
+import dev.engine_room.flywheel.lib.material.SimpleLightShader;
 import dev.engine_room.flywheel.lib.material.SimpleMaterial;
 import dev.engine_room.flywheel.lib.material.SimpleMaterialShaders;
 import dev.engine_room.flywheel.lib.model.SingleMeshModel;
 import dev.golem.core.Ids;
 import dev.golem.core.render.gem.Geometry;
 import dev.golem.core.render.gem.Surface;
+
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import org.joml.Vector4f;
 import org.joml.Vector4fc;
@@ -35,47 +39,58 @@ final class GemModels {
     private static final Map<Key, Built> MODELS = new ConcurrentHashMap<>();
     private static final Map<Surface, Material> MATERIALS = new ConcurrentHashMap<>();
 
-    /** GemRender 0.1.14's 26.1 Flywheel keeps 1.21's smoothstep fog; 26.1 vanilla ramps linearly. */
+    /**
+     * GemRender 0.1.14's 26.1 Flywheel keeps 1.21's smoothstep fog; 26.1 vanilla ramps linearly.
+     */
     private static final FogShader FOG = vanillaFog();
 
-    /** 26.1's two-sided entity pipelines light a back face with the negated light; Flywheel lights by normal. */
+    private static final LightShader LIGHT = new SimpleLightShader(
+            Ids.of("golemcore", "light/centered_smooth_when_embedded.glsl"));
+
+    /**
+     * 26.1's two-sided entity pipelines light a back face with the negated light; Flywheel lights by normal.
+     */
     private static final MaterialShaders PER_FACE = new SimpleMaterialShaders(
             Ids.of("flywheel", "material/default.vert"), Ids.of("golemcore", "material/per_face.frag"));
 
-    private GemModels() {}
+    private GemModels() {
+    }
 
     static Model of(Geometry geometry, Surface surface) {
         // compute, not get-then-put: visuals are built on Flywheel's worker threads.
         return MODELS.compute(new Key(geometry.name(), surface), (key, held) ->
-                held != null && held.geometry() == geometry
-                        ? held
-                        : new Built(geometry, new SingleMeshModel(new GeometryMesh(geometry), materialOf(surface))))
-                .model();
+                             held != null && held.geometry() == geometry
+                                     ? held
+                                     : new Built(geometry, new SingleMeshModel(new GeometryMesh(geometry), materialOf(surface))))
+                     .model();
     }
 
     static int modelCount() {
         return MODELS.size();
     }
 
-    /** Each blend spelled as the state of the vanilla render type {@link Surface#renderType} picks. */
+    /**
+     * Each blend spelled as the state of the vanilla render type {@link Surface#renderType} picks.
+     */
     private static Material materialOf(Surface surface) {
         return MATERIALS.computeIfAbsent(surface, skin -> {
             SimpleMaterial.Builder builder = SimpleMaterial.builder()
-                    .texture(Ids.parse(skin.texture()))
-                    .fog(FOG)
-                    .mipmap(false);
+                                                           .texture(Ids.parse(skin.texture()))
+                                                           .fog(FOG)
+                                                           .light(LIGHT)
+                                                           .mipmap(false);
             return switch (skin.blend()) {
                 case SOLID -> builder.cutout(CutoutShaders.OFF).build();
                 case CUTOUT, CUTOUT_CULL -> builder.cutout(CutoutShaders.ONE_TENTH).build();
                 case CUTOUT_NO_CULL -> perFace(builder.cutout(CutoutShaders.ONE_TENTH).backfaceCulling(false));
                 case TRANSLUCENT -> perFace(builder.transparency(Transparency.TRANSLUCENT)
-                        .cutout(CutoutShaders.ONE_TENTH)
-                        .backfaceCulling(false));
+                                                   .cutout(CutoutShaders.ONE_TENTH)
+                                                   .backfaceCulling(false));
                 case TRANSLUCENT_EMISSIVE -> perFace(builder.transparency(Transparency.TRANSLUCENT)
-                        .cutout(CutoutShaders.ONE_TENTH)
-                        .useLight(false)
-                        .writeMask(WriteMask.COLOR)
-                        .backfaceCulling(false));
+                                                            .cutout(CutoutShaders.ONE_TENTH)
+                                                            .useLight(false)
+                                                            .writeMask(WriteMask.COLOR)
+                                                            .backfaceCulling(false));
                 case PLASMA_GLOW -> plasmaGlow(builder);
             };
         });
@@ -87,7 +102,7 @@ final class GemModels {
         return builder.shaders(PER_FACE).cardinalLightingMode(CardinalLightingMode.OFF).build();
         //?} else {
         /*return builder.build();
-        *///?}
+         *///?}
     }
 
     private static FogShader vanillaFog() {
@@ -96,29 +111,35 @@ final class GemModels {
         return new SimpleFogShader(Ids.of("golemcore", "fog/linear.glsl"));
         //?} else {
         /*return FogShaders.LINEAR;
-        *///?}
+         *///?}
     }
 
-    /** SRC_ALPHA/ONE, unculled, colour only and unlit, as {@code PlasmaGlowRenderType} draws on this node. */
+    /**
+     * SRC_ALPHA/ONE, unculled, colour only and unlit, as {@code PlasmaGlowRenderType} draws on this node.
+     */
     private static Material plasmaGlow(SimpleMaterial.Builder builder) {
         builder.transparency(Transparency.LIGHTNING)
-                .useLight(false)
-                .useOverlay(false)
-                .writeMask(WriteMask.COLOR)
-                .backfaceCulling(false);
+               .useLight(false)
+               .useOverlay(false)
+               .writeMask(WriteMask.COLOR)
+               .backfaceCulling(false);
         //? if >=26.1 {
         return builder.cutout(CutoutShaders.OFF).cardinalLightingMode(CardinalLightingMode.OFF).build();
         //?} else {
         /*return builder.cutout(CutoutShaders.ONE_TENTH).cardinalLightingMode(CardinalLightingMode.ENTITY).build();
-        *///?}
+         *///?}
     }
 
-    /** Geometry's eight floats per vertex: position, uv, normal. */
+    /**
+     * Geometry's eight floats per vertex: position, uv, normal.
+     */
     private record GeometryMesh(Geometry geometry) implements Mesh {
 
         private static final int STRIDE = 8;
 
-        /** Every mesh is unindexed triangle soup; one shared object, as IndexPool keys runs on identity. */
+        /**
+         * Every mesh is unindexed triangle soup; one shared object, as IndexPool keys runs on identity.
+         */
         private static final IndexSequence SEQUENTIAL = (ptr, count) -> {
             for (int index = 0; index < count; index++) {
                 MemoryUtil.memPutInt(ptr + index * 4L, index);
@@ -162,7 +183,9 @@ final class GemModels {
             return geometry.indices().length;
         }
 
-        /** Around the lump's own vertices: a machine reaches well past its block, and Flywheel culls on this. */
+        /**
+         * Around the lump's own vertices: a machine reaches well past its block, and Flywheel culls on this.
+         */
         @Override
         public Vector4fc boundingSphere() {
             float[] vertices = geometry.vertices();
@@ -194,7 +217,9 @@ final class GemModels {
         }
     }
 
-    private record Key(String name, Surface surface) {}
+    private record Key(String name, Surface surface) {
+    }
 
-    private record Built(Geometry geometry, Model model) {}
+    private record Built(Geometry geometry, Model model) {
+    }
 }
