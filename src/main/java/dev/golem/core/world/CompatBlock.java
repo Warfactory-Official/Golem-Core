@@ -181,7 +181,9 @@ public class CompatBlock extends Block {
     @Override
     protected void onExplosionHit(BlockState state, ServerLevel level, BlockPos pos, Explosion explosion,
                                   BiConsumer<ItemStack, BlockPos> onHit) {
-        if (!onExplosion(state, level, pos, explosion, onHit)) {
+        // a trigger-only blast (a wind charge) removes nothing, so the removal hook is not asked
+        if (explosion.getBlockInteraction() == Explosion.BlockInteraction.TRIGGER_BLOCK
+                || !onExplosion(state, level, pos, explosion, onHit)) {
             super.onExplosionHit(state, level, pos, explosion, onHit);
         }
     }
@@ -254,12 +256,14 @@ public class CompatBlock extends Block {
     //? if >=1.21 && <26.1 {
     /*/^*
      * 1.21's vanilla hook, called before the block is removed, with the same contract as 26.1's: a hook
-     * that answers true owns the block's removal. Both loaders route explosions through it in this era.
+     * that answers true owns the block's removal, and a trigger-only blast skips it. Both loaders route
+     * explosions through it in this era.
      ^/
     @Override
     protected void onExplosionHit(BlockState state, Level level, BlockPos pos, Explosion explosion,
                                   BiConsumer<ItemStack, BlockPos> onHit) {
-        if (level instanceof ServerLevel server && onExplosion(state, server, pos, explosion, onHit)) {
+        if (level instanceof ServerLevel server && explosion.getBlockInteraction() != Explosion.BlockInteraction.TRIGGER_BLOCK
+                && onExplosion(state, server, pos, explosion, onHit)) {
             return;
         }
         super.onExplosionHit(state, level, pos, explosion, onHit);
