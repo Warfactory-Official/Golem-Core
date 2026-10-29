@@ -42,6 +42,7 @@ public final class Surface {
     private final String texture;
     private final Blend blend;
     private RenderType renderType;
+    private Surface unculled;
 
     private Surface(String texture, Blend blend) {
         if (texture == null || texture.isBlank()) throw new IllegalArgumentException("Blank surface texture");
@@ -108,6 +109,17 @@ public final class Surface {
     /** Whether it blends with what is behind it, so its quads must be sorted with the rest of the submit pass. */
     public boolean blended() {
         return blend == Blend.TRANSLUCENT || blend == Blend.TRANSLUCENT_EMISSIVE || blend == Blend.PLASMA_GLOW;
+    }
+
+    /**
+     * The same surface drawn from both sides. A mirrored pose reverses every triangle's winding, so a culled surface
+     * under it would show only its inside.
+     */
+    public Surface unculled() {
+        if (blend != Blend.SOLID && blend != Blend.CUTOUT && blend != Blend.CUTOUT_CULL) return this;
+        Surface twin = unculled;
+        if (twin == null) unculled = twin = new Surface(texture, Blend.CUTOUT_NO_CULL);
+        return twin;
     }
 
     /** The vanilla render type for this surface, resolved on first use and kept. */

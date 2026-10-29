@@ -824,11 +824,13 @@ public final class Gem {
             int overlay = model.overlayOf(state);
             int tint = part.tintOf(state);
             SubmitSink target = part.order() == 0 ? sink : sink.order(part.order());
+            Surface surface = part.surfaceOf(state);
+            if (poseStack.last().pose().determinant3x3() < 0F) surface = surface.unculled();
             if (model.resident) {
-                StaticMeshes.submit(target, poseStack, part.surfaceOf(state), geometry, light,
+                StaticMeshes.submit(target, poseStack, surface, geometry, light,
                         overlay, tint);
             } else {
-                target.submitCustomGeometry(poseStack, part.surfaceOf(state).renderType(),
+                target.submitCustomGeometry(poseStack, surface.renderType(),
                         (pose, buffer) -> geometry.draw(pose, buffer, light, overlay, tint));
             }
         }
