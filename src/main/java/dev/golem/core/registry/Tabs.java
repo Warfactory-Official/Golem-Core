@@ -1,7 +1,6 @@
 package dev.golem.core.registry;
 
 //? if neoforge {
-
 import dev.golem.core.platform.NeoForgeEntrypoint;
 //?}
 //? if neoforge {
@@ -11,7 +10,6 @@ import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.CreativeModeTab;
@@ -31,20 +29,15 @@ import dev.golem.core.world.ItemStacks;
  */
 public final class Tabs {
 
-    private Tabs() {
-    }
+    private Tabs() {}
 
-    /**
-     * Somewhere to put items, without exposing vanilla's protected {@code Output}.
-     */
+    /** Somewhere to put items, without exposing vanilla's protected {@code Output}. */
     @FunctionalInterface
     public interface Entries {
         void accept(ItemStack stack);
     }
 
-    /**
-     * Registers a callback that contributes entries to one tab.
-     */
+    /** Registers a callback that contributes entries to one tab. */
     public static void modifyEntries(ResourceKey<CreativeModeTab> tab, Consumer<Entries> contents) {
         //? if fabric && >=26.1 {
         /*net.fabricmc.fabric.api.creativetab.v1.CreativeModeTabEvents.modifyOutputEvent(tab)
@@ -75,7 +68,7 @@ public final class Tabs {
      * stacks already in the tab are moved, not duplicated.
      */
     public static void insertBefore(ResourceKey<CreativeModeTab> tab, Supplier<ItemStack> anchor,
-                                    Supplier<List<ItemStack>> stacks) {
+            Supplier<List<ItemStack>> stacks) {
         //? if neoforge {
         // Golem Core's own mod bus, the same one Tints subscribes to.
         NeoForgeEntrypoint.modBus().addListener(
@@ -108,7 +101,7 @@ public final class Tabs {
                         entries.remove(stack);
                         entries.putBefore(before, stack, CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
                     }
-                });
+        });
         *///?} else {
         /*net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents.modifyEntriesEvent(tab)
                 .register(output -> {
@@ -116,7 +109,7 @@ public final class Tabs {
                     removeCopies(output.getDisplayStacks(), moved);
                     removeCopies(output.getSearchTabStacks(), moved);
                     output.addBefore(anchor.get(), moved);
-                });
+        });
         *///?}
     }
 

@@ -30,7 +30,7 @@ public class MixinLivingEntityRenderer {
 
     @Inject(method = "setupRotations", at = @At("HEAD"))
     private void golem$applyPlayerPose(AvatarRenderState state, PoseStack pose, float bodyRot, float scale,
-                                       CallbackInfo ci) {
+            CallbackInfo ci) {
         PlayerRenderHooks.applyState(state, pose, dev.golem.core.client.FrameTime.partialTick());
     }
 }

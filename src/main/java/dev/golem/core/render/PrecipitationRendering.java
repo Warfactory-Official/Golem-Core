@@ -77,7 +77,7 @@ public final class PrecipitationRendering {
                 builder.withDepthStencilState(new com.mojang.blaze3d.pipeline.DepthStencilState(
                         com.mojang.blaze3d.platform.CompareOp.LESS_THAN_OR_EQUAL, false));
             }
-            return builder.build();
+            return WorldPipelines.add(builder.build());
         });
     }
 

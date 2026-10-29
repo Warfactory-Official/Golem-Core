@@ -43,7 +43,7 @@ public final class GlintRenderType {
     private GlintRenderType() {}
 
     //? if >=26.1 {
-    private static final RenderPipeline ADDITIVE = RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET,
+    private static final RenderPipeline ADDITIVE = WorldPipelines.add(RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET,
                     RenderPipelines.FOG_SNIPPET, RenderPipelines.GLOBALS_SNIPPET)
             .withLocation("pipeline/golem_glint_additive")
             .withVertexShader("core/glint")
@@ -54,7 +54,7 @@ public final class GlintRenderType {
             .withVertexFormat(com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_TEX,
                     com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS)
             .withDepthStencilState(RenderPipelines.GLINT.getDepthStencilState())
-            .build();
+            .build());
 
     private static final Function<Identifier, RenderType> GLINT = Util.memoize(texture ->
             RenderType.create("golem_glint", RenderSetup.builder(RenderPipelines.GLINT)

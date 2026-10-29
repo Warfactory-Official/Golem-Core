@@ -6,17 +6,13 @@ import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.world.level.ItemLike;
 
-/**
- * Default-component patches from registrars and item helpers, resolved only when the loader builds components.
- */
+/** Default-component patches from registrars and item helpers, resolved only when the loader builds components. */
 public final class ComponentPatches {
 
-    private ComponentPatches() {
-    }
+    private ComponentPatches() {}
 
     private static final List<Map.Entry<Supplier<? extends ItemLike>, Consumer<DataComponentMap.Builder>>> PATCHES =
             new CopyOnWriteArrayList<>();

@@ -468,7 +468,7 @@ public final class StaticMeshes {
                         || !vanilla.getVertexShader().equals(net.minecraft.resources.Identifier.withDefaultNamespace("core/entity"))) {
                     throw new IllegalStateException("entity_cutout_cull is not the pipeline this mirror was written for: " + vanilla);
                 }
-                pipeline = built;
+                pipeline = WorldPipelines.add(built);
             }
             return pipeline;
         }

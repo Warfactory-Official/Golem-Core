@@ -30,20 +30,13 @@ public final class DejsonWriter {
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 
-    private DejsonWriter() {
-    }
+    private DejsonWriter() {}
 
-    /**
-     * What one write did: how many files it emitted and how many an authored file already covered.
-     */
-    public record Report(int written, int deferred) {
-    }
+    /** What one write did: how many files it emitted and how many an authored file already covered. */
+    public record Report(int written, int deferred) {}
 
-    /**
-     * One disagreement between a declaration and the file it stands in for.
-     */
-    public record Mismatch(String path, String detail) {
-    }
+    /** One disagreement between a declaration and the file it stands in for. */
+    public record Mismatch(String path, String detail) {}
 
     /**
      * Emits every declaration that no authored file already covers.
@@ -88,7 +81,7 @@ public final class DejsonWriter {
             JsonObject shipped;
             try {
                 shipped = JsonParser.parseString(Files.readString(file, StandardCharsets.UTF_8))
-                                    .getAsJsonObject();
+                        .getAsJsonObject();
             } catch (IOException failure) {
                 throw new UncheckedIOException("could not read " + file, failure);
             }
@@ -114,7 +107,7 @@ public final class DejsonWriter {
      * that mod's, so dependency resources also satisfy a declaration. A consumer that ships one file under
      * {@code assets/minecraft} must not thereby make every vanilla sprite look missing.
      */
-    public static List<String> missingSprites(Path authored, String owner) {
+    public static List<String> missingSprites(Path authored) {
         List<String> missing = new ArrayList<>();
         Map<String, String> generated = Dejson.generatedSprites();
         for (String declared : Dejson.sprites()) {
@@ -125,20 +118,17 @@ public final class DejsonWriter {
             String namespace = colon < 0 ? "minecraft" : sprite.substring(0, colon);
             String path = sprite.substring(colon + 1);
             Path textures = authored.resolve("assets").resolve(namespace).resolve("textures");
-            if (!owner.equals(namespace) || !Files.isDirectory(textures)) {
+            if ("minecraft".equals(namespace) || !Files.isDirectory(textures)) {
                 continue;
             }
-            if (!Files.exists(textures.resolve(path + ".png")) && !Textures.dependencySource(
-                    declared) && !missing.contains(sprite)) {
+            if (!Files.exists(textures.resolve(path + ".png")) && !Textures.dependencySource(declared) && !missing.contains(sprite)) {
                 missing.add(sprite);
             }
         }
         return missing;
     }
 
-    /**
-     * How many authored files the declarations reproduce exactly, and would let go.
-     */
+    /** How many authored files the declarations reproduce exactly, and would let go. */
     public static int covered(Path authored) {
         int covered = 0;
         for (String path : files().keySet()) {
@@ -178,9 +168,7 @@ public final class DejsonWriter {
         return files;
     }
 
-    /**
-     * {@code hbm:block/foo} in {@code models} becomes {@code assets/hbm/models/block/foo.json}.
-     */
+    /** {@code hbm:block/foo} in {@code models} becomes {@code assets/hbm/models/block/foo.json}. */
     private static String path(String id, String folder) {
         int colon = id.indexOf(':');
         return "assets/" + id.substring(0, colon) + "/" + folder + "/" + id.substring(colon + 1) + ".json";

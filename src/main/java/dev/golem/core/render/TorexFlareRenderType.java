@@ -26,7 +26,7 @@ final class TorexFlareRenderType {
     private TorexFlareRenderType() {}
 
     //? if >=26.1 {
-    private static final RenderPipeline PIPELINE = RenderPipeline.builder(
+    private static final RenderPipeline PIPELINE = WorldPipelines.add(RenderPipeline.builder(
                     RenderPipelines.MATRICES_PROJECTION_SNIPPET, RenderPipelines.GLOBALS_SNIPPET)
             .withLocation(dev.golem.core.Ids.parse("golemcore:pipeline/golem_torex_flare"))
             .withVertexShader(dev.golem.core.Ids.parse("golemcore:core/golem_torex_flare"))
@@ -37,7 +37,7 @@ final class TorexFlareRenderType {
             .withDepthStencilState(new DepthStencilState(DepthStencilState.DEFAULT.depthTest(), false))
             .withColorTargetState(new ColorTargetState(BlendFunction.LIGHTNING))
             .withCull(false)
-            .build();
+            .build());
 
     private static final Function<Identifier, RenderType> BY_TEXTURE = Util.memoize(texture ->
             RenderType.create("golem_torex_flare", RenderSetup.builder(PIPELINE)

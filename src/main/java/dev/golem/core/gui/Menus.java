@@ -22,37 +22,28 @@ import net.minecraft.world.inventory.MenuType;
  */
 public final class Menus {
 
-    private Menus() {
-    }
+    private Menus() {}
 
-    /**
-     * Builds a menu from its network id, the player's inventory, and the position it was opened at.
-     */
+    /** Builds a menu from its network id, the player's inventory, and the position it was opened at. */
     @FunctionalInterface
     public interface PosFactory<T extends AbstractContainerMenu> {
         T create(int containerId, Inventory playerInventory, BlockPos pos);
     }
 
-    /**
-     * Builds a menu from its network id, the player's inventory, and the hand that opened it.
-     */
+    /** Builds a menu from its network id, the player's inventory, and the hand that opened it. */
     @FunctionalInterface
     public interface HandFactory<T extends AbstractContainerMenu> {
         T create(int containerId, Inventory playerInventory, InteractionHand hand);
     }
 
     /** Creates a menu type whose menu is opened with a {@link BlockPos} as extra data. */
-    /**
-     * A menu keyed by an entity id, for menus opened on a living vehicle or mob rather than a block.
-     */
+    /** A menu keyed by an entity id, for menus opened on a living vehicle or mob rather than a block. */
     @FunctionalInterface
     public interface EntityFactory<T extends AbstractContainerMenu> {
         T create(int containerId, Inventory playerInventory, int entityId);
     }
 
-    /**
-     * Builds a menu with an integer captured by the server when it opens.
-     */
+    /** Builds a menu with an integer captured by the server when it opens. */
     @FunctionalInterface
     public interface IntFactory<T extends AbstractContainerMenu> {
         T create(int containerId, Inventory playerInventory, int openingData);
@@ -61,7 +52,7 @@ public final class Menus {
     public static <T extends AbstractContainerMenu> MenuType<T> typeWithPos(PosFactory<T> factory) {
         //? if fabric && >=26.1 {
         /*return new net.fabricmc.fabric.api.menu.v1.ExtendedMenuType<>(factory::create, BlockPos.STREAM_CODEC);
-         *///?} elif fabric && >=1.20.5 {
+        *///?} elif fabric && >=1.20.5 {
         /*return new net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerType<>(
                 factory::create, BlockPos.STREAM_CODEC);
         *///?} elif fabric {
@@ -77,9 +68,7 @@ public final class Menus {
         *///?}
     }
 
-    /**
-     * Creates a menu type whose menu is opened with the player's main/off hand as extra data.
-     */
+    /** Creates a menu type whose menu is opened with the player's main/off hand as extra data. */
     public static <T extends AbstractContainerMenu> MenuType<T> typeWithHand(HandFactory<T> factory) {
         //? if fabric && >=26.1 {
         /*return new net.fabricmc.fabric.api.menu.v1.ExtendedMenuType<>(factory::create,
@@ -106,9 +95,7 @@ public final class Menus {
         *///?}
     }
 
-    /**
-     * As {@link #typeWithHand} with an entity id instead of a hand.
-     */
+    /** As {@link #typeWithHand} with an entity id instead of a hand. */
     public static <T extends AbstractContainerMenu> MenuType<T> typeWithEntity(EntityFactory<T> factory) {
         return typeWithInt(factory::create);
     }
@@ -136,9 +123,7 @@ public final class Menus {
         *///?}
     }
 
-    /**
-     * Opens a provider for the player, sending {@code pos} to the client alongside it.
-     */
+    /** Opens a provider for the player, sending {@code pos} to the client alongside it. */
     public static void openWithPos(ServerPlayer player, MenuProvider provider, BlockPos pos) {
         //? if fabric && >=26.1 {
         /*player.openMenu(new net.fabricmc.fabric.api.menu.v1.ExtendedMenuProvider<BlockPos>() {
@@ -195,12 +180,10 @@ public final class Menus {
         player.openMenu(provider, pos);
         //?} elif forge {
         /*net.minecraftforge.network.NetworkHooks.openScreen(player, provider, pos);
-         *///?}
+        *///?}
     }
 
-    /**
-     * Opens a provider for the player, sending the hand that owns a stack-backed menu.
-     */
+    /** Opens a provider for the player, sending the hand that owns a stack-backed menu. */
     public static void openWithHand(ServerPlayer player, MenuProvider provider, InteractionHand hand) {
         int value = hand == InteractionHand.MAIN_HAND ? 0 : 1;
         //? if fabric && >=26.1 {
@@ -251,19 +234,15 @@ public final class Menus {
         player.openMenu(provider, buffer -> buffer.writeVarInt(value));
         //?} elif forge {
         /*net.minecraftforge.network.NetworkHooks.openScreen(player, provider, buffer -> buffer.writeVarInt(value));
-         *///?}
+        *///?}
     }
 
-    /**
-     * As {@link #openWithHand} with an entity id instead of a hand.
-     */
+    /** As {@link #openWithHand} with an entity id instead of a hand. */
     public static void openWithEntity(ServerPlayer player, MenuProvider provider, int entityId) {
         openWithInt(player, provider, entityId);
     }
 
-    /**
-     * Opens a provider with the same mandatory integer consumed by {@link #typeWithInt}.
-     */
+    /** Opens a provider with the same mandatory integer consumed by {@link #typeWithInt}. */
     public static void openWithInt(ServerPlayer player, MenuProvider provider, int value) {
         //? if fabric && >=26.1 {
         /*player.openMenu(new net.fabricmc.fabric.api.menu.v1.ExtendedMenuProvider<Integer>() {
@@ -310,18 +289,16 @@ public final class Menus {
         player.openMenu(provider, buffer -> buffer.writeVarInt(value));
         //?} elif forge {
         /*net.minecraftforge.network.NetworkHooks.openScreen(player, provider, buffer -> buffer.writeVarInt(value));
-         *///?}
+        *///?}
     }
 
-    /**
-     * Dispatches a menu click without exposing the era-specific click enum to common callers.
-     */
+    /** Dispatches a menu click without exposing the era-specific click enum to common callers. */
     public static void click(AbstractContainerMenu menu, int slotId, int button,
                              CompatContainerMenu.ClickAction action, Player player) {
         //? if >=26.1 {
         menu.clicked(slotId, button, net.minecraft.world.inventory.ContainerInput.valueOf(action.name()), player);
         //?} else {
         /*menu.clicked(slotId, button, net.minecraft.world.inventory.ClickType.valueOf(action.name()), player);
-         *///?}
+        *///?}
     }
 }

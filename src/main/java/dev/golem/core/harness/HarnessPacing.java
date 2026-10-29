@@ -2,9 +2,7 @@ package dev.golem.core.harness;
 
 import net.minecraft.server.MinecraftServer;
 
-/**
- * Development harness clocks; ordinary clients and servers retain vanilla pacing until explicitly requested.
- */
+/** Development harness clocks; ordinary clients and servers retain vanilla pacing until explicitly requested. */
 public final class HarnessPacing {
 
     private static volatile long serverMillis = 50L;

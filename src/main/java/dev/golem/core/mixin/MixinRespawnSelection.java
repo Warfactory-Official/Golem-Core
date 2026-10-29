@@ -10,12 +10,12 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.Set;
@@ -28,7 +28,7 @@ import net.minecraft.world.level.portal.TeleportTransition;
 /**
  * Vanilla has no respawn selector; loader respawn events run after spawn-block lookup.
  * Loaders supply sleep-time results, and Fabric supplies spawn-setting events.
- * Widening cannot replace the remaining lookup and bed-world gates.
+ * Widening cannot replace the remaining lookup, bed-world and saved-bed gates.
  */
 @Mixin(ServerPlayer.class)
 public abstract class MixinRespawnSelection {
@@ -76,11 +76,27 @@ public abstract class MixinRespawnSelection {
                 level.getSharedSpawnAngle(), 0F, after));
     }
 
-    @ModifyArg(method = "findRespawnPositionAndUseSpawnBlock", index = 0, at = @At(value = "INVOKE",
+    // Fabric has no event after a rejected spawn block and NeoForge's PlayerRespawnPositionEvent is NeoForge-only;
+    // widening cannot pick the level or the angle.
+    @WrapOperation(method = "findRespawnPositionAndUseSpawnBlock", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/world/level/portal/DimensionTransition;missingRespawnBlock(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/level/portal/DimensionTransition$PostDimensionTransition;)Lnet/minecraft/world/level/portal/DimensionTransition;"))
-    private ServerLevel golem$missingSpawn(ServerLevel vanilla) {
+    private DimensionTransition golem$missingSpawn(ServerLevel vanilla, Entity entity,
+            DimensionTransition.PostDimensionTransition after, Operation<DimensionTransition> original) {
         var destination = Respawns.FALLBACKS.invoker().destination((ServerPlayer) (Object) this);
-        return destination instanceof Respawns.WorldSpawn world ? world.level() : vanilla;
+        if (!(destination instanceof Respawns.WorldSpawn world)) return original.call(vanilla, entity, after);
+        var level = world.level();
+        return new DimensionTransition(level,
+                Vec3.atBottomCenterOf(entity.adjustSpawnLocation(level, level.getSharedSpawnPos())), Vec3.ZERO,
+                level.getSharedSpawnAngle(), 0F, true, after);
+    }
+
+    // A saved bed is re-checked only by BedBlock.canSetSpawn in this static lookup; no loader event reaches it
+    // and widening cannot change its answer.
+    @WrapOperation(method = "findRespawnAndUseSpawnBlock", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/level/block/BedBlock;canSetSpawn(Lnet/minecraft/world/level/Level;)Z"))
+    private static boolean golem$storedBed(Level level, Operation<Boolean> original,
+            @Local(argsOnly = true) BlockPos pos) {
+        return WorldAttributes.BED_SPAWN.invoker().apply(level, pos, original.call(level));
     }
     *///?}
 

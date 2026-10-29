@@ -1,11 +1,11 @@
 package dev.golem.core.render;
 
 import dev.golem.core.Ids;
-
 import java.util.HashMap;
 import java.util.Map;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
@@ -56,29 +56,19 @@ import net.minecraft.resources.ResourceLocation;
  */
 public final class Sky {
 
-    /**
-     * The two blend functions 1.7's sky renderers used.
-     */
+    /** The two blend functions 1.7's sky renderers used. */
     public enum Blend {
-        /**
-         * {@code glBlendFunc(SRC_ALPHA, ONE_MINUS_SRC_ALPHA)} ({@code OpenGlHelper.glBlendFunc(770, 771, 1, 0)}).
-         */
+        /** {@code glBlendFunc(SRC_ALPHA, ONE_MINUS_SRC_ALPHA)} ({@code OpenGlHelper.glBlendFunc(770, 771, 1, 0)}). */
         ALPHA,
-        /**
-         * {@code glBlendFunc(SRC_ALPHA, ONE)} ({@code OpenGlHelper.glBlendFunc(770, 1, 1, 0)}), vanilla's sun blend.
-         */
+        /** {@code glBlendFunc(SRC_ALPHA, ONE)} ({@code OpenGlHelper.glBlendFunc(770, 1, 1, 0)}), vanilla's sun blend. */
         ADDITIVE
     }
 
-    /**
-     * A texture for {@link #texturedQuads}: a plain image, or vanilla's sun or one moon phase.
-     */
+    /** A texture for {@link #texturedQuads}: a plain image, or vanilla's sun or one moon phase. */
     public static final class Texture {
         private final String namespace;
         private final String path;
-        /**
-         * -1: a plain image; -2: the sun; 0..7: that moon phase.
-         */
+        /** -1: a plain image; -2: the sun; 0..7: that moon phase. */
         private final int celestial;
 
         private Texture(String namespace, String path, int celestial) {
@@ -87,9 +77,7 @@ public final class Sky {
             this.celestial = celestial;
         }
 
-        /**
-         * A plain image, e.g. {@code of("hbm", "textures/misc/star_digamma.png")}.
-         */
+        /** A plain image, e.g. {@code of("hbm", "textures/misc/star_digamma.png")}. */
         public static Texture of(String namespace, String path) {
             return new Texture(namespace, path, -1);
         }
@@ -97,23 +85,17 @@ public final class Sky {
         private static final Texture SUN = new Texture("minecraft", "sun", -2);
         private static final Texture[] MOON = new Texture[8];
 
-        /**
-         * {@code namespace:path} of a plain image ({@link GuiCanvas}, {@link #shaderQuads}).
-         */
+        /** {@code namespace:path} of a plain image ({@link GuiCanvas}, {@link #shaderQuads}). */
         String id() {
             return namespace + ":" + path;
         }
 
-        /**
-         * True for a plain image, false for vanilla's sun or a moon phase.
-         */
+        /** True for a plain image, false for vanilla's sun or a moon phase. */
         boolean plain() {
             return celestial == -1;
         }
 
-        /**
-         * Vanilla's sun image (1.7 {@code textures/environment/sun.png}).
-         */
+        /** Vanilla's sun image (1.7 {@code textures/environment/sun.png}). */
         public static Texture sun() {
             return SUN;
         }
@@ -148,9 +130,7 @@ public final class Sky {
         return level;
     }
 
-    /**
-     * The sky pose; see the class comment. Restore what you push.
-     */
+    /** The sky pose; see the class comment. Restore what you push. */
     public PoseStack pose() {
         return pose;
     }
@@ -167,9 +147,7 @@ public final class Sky {
         return celestialAngle;
     }
 
-    /**
-     * The moon phase vanilla draws this frame, 1.7 {@code getMoonPhase} indexing.
-     */
+    /** The moon phase vanilla draws this frame, 1.7 {@code getMoonPhase} indexing. */
     public int moonPhase() {
         return moonPhase;
     }
@@ -181,24 +159,19 @@ public final class Sky {
      */
     public net.minecraft.world.phys.Vec3 skyColor() {
         //? if >=26.1 {
-        int argb = net.minecraft.client.Minecraft.getInstance().gameRenderer.getGameRenderState().levelRenderState.skyRenderState.skyColor;
-        return new net.minecraft.world.phys.Vec3(((argb >> 16) & 0xFF) / 255.0, ((argb >> 8) & 0xFF) / 255.0,
-                (argb & 0xFF) / 255.0);
+        int argb = Minecraft.getInstance().gameRenderer.getGameRenderState().levelRenderState.skyRenderState.skyColor;
+        return new net.minecraft.world.phys.Vec3(((argb >> 16) & 0xFF) / 255.0, ((argb >> 8) & 0xFF) / 255.0, (argb & 0xFF) / 255.0);
         //?} else {
-        /*net.minecraft.world.phys.Vec3 camera = net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+        /*Vec3 camera = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
         return level.getSkyColor(camera, partialTick);
         *///?}
     }
 
-    /**
-     * The current camera's sampled fog colour.
-     */
+    /** The current camera's sampled fog colour. */
     public Vec3 fogColor() {
         //? if >=26.1 {
-        int color = net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera().attributeProbe()
-                                                                             .getValue(
-                                                                                     net.minecraft.world.attribute.EnvironmentAttributes.FOG_COLOR,
-                                                                                     partialTick);
+        int color = Minecraft.getInstance().gameRenderer.getMainCamera().attributeProbe()
+                .getValue(net.minecraft.world.attribute.EnvironmentAttributes.FOG_COLOR, partialTick);
         return new Vec3(net.minecraft.util.ARGB.redFloat(color),
                 net.minecraft.util.ARGB.greenFloat(color), net.minecraft.util.ARGB.blueFloat(color));
         //?} else {
@@ -206,10 +179,7 @@ public final class Sky {
         return new Vec3(color[0], color[1], color[2]);
         *///?}
     }
-
-    /**
-     * Untextured quads: {@code xyz} holds 3 floats per vertex, 4 vertices per quad, coloured {@code r g b a}.
-     */
+    /** Untextured quads: {@code xyz} holds 3 floats per vertex, 4 vertices per quad, coloured {@code r g b a}. */
     public void quads(Blend blend, float r, float g, float b, float a, float... xyz) {
         if (xyz.length < 12) return;
         draw(null, blend, r, g, b, a, xyz, 3);
@@ -225,9 +195,7 @@ public final class Sky {
         draw(null, blend, 1.0F, 1.0F, 1.0F, 1.0F, xyzrgba, 7);
     }
 
-    /**
-     * Textured quads: {@code xyzuv} holds 5 floats per vertex (UV 0..1 over the texture), 4 vertices per quad.
-     */
+    /** Textured quads: {@code xyzuv} holds 5 floats per vertex (UV 0..1 over the texture), 4 vertices per quad. */
     public void texturedQuads(Texture texture, Blend blend, float r, float g, float b, float a, float... xyzuv) {
         if (xyzuv.length < 20) return;
         draw(texture, blend, r, g, b, a, xyzuv, 5);
@@ -268,7 +236,7 @@ public final class Sky {
         Matrix4f m = pose.last().pose();
         org.joml.Vector3f right = new org.joml.Matrix3f(m).invert().transform(new org.joml.Vector3f(1, 0, 0));
         if (right.lengthSquared() > 0) right.normalize();
-        int height = Math.max(1, net.minecraft.client.Minecraft.getInstance().getWindow().getHeight());
+        int height = Math.max(1, Minecraft.getInstance().getWindow().getHeight());
         double fov = dev.golem.core.client.Fov.current();
         float perDistance = (float) (2.0 * Math.tan(Math.toRadians(fov) / 2.0) / height);
         float[] v = new float[n * 2 * 5];
@@ -327,14 +295,11 @@ public final class Sky {
          * (0 to 3).
          */
         public static Shader of(String namespace, String name, int samplers) {
-            if (samplers < 0 || samplers > 3)
-                throw new IllegalArgumentException("a sky shader samples 0 to 3 textures");
+            if (samplers < 0 || samplers > 3) throw new IllegalArgumentException("a sky shader samples 0 to 3 textures");
             return new Shader(namespace, name, samplers, false);
         }
 
-        /**
-         * RGB already contains emission; alpha describes how much background the fragment occludes.
-         */
+        /** RGB already contains emission; alpha describes how much background the fragment occludes. */
         public Shader premultipliedAlpha() {
             return new Shader(namespace, name, samplers, true);
         }
@@ -344,10 +309,7 @@ public final class Sky {
         }
 
         //? if >=26.1 {
-
-        /**
-         * The native pipeline used by this shader's sky draws, including its actual uniforms and blend state.
-         */
+        /** The native pipeline used by this shader's sky draws, including its actual uniforms and blend state. */
         public RenderPipeline nativePipeline(Blend blend, boolean cull) {
             return SkyShaders.pipeline(namespace, name, samplers, blend, cull, false, premultipliedAlpha);
         }
@@ -365,17 +327,13 @@ public final class Sky {
             return samplers;
         }
 
-        /**
-         * {@code namespace:name}.
-         */
+        /** {@code namespace:name}. */
         public String id() {
             return namespace + ":" + name;
         }
     }
 
-    /**
-     * How many floats a {@link #shaderQuads} parameter block has ({@code PARAM(0)} to {@code PARAM(63)}).
-     */
+    /** How many floats a {@link #shaderQuads} parameter block has ({@code PARAM(0)} to {@code PARAM(63)}). */
     public static final int SHADER_PARAMS = SkyShaders.PARAMS;
 
     /**
@@ -386,8 +344,7 @@ public final class Sky {
      * as every sky draw; {@code cull} false is 1.7's {@code glDisable(GL_CULL_FACE)}. The fragment's colour is blended as
      * it is: the shader decides the alpha (1.7's sky shaders ignored {@code glColor}).
      */
-    public void shaderQuads(Shader shader, Blend blend, boolean cull, float[] params, Texture[] textures,
-                            float... xyzuv) {
+    public void shaderQuads(Shader shader, Blend blend, boolean cull, float[] params, Texture[] textures, float... xyzuv) {
         int quads = xyzuv.length / 20;
         if (quads < 1) return;
         String[] ids = new String[shader.samplers];
@@ -397,14 +354,11 @@ public final class Sky {
             ids[i] = texture.namespace + ":" + texture.path;
         }
         float[] block = java.util.Arrays.copyOf(params, SHADER_PARAMS);
-        SkyShaders.draw(shader.namespace, shader.name, shader.samplers, blend, cull, shader.premultipliedAlpha, ids,
-                new Matrix4f(pose.last().pose()),
+        SkyShaders.draw(shader.namespace, shader.name, shader.samplers, blend, cull, shader.premultipliedAlpha, ids, new Matrix4f(pose.last().pose()),
                 block, xyzuv, quads);
     }
 
-    /**
-     * How many {@link #shaderQuads} draws of {@code shader} this client has made (a positive signal for tests).
-     */
+    /** How many {@link #shaderQuads} draws of {@code shader} this client has made (a positive signal for tests). */
     public static long shaderDraws(Shader shader) {
         return SkyShaders.draws(shader.id());
     }
@@ -412,8 +366,7 @@ public final class Sky {
     // ======================================================================== per-version drawing
 
     //? if >=26.1 {
-    private static final BlendFunction BLEND_ALPHA = new BlendFunction(SourceFactor.SRC_ALPHA,
-            DestFactor.ONE_MINUS_SRC_ALPHA,
+    private static final BlendFunction BLEND_ALPHA = new BlendFunction(SourceFactor.SRC_ALPHA, DestFactor.ONE_MINUS_SRC_ALPHA,
             SourceFactor.SRC_ALPHA, DestFactor.ONE_MINUS_SRC_ALPHA);
     private static final BlendFunction BLEND_ADDITIVE = BlendFunction.OVERLAY; // SRC_ALPHA, ONE, ONE, ZERO
 
@@ -423,20 +376,16 @@ public final class Sky {
 
     private static RenderPipeline pipeline(String name, boolean textured, BlendFunction blend, VertexFormat.Mode mode) {
         RenderPipeline.Builder builder = RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET)
-                                                       .withLocation("pipeline/golem_sky_" + name)
-                                                       .withVertexShader(Ids.parse(
-                                                               mode == VertexFormat.Mode.POINTS ? "golemcore:core/sky_points"
-                                                                       : textured ? "core/position_tex_color" : "core/position_color"))
-                                                       .withFragmentShader(
-                                                               textured ? "core/position_tex_color" : "core/position_color")
-                                                       .withColorTargetState(new ColorTargetState(blend))
-                                                       .withVertexFormat(
-                                                               textured ? DefaultVertexFormat.POSITION_TEX_COLOR : DefaultVertexFormat.POSITION_COLOR,
-                                                               mode);
+                .withLocation("pipeline/golem_sky_" + name)
+                .withVertexShader(Ids.parse(mode == VertexFormat.Mode.POINTS ? "golemcore:core/sky_points"
+                        : textured ? "core/position_tex_color" : "core/position_color"))
+                .withFragmentShader(textured ? "core/position_tex_color" : "core/position_color")
+                .withColorTargetState(new ColorTargetState(blend))
+                .withVertexFormat(textured ? DefaultVertexFormat.POSITION_TEX_COLOR : DefaultVertexFormat.POSITION_COLOR, mode);
         if (textured) builder.withSampler("Sampler0");
         if (textured && mode == VertexFormat.Mode.POINTS) builder.withShaderDefine("TEXTURED");
         // No depth state: neither tested nor written, as vanilla's CELESTIAL and STARS pipelines.
-        return builder.build();
+        return WorldPipelines.add(builder.build());
     }
 
     private static final RenderPipeline COLOR_ALPHA = pipeline("color_alpha", false, BLEND_ALPHA);
@@ -448,14 +397,10 @@ public final class Sky {
     private static final RenderType TYPE_COLOR_ADDITIVE = RenderType.create("golem_sky_color_additive",
             RenderSetup.builder(COLOR_ADDITIVE).createRenderSetup());
     private static final java.util.Map<String, RenderType> TEXTURED = new java.util.HashMap<>();
-    private static final RenderPipeline LINE_COLOR_ALPHA = pipeline("line_color_alpha", false, BLEND_ALPHA,
-            VertexFormat.Mode.DEBUG_LINES);
-    private static final RenderPipeline LINE_COLOR_ADDITIVE = pipeline("line_color_additive", false, BLEND_ADDITIVE,
-            VertexFormat.Mode.DEBUG_LINES);
-    private static final RenderPipeline LINE_TEX_ALPHA = pipeline("line_tex_alpha", true, BLEND_ALPHA,
-            VertexFormat.Mode.DEBUG_LINES);
-    private static final RenderPipeline LINE_TEX_ADDITIVE = pipeline("line_tex_additive", true, BLEND_ADDITIVE,
-            VertexFormat.Mode.DEBUG_LINES);
+    private static final RenderPipeline LINE_COLOR_ALPHA = pipeline("line_color_alpha", false, BLEND_ALPHA, VertexFormat.Mode.DEBUG_LINES);
+    private static final RenderPipeline LINE_COLOR_ADDITIVE = pipeline("line_color_additive", false, BLEND_ADDITIVE, VertexFormat.Mode.DEBUG_LINES);
+    private static final RenderPipeline LINE_TEX_ALPHA = pipeline("line_tex_alpha", true, BLEND_ALPHA, VertexFormat.Mode.DEBUG_LINES);
+    private static final RenderPipeline LINE_TEX_ADDITIVE = pipeline("line_tex_additive", true, BLEND_ADDITIVE, VertexFormat.Mode.DEBUG_LINES);
     private static final RenderType TYPE_LINE_COLOR_ALPHA = RenderType.create("golem_sky_line_color_alpha",
             RenderSetup.builder(LINE_COLOR_ALPHA).createRenderSetup());
     private static final RenderType TYPE_LINE_COLOR_ADDITIVE = RenderType.create("golem_sky_line_color_additive",
@@ -465,26 +410,20 @@ public final class Sky {
     private static RenderType texturedLines(Identifier texture, Blend blend) {
         return TEXTURED_LINES.computeIfAbsent(blend + "|" + texture, key -> RenderType.create("golem_sky_line_tex",
                 RenderSetup.builder(blend == Blend.ALPHA ? LINE_TEX_ALPHA : LINE_TEX_ADDITIVE)
-                           .withTexture("Sampler0", texture).createRenderSetup()));
+                        .withTexture("Sampler0", texture).createRenderSetup()));
     }
 
-    private static final RenderPipeline POINT_COLOR_ALPHA = pipeline("point_color_alpha", false, BLEND_ALPHA,
-            VertexFormat.Mode.POINTS);
-    private static final RenderPipeline POINT_COLOR_ADDITIVE = pipeline("point_color_additive", false, BLEND_ADDITIVE,
-            VertexFormat.Mode.POINTS);
-    private static final RenderPipeline POINT_TEX_ALPHA = pipeline("point_tex_alpha", true, BLEND_ALPHA,
-            VertexFormat.Mode.POINTS);
-    private static final RenderPipeline POINT_TEX_ADDITIVE = pipeline("point_tex_additive", true, BLEND_ADDITIVE,
-            VertexFormat.Mode.POINTS);
+    private static final RenderPipeline POINT_COLOR_ALPHA = pipeline("point_color_alpha", false, BLEND_ALPHA, VertexFormat.Mode.POINTS);
+    private static final RenderPipeline POINT_COLOR_ADDITIVE = pipeline("point_color_additive", false, BLEND_ADDITIVE, VertexFormat.Mode.POINTS);
+    private static final RenderPipeline POINT_TEX_ALPHA = pipeline("point_tex_alpha", true, BLEND_ALPHA, VertexFormat.Mode.POINTS);
+    private static final RenderPipeline POINT_TEX_ADDITIVE = pipeline("point_tex_additive", true, BLEND_ADDITIVE, VertexFormat.Mode.POINTS);
     private static final RenderType TYPE_POINT_COLOR_ALPHA = RenderType.create("golem_sky_point_color_alpha",
             RenderSetup.builder(POINT_COLOR_ALPHA).createRenderSetup());
     private static final RenderType TYPE_POINT_COLOR_ADDITIVE = RenderType.create("golem_sky_point_color_additive",
             RenderSetup.builder(POINT_COLOR_ADDITIVE).createRenderSetup());
     private static final Map<String, RenderType> TEXTURED_POINTS = new HashMap<>();
 
-    /**
-     * Actual native pipelines shared by the renderer's draws and consumers inspecting their state.
-     */
+    /** Actual native pipelines shared by the renderer's draws and consumers inspecting their state. */
     public static RenderPipeline nativePipeline(boolean textured, Blend blend, VertexFormat.Mode mode) {
         return switch (mode) {
             case QUADS -> textured ? (blend == Blend.ALPHA ? TEX_ALPHA : TEX_ADDITIVE)
@@ -497,23 +436,17 @@ public final class Sky {
         };
     }
 
-    /**
-     * Plain images only, as with the sky's line draws.
-     */
+    /** Plain images only, as with the sky's line draws. */
     private void drawPoints(Texture texture, Blend blend, float r, float g, float b, float a, float[] xyz) {
         var type = texture == null ? (blend == Blend.ALPHA ? TYPE_POINT_COLOR_ALPHA : TYPE_POINT_COLOR_ADDITIVE)
-                : TEXTURED_POINTS.computeIfAbsent(blend + "|" + texture.id(),
-                key -> RenderType.create("golem_sky_point_tex",
+                : TEXTURED_POINTS.computeIfAbsent(blend + "|" + texture.id(), key -> RenderType.create("golem_sky_point_tex",
                         RenderSetup.builder(nativePipeline(true, blend, VertexFormat.Mode.POINTS))
-                                   .withTexture("Sampler0",
-                                           Identifier.fromNamespaceAndPath(texture.namespace, texture.path))
-                                   .createRenderSetup()));
+                                .withTexture("Sampler0", Identifier.fromNamespaceAndPath(texture.namespace, texture.path))
+                                .createRenderSetup()));
         drawVertices(type, VertexFormat.Mode.POINTS, texture, r, g, b, a, xyz, 3, xyz.length / 3, 0, 0, 1, 1);
     }
 
-    /**
-     * Plain images only.
-     */
+    /** Plain images only. */
     private void drawLines(Texture texture, Blend blend, float r, float g, float b, float a, float[] v, int stride) {
         var type = texture == null ? (blend == Blend.ALPHA ? TYPE_LINE_COLOR_ALPHA : TYPE_LINE_COLOR_ADDITIVE)
                 : texturedLines(Identifier.fromNamespaceAndPath(texture.namespace, texture.path), blend);
@@ -524,7 +457,7 @@ public final class Sky {
     private static RenderType textured(Identifier texture, Blend blend) {
         return TEXTURED.computeIfAbsent(blend + "|" + texture, key -> RenderType.create("golem_sky_tex",
                 RenderSetup.builder(blend == Blend.ALPHA ? TEX_ALPHA : TEX_ADDITIVE)
-                           .withTexture("Sampler0", texture).createRenderSetup()));
+                        .withTexture("Sampler0", texture).createRenderSetup()));
     }
 
     private void draw(Texture texture, Blend blend, float r, float g, float b, float a, float[] v, int stride) {
@@ -535,8 +468,8 @@ public final class Sky {
         } else if (texture.celestial == -1) {
             type = textured(Identifier.fromNamespaceAndPath(texture.namespace, texture.path), blend);
         } else {
-            var atlas = net.minecraft.client.Minecraft.getInstance().getAtlasManager()
-                                                      .getAtlasOrThrow(net.minecraft.data.AtlasIds.CELESTIALS);
+            var atlas = Minecraft.getInstance().getAtlasManager()
+                    .getAtlasOrThrow(net.minecraft.data.AtlasIds.CELESTIALS);
             String sprite = texture.celestial == -2 ? "sun"
                     : "moon/" + net.minecraft.world.level.MoonPhase.values()[texture.celestial].getSerializedName();
             var s = atlas.getSprite(Identifier.withDefaultNamespace(sprite));
@@ -550,8 +483,7 @@ public final class Sky {
                 v.length / (stride * 4) * 4, u0, v0, u1, v1);
     }
 
-    private void drawVertices(RenderType type, VertexFormat.Mode mode, Texture texture, float r, float g, float b,
-                              float a,
+    private void drawVertices(RenderType type, VertexFormat.Mode mode, Texture texture, float r, float g, float b, float a,
                               float[] vertices, int stride, int count, float u0, float v0, float u1, float v1) {
         var matrix = pose.last().pose();
         var builder = Tesselator.getInstance().begin(mode,
@@ -561,8 +493,7 @@ public final class Sky {
             var vertex = builder.addVertex(matrix, vertices[offset], vertices[offset + 1], vertices[offset + 2]);
             if (texture != null) vertex.setUv(stride == 3 ? 0 : u0 + vertices[offset + 3] * (u1 - u0),
                     stride == 3 ? 0 : v0 + vertices[offset + 4] * (v1 - v0));
-            if (stride == 7)
-                vertex.setColor(vertices[offset + 3], vertices[offset + 4], vertices[offset + 5], vertices[offset + 6]);
+            if (stride == 7) vertex.setColor(vertices[offset + 3], vertices[offset + 4], vertices[offset + 5], vertices[offset + 6]);
             else vertex.setColor(r, g, b, a);
         }
         var mesh = builder.build();
@@ -594,7 +525,7 @@ public final class Sky {
         }
         if (texShader != null) return texShader;
         try {
-            texShader = ShaderLoader.load(net.minecraft.client.Minecraft.getInstance().getResourceManager(), TEX_SHADER,
+            texShader = ShaderLoader.load(Minecraft.getInstance().getResourceManager(), TEX_SHADER,
                     DefaultVertexFormat.POSITION_TEX_COLOR, () -> blend(texBlend));
         } catch (java.io.IOException e) {
             throw new IllegalStateException("Could not load shader " + TEX_SHADER, e);

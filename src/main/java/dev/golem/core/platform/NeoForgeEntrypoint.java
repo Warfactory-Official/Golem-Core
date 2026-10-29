@@ -56,9 +56,7 @@ public class NeoForgeEntrypoint {
                         (java.util.function.Supplier) value));
     }
 
-    /**
-     * Applies queued {@link ComponentPatches} when the loader builds item components.
-     */
+    /** Applies queued {@link ComponentPatches} when the loader builds item components. */
     private static void modifyComponents(
             ModifyDefaultComponentsEvent event) {
         for (var patch : ComponentPatches.all()) {
@@ -87,9 +85,7 @@ public class NeoForgeEntrypoint {
     }
     *///?}
 
-    /**
-     * @throws IllegalStateException if called before the mod is constructed.
-     */
+    /** @throws IllegalStateException if called before the mod is constructed. */
     public static IEventBus modBus() {
         if (modBus == null) throw new IllegalStateException("Golem Core's mod bus is not available yet");
         return modBus;

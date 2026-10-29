@@ -66,13 +66,13 @@ public final class GhostBlocks {
     private GhostBlocks() {}
 
     //? if >=26.1 {
-    private static final RenderPipeline PIPELINE = RenderPipeline.builder(RenderPipelines.ENTITY_EMISSIVE_SNIPPET)
+    private static final RenderPipeline PIPELINE = WorldPipelines.add(RenderPipeline.builder(RenderPipelines.ENTITY_EMISSIVE_SNIPPET)
             .withLocation("pipeline/golem_ghost_block")
             .withShaderDefine("ALPHA_CUTOUT", 0.1F)
             .withShaderDefine("NO_CARDINAL_LIGHTING")
             .withSampler("Sampler1")
             .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
-            .build();
+            .build());
 
     private static final RenderType TYPE = RenderType.create("golem_ghost_block",
             RenderSetup.builder(PIPELINE)

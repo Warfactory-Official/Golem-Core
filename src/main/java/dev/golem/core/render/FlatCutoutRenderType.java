@@ -39,7 +39,7 @@ public final class FlatCutoutRenderType {
     private FlatCutoutRenderType() {}
 
     //? if >=26.1 {
-    private static final RenderPipeline PIPELINE = RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
+    private static final RenderPipeline PIPELINE = WorldPipelines.add(RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
             .withLocation("pipeline/golem_flat_cutout")
             .withVertexShader("core/entity")
             .withFragmentShader("core/entity")
@@ -51,7 +51,7 @@ public final class FlatCutoutRenderType {
             .withVertexFormat(DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS)
             .withDepthStencilState(DepthStencilState.DEFAULT)
             .withCull(false)
-            .build();
+            .build());
 
     private static final Function<Identifier, RenderType> BY_TEXTURE = Util.memoize(texture ->
             RenderType.create("golem_flat_cutout", RenderSetup.builder(PIPELINE)
@@ -66,7 +66,7 @@ public final class FlatCutoutRenderType {
 
     // decal: the same, drawn with a depth bias toward the camera (vanilla's polygon-offset text), for a sheet laid
     // a hair in front of a surface - 1.7 put the RBMK numitron digits a thousandth of a block over the tube glass.
-    private static final RenderPipeline DECAL_PIPELINE = RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
+    private static final RenderPipeline DECAL_PIPELINE = WorldPipelines.add(RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
             .withLocation("pipeline/golem_flat_cutout_decal")
             .withVertexShader("core/entity")
             .withFragmentShader("core/entity")
@@ -78,7 +78,7 @@ public final class FlatCutoutRenderType {
             .withVertexFormat(DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS)
             .withDepthStencilState(new DepthStencilState(com.mojang.blaze3d.platform.CompareOp.LESS_THAN_OR_EQUAL, true, -1.0F, -10.0F))
             .withCull(false)
-            .build();
+            .build());
 
     private static final Function<Identifier, RenderType> DECAL_BY_TEXTURE = Util.memoize(texture ->
             RenderType.create("golem_flat_cutout_decal", RenderSetup.builder(DECAL_PIPELINE)
@@ -94,7 +94,7 @@ public final class FlatCutoutRenderType {
     // translucent: the same unlit, lightmapped sheet blended SRC_ALPHA / ONE_MINUS_SRC_ALPHA, back faces culled and
     // depth written - 1.12's first-person crucible blade (glColor alpha 0.7 through the vertex colour). The stock
     // translucent entity pipelines all define PER_FACE_LIGHTING or leave culling off.
-    private static final RenderPipeline TRANSLUCENT_CULL_PIPELINE = RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
+    private static final RenderPipeline TRANSLUCENT_CULL_PIPELINE = WorldPipelines.add(RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
             .withLocation("pipeline/golem_flat_translucent_cull")
             .withVertexShader("core/entity")
             .withFragmentShader("core/entity")
@@ -108,7 +108,7 @@ public final class FlatCutoutRenderType {
                     com.mojang.blaze3d.pipeline.BlendFunction.TRANSLUCENT))
             .withDepthStencilState(DepthStencilState.DEFAULT)
             .withCull(true)
-            .build();
+            .build());
 
     private static final Function<Identifier, RenderType> TRANSLUCENT_CULL_BY_TEXTURE = Util.memoize(texture ->
             RenderType.create("golem_flat_translucent_cull", RenderSetup.builder(TRANSLUCENT_CULL_PIPELINE)
@@ -123,7 +123,7 @@ public final class FlatCutoutRenderType {
 
     // translucent: unlit, lightmapped, blended SRC_ALPHA / ONE_MINUS_SRC_ALPHA, unculled, depth tested but not written -
     // a 1.12 particle or decal drawn with lighting off and depthMask(false) (1.12.2 ParticleBlood, ParticleDecal).
-    private static final RenderPipeline TRANSLUCENT_PIPELINE = RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
+    private static final RenderPipeline TRANSLUCENT_PIPELINE = WorldPipelines.add(RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
             .withLocation("pipeline/golem_flat_translucent")
             .withVertexShader("core/entity")
             .withFragmentShader("core/entity")
@@ -136,7 +136,7 @@ public final class FlatCutoutRenderType {
                     com.mojang.blaze3d.pipeline.BlendFunction.TRANSLUCENT))
             .withDepthStencilState(new DepthStencilState(DepthStencilState.DEFAULT.depthTest(), false))
             .withCull(false)
-            .build();
+            .build());
 
     private static final Function<Identifier, RenderType> TRANSLUCENT_BY_TEXTURE = Util.memoize(texture ->
             RenderType.create("golem_flat_translucent", RenderSetup.builder(TRANSLUCENT_PIPELINE)

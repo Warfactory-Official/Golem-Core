@@ -41,7 +41,7 @@ public final class EntityShaderRenderType {
         return TYPES.computeIfAbsent(shaderId + "\n" + texture + "\n" + extra, key -> {
             RenderPipeline pipeline = PIPELINES.computeIfAbsent(shaderId, id -> {
                 Identifier base = dev.golem.core.Ids.parse(id);
-                return RenderPipeline.builder(RenderPipelines.MATRICES_FOG_LIGHT_DIR_SNIPPET)
+                return WorldPipelines.add(RenderPipeline.builder(RenderPipelines.MATRICES_FOG_LIGHT_DIR_SNIPPET)
                         .withLocation(dev.golem.core.Ids.of(base.getNamespace(), "pipeline/" + base.getPath()))
                         .withVertexShader("core/entity")
                         .withFragmentShader(dev.golem.core.Ids.of(base.getNamespace(), "core/" + base.getPath()))
@@ -53,7 +53,7 @@ public final class EntityShaderRenderType {
                         .withVertexFormat(DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS)
                         .withDepthStencilState(DepthStencilState.DEFAULT)
                         .withCull(true)
-                        .build();
+                        .build());
             });
             return RenderType.create("golem_entity_shader", RenderSetup.builder(pipeline)
                     .withTexture("Sampler0", texture)

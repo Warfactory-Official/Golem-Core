@@ -35,7 +35,7 @@ final class AdditiveRenderType {
     private static final RenderType QUADS_DEPTH = create("golem_additive_depth", VertexFormat.Mode.QUADS, true);
 
     private static RenderType create(String name, VertexFormat.Mode mode, boolean depthWrite) {
-        RenderPipeline pipeline = RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
+        RenderPipeline pipeline = WorldPipelines.add(RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
                 .withLocation("pipeline/" + name)
                 .withVertexShader("core/rendertype_lightning")
                 .withFragmentShader("core/rendertype_lightning")
@@ -43,7 +43,7 @@ final class AdditiveRenderType {
                 .withColorTargetState(new ColorTargetState(BlendFunction.LIGHTNING))
                 .withDepthStencilState(new DepthStencilState(DepthStencilState.DEFAULT.depthTest(), depthWrite))
                 .withCull(false)
-                .build();
+                .build());
         return RenderType.create(name, RenderSetup.builder(pipeline).createRenderSetup());
     }
     //?} else {

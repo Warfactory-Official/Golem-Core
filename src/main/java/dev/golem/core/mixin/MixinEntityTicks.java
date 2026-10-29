@@ -20,5 +20,11 @@ public abstract class MixinEntityTicks {
     private void golem$entityTicked(Entity entity, CallbackInfo callback) {
         EntityTicks.ticked(entity);
     }
+
+    @Inject(method = "tickPassenger", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/entity/Entity;rideTick()V", shift = At.Shift.AFTER))
+    private void golem$passengerTicked(Entity vehicle, Entity passenger, CallbackInfo callback) {
+        EntityTicks.ticked(passenger);
+    }
     *///?}
 }

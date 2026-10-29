@@ -3,6 +3,9 @@ package dev.golem.core.client;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
+import java.lang.invoke.WrongMethodTypeException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Whether a shader pack is rendering the world: Iris (Fabric and NeoForge), or Oculus, its Forge 1.20.1 port. Both
@@ -13,9 +16,11 @@ import java.lang.invoke.MethodType;
  * dev.golem.core.render.WorldEffects} screen-space draws) are painted over by its final pass, and entity renderers
  * run a second time in its shadow pass. {@link dev.golem.core.render.WorldEffects} asks here to draw after the pack's
  * final pass and to ignore shadow-pass submissions. Neither mod is a dependency: the API is reached through its public
- * methods only, and with neither installed both answers are {@code false}.
+ * methods, and with neither installed both answers are {@code false}. {@link #bindWorldTarget} alone reaches Iris
+ * internals, as the public API has no way to bind the pack's gbuffer.
  */
 public final class ShaderPacks {
+    private static final Logger LOG = LoggerFactory.getLogger("Golem Core");
     private static final MethodHandle GET_INSTANCE;
     private static final MethodHandle IN_USE;
     private static final MethodHandle SHADOW_PASS;
@@ -38,39 +43,44 @@ public final class ShaderPacks {
         SHADOW_PASS = shadowPass;
     }
 
-    private ShaderPacks() {
-    }
+    private ShaderPacks() {}
 
-    /**
-     * Writes native world geometry into the pack's current gbuffer, before its composite passes.
-     */
+    private static boolean worldTargetResolved;
+    private static MethodHandle currentPipeline;
+    private static MethodHandle bindDefault;
+    private static Class<?> irisPipeline;
+
+    /** Writes native world geometry into the pack's current gbuffer, before its composite passes. Render thread. */
     public static void bindWorldTarget() {
+        if (!worldTargetResolved) {
+            worldTargetResolved = true;
+            resolveWorldTarget();
+        }
+        if (bindDefault == null) return;
         try {
-            Object pipeline = WorldTarget.CURRENT.invokeExact();
-            WorldTarget.BIND.invokeExact(pipeline);
+            Object pipeline = currentPipeline.invokeExact();
+            if (irisPipeline.isInstance(pipeline)) bindDefault.invokeExact(pipeline);
         } catch (Throwable failure) {
-            throw new IllegalStateException("Cannot bind the active Iris world target", failure);
+            bindDefault = null;
+            LOG.warn("Cannot bind the Iris world target; native world effects keep the current target", failure);
         }
     }
 
-    private static final class WorldTarget {
-        static final MethodHandle CURRENT;
-        static final MethodHandle BIND;
-
-        static {
-            try {
-                var lookup = MethodHandles.publicLookup();
-                var iris = Class.forName("net.irisshaders.iris.Iris");
-                var manager = iris.getMethod("getPipelineManager");
-                var current = manager.getReturnType().getMethod("getPipelineNullable");
-                CURRENT = MethodHandles.filterReturnValue(lookup.unreflect(manager), lookup.unreflect(current))
-                                       .asType(MethodType.methodType(Object.class));
-                BIND = lookup.unreflect(Class.forName("net.irisshaders.iris.pipeline.IrisRenderingPipeline")
-                                             .getMethod("bindDefault"))
-                             .asType(MethodType.methodType(void.class, Object.class));
-            } catch (ReflectiveOperationException failure) {
-                throw new ExceptionInInitializerError(failure);
-            }
+    private static void resolveWorldTarget() {
+        try {
+            var lookup = MethodHandles.publicLookup();
+            var manager = Class.forName("net.irisshaders.iris.Iris").getMethod("getPipelineManager");
+            var current = manager.getReturnType().getMethod("getPipelineNullable");
+            var pipelineClass = Class.forName("net.irisshaders.iris.pipeline.IrisRenderingPipeline");
+            currentPipeline = MethodHandles.filterReturnValue(lookup.unreflect(manager), lookup.unreflect(current))
+                    .asType(MethodType.methodType(Object.class));
+            bindDefault = lookup.unreflect(pipelineClass.getMethod("bindDefault"))
+                    .asType(MethodType.methodType(void.class, Object.class));
+            irisPipeline = pipelineClass;
+        } catch (ReflectiveOperationException | LinkageError | WrongMethodTypeException
+                 | IllegalArgumentException failure) {
+            bindDefault = null;
+            LOG.warn("Iris has no world target to bind; native world effects keep the current target", failure);
         }
     }
 
@@ -87,9 +97,7 @@ public final class ShaderPacks {
         }
     }
 
-    /**
-     * True while Iris or Oculus has a shader pack enabled.
-     */
+    /** True while Iris or Oculus has a shader pack enabled. */
     public static boolean inUse() {
         if (IN_USE == null) return false;
         try {

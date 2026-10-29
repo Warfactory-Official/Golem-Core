@@ -5,7 +5,7 @@
   "refmap": "golemcore.refmap.json",
   "compatibilityLevel": "${mixin_compatibility}",
   "mixins": [
-    "MixinHarnessServerClock"
+    "MixinGameTestDimensions"${harness_clock_mixins}
   ],
   "client": [
     "MixinHarnessWindow",
@@ -15,8 +15,7 @@
     "HarnessCreateWorldScreenAccessor",
     "HarnessContainerScreenAccessor",
     "MixinHarnessClientClock",
-    "MixinHarnessFramerate",
-    "MixinHarnessFrames"${render_validation_mixins}${client_gametest_mixins}
+    "MixinHarnessFramerate"${harness_frame_mixins}${render_validation_mixins}${client_gametest_mixins}
   ],
   "injectors": {
     "defaultRequire": 1

@@ -11,8 +11,7 @@ import java.util.List;
  */
 public final class Fixtures {
 
-    private Fixtures() {
-    }
+    private Fixtures() {}
 
     /**
      * Force-loads and builds a flat stone platform centred on {@code (x, y, z)} with {@code radius},
@@ -50,9 +49,7 @@ public final class Fixtures {
         Expect.block(c, x, y, z, block);
     }
 
-    /**
-     * Fills an ordered cuboid in batches within vanilla's default 32,768-block limit.
-     */
+    /** Fills an ordered cuboid in batches within vanilla's default 32,768-block limit. */
     public static void fill(Client c, int x1, int y1, int z1, int x2, int y2, int z2, String block) {
         int width = x2 - x1 + 1, height = y2 - y1 + 1, depth = z2 - z1 + 1;
         if ((long) width * height * depth <= 32_768) {
@@ -72,9 +69,7 @@ public final class Fixtures {
         }
     }
 
-    /**
-     * Waits for matching light and rebuilt sections; the first air sample must be fully sunlit.
-     */
+    /** Waits for matching light and rebuilt sections; the first air sample must be fully sunlit. */
     public static void waitForSkylight(Client c, int[]... positions) {
         long deadline = System.nanoTime() + 30_000_000_000L;
         List<String> samples;
@@ -106,9 +101,7 @@ public final class Fixtures {
         throw new AssertionError("Scene lighting not ready: sectionsBuilt=" + sectionsBuilt + ", samples=" + samples);
     }
 
-    /**
-     * Gives one stack and lets the inventory update reach the client.
-     */
+    /** Gives one stack and lets the inventory update reach the client. */
     public static void give(Client c, String itemId, int count) {
         c.cmd("give @s " + itemId + " " + count);
         c.waitTicks(2);
@@ -158,9 +151,7 @@ public final class Fixtures {
         c.waitTicks(3);
     }
 
-    /**
-     * Waits for vanilla's crosshair pick to catch up with an aimed block.
-     */
+    /** Waits for vanilla's crosshair pick to catch up with an aimed block. */
     public static void waitForTarget(Client c, int x, int y, int z) {
         long deadline = System.nanoTime() + 5_000_000_000L;
         JsonObject player;
@@ -174,10 +165,7 @@ public final class Fixtures {
         } while (System.nanoTime() < deadline);
         throw new AssertionError("Crosshair did not reach " + x + "," + y + "," + z + ": " + player);
     }
-
-    /**
-     * Places a structure template published from {@code harness/fixtures/<name>.nbt}.
-     */
+    /** Places a structure template published from {@code harness/fixtures/<name>.nbt}. */
     public static void template(Client c, String name, int x, int y, int z) {
         c.cmd("place template harness:" + name + " " + x + " " + y + " " + z);
         c.waitTicks(2);

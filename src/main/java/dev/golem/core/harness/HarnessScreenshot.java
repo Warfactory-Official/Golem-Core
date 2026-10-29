@@ -20,20 +20,14 @@ final class HarnessScreenshot {
     private static int framesToSkip;
     private static long completedFrames;
 
-    private HarnessScreenshot() {
-    }
+    private HarnessScreenshot() {}
 
-    /**
-     * Completes after vanilla has rendered the changed view and refreshed its crosshair pick.
-     */
+    /** Completes after vanilla has rendered the changed view and refreshed its crosshair pick. */
     static HarnessServer.Pending afterFrame(JsonObject answer) {
         long previous = completedFrames;
         return minecraft -> completedFrames > previous ? answer : null;
     }
-
-    /**
-     * Queues a capture; the returned pending completes when the PNG is written.
-     */
+    /** Queues a capture; the returned pending completes when the PNG is written. */
     static HarnessServer.Pending request(Path path, int skipFrames) {
         pending = path;
         result = null;
@@ -41,9 +35,7 @@ final class HarnessScreenshot {
         return minecraft -> result;
     }
 
-    /**
-     * Called after GameRenderer.render, including its screen pass.
-     */
+    /** Called after GameRenderer.render, including its screen pass. */
     static void completedFrame() {
         completedFrames++;
         if (pending == null) return;

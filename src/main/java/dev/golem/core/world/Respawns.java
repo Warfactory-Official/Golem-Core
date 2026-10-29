@@ -9,7 +9,8 @@ import net.minecraft.world.level.Level;
 import org.jspecify.annotations.Nullable;
 
 /**
- * A provider may choose a respawn transition before vanilla consumes or rejects the stored spawn block.
+ * A provider may choose a respawn before vanilla consumes or rejects the stored spawn block. A WorldSpawn faces that
+ * level's world spawn angle on every path.
  */
 public final class Respawns {
     public record Point(ResourceKey<Level> dimension, BlockPos pos) {
@@ -30,13 +31,9 @@ public final class Respawns {
         @Nullable Destination destination(ServerPlayer player);
     }
 
-    /**
-     * The first destination wins; null retains vanilla's spawn-block lookup.
-     */
+    /** The first destination wins and skips the lookup, keeping the saved point; null keeps vanilla's lookup. */
     public static final Hook<Rule> RULES = rules();
-    /**
-     * Selects the world spawn only after vanilla rejects the stored spawn block.
-     */
+    /** Asked only after a stored point's block is rejected, never without one; the saved point is cleared. */
     public static final Hook<Rule> FALLBACKS = rules();
 
     private static Hook<Rule> rules() {

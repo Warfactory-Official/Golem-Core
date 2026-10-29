@@ -1,7 +1,6 @@
 package dev.golem.core.dejson;
 
 import dev.golem.core.render.ColorRamp;
-
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -13,28 +12,19 @@ import java.util.List;
 import java.util.Map;
 import javax.imageio.ImageIO;
 
-/**
- * Build-time sprite remaps, emitted as ordinary PNG resources alongside the declared models.
- */
+/** Build-time sprite remaps, emitted as ordinary PNG resources alongside the declared models. */
 public final class Textures {
-    private record Remap(String source, ColorRamp ramp) {
-    }
-
+    private record Remap(String source, ColorRamp ramp) {}
     private static final Map<String, Remap> REMAPS = new LinkedHashMap<>();
 
     private Textures() {
     }
-
-    /**
-     * The same per-channel interpolation used by load-time atlas remaps.
-     */
+    /** The same per-channel interpolation used by load-time atlas remaps. */
     public static void remap(String target, String source, int light, int dark) {
         declare(target, source, ColorRamp.of(light, dark));
     }
 
-    /**
-     * Publishes the unchanged source pixels under another sprite id.
-     */
+    /** Publishes the unchanged source pixels under another sprite id. */
     public static void copy(String target, String source) {
         declare(target, source, new ColorRamp(0xFFFFFF, 0, 0xFFFFFF, 0));
     }
@@ -116,10 +106,7 @@ public final class Textures {
                 var differs = false;
                 for (var y = 0; y < expected.getHeight() && !differs; y++) {
                     for (var x = 0; x < expected.getWidth(); x++) {
-                        if (actual.getRGB(x, y) != expected.getRGB(x, y)) {
-                            differs = true;
-                            break;
-                        }
+                        if (actual.getRGB(x, y) != expected.getRGB(x, y)) { differs = true; break; }
                     }
                 }
                 if (differs) mismatches.add(new DejsonWriter.Mismatch(relative, "PNG pixels differ"));
@@ -130,7 +117,5 @@ public final class Textures {
         return mismatches;
     }
 
-    static void reset() {
-        REMAPS.clear();
-    }
+    static void reset() { REMAPS.clear(); }
 }

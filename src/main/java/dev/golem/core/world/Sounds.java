@@ -10,7 +10,7 @@ import net.minecraft.network.protocol.game.ClientboundSoundPacket;
 import net.minecraft.resources.Identifier;
 //?} else {
 /*import net.minecraft.resources.ResourceLocation;
- *///?}
+*///?}
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.server.level.ServerLevel;
@@ -19,31 +19,26 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.phys.Vec3;
 
-/**
- * Sound registry lookup and public entity vibrations across the registry and game-event APIs.
- */
+/** Sound registry lookup and public entity vibrations across the registry and game-event APIs. */
 public final class Sounds {
 
-    private Sounds() {
-    }
+    private Sounds() {}
 
     public static SoundEvent get(
             //? if >=26.1 {
             Identifier
-                    //?} else {
-                    /*ResourceLocation
-                     *///?}
-                    id) {
+            //?} else {
+            /*ResourceLocation
+            *///?}
+            id) {
         //? if >=26.1 {
         return net.minecraft.core.registries.BuiltInRegistries.SOUND_EVENT.getValue(id);
         //?} else {
         /*return net.minecraft.core.registries.BuiltInRegistries.SOUND_EVENT.get(id);
-         *///?}
+        *///?}
     }
 
-    /**
-     * Public equipment noise: ENTITY_ACTION replaced the frequency-four ENTITY_ROAR event after 1.20.1.
-     */
+    /** Public equipment noise: ENTITY_ACTION replaced the frequency-four ENTITY_ROAR event after 1.20.1. */
     public static void entityNoise(Entity source, double x, double y, double z, float volume) {
         if (volume > 0F && source.level() instanceof ServerLevel server) {
             server.gameEvent(
@@ -51,7 +46,7 @@ public final class Sounds {
                     GameEvent.ENTITY_ACTION,
                     //?} else {
                     /*GameEvent.ENTITY_ROAR,
-                     *///?}
+                    *///?}
                     new Vec3(x, y, z), GameEvent.Context.of(source));
         }
     }
@@ -60,9 +55,7 @@ public final class Sounds {
         return get(Ids.minecraft(path));
     }
 
-    /**
-     * Observers hear the position; an emitting player hears the sound attached to its own entity.
-     */
+    /** Observers hear the position; an emitting player hears the sound attached to its own entity. */
     public static void playFrom(Entity emitter, double x, double y, double z, SoundEvent event,
                                 SoundSource source, float volume, float pitch) {
         if (!(emitter instanceof ServerPlayer player)) {

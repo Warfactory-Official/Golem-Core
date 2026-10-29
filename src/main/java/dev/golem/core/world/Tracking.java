@@ -5,9 +5,7 @@ import java.util.function.BiConsumer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 
-/**
- * Initial state sent when an observer starts tracking an entity.
- */
+/** Initial state sent when an observer starts tracking an entity. */
 public final class Tracking {
     private Tracking() {
     }

@@ -21,9 +21,7 @@ import dev.golem.core.registry.ComponentPatches;
 import net.minecraft.core.component.DataComponents;
 //?}
 
-/**
- * Item-definition aliases retain lazy handles until the registry and client models are available.
- */
+/** Item-definition aliases retain lazy handles until the registry and client models are available. */
 public final class ItemModels {
     private record Alias(Supplier<? extends ItemLike> item, String namespace, String path) {
     }

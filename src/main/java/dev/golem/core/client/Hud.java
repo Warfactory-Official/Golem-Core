@@ -1,5 +1,6 @@
 package dev.golem.core.client;
 
+import dev.golem.core.Ids;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -7,16 +8,12 @@ import java.util.function.Consumer;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 //?} else {
 /*import net.minecraft.client.gui.GuiGraphics;
- *///?}
+*///?}
 
-/**
- * Client HUD layers share draw order and depth composition while leaving chat above screen effects.
- */
+/** Client HUD layers share draw order and depth composition while leaving chat above screen effects. */
 public final class Hud {
 
-    private Hud() {
-    }
-
+    private Hud() {}
     //? if fabric && <26.1 {
     /*private static final List<Consumer<GuiGraphics>> BEFORE_CHAT = new ArrayList<>();
 
@@ -27,9 +24,7 @@ public final class Hud {
 
     //? if >=26.1 {
 
-    /**
-     * Draws a screen effect over the HUD while keeping chat and its backdrop readable above it.
-     */
+    /** Draws a screen effect over the HUD while keeping chat and its backdrop readable above it. */
     public static void addBeforeChat(String namespace, String path, Consumer<GuiGraphicsExtractor> renderer) {
         //?} else {
         /*public static void addBeforeChat(String namespace, String path, Consumer<GuiGraphics> renderer) {
@@ -37,14 +32,14 @@ public final class Hud {
         //? if fabric && >=26.1 {
         /*net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.attachElementBefore(
                 net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements.CHAT,
-                dev.golem.core.Ids.of(namespace, path), (graphics, _) -> renderer.accept(graphics));
+                Ids.of(namespace, path), (graphics, _) -> renderer.accept(graphics));
         *///?} elif fabric {
         /*BEFORE_CHAT.add(renderer);
          *///?} elif neoforge {
         dev.golem.core.platform.NeoForgeEntrypoint.modBus().addListener(
                 (net.neoforged.neoforge.client.event.RegisterGuiLayersEvent event) ->
                         event.registerBelow(net.neoforged.neoforge.client.gui.VanillaGuiLayers.CHAT,
-                                dev.golem.core.Ids.of(namespace, path),
+                                Ids.of(namespace, path),
                                 (graphics, deltaTracker) -> draw(graphics, renderer)));
         //?} elif forge {
         /*dev.golem.core.platform.ForgeEntrypoint.modBus().addListener(
@@ -55,18 +50,15 @@ public final class Hud {
     }
 
     //? if >=26.1 {
-
-    /**
-     * Registers an overlay drawn after the vanilla HUD.
-     */
+    /** Registers an overlay drawn after the vanilla HUD. */
     public static void addLast(String namespace, String path, Consumer<GuiGraphicsExtractor> renderer) {
-        //?} else {
+    //?} else {
     /*/^* Registers an overlay drawn after the vanilla HUD. ^/
     public static void addLast(String namespace, String path, Consumer<GuiGraphics> renderer) {
     *///?}
         //? if fabric && >=26.1 {
         /*net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.addLast(
-                dev.golem.core.Ids.of(namespace, path), (graphics, deltaTracker) -> renderer.accept(graphics));
+                Ids.of(namespace, path), (graphics, deltaTracker) -> renderer.accept(graphics));
         *///?} elif fabric {
         /*// Pre-26.1 fabric-api has one unnamed callback; the id is accepted and ignored.
         net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback.EVENT.register(
@@ -74,7 +66,7 @@ public final class Hud {
         *///?} elif neoforge {
         dev.golem.core.platform.NeoForgeEntrypoint.modBus().addListener(
                 (net.neoforged.neoforge.client.event.RegisterGuiLayersEvent event) ->
-                        event.registerAboveAll(dev.golem.core.Ids.of(namespace, path),
+                        event.registerAboveAll(Ids.of(namespace, path),
                                 (graphics, deltaTracker) -> renderer.accept(graphics)));
         //?} elif forge {
         /*// One named layer above every vanilla overlay. (RenderGuiOverlayEvent.Post, used here before, fires

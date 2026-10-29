@@ -10,7 +10,8 @@ import com.mojang.blaze3d.platform.FramerateLimitTracker;
 //?}
 
 /**
- * No loader API bypasses vanilla's inactivity frame cap; widening cannot change the computed limit.
+ * Raises the frame limit so paced ticks are not starved: 26.1 caps unfocused and idle windows, older nodes the
+ * player's option. No loader API changes either, and this config is stripped from release jars.
  */
 //? if >=26.1 {
 @Mixin(FramerateLimitTracker.class)

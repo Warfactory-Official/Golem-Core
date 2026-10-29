@@ -15,7 +15,10 @@ import net.minecraft.world.attribute.EnvironmentAttributes;
 //?}
 
 /**
- * Adds live world rules after vanilla's dimension, biome, timeline and weather attribute layers.
+ * Live world rules. Each rule gets vanilla's answer at the block and returns the one to use. On 26.1 they are
+ * attribute layers after the dimension, biome, timeline and weather layers. Before 26.1 a bed's base is the
+ * dimension's natural() (bedWorks for a saved bed), sleep also needs night and burning gets Level.isDay().
+ * Either bed rule opens a bed the base keeps shut.
  */
 public final class WorldAttributes {
     private WorldAttributes() {
@@ -26,16 +29,20 @@ public final class WorldAttributes {
         boolean apply(Level level, BlockPos pos, boolean value);
     }
 
+    /** Whether a bed may be slept in now, also asked each tick to keep a sleeper asleep. */
     public static final Hook<Rule> BED_SLEEP = rules();
+    /** Whether a bed sets the spawn point, and at respawn whether a saved bed still works: false clears it. */
     public static final Hook<Rule> BED_SPAWN = rules();
+    /** Whether daylight burns a sun-sensitive mob here, asked before the burn roll. */
     public static final Hook<Rule> MONSTERS_BURN = rules();
 
     static {
         //? if fabric && <26.1 {
         /*net.fabricmc.fabric.api.entity.event.v1.EntitySleepEvents.ALLOW_SETTING_SPAWN.register((player, pos) ->
-                BED_SPAWN.invoker().apply(player.level(), pos, true));
+                BED_SPAWN.invoker().apply(player.level(), pos, player.level().dimensionType().natural()));
         net.fabricmc.fabric.api.entity.event.v1.EntitySleepEvents.ALLOW_SLEEP_TIME.register((player, pos, vanilla) -> {
-            boolean allowed = BED_SLEEP.invoker().apply(player.level(), pos, vanilla);
+            var level = player.level();
+            boolean allowed = BED_SLEEP.invoker().apply(level, pos, level.dimensionType().natural() && vanilla);
             return allowed == vanilla ? InteractionResult.PASS : allowed ? InteractionResult.SUCCESS : InteractionResult.FAIL;
         });
         *///?} elif neoforge && <26.1 {
@@ -43,8 +50,29 @@ public final class WorldAttributes {
                 (net.neoforged.neoforge.event.entity.player.CanPlayerSleepEvent event) -> {
                     var problem = event.getProblem();
                     if (problem != null && problem != Player.BedSleepingProblem.NOT_POSSIBLE_NOW) return;
-                    boolean allowed = BED_SLEEP.invoker().apply(event.getLevel(), event.getPos(), problem == null);
+                    var level = event.getLevel();
+                    boolean allowed = BED_SLEEP.invoker().apply(level, event.getPos(),
+                            level.dimensionType().natural() && problem == null);
                     event.setProblem(allowed ? null : Player.BedSleepingProblem.NOT_POSSIBLE_NOW);
+                    if (!allowed || problem == null || event.getEntity().isCreative()) return;
+                    // vanilla returned at its time check, before the monster check a night sleep would run
+                    var centre = net.minecraft.world.phys.Vec3.atBottomCenterOf(event.getPos());
+                    var box = new net.minecraft.world.phys.AABB(centre.x - 8.0, centre.y - 5.0, centre.z - 8.0,
+                            centre.x + 8.0, centre.y + 5.0, centre.z + 8.0);
+                    if (!level.getEntitiesOfClass(net.minecraft.world.entity.monster.Monster.class, box,
+                            monster -> monster.isPreventingPlayerRest(event.getEntity())).isEmpty())
+                        event.setProblem(Player.BedSleepingProblem.NOT_SAFE);
+                });
+        // Player.tick wakes a sleeper through this event, so the same rule keeps them asleep.
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.event.entity.player.CanContinueSleepingEvent event) -> {
+                    var problem = event.getProblem();
+                    if (!(event.getEntity() instanceof Player player)
+                            || problem != null && problem != Player.BedSleepingProblem.NOT_POSSIBLE_NOW) return;
+                    var pos = player.getSleepingPos().orElse(player.blockPosition());
+                    boolean allowed = BED_SLEEP.invoker().apply(player.level(), pos,
+                            player.level().dimensionType().natural() && problem == null);
+                    if (allowed != (problem == null)) event.setContinueSleeping(allowed);
                 });
         *///?} elif forge {
         /*net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(
@@ -73,8 +101,6 @@ public final class WorldAttributes {
     public static final Hook<BiConsumer<Level, EnvironmentAttributeSystem.Builder>> LAYERS = Hook.notifying();
 
     public static void apply(Level level, EnvironmentAttributeSystem.Builder attributes) {
-        attributes.addPositionalLayer(EnvironmentAttributes.WATER_EVAPORATES,
-                (vanilla, pos, _) -> Evaporation.water(level, BlockPos.containing(pos), vanilla));
         attributes.addPositionalLayer(EnvironmentAttributes.MONSTERS_BURN,
                 (vanilla, pos, _) -> MONSTERS_BURN.invoker().apply(level, BlockPos.containing(pos), vanilla));
         attributes.addPositionalLayer(EnvironmentAttributes.BED_RULE, (rule, pos, _) -> {

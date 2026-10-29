@@ -194,6 +194,10 @@ tasks.processResources {
         "mixin_compatibility" to if (javaVersion <= 17) "JAVA_17" else "JAVA_21",
         "legacy_item_owner_mixins" to if (mcVersion.substringBefore('.').toInt() < 26)
             ", \"MixinItemRenderer\"" else "",
+        // EntityTicks: NeoForge posts EntityTickEvent.Post itself.
+        "entity_tick_mixins" to "",
+        // Respawns: 1.21+ picks the point in ServerPlayer (MixinRespawnSelection).
+        "legacy_respawn_mixins" to "",
         "physics_mixins" to "",
         // dev.golem.core.gametest.TestChunks: a 26.1 test waits until its whole plot is entity-ticking.
         "gametest_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinGameTestChunks\"" else "",
@@ -206,11 +210,15 @@ tasks.processResources {
         "glider_client_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) "" else ", \"MixinGliderClientStart\"",
         // SlotSync: from 26.1 the client echoes server slot pushes from the creative screen.
         "creative_echo_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinCreativeEchoPush\", \"MixinCreativeEchoListener\"" else "",
-        "world_effect_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinWorldEffects\"" else "",
-        // Skies.Modifier: 26.1 appends environment-attribute layers; older nodes wrap the sky darkening and the
-        // client colour getters (the mixin classes are empty stubs on the other era).
+        "world_effect_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinWorldEffects\", \"MixinNativeWorldTarget\"" else "",
+        // Dev-only, listed in the harness mixin config that releaseJar strips.
         "client_gametest_mixins" to "",
         "render_validation_mixins" to "",
+        // 1.21 paces the server through its tick-rate manager; NeoForge posts RenderFrameEvent.Post.
+        "harness_clock_mixins" to "",
+        "harness_frame_mixins" to "",
+        // Skies.Modifier: 26.1 appends environment-attribute layers; older nodes wrap the sky darkening and the
+        // client colour getters (the mixin classes are empty stubs on the other era).
         "sky_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinEnvironmentSkyLayers\"" else ", \"MixinLevelSkyDarken\"",
         "sky_client_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) "" else
             ", \"MixinClientLevelSky\", \"MixinDimensionEffectsSky\", \"MixinOverworldFogColor\"",
@@ -345,6 +353,7 @@ tasks.test {
 
 // The uploaded copy of this node's jar, without the test harness.
 apply(from = rootProject.file("gradle/release-jar.gradle.kts"))
+apply(from = rootProject.file("gradle/mod/mixin-validation.gradle.kts"))
 
 // Credits and links in the loader metadata, from the mod.* properties.
 apply(from = rootProject.file("gradle/mod/mod-metadata.gradle.kts"))

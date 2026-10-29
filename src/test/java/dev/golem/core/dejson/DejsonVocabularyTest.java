@@ -5,13 +5,13 @@ import com.google.gson.JsonParser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * Every shape in the vocabulary must write exactly the file it replaces.
- */
+/** Every shape in the vocabulary must write exactly the file it replaces. */
 class DejsonVocabularyTest {
 
     @BeforeEach
@@ -26,7 +26,7 @@ class DejsonVocabularyTest {
     @Test
     void resultComponentsMayBeStrings() {
         Crafting.componentShaped("hbm", "cart_test", Crafting.stack("hbm:cart_empty").with("hbm:cart_base", "steel")
-                                                             .with("hbm:item_variant", 2),
+                        .with("hbm:item_variant", 2),
                 Crafting.rows("P"), Crafting.key("P", Crafting.item("hbm:plate_steel")));
         JsonObject recipe = DejsonWriter.files().get("data/hbm/recipe/cart_test.json");
         JsonObject components = recipe.getAsJsonObject("result").getAsJsonObject("components");
@@ -38,15 +38,10 @@ class DejsonVocabularyTest {
     @Test
     void elementGeometryKeepsIntegersAndFaceDetail() {
         Dejson.model("hbm:block/pipe_anchor_down", Model.parent("minecraft:block/block")
-                                                        .ambientOcclusion(false)
-                                                        .textures(Slots.of("all", "hbm:blocks/pipe_anchor", "particle",
-                                                                "hbm:blocks/pipe_anchor"))
-                                                        .elements(Model.Element.box(6, 0, 6, 10, 16.5, 10)
-                                                                               .rotation(8, 8, 8, "y", 22.5, true)
-                                                                               .face(Model.Face.of("north", "#all")
-                                                                                               .uv(6, 0, 10, 16)
-                                                                                               .cullface("north")
-                                                                                               .rotation(90))));
+                .ambientOcclusion(false)
+                .textures(Slots.of("all", "hbm:blocks/pipe_anchor", "particle", "hbm:blocks/pipe_anchor"))
+                .elements(Model.Element.box(6, 0, 6, 10, 16.5, 10).rotation(8, 8, 8, "y", 22.5, true)
+                        .face(Model.Face.of("north", "#all").uv(6, 0, 10, 16).cullface("north").rotation(90))));
         JsonObject model = DejsonWriter.files().get("assets/hbm/models/block/pipe_anchor_down.json");
         assertEquals(json("{'parent':'minecraft:block/block','ambientocclusion':false,"
                 + "'textures':{'all':'hbm:blocks/pipe_anchor','particle':'hbm:blocks/pipe_anchor'},"
@@ -54,32 +49,32 @@ class DejsonVocabularyTest {
                 + "'rotation':{'origin':[8,8,8],'axis':'y','angle':22.5,'rescale':true},"
                 + "'faces':{'north':{'uv':[6,0,10,16],'texture':'#all','cullface':'north','rotation':90}}}]}"), model);
         assertTrue(model.getAsJsonArray("elements").get(0).getAsJsonObject().getAsJsonArray("from").get(0)
-                        .getAsJsonPrimitive().getAsNumber() instanceof Integer);
+                .getAsJsonPrimitive().getAsNumber() instanceof Integer);
         assertTrue(Dejson.sprites().contains("hbm:blocks/pipe_anchor"));
     }
 
     @Test
     void multipartAndVariantFilesAreWrittenUnderBlockstates() {
         States.multipart("hbm", "fence_metal")
-              .part(new Variant("hbm:block/fence_metal_post"))
-              .part(When.or(When.of("north", "true"), When.of("south", "true")),
-                      new Variant("hbm:block/fence_metal_side", 0, 90, true))
-              .register();
+                .part(new Variant("hbm:block/fence_metal_post"))
+                .part(When.or(When.of("north", "true"), When.of("south", "true")),
+                        new Variant("hbm:block/fence_metal_side", 0, 90, true))
+                .register();
         assertEquals(json("{'multipart':[{'apply':{'model':'hbm:block/fence_metal_post'}},"
                         + "{'when':{'OR':[{'north':'true'},{'south':'true'}]},"
                         + "'apply':{'model':'hbm:block/fence_metal_side','y':90,'uvlock':true}}]}"),
                 DejsonWriter.files().get("assets/hbm/blockstates/fence_metal.json"));
         assertThrows(DejsonException.class, () -> States.variants("hbm", "fence_metal")
-                                                        .variant("", new Variant("hbm:block/x")).register());
+                .variant("", new Variant("hbm:block/x")).register());
     }
 
     @Test
     void anItemDefinitionTreeIsEmittedWithTheOversizedFlag() {
         Dejson.item("hbm", "machine_press")
-              .definition(ItemModels.special("hbm:item/machine_obj_base",
-                      ItemModels.custom("hbm:machine_obj").with("obj", "hbm:models/press.obj").with("yaw", 90)))
-              .oversizedInGui()
-              .register();
+                .definition(ItemModels.special("hbm:item/machine_obj_base",
+                        ItemModels.custom("hbm:machine_obj").with("obj", "hbm:models/press.obj").with("yaw", 90)))
+                .oversizedInGui()
+                .register();
         assertEquals(json("{'model':{'type':'minecraft:special','base':'hbm:item/machine_obj_base',"
                         + "'model':{'type':'hbm:machine_obj','obj':'hbm:models/press.obj','yaw':90}},"
                         + "'oversized_in_gui':true}"),
@@ -94,14 +89,13 @@ class DejsonVocabularyTest {
         Atlases.directories("minecraft", "blocks", "blocks", "blocks/");
         DataMaps.furnaceFuels().burnTime("hbm:lignite", 1200).register();
         Biomes.biome("hbm", "crater").downfall(0.0).precipitation(false).sky(0x525A52)
-              .spawn(Biomes.MONSTER, "minecraft:witch", 5, 1, 1).register();
+                .spawn(Biomes.MONSTER, "minecraft:witch", 5, 1, 1).register();
 
         assertEquals(json("{'replace':false,'values':[]}"),
                 DejsonWriter.files().get("data/hbm/tags/item/repairs/cobalt.json"));
         assertEquals(json("{'replace':false,'values':['minecraft:chest',{'id':'hbm:crate_iron','required':false}]}"),
                 DejsonWriter.files().get("data/hbm/tags/block/fbi_breakable.json"));
-        assertEquals(
-                json("{'layers':{'humanoid':[{'texture':'hbm:steel'}],'humanoid_leggings':[{'texture':'hbm:steel'}]}}"),
+        assertEquals(json("{'layers':{'humanoid':[{'texture':'hbm:steel'}],'humanoid_leggings':[{'texture':'hbm:steel'}]}}"),
                 DejsonWriter.files().get("assets/hbm/equipment/steel.json"));
         assertEquals(json("{'sources':[{'type':'minecraft:directory','source':'blocks','prefix':'blocks/'}]}"),
                 DejsonWriter.files().get("assets/minecraft/atlases/blocks.json"));
@@ -119,12 +113,23 @@ class DejsonVocabularyTest {
         Drops.stacks("hbm", "zirnox_destroyed", "hbm:concrete_smooth", 6);
         JsonObject door = DejsonWriter.files().get("data/hbm/loot_table/blocks/door_metal.json");
         JsonObject entry = door.getAsJsonArray("pools").get(0).getAsJsonObject().getAsJsonArray("entries").get(0)
-                               .getAsJsonObject();
+                .getAsJsonObject();
         assertEquals("lower", entry.getAsJsonArray("conditions").get(0).getAsJsonObject()
-                                   .getAsJsonObject("properties").get("half").getAsString());
+                .getAsJsonObject("properties").get("half").getAsString());
         JsonObject wreck = DejsonWriter.files().get("data/hbm/loot_table/blocks/zirnox_destroyed.json");
         assertEquals(6, wreck.getAsJsonArray("pools").get(0).getAsJsonObject().getAsJsonArray("entries").get(0)
-                             .getAsJsonObject().getAsJsonArray("functions").get(0).getAsJsonObject().get("count")
-                             .getAsInt());
+                .getAsJsonObject().getAsJsonArray("functions").get(0).getAsJsonObject().get("count").getAsInt());
+    }
+
+    @Test
+    void featureModifierExcludesATag() {
+        BiomeModifiers.addFeatures("hbm", "tfc_test", "#hbm:has_feature/tfc_test", "#minecraft:is_overworld",
+                List.of("hbm:bedrock_ore"), BiomeModifiers.UNDERGROUND_ORES);
+        assertEquals(json("{'type':'neoforge:add_features','biomes':{'type':'neoforge:and','values':["
+                + "'#hbm:has_feature/tfc_test',{'type':'neoforge:not','value':'#minecraft:is_overworld'}]},"
+                + "'features':'hbm:bedrock_ore','step':'underground_ores'}"),
+                DejsonWriter.files().get("data/hbm/neoforge/biome_modifier/tfc_test.json"));
+        assertEquals("forge:and", DejsonWriter.files().get("data/hbm/forge/biome_modifier/tfc_test.json")
+                .getAsJsonObject("biomes").get("type").getAsString());
     }
 }

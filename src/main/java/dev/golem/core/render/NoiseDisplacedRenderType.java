@@ -148,7 +148,7 @@ public final class NoiseDisplacedRenderType {
 
     private static RenderType createTextured(String shaderId, Identifier noise, Identifier texture, int slot) {
         Identifier base = dev.golem.core.Ids.parse(shaderId);
-        RenderPipeline pipeline = RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET)
+        RenderPipeline pipeline = WorldPipelines.add(RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET)
                 .withLocation(dev.golem.core.Ids.of(base.getNamespace(), "pipeline/" + base.getPath()))
                 .withVertexShader(dev.golem.core.Ids.of(base.getNamespace(), "core/" + base.getPath()))
                 .withFragmentShader(dev.golem.core.Ids.of(base.getNamespace(), "core/" + base.getPath()))
@@ -158,7 +158,7 @@ public final class NoiseDisplacedRenderType {
                 .withDepthStencilState(new DepthStencilState(DepthStencilState.DEFAULT.depthTest(), false))
                 .withColorTargetState(new ColorTargetState(BlendFunction.LIGHTNING))
                 .withCull(false)
-                .build();
+                .build());
         RenderSetup setup = RenderSetup.builder(pipeline)
                 .withTexture("Sampler0", noise, NoiseTextures::sampler)
                 .withTexture("Sampler1", texture, NoiseTextures::sampler)
@@ -183,6 +183,7 @@ public final class NoiseDisplacedRenderType {
                 .withTexture("Sampler0", noise, NoiseTextures::sampler)
                 .setTextureTransform(LOCAL_TRANSFORMS[slot]);
         if (bloom) setup.setOutputTarget(BLOOM_OUTPUT);
+        else WorldPipelines.add(pipeline);
         return RenderType.create("golem_noise_displaced", setup.createRenderSetup());
     }
     //?} else {

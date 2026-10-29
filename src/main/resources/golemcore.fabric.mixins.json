@@ -13,7 +13,8 @@
     "MixinMobFinalizeSpawnCheck",
     "MixinServerLevelSpawnCancel",
     "MixinBlockItemPlaced",
-    "MixinFlintAndSteelPlaced"${legacy_explosion_mixins}
+    "MixinFlintAndSteelPlaced",
+    "MixinFireChargePlaced"${legacy_explosion_mixins}
   ],
   "client": [
     "MixinCameraFov",

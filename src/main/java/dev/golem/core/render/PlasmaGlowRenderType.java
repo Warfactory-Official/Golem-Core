@@ -55,7 +55,7 @@ public final class PlasmaGlowRenderType {
     }
 
     //? if >=26.1 {
-    private static final RenderPipeline PIPELINE = RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
+    private static final RenderPipeline PIPELINE = WorldPipelines.add(RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
             .withLocation("pipeline/golem_plasma_glow")
             .withVertexShader("core/entity")
             .withFragmentShader("core/entity")
@@ -68,13 +68,13 @@ public final class PlasmaGlowRenderType {
             // Depth test as normal, depth WRITE off.
             .withDepthStencilState(new DepthStencilState(DepthStencilState.DEFAULT.depthTest(), false))
             .withCull(false)
-            .build();
+            .build());
 
     private static final Function<Identifier, RenderType> BY_TEXTURE = Util.memoize(texture ->
             RenderType.create("golem_plasma_glow",
                     RenderSetup.builder(PIPELINE).withTexture("Sampler0", texture).createRenderSetup()));
 
-    private static final RenderPipeline SEE_THROUGH_PIPELINE = RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
+    private static final RenderPipeline SEE_THROUGH_PIPELINE = WorldPipelines.add(RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
             .withLocation("pipeline/golem_plasma_glow_see_through")
             .withVertexShader("core/entity")
             .withFragmentShader("core/entity")
@@ -86,7 +86,7 @@ public final class PlasmaGlowRenderType {
             .withVertexFormat(DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS)
             .withDepthStencilState(java.util.Optional.empty())
             .withCull(false)
-            .build();
+            .build());
 
     private static final Function<Identifier, RenderType> SEE_THROUGH = Util.memoize(texture ->
             RenderType.create("golem_plasma_glow_see_through",

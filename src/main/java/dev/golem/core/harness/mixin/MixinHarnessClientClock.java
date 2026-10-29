@@ -10,9 +10,7 @@ import org.spongepowered.asm.mixin.injection.At;
 /*import net.minecraft.client.Timer;
  *///?}
 
-/**
- * Vanilla and loaders expose no client-clock setter; access widening cannot replace its timing calculation.
- */
+/** No loader sets the client tick length; a mutable widening would, but ships to players, and this config is stripped. */
 //? if >=1.21 {
 @Mixin(Minecraft.class)
 //?} else {

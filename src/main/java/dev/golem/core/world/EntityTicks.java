@@ -8,7 +8,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 
 /**
- * After an eligible non-passenger server entity completes its tick, before its passengers tick.
+ * After a server entity, passengers included, completes its tick; a vehicle is notified before its passengers tick.
+ * On NeoForge a passenger is notified before its vehicle moves it to its seat, elsewhere after.
  */
 public final class EntityTicks {
     public static final Hook<Consumer<Entity>> AFTER = Hook.notifying();

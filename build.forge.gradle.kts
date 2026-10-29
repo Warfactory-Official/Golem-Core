@@ -105,11 +105,15 @@ tasks.processResources {
         "mixin_compatibility" to if (javaVersion <= 17) "JAVA_17" else "JAVA_21",
         "legacy_item_owner_mixins" to if (mcVersion.substringBefore('.').toInt() < 26)
             ", \"MixinItemRenderer\"" else "",
-        // Forge 1.20.1 routes carts through getRailMaxSpeed/onMinecartPass itself.
+        // EntityTicks: NeoForge's EntityTickEvent.Post has no Fabric or Forge counterpart.
+        "entity_tick_mixins" to ", \"MixinEntityTicks\"",
+        // Respawns: 1.20.1 picks the point in PlayerList.respawn, 1.21+ in ServerPlayer (MixinRespawnSelection).
+        "legacy_respawn_mixins" to if (stonecutter.eval(mcVersion, "<1.21")) ", \"MixinPlayerListRespawns\"" else "",
         // The 1.20.5 physics attributes, backported on 1.20.1 only (dev.golem.core.world.Physics).
         "physics_mixins" to if (mcVersion.startsWith("1.20.")) ", \"MixinLegacyAttributeSupplier\", \"MixinLegacyLivingPhysics\"" else "",
         // dev.golem.core.gametest.TestChunks: a 26.1 test waits until its whole plot is entity-ticking.
         "gametest_mixins" to "",
+        // Forge 1.20.1 routes carts through getRailMaxSpeed/onMinecartPass itself.
         "rail_mixins" to "",
         // 1.21.1 only: the world-exit unload spin (MixinChunkMapUnloadDrain).
         "unload_mixins" to "",
@@ -119,10 +123,14 @@ tasks.processResources {
         // SlotSync: from 26.1 the client echoes server slot pushes from the creative screen.
         "creative_echo_mixins" to "",
         "world_effect_mixins" to "",
-        // Skies.Modifier: 26.1 appends environment-attribute layers; older nodes wrap the sky darkening and the
-        // client colour getters (the mixin classes are empty stubs on the other era).
+        // Dev-only, listed in the harness mixin config that releaseJar strips.
         "client_gametest_mixins" to "",
         "render_validation_mixins" to "",
+        // 1.21 paces the server through its tick-rate manager; only Fabric lacks a render-end event.
+        "harness_clock_mixins" to if (stonecutter.eval(mcVersion, "<1.21")) ", \"MixinHarnessServerClock\"" else "",
+        "harness_frame_mixins" to "",
+        // Skies.Modifier: 26.1 appends environment-attribute layers; older nodes wrap the sky darkening and the
+        // client colour getters (the mixin classes are empty stubs on the other era).
         "sky_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinEnvironmentSkyLayers\"" else ", \"MixinLevelSkyDarken\"",
         "sky_client_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) "" else
             ", \"MixinClientLevelSky\", \"MixinDimensionEffectsSky\", \"MixinOverworldFogColor\"",
@@ -265,6 +273,7 @@ publishing {
 
 // The uploaded copy of this node's jar, without the test harness.
 apply(from = rootProject.file("gradle/release-jar.gradle.kts"))
+apply(from = rootProject.file("gradle/mod/mixin-validation.gradle.kts"))
 
 // Credits and links in the loader metadata, from the mod.* properties.
 apply(from = rootProject.file("gradle/mod/mod-metadata.gradle.kts"))

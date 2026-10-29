@@ -4,9 +4,7 @@ import dev.golem.core.GolemCore;
 import dev.golem.core.client.ClientTicks;
 import dev.golem.core.platform.Lifecycle;
 import dev.golem.core.platform.Platform;
-
 import java.util.Locale;
-
 import net.minecraft.client.Minecraft;
 //? if neoforge {
 import net.neoforged.neoforge.client.event.RenderFrameEvent;
@@ -32,12 +30,9 @@ public final class Harness {
     private static boolean initialised;
     private static long tick;
 
-    private Harness() {
-    }
+    private Harness() {}
 
-    /**
-     * The listener port, or 0 when the harness is not requested.
-     */
+    /** The listener port, or 0 when the harness is not requested. */
     public static int port() {
         String value = System.getProperty("golem.harness.port");
         if (value == null || value.isBlank()) value = System.getenv("GOLEM_HARNESS_PORT");
@@ -50,9 +45,7 @@ public final class Harness {
         }
     }
 
-    /**
-     * True when {@code -Dgolem.harness.<key>} or {@code GOLEM_HARNESS_<KEY>} is unset or not "false".
-     */
+    /** True when {@code -Dgolem.harness.<key>} or {@code GOLEM_HARNESS_<KEY>} is unset or not "false". */
     public static boolean flag(String key, boolean fallback) {
         String value = System.getProperty("golem.harness." + key);
         if (value == null || value.isBlank()) {
@@ -66,16 +59,12 @@ public final class Harness {
         return initialised;
     }
 
-    /**
-     * Current client tick counter, incremented at the end of every client tick.
-     */
+    /** Current client tick counter, incremented at the end of every client tick. */
     public static long tick() {
         return tick;
     }
 
-    /**
-     * Called once from each loader's client initialisation. Safe to call twice.
-     */
+    /** Called once from each loader's client initialisation. Safe to call twice. */
     public static void init() {
         if (initialised) return;
         int port = port();
@@ -102,9 +91,7 @@ public final class Harness {
         HarnessServer.start(port);
     }
 
-    /**
-     * Development render hook after world, HUD and screen drawing.
-     */
+    /** Development render hook after world, HUD and screen drawing. */
     public static void completedFrame() {
         HarnessScreenshot.completedFrame();
     }

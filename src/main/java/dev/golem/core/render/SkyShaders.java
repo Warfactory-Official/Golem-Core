@@ -169,7 +169,8 @@ final class SkyShaders {
                     .withCull(cull);
             for (int i = 0; i < samplers; i++) builder.withSampler("Sampler" + i);
             // No depth state: neither tested nor written, as vanilla's sky.
-            return builder.build();
+            RenderPipeline pipeline = builder.build();
+            return picture ? pipeline : WorldPipelines.add(pipeline);
         });
     }
 

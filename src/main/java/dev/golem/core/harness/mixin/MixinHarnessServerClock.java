@@ -6,9 +6,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.Constant;
 import org.spongepowered.asm.mixin.injection.ModifyConstant;
 
-/**
- * 1.20 has no tick-rate API or loader pacing hook; widening cannot replace its four fixed loop intervals.
- */
+/** 1.20 has no tick-rate API or loader pacing hook; widening cannot replace its four fixed loop intervals. */
 @Mixin(MinecraftServer.class)
 public abstract class MixinHarnessServerClock {
 

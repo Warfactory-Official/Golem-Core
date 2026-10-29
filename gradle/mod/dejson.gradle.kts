@@ -78,7 +78,6 @@ val dejsonVerify = tasks.register<JavaExec>("dejsonVerify") {
         "verify",
         generatedResources.get().asFile.absolutePath,
         authoredResources.absolutePath,
-        project.property("mod.id").toString(),
         *DECLARATION_CLASSES
     )
 }
@@ -96,7 +95,6 @@ val dejsonGenerate = tasks.register<JavaExec>("dejsonGenerate") {
         "write",
         generatedResources.get().asFile.absolutePath,
         authoredResources.absolutePath,
-        project.property("mod.id").toString(),
         *DECLARATION_CLASSES
     )
 }
@@ -120,7 +118,6 @@ tasks.register<JavaExec>("dejsonGenerateAll") {
     args(
         "write", layout.buildDirectory.dir("generated/dejson-all").get().asFile.absolutePath,
         layout.buildDirectory.dir("generated/dejson-nothing").get().asFile.absolutePath,
-        project.property("mod.id").toString(),
         *DECLARATION_CLASSES
     )
 }

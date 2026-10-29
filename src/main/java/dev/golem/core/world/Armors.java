@@ -66,7 +66,7 @@ public final class Armors {
         *///?}
     }
 
-    /** Humanoid equipment data for an ordinary item; pre-component targets retain their existing item form. */
+    /** 26.1's equipment component of a {@link Wearable}; not dispensable: dispensers before 26.1 drop it. */
     public static Item.Properties equippable(
             Item.Properties properties, ArmorSlot slot, String asset) {
         //? if >=26.1 {
@@ -75,6 +75,7 @@ public final class Armors {
                         .setAsset(ResourceKey.create(
                                 EquipmentAssets.ROOT_ID,
                                 Ids.parse(asset)))
+                        .setDispensable(false)
                         .build());
         //?} else {
         /*return properties;

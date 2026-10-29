@@ -5,9 +5,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.portal.PortalShape;
 
-/**
- * Portal-frame validation and loader vetoes share one creation path.
- */
+/** Portal-frame validation and loader vetoes share one creation path. */
 public final class Portals {
     private Portals() {
     }

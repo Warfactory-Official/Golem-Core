@@ -13,14 +13,12 @@ import dev.golem.core.net.GolemPayload;
 import dev.golem.core.platform.Lifecycle;
 import dev.golem.core.registry.DeferredRegister;
 import dev.golem.core.registry.RegistryObject;
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
-
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.FriendlyByteBuf;
@@ -40,7 +38,7 @@ import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeInput;
 //?} else {
 /*import net.minecraft.world.Container;
- *///?}
+*///?}
 
 /**
  * Data-driven recipe tables: a mod's machine recipes as ordinary datapack recipes of their own vanilla
@@ -62,19 +60,15 @@ import net.minecraft.world.item.crafting.RecipeInput;
  */
 public final class RecipeTables {
 
-    /**
-     * One row: the recipe id and the decoded value.
-     */
-    public record Entry<T>(String id, T value) {
-    }
+    /** One row: the recipe id and the decoded value. */
+    public record Entry<T>(String id, T value) {}
 
     private static final Map<String, Table<?>> TABLES = new ConcurrentHashMap<>();
     private static final Map<String, DeferredRegister<RecipeType<?>>> TYPES = new ConcurrentHashMap<>();
     private static final Map<String, DeferredRegister<RecipeSerializer<?>>> SERIALIZERS = new ConcurrentHashMap<>();
     private static volatile MinecraftServer server;
 
-    private RecipeTables() {
-    }
+    private RecipeTables() {}
 
     /**
      * Declares the table {@code <namespace>:<name>}: its recipe type and serializer are registered with the
@@ -88,18 +82,14 @@ public final class RecipeTables {
         return table;
     }
 
-    /**
-     * Every declared table, sorted by id; for tools (the scripting adapter).
-     */
+    /** Every declared table, sorted by id; for tools (the scripting adapter). */
     public static List<Table<?>> all() {
         List<Table<?>> all = new ArrayList<>(TABLES.values());
         all.sort(Comparator.comparing(Table::id));
         return all;
     }
 
-    /**
-     * Golem Core's entrypoints call this on every side.
-     */
+    /** Golem Core's entrypoints call this on every side. */
     public static void init() {
         GolemNetwork.declarePlayToClient(SyncPayload.CODEC);
         Lifecycle.onServerStarted(started -> {
@@ -122,14 +112,11 @@ public final class RecipeTables {
         });
     }
 
-    /**
-     * Golem Core's client entrypoints call this.
-     */
+    /** Golem Core's client entrypoints call this. */
     public static void initClient() {
         GolemNetwork.registerPlayToClient(SyncPayload.CODEC, (payload, context) -> {
             Table<?> table = TABLES.get(payload.table());
-            if (table != null && context.level() != null)
-                table.receive(payload.rows(), context.level().registryAccess());
+            if (table != null && context.level() != null) table.receive(payload.rows(), context.level().registryAccess());
         });
     }
 
@@ -143,9 +130,7 @@ public final class RecipeTables {
         return found == null ? List.of() : found.received;
     }
 
-    /**
-     * A machine's recipe table.
-     */
+    /** A machine's recipe table. */
     public static final class Table<T> {
 
         private final String namespace;
@@ -158,9 +143,7 @@ public final class RecipeTables {
         private volatile List<String> received = List.of();
         private volatile RecipeFields fields;
 
-        /**
-         * Fires after the rows changed (server reload, or a client receiving them), on that side's thread.
-         */
+        /** Fires after the rows changed (server reload, or a client receiving them), on that side's thread. */
         public final Hook<Runnable> changed = Hook.notifying();
 
         private Table(String namespace, String name, Supplier<MapCodec<T>> codec) {
@@ -168,21 +151,19 @@ public final class RecipeTables {
             this.name = name;
             this.codec = codec;
             this.type = TYPES.computeIfAbsent(namespace,
-                                     ns -> DeferredRegister.create(() -> Registries.RECIPE_TYPE, ns))
-                             .register(name, () -> new RecipeType<TableRecipe<?>>() {
-                                 @Override
-                                 public String toString() {
-                                     return namespace + ":" + name;
-                                 }
-                             });
+                            ns -> DeferredRegister.create(() -> Registries.RECIPE_TYPE, ns))
+                    .register(name, () -> new RecipeType<TableRecipe<?>>() {
+                        @Override
+                        public String toString() {
+                            return namespace + ":" + name;
+                        }
+                    });
             this.serializer = SERIALIZERS.computeIfAbsent(namespace,
-                                                 ns -> DeferredRegister.create(() -> Registries.RECIPE_SERIALIZER, ns))
-                                         .register(name, () -> serializerFor(this));
+                            ns -> DeferredRegister.create(() -> Registries.RECIPE_SERIALIZER, ns))
+                    .register(name, () -> serializerFor(this));
         }
 
-        /**
-         * {@code <namespace>:<name>}, the recipe JSON's {@code "type"}.
-         */
+        /** {@code <namespace>:<name>}, the recipe JSON's {@code "type"}. */
         public String id() {
             return namespace + ":" + name;
         }
@@ -206,8 +187,7 @@ public final class RecipeTables {
         public RecipeFields fields() {
             RecipeFields result = fields == null ? RecipeFields.of() : fields;
             java.util.Iterator<String> keys = codec().keys(JsonOps.INSTANCE)
-                                                     .map(key -> JsonOps.INSTANCE.getStringValue(key).result()
-                                                                                 .orElse(null)).iterator();
+                    .map(key -> JsonOps.INSTANCE.getStringValue(key).result().orElse(null)).iterator();
             while (keys.hasNext()) {
                 String key = keys.next();
                 if (key != null && result.get(key) == null) {
@@ -219,18 +199,14 @@ public final class RecipeTables {
             return result;
         }
 
-        /**
-         * The current rows, sorted by recipe id: the server's after its last reload, or the last ones synced.
-         */
+        /** The current rows, sorted by recipe id: the server's after its last reload, or the last ones synced. */
         public List<Entry<T>> entries() {
             MinecraftServer current = server;
             if (current != null) refresh(current);
             return entries;
         }
 
-        /**
-         * Replaces the rows, as a reload would; for tests and tools only.
-         */
+        /** Replaces the rows, as a reload would; for tests and tools only. */
         public void replace(List<Entry<T>> rows) {
             List<Entry<T>> sorted = new ArrayList<>(rows);
             sorted.sort(Comparator.comparing(Entry::id));
@@ -239,16 +215,12 @@ public final class RecipeTables {
             for (Runnable listener : changed) listener.run();
         }
 
-        /**
-         * Encodes one value to JSON, as a datapack file would hold it (without "type").
-         */
+        /** Encodes one value to JSON, as a datapack file would hold it (without "type"). */
         public JsonElement toJson(T value, HolderLookup.Provider registries) {
             return unwrap(codec().codec().encodeStart(RegistryOps.create(JsonOps.INSTANCE, registries), value), id());
         }
 
-        /**
-         * Decodes one value from JSON.
-         */
+        /** Decodes one value from JSON. */
         public T fromJson(JsonElement json, HolderLookup.Provider registries) {
             return unwrap(codec().codec().parse(RegistryOps.create(JsonOps.INSTANCE, registries), json), id());
         }
@@ -333,9 +305,7 @@ public final class RecipeTables {
         return ids;
     }
 
-    /**
-     * The top-level recipe key naming the {@link #flag flags} a recipe of any type needs (see {@link #REQUIRES}).
-     */
+    /** The top-level recipe key naming the {@link #flag flags} a recipe of any type needs (see {@link #REQUIRES}). */
     public static final String REQUIRES = "golem:requires";
 
     private static final Map<String, java.util.function.BooleanSupplier> FLAGS = new ConcurrentHashMap<>();
@@ -351,14 +321,11 @@ public final class RecipeTables {
      */
     public static void flag(String name, java.util.function.BooleanSupplier value) {
         if (name.isEmpty() || name.startsWith("!")) throw new IllegalArgumentException("Bad recipe flag name " + name);
-        if (FLAGS.putIfAbsent(name, value) != null)
-            throw new IllegalStateException("Recipe flag " + name + " declared twice");
+        if (FLAGS.putIfAbsent(name, value) != null) throw new IllegalStateException("Recipe flag " + name + " declared twice");
         LootRequires.register();
     }
 
-    /**
-     * Whether every literal holds now ({@code name} or {@code !name}); an empty list always holds.
-     */
+    /** Whether every literal holds now ({@code name} or {@code !name}); an empty list always holds. */
     public static boolean holds(Iterable<String> literals, String where) {
         for (String literal : literals) {
             boolean negated = literal.startsWith("!");
@@ -374,20 +341,16 @@ public final class RecipeTables {
         return true;
     }
 
-    /**
-     * The ids of every recipe file whose {@link #REQUIRES} literals do not hold now.
-     */
+    /** The ids of every recipe file whose {@link #REQUIRES} literals do not hold now. */
     private static java.util.Set<String> unmet(MinecraftServer server) {
         java.util.Set<String> ids = new java.util.HashSet<>();
-        var files = dev.golem.core.data.DataFiles.read(dev.golem.core.data.DataFiles.recipeFolder(),
-                server.getResourceManager());
+        var files = dev.golem.core.data.DataFiles.read(dev.golem.core.data.DataFiles.recipeFolder(), server.getResourceManager());
         for (Map.Entry<String, JsonElement> file : files.entrySet()) {
             if (!file.getValue().isJsonObject()) continue;
             JsonElement requires = file.getValue().getAsJsonObject().get(REQUIRES);
             if (requires == null) continue;
             List<String> literals = new ArrayList<>();
-            if (requires.isJsonArray())
-                for (JsonElement literal : requires.getAsJsonArray()) literals.add(literal.getAsString());
+            if (requires.isJsonArray()) for (JsonElement literal : requires.getAsJsonArray()) literals.add(literal.getAsString());
             else literals.add(requires.getAsString());
             if (!holds(literals, file.getKey())) ids.add(file.getKey());
         }
@@ -442,14 +405,11 @@ public final class RecipeTables {
         manager.replaceRecipes(kept);
         *///?}
         org.slf4j.LoggerFactory.getLogger("Golem Core").info(
-                "Removed {} recipe(s) listed in {} files or with unmet {} ({} id(s) listed, {} unmet)", dropped,
-                REMOVALS,
+                "Removed {} recipe(s) listed in {} files or with unmet {} ({} id(s) listed, {} unmet)", dropped, REMOVALS,
                 REQUIRES, listed, unmet.size());
     }
 
-    /**
-     * The datapack folder of recipe removal lists.
-     */
+    /** The datapack folder of recipe removal lists. */
     public static final String REMOVALS = "recipe_removals";
 
     private static <V> V unwrap(DataResult<V> result, String table) {
@@ -457,15 +417,13 @@ public final class RecipeTables {
                 + result.error().map(error -> error.message()).orElse("no value")));
     }
 
-    /**
-     * The datapack carrier of one row: never matches, never in a recipe book.
-     */
+    /** The datapack carrier of one row: never matches, never in a recipe book. */
     public static final class TableRecipe<T> implements Recipe<
             //? if >=1.20.5 {
             RecipeInput
             //?} else {
             /*Container
-             *///?}
+            *///?}
             > {
 
         final Table<T> table;
@@ -473,8 +431,8 @@ public final class RecipeTables {
         //private final net.minecraft.resources.ResourceLocation id;
 
         TableRecipe(Table<T> table, T value
-                    //? if <1.20.5
-                    //, net.minecraft.resources.ResourceLocation id
+                //? if <1.20.5
+                //, net.minecraft.resources.ResourceLocation id
         ) {
             this.table = table;
             this.value = value;
@@ -482,9 +440,7 @@ public final class RecipeTables {
             //this.id = id;
         }
 
-        /**
-         * The table's own row behind this recipe-manager entry.
-         */
+        /** The table's own row behind this recipe-manager entry. */
         public T value() {
             return value;
         }
@@ -586,12 +542,10 @@ public final class RecipeTables {
 
     private static <T> RecipeSerializer<?> serializerFor(Table<T> table) {
         //? if >=1.20.5 {
-        MapCodec<TableRecipe<T>> codec = table.codec()
-                                              .xmap(value -> new TableRecipe<>(table, value), recipe -> recipe.value);
+        MapCodec<TableRecipe<T>> codec = table.codec().xmap(value -> new TableRecipe<>(table, value), recipe -> recipe.value);
         // The row travels as its JSON text: one wire format for every table, decoded with the same codec as the file.
         StreamCodec<RegistryFriendlyByteBuf, TableRecipe<T>> stream = StreamCodec.of(
-                (buffer, recipe) -> buffer.writeUtf(table.toJson(recipe.value, buffer.registryAccess()).toString(),
-                        262144),
+                (buffer, recipe) -> buffer.writeUtf(table.toJson(recipe.value, buffer.registryAccess()).toString(), 262144),
                 buffer -> new TableRecipe<>(table,
                         table.fromJson(JsonParser.parseString(buffer.readUtf(262144)), buffer.registryAccess())));
         //?}
@@ -634,13 +588,10 @@ public final class RecipeTables {
         *///?}
     }
 
-    /**
-     * One table's rows for a client: recipe id and row JSON, alternating.
-     */
+    /** One table's rows for a client: recipe id and row JSON, alternating. */
     record SyncPayload(String table, List<String> rows) implements GolemPayload {
 
-        static final GolemCodec<SyncPayload> CODEC = GolemCodec.of(SyncPayload.class,
-                Ids.of("golemcore", "recipe_table"),
+        static final GolemCodec<SyncPayload> CODEC = GolemCodec.of(SyncPayload.class, Ids.of("golemcore", "recipe_table"),
                 (payload, buffer) -> {
                     buffer.writeUtf(payload.table());
                     buffer.writeVarInt(payload.rows().size());
@@ -656,12 +607,12 @@ public final class RecipeTables {
 
         @Override
         public
-            //? if >=26.1 {
-        net.minecraft.resources.Identifier
-        //?} else {
-        /*net.minecraft.resources.ResourceLocation
-         *///?}
-        id() {
+                //? if >=26.1 {
+                net.minecraft.resources.Identifier
+                //?} else {
+                /*net.minecraft.resources.ResourceLocation
+                *///?}
+                id() {
             return CODEC.id();
         }
     }

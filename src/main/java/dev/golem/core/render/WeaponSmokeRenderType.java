@@ -21,7 +21,7 @@ public final class WeaponSmokeRenderType {
     private WeaponSmokeRenderType() {}
 
     //? if >=26.1 {
-    private static final RenderPipeline PIPELINE = RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
+    private static final RenderPipeline PIPELINE = WorldPipelines.add(RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
             .withLocation("pipeline/golem_weapon_smoke")
             .withVertexShader("core/rendertype_lightning")
             .withFragmentShader("core/rendertype_lightning")
@@ -29,7 +29,7 @@ public final class WeaponSmokeRenderType {
             .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
             .withDepthStencilState(new DepthStencilState(DepthStencilState.DEFAULT.depthTest(), false))
             .withCull(false)
-            .build();
+            .build());
 
     private static final RenderType TYPE = RenderType.create("golem_weapon_smoke",
             RenderSetup.builder(PIPELINE).createRenderSetup());

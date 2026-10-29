@@ -2,7 +2,6 @@ package dev.golem.core.client;
 
 import dev.golem.core.render.CompatBERProvider;
 import dev.golem.core.render.CompatRenderState;
-
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
@@ -33,20 +32,15 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
  */
 public final class ClientRegistrations {
 
-    private ClientRegistrations() {
-    }
+    private ClientRegistrations() {}
 
-    /**
-     * Where screens are bound to menu types.
-     */
+    /** Where screens are bound to menu types. */
     public interface Screens {
         <M extends AbstractContainerMenu, U extends AbstractContainerScreen<M>> void register(
                 MenuType<M> menu, MenuScreens.ScreenConstructor<M, U> factory);
     }
 
-    /**
-     * Where renderers are bound to block-entity and entity types.
-     */
+    /** Where renderers are bound to block-entity and entity types. */
     public interface Renderers {
         <T extends BlockEntity, S extends CompatRenderState> void blockEntity(
                 BlockEntityType<? extends T> type, CompatBERProvider<T, S> provider);
@@ -54,9 +48,7 @@ public final class ClientRegistrations {
         <T extends Entity> void entity(EntityType<? extends T> type, EntityRendererProvider<T> provider);
     }
 
-    /**
-     * Providers whose particles resolve their own sprites rather than a particle JSON texture list.
-     */
+    /** Providers whose particles resolve their own sprites rather than a particle JSON texture list. */
     public interface ParticleFactories {
         <T extends ParticleOptions> void register(ParticleType<T> type, ParticleProvider<T> provider);
     }
@@ -66,21 +58,17 @@ public final class ClientRegistrations {
     private static final List<Consumer<ParticleFactories>> PARTICLES = new CopyOnWriteArrayList<>();
     private static boolean hooked;
 
-    /**
-     * Declares screens; {@code declarations} runs at the loader's screen-registration moment.
-     */
+    /** Declares screens; {@code declarations} runs at the loader's screen-registration moment. */
     public static void screens(Consumer<Screens> declarations) {
         //? if fabric {
         /*declarations.accept(MenuScreens::register);
-         *///?} else {
+        *///?} else {
         SCREENS.add(declarations);
         hook();
         //?}
     }
 
-    /**
-     * Declares renderers; {@code declarations} runs at the loader's renderer-registration moment.
-     */
+    /** Declares renderers; {@code declarations} runs at the loader's renderer-registration moment. */
     public static void renderers(Consumer<Renderers> declarations) {
         //? if fabric {
         /*declarations.accept(new Renderers() {
@@ -102,9 +90,7 @@ public final class ClientRegistrations {
         //?}
     }
 
-    /**
-     * Declares non-JSON particle providers at the loader's particle registration moment.
-     */
+    /** Declares non-JSON particle providers at the loader's particle registration moment. */
     public static void particles(Consumer<ParticleFactories> declarations) {
         //? if fabric && >=26.1 {
         /*declarations.accept(net.fabricmc.fabric.api.client.particle.v1.ParticleProviderRegistry.getInstance()::register);
@@ -136,8 +122,7 @@ public final class ClientRegistrations {
                 }
 
                 @Override
-                public <T extends Entity> void entity(EntityType<? extends T> type,
-                                                      EntityRendererProvider<T> provider) {
+                public <T extends Entity> void entity(EntityType<? extends T> type, EntityRendererProvider<T> provider) {
                     event.registerEntityRenderer(type, provider);
                 }
             };

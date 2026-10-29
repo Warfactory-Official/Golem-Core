@@ -49,7 +49,6 @@ accessible field net/minecraft/world/entity/LivingEntity jumping Z
 
 # client.Sounds.source: the OpenAL source of a live channel, for per-source parameters; no getter.
 accessible field com/mojang/blaze3d/audio/Channel source I
-accessible field net/minecraft/client/resources/sounds/EntityBoundSoundInstance entity Lnet/minecraft/world/entity/Entity;
 
 # Mobs.usedItem: the goal keeps its item private with no getter.
 accessible field net/minecraft/world/entity/ai/goal/UseItemGoal item Lnet/minecraft/world/item/ItemStack;
