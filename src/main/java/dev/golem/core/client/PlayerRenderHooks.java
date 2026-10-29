@@ -1,23 +1,68 @@
 package dev.golem.core.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
 import dev.golem.core.render.HumanoidPose;
-import java.util.function.Consumer;
-import net.minecraft.client.model.HumanoidModel;
-import net.minecraft.world.entity.player.Player;
 
 import java.util.Map;
 import java.util.WeakHashMap;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
+
+import net.minecraft.client.model.HumanoidModel;
+import net.minecraft.world.entity.player.Player;
+
+//? if >=26.1 {
+import net.minecraft.client.renderer.entity.state.AvatarRenderState;
+//?}
+//? if neoforge && >=26.1 {
+import net.neoforged.neoforge.client.event.RenderPlayerEvent;
+import net.neoforged.neoforge.common.NeoForge;
+//?}
 
 /**
- * Small client seam for player pose changes that must happen before the humanoid model is submitted.
- *
- * <p>There is no common player-render event across the six targets. The HBM mixin only calls this hook;
- * all feature semantics remain in HBM and this class contains no mod dependency.
+ * Frame bindings keep player model and layer callbacks attached to the same rendered player.
  */
 public final class PlayerRenderHooks {
 
-    private PlayerRenderHooks() {}
+    private PlayerRenderHooks() {
+    }
+
+    private static final dev.golem.core.hook.Hook<Predicate<Player>> FLIGHT_POSES =
+            dev.golem.core.hook.Hook.of(listeners -> player -> {
+                for (int index = 0; index < listeners.size(); index++)
+                    if (listeners.get(index).test(player)) return true;
+                return false;
+            });
+    private static boolean flightEventsInstalled;
+
+    /**
+     * Requests a fully blended fall-flying render pose without changing travel or velocity yaw.
+     */
+    public static synchronized void flightPose(Predicate<Player> condition) {
+        FLIGHT_POSES.register(condition);
+        if (flightEventsInstalled) return;
+        flightEventsInstalled = true;
+        //? if neoforge && >=26.1 {
+        NeoForge.EVENT_BUS.addListener((RenderPlayerEvent.Pre<?> event) -> applyFlightState(event.getRenderState()));
+        //?}
+    }
+
+    //? if >=26.1 {
+    public static void applyFlightState(AvatarRenderState state) {
+        var player = playerForState(state);
+        if (player != null && FLIGHT_POSES.invoker().test(player)) {
+            state.isFallFlying = true;
+            state.fallFlyingTimeInTicks = 10F;
+            state.shouldApplyFlyingYRot = false;
+        }
+    }
+    //?}
+
+    public static void applyFlightRotation(Player player, PoseStack pose) {
+        if (FLIGHT_POSES.invoker().test(player))
+            pose.mulPose(Axis.XP.rotationDegrees(-90F - player.getXRot()));
+    }
 
     @FunctionalInterface
     public interface Hook {
@@ -43,8 +88,9 @@ public final class PlayerRenderHooks {
         // skin layers after HumanoidModel.setupAnim returns.
         //? if <26.1 {
         /*model.hat.copyFrom(model.head);
-        *///?}
+         *///?}
     }
+
     // Render states are frame-scoped. Weak keys cover skipped renderer paths without pinning a player or
     // a frame indefinitely, while allowing every attached HBM layer to read the same player binding.
     private static final Map<Object, Player> STATE_PLAYERS = new WeakHashMap<>();
@@ -68,10 +114,11 @@ public final class PlayerRenderHooks {
      */
     public static net.minecraft.world.phys.Vec3 renderOffset(Player player, float partialTick) {
         //? if >=26.1 {
-        net.minecraft.world.phys.Vec3 camera = net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera().position();
+        net.minecraft.world.phys.Vec3 camera = net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera()
+                                                                                                        .position();
         //?} else {
         /*net.minecraft.world.phys.Vec3 camera = net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
-        *///?}
+         *///?}
         return player.getPosition(partialTick).subtract(camera);
     }
 
@@ -79,7 +126,9 @@ public final class PlayerRenderHooks {
         if (player != null) run(player, pose, partialTick);
     }
 
-    /** The 26.1 state renderer has no entity argument at setupRotations; local camera pose is still useful. */
+    /**
+     * The 26.1 state renderer has no entity argument at setupRotations; local camera pose is still useful.
+     */
     public static void applyLocal(PoseStack pose, float partialTick) {
         Player player = net.minecraft.client.Minecraft.getInstance().player;
         if (player != null) run(player, pose, partialTick);

@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -54,7 +55,7 @@ public final class Client implements AutoCloseable {
         IOException last = null;
         // The game JVM may prefer IPv6 (ModDev passes -Djava.net.preferIPv6Addresses=system), so the
         // listener can sit on ::1 or 127.0.0.1; try both.
-        for (String host : new String[] {"127.0.0.1", "::1"}) {
+        for (String host : new String[]{"127.0.0.1", "::1"}) {
             try {
                 socket = new Socket(InetAddress.getByName(host), port);
                 last = null;
@@ -81,7 +82,9 @@ public final class Client implements AutoCloseable {
         return port;
     }
 
-    /** Where {@link #screenshot(String)} writes; set by the runner per node. */
+    /**
+     * Where {@link #screenshot(String)} writes; set by the runner per node.
+     */
     public void setScreenshotDir(Path dir) {
         this.screenshotDir = dir;
     }
@@ -109,12 +112,13 @@ public final class Client implements AutoCloseable {
 
     // ---- transport -------------------------------------------------------------------------
 
-    /** Sends a raw request; {@code cmd} is added from {@code command}. Throws on {@code ok:false}. */
+    /**
+     * Sends a raw request; {@code cmd} is added from {@code command}. Throws on {@code ok:false}.
+     */
     public synchronized JsonObject send(String command, JsonObject params, long timeoutMs) {
         JsonObject req = params == null ? new JsonObject() : params.deepCopy();
         req.addProperty("cmd", command);
         req.addProperty("timeout_ms", timeoutMs);
-        if (!req.has("timeout_ticks")) req.addProperty("timeout_ticks", Math.max(1, timeoutMs / 50));
         String line = req.toString();
         String reply;
         try {
@@ -129,10 +133,12 @@ public final class Client implements AutoCloseable {
         if (reply == null) throw new HarnessException(node + ": connection closed during " + command);
         transcript.add("> " + line);
         transcript.add("< " + (reply.length() > 400 ? reply.substring(0, 400) + "..." : reply));
-        if (echo) System.out.println("[" + node + "] " + command + " -> " + (reply.length() > 200 ? reply.substring(0, 200) + "..." : reply));
+        if (echo) System.out.println("[" + node + "] " + command + " -> " + (reply.length() > 200 ? reply.substring(0,
+                200) + "..." : reply));
         JsonObject json = JsonParser.parseString(reply).getAsJsonObject();
         if (json.has("ok") && !json.get("ok").getAsBoolean()) {
-            throw new HarnessException(node + ": " + command + " failed: " + (json.has("error") ? json.get("error").getAsString() : reply));
+            throw new HarnessException(node + ": " + command + " failed: " + (json.has("error") ? json.get("error")
+                                                                                                      .getAsString() : reply));
         }
         return json;
     }
@@ -145,7 +151,9 @@ public final class Client implements AutoCloseable {
         return send(command, null, 60_000L);
     }
 
-    /** Sends the raw JSON text of a request (must carry {@code cmd}). */
+    /**
+     * Sends the raw JSON text of a request (must carry {@code cmd}).
+     */
     public JsonObject raw(String json) {
         JsonObject req = JsonParser.parseString(json).getAsJsonObject();
         String command = req.get("cmd").getAsString();
@@ -220,12 +228,16 @@ public final class Client implements AutoCloseable {
 
     private long logMark = -1;
 
-    /** Remembers the current end of the log; {@link #logSinceMark} reads only what came after. */
+    /**
+     * Remembers the current end of the log; {@link #logSinceMark} reads only what came after.
+     */
     public void markLog() {
         logMark = query("log", obj("lines", 0, "filter", "")).get("total").getAsLong();
     }
 
-    /** Lines logged since {@link #markLog} (all lines when no mark was set), filtered by regex. */
+    /**
+     * Lines logged since {@link #markLog} (all lines when no mark was set), filtered by regex.
+     */
     public List<String> logSinceMark(String filterRegex) {
         if (logMark < 0) return log(4000, filterRegex);
         // one query: the listener cuts at the mark under its own lock ("since"). Two queries ("total now", then "the last
@@ -242,16 +254,27 @@ public final class Client implements AutoCloseable {
 
     // ---- actions ---------------------------------------------------------------------------
 
-    /** Runs a slash command as the player (leading slash optional). */
+    /**
+     * Runs a slash command as the player (leading slash optional).
+     */
     public void cmd(String text) {
         send("cmd", obj("text", text));
+    }
+
+    /**
+     * Sets the integrated server and client clock together, returning the previous server rate.
+     */
+    public float tickRate(float rate) {
+        return send("tick_rate", obj("rate", rate)).get("previous").getAsFloat();
     }
 
     public void chat(String text) {
         send("chat", obj("text", text));
     }
 
-    /** Presses and releases a key: {@code key.use}, {@code w}, {@code space}, {@code f3}, {@code mouse.left}. */
+    /**
+     * Presses and releases a key: {@code key.use}, {@code w}, {@code space}, {@code f3}, {@code mouse.left}.
+     */
     public void key(String key) {
         send("key", obj("key", key, "hold_ticks", 1));
     }
@@ -268,7 +291,9 @@ public final class Client implements AutoCloseable {
         send("key_up", obj("key", key));
     }
 
-    /** Types text into the focused widget, one character event per code point. */
+    /**
+     * Types text into the focused widget, one character event per code point.
+     */
     public void type(String text) {
         send("type", obj("text", text));
     }
@@ -281,7 +306,9 @@ public final class Client implements AutoCloseable {
         send("mouse_move", obj("x", guiX, "y", guiY));
     }
 
-    /** Left-click at GUI-scaled coordinates. */
+    /**
+     * Left-click at GUI-scaled coordinates.
+     */
     public void click(double guiX, double guiY) {
         click(guiX, guiY, 0);
     }
@@ -294,7 +321,9 @@ public final class Client implements AutoCloseable {
         send("scroll", obj("dx", 0, "dy", dy));
     }
 
-    /** Right mouse button (use item / interact) held for {@code holdTicks}. */
+    /**
+     * Right mouse button (use item / interact) held for {@code holdTicks}.
+     */
     public void use(int holdTicks) {
         send("use", obj("hold_ticks", holdTicks));
     }
@@ -315,7 +344,9 @@ public final class Client implements AutoCloseable {
         send("hotbar", obj("slot", slot));
     }
 
-    /** Direct menu click (bypasses screen hit-testing): PICKUP, QUICK_MOVE, SWAP, CLONE, THROW. */
+    /**
+     * Direct menu click (bypasses screen hit-testing): PICKUP, QUICK_MOVE, SWAP, CLONE, THROW.
+     */
     public void slotClick(int slot, int button, String action) {
         send("slot_click", obj("slot", slot, "button", button, "action", action));
     }
@@ -324,12 +355,16 @@ public final class Client implements AutoCloseable {
         send("look", obj("yaw", yaw, "pitch", pitch));
     }
 
-    /** Aims at the centre of block {@code (x, y, z)}. */
+    /**
+     * Aims at the centre of block {@code (x, y, z)}.
+     */
     public void lookAt(int x, int y, int z) {
         send("look_at", obj("x", x, "y", y, "z", z));
     }
 
-    /** Aims at an exact point. */
+    /**
+     * Aims at an exact point.
+     */
     public void lookAt(double x, double y, double z) {
         send("look_at", obj("x", x, "y", y, "z", z, "exact", true));
     }
@@ -358,7 +393,25 @@ public final class Client implements AutoCloseable {
         send("wait_ticks", obj("ticks", ticks), ticks * 50L + 30_000L);
     }
 
-    /** Waits until a screen whose class name contains {@code contains} is open ("none" = no screen). */
+    /**
+     * Waits for integrated-world ticks independently of client rendering and tick throughput.
+     */
+    public void waitServerTicks(int ticks) {
+        var params = obj("server", true, "radius", 0);
+        long target = query("entities", params).get("game_time").getAsLong() + ticks;
+        long deadline = System.nanoTime() + (ticks * 50L + 5_000L) * 1_000_000L;
+        long time;
+        do {
+            waitTicks(20);
+            time = query("entities", params).get("game_time").getAsLong();
+            if (time >= target) return;
+        } while (System.nanoTime() < deadline);
+        throw new AssertionError("Server game time did not reach " + target + ": " + time);
+    }
+
+    /**
+     * Waits until a screen whose class name contains {@code contains} is open ("none" = no screen).
+     */
     public JsonObject waitScreen(String contains, long timeoutMs) {
         return send("wait_screen", obj("contains", contains), timeoutMs);
     }
@@ -384,7 +437,9 @@ public final class Client implements AutoCloseable {
         send("join_world", obj("name", name), timeoutMs);
     }
 
-    /** Joins a dedicated server through vanilla's connect screen (the client must not be in a world). */
+    /**
+     * Joins a dedicated server through vanilla's connect screen (the client must not be in a world).
+     */
     public void joinServer(String host, int port, long timeoutMs) {
         send("join_server", obj("host", host, "port", port), timeoutMs);
     }
@@ -400,12 +455,18 @@ public final class Client implements AutoCloseable {
      * worldgen tests rely on the same terrain, biomes and structure positions on every run.
      */
     public static final long SEEDED_WORLD_SEED = 4815162342L;
-    /** Save name of the seeded world; it has its own snapshot, separate from the superflat world. */
+    /**
+     * Save name of the seeded world; it has its own snapshot, separate from the superflat world.
+     */
     public static final String SEEDED_WORLD = "harness_seeded";
-    /** Save name of the default superflat world (the CLI sets it from harness.json {@code world}). */
+    /**
+     * Save name of the default superflat world (the CLI sets it from harness.json {@code world}).
+     */
     public static volatile String flatWorld = "harness";
 
-    /** Snapshot/restore of a save, installed by the CLI (the API has no file-system view of the run dir). */
+    /**
+     * Snapshot/restore of a save, installed by the CLI (the API has no file-system view of the run dir).
+     */
     public interface WorldFiles {
         void snapshot(String node, String world) throws IOException;
 
@@ -414,12 +475,16 @@ public final class Client implements AutoCloseable {
 
     public static volatile WorldFiles worldFiles;
 
-    /** Creates a world: {@code type} "flat" (superflat) or "seeded" (default preset with {@code seed}). */
+    /**
+     * Creates a world: {@code type} "flat" (superflat) or "seeded" (default preset with {@code seed}).
+     */
     public void createWorld(String name, String type, long seed, long timeoutMs) {
         send("create_world", obj("name", name, "type", type, "seed", seed), timeoutMs);
     }
 
-    /** Save folder of the open world (null on the title screen). */
+    /**
+     * Save folder of the open world (null on the title screen).
+     */
     public String currentWorld() {
         JsonElement current = send("world_info", null).get("current");
         return current == null || current.isJsonNull() ? null : current.getAsString();
@@ -472,17 +537,23 @@ public final class Client implements AutoCloseable {
         }
     }
 
-    /** The fixed-seed normal world ({@link #SEEDED_WORLD}, seed {@link #SEEDED_WORLD_SEED}). */
+    /**
+     * The fixed-seed normal world ({@link #SEEDED_WORLD}, seed {@link #SEEDED_WORLD_SEED}).
+     */
     public void useSeededWorld() {
         useWorld(SEEDED_WORLD, "seeded");
     }
 
-    /** Back to the default superflat world. */
+    /**
+     * Back to the default superflat world.
+     */
     public void useFlatWorld() {
         useWorld(flatWorld, "flat");
     }
 
-    /** Leaves, restores the open world's snapshot, and rejoins (like {@code harness world reset}). */
+    /**
+     * Leaves, restores the open world's snapshot, and rejoins (like {@code harness world reset}).
+     */
     public void resetWorld() {
         String name = currentWorld();
         if (name == null) throw new HarnessException("resetWorld: not in a world");
@@ -510,7 +581,9 @@ public final class Client implements AutoCloseable {
 
     // ---- screenshots -----------------------------------------------------------------------
 
-    /** Captures the next frame to {@code <screenshotDir>/<name>.png} and returns the path. */
+    /**
+     * Captures the next frame to {@code <screenshotDir>/<name>.png} and returns the path.
+     */
     public Path screenshot(String name) {
         return screenshot(name, null);
     }
@@ -550,13 +623,17 @@ public final class Client implements AutoCloseable {
 
     // ---- helpers over queries ----------------------------------------------------------------
 
-    /** The open screen's simple class name, or null. */
+    /**
+     * The open screen's simple class name, or null.
+     */
     public String screenClass() {
         JsonObject s = status();
         return s.get("screen").isJsonNull() ? null : s.get("screen").getAsString();
     }
 
-    /** Finds a slot in the open container screen by index; null when absent. */
+    /**
+     * Finds a slot in the open container screen by index; null when absent.
+     */
     public JsonObject slot(int index) {
         JsonObject screen = screen();
         if (!screen.has("slots")) return null;
@@ -567,7 +644,9 @@ public final class Client implements AutoCloseable {
         return null;
     }
 
-    /** Finds a widget whose message contains {@code text} (case-insensitive); null when absent. */
+    /**
+     * Finds a widget whose message contains {@code text} (case-insensitive); null when absent.
+     */
     public JsonObject widget(String text) {
         JsonObject screen = screen();
         if (!screen.has("widgets")) return null;
@@ -579,7 +658,9 @@ public final class Client implements AutoCloseable {
         return null;
     }
 
-    /** Clicks the centre of a container slot through real mouse events. */
+    /**
+     * Clicks the centre of a container slot through real mouse events.
+     */
     public void clickSlot(int index) {
         clickSlot(index, 0);
     }
@@ -590,7 +671,9 @@ public final class Client implements AutoCloseable {
         click(s.get("center_x").getAsDouble(), s.get("center_y").getAsDouble(), button);
     }
 
-    /** Clicks the centre of a widget found by its label. */
+    /**
+     * Clicks the centre of a widget found by its label.
+     */
     public void clickWidget(String text) {
         JsonObject w = widget(text);
         if (w == null) throw new HarnessException(node + ": no widget with text '" + text + "' on the open screen");

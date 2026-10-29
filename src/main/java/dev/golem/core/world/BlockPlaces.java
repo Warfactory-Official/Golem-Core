@@ -14,21 +14,25 @@ import org.jspecify.annotations.Nullable;
  * <p>Notification only: a handler that wants the block gone or different changes the world itself (an atmosphere mod
  * that snuffs a torch placed in vacuum swaps the block). Forge-like loaders answer from
  * {@code BlockEvent.EntityPlaceEvent} (every block of a multi-block placement too, skipped when an earlier listener
- * cancelled it), Fabric, which has no place event, from {@code MixinBlockItemPlaced} - so on Fabric only placements
- * through a {@code BlockItem} (players, and dispensers placing block items) are reported, which is what the legacy event
- * mostly saw.
+ * cancelled it). Fabric, which has no place event, reports block-item placements and flint-and-steel fire through
+ * {@code MixinBlockItemPlaced} and {@code MixinFlintAndSteelPlaced}.
  */
 public final class BlockPlaces {
 
-    private BlockPlaces() {}
+    private BlockPlaces() {
+    }
 
     @FunctionalInterface
     public interface Handler {
-        /** {@code placer} may be null (a dispenser on Fabric, a non-entity cause on Forge-like loaders). */
+        /**
+         * {@code placer} may be null (a dispenser on Fabric, a non-entity cause on Forge-like loaders).
+         */
         void onPlace(@Nullable Entity placer, ServerLevel level, BlockPos pos, BlockState placed);
     }
 
-    /** Every listener, in phase order; register through {@link #onPlace} (which hooks the loader once) or directly. */
+    /**
+     * Every listener, in phase order; register through {@link #onPlace} (which hooks the loader once) or directly.
+     */
     public static final Hook<Handler> HANDLERS = Hook.notifying();
     private static boolean hooked;
 
@@ -39,7 +43,8 @@ public final class BlockPlaces {
         //? if neoforge {
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 (net.neoforged.neoforge.event.level.BlockEvent.EntityPlaceEvent event) -> {
-                    if (!event.isCanceled()) placed(event.getEntity(), event.getLevel(), event.getPos(), event.getPlacedBlock());
+                    if (!event.isCanceled())
+                        placed(event.getEntity(), event.getLevel(), event.getPos(), event.getPlacedBlock());
                 });
         //?} elif forge {
         /*net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(
@@ -49,7 +54,9 @@ public final class BlockPlaces {
         *///?}
     }
 
-    /** Dispatches a placement. Only server levels reach the handlers, as in the legacy event. */
+    /**
+     * Dispatches a placement. Only server levels reach the handlers, as in the legacy event.
+     */
     public static void placed(@Nullable Entity placer, Object level, BlockPos pos, BlockState state) {
         if (HANDLERS.isEmpty() || !(level instanceof ServerLevel serverLevel)) return;
         for (Handler handler : HANDLERS) handler.onPlace(placer, serverLevel, pos, state);

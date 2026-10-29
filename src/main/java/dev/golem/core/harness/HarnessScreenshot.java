@@ -3,26 +3,37 @@ package dev.golem.core.harness;
 import com.google.gson.JsonObject;
 import com.mojang.blaze3d.platform.NativeImage;
 import dev.golem.core.GolemCore;
+import dev.golem.core.gui.Screenshots;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import net.minecraft.client.Minecraft;
 
 /**
- * Captures the main render target to a PNG from the client tick. Between frames the render target
- * still holds the last fully composed frame, world, HUD and any open screen included, whereas the
- * HUD render pass runs before screens are drawn and would miss them. {@code skip_frames} counts ticks
- * to wait first, so a change made by the previous command has been rendered at least once.
+ * Captures the main render target after the world, HUD and open screen have been rendered.
+ * {@code skip_frames} counts completed frames independently of the client tick rate.
  */
 final class HarnessScreenshot {
 
     private static Path pending;
     private static volatile JsonObject result;
     private static int framesToSkip;
+    private static long completedFrames;
 
-    private HarnessScreenshot() {}
+    private HarnessScreenshot() {
+    }
 
-    /** Queues a capture; the returned pending completes when the PNG is written. */
+    /**
+     * Completes after vanilla has rendered the changed view and refreshed its crosshair pick.
+     */
+    static HarnessServer.Pending afterFrame(JsonObject answer) {
+        long previous = completedFrames;
+        return minecraft -> completedFrames > previous ? answer : null;
+    }
+
+    /**
+     * Queues a capture; the returned pending completes when the PNG is written.
+     */
     static HarnessServer.Pending request(Path path, int skipFrames) {
         pending = path;
         result = null;
@@ -30,17 +41,17 @@ final class HarnessScreenshot {
         return minecraft -> result;
     }
 
-    /** HUD render callback: kept as a hook; captures happen on the tick. */
-    static void render() {}
-
-    /** End-of-tick capture of the last composed frame. */
-    static void tick(Minecraft minecraft) {
+    /**
+     * Called after GameRenderer.render, including its screen pass.
+     */
+    static void completedFrame() {
+        completedFrames++;
         if (pending == null) return;
         if (framesToSkip-- > 0) return;
-        capture(minecraft);
+        capture();
     }
 
-    private static void capture(Minecraft minecraft) {
+    private static void capture() {
         Path path = pending;
         pending = null;
         try {
@@ -50,13 +61,8 @@ final class HarnessScreenshot {
             return;
         }
         try {
-            //? if >=26.1 {
-            net.minecraft.client.Screenshot.takeScreenshot(minecraft.getMainRenderTarget(), image -> write(image, path));
-            //?} else {
-            /*NativeImage image = net.minecraft.client.Screenshot.takeScreenshot(minecraft.getMainRenderTarget());
-            write(image, path);
-            *///?}
-        } catch (Throwable t) {
+            Screenshots.capture(image -> write(image, path));
+        } catch (RuntimeException t) {
             GolemCore.LOG.error("[harness] screenshot failed", t);
             result = Json.error("screenshot failed: " + t);
         }

@@ -4,16 +4,18 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 //? if fabric && <26.1 {
 /*import net.fabricmc.fabric.api.client.rendering.v1.DimensionRenderingRegistry;
-*///?}
+ *///?}
 import net.minecraft.client.CloudStatus;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 
 import dev.golem.core.client.Clouds;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
@@ -25,12 +27,15 @@ import net.minecraft.world.level.Level;
 // port: Older nodes retain native cloud geometry and shader state for their rendering API.
 public final class CloudRendering {
 
-    private CloudRendering() {}
+    private CloudRendering() {
+    }
 
     private static boolean hooked;
     private static final Set<ResourceKey<Level>> INSTALLED = new HashSet<>();
 
-    /** Installs the node's hook (once) and, where the hook is per dimension, for {@code dimension}. */
+    /**
+     * Installs the node's hook (once) and, where the hook is per dimension, for {@code dimension}.
+     */
     public static synchronized void install(ResourceKey<Level> dimension, boolean replacement) {
         if (!INSTALLED.add(dimension)) return;
         //? if fabric && <26.1 {
@@ -55,29 +60,34 @@ public final class CloudRendering {
                         event.registerCloudRenderer(dev.golem.core.Ids.of(Clouds.NAMESPACE, Clouds.PATH),
                                 new net.neoforged.neoforge.client.CustomCloudsRenderer() {
                                     @Override
-                                    public boolean renderClouds(net.minecraft.client.renderer.state.level.LevelRenderState state,
-                                                                net.minecraft.world.phys.Vec3 camera,
-                                                                net.minecraft.client.CloudStatus status, int color,
-                                                                float height, int range, org.joml.Matrix4fc modelView) {
+                                    public boolean renderClouds(
+                                            net.minecraft.client.renderer.state.level.LevelRenderState state,
+                                            net.minecraft.world.phys.Vec3 camera,
+                                            net.minecraft.client.CloudStatus status, int color,
+                                            float height, int range, org.joml.Matrix4fc modelView) {
                                         return render(status, range, camera);
                                     }
                                 }));
         //?}
     }
 
-    /** Whether {@code renderer} is one of Golem's own layer renderers (26.1; the vanilla hook must not take them over). */
+    /**
+     * Whether {@code renderer} is one of Golem's own layer renderers (26.1; the vanilla hook must not take them over).
+     */
     public static boolean isLayerRenderer(Object renderer) {
         //? if >=26.1 {
         return renderer instanceof LayerRenderer;
         //?} else {
         /*return false;
-        *///?}
+         *///?}
     }
 
     private static volatile boolean reloadPending;
     private static long layersDrawn;
 
-    /** How many cloud layers Golem has drawn since start (a positive signal for tests that the node's hook runs). */
+    /**
+     * How many cloud layers Golem has drawn since start (a positive signal for tests that the node's hook runs).
+     */
     public static long layersDrawn() {
         return layersDrawn;
     }
@@ -87,7 +97,9 @@ public final class CloudRendering {
     private static List<Clouds.Layer> nativeExtras = List.of();
     private static long nativeLayersDrawn;
 
-    /** Actual last native first layer and its additions, captured at the renderer's return. */
+    /**
+     * Actual last native first layer and its additions, captured at the renderer's return.
+     */
     public static List<Clouds.Layer> renderedNativeLayers(Level level) {
         if (level.dimension() != nativeDimension) return List.of();
         var argb = lastNativeLayer.argb();
@@ -98,7 +110,9 @@ public final class CloudRendering {
         return frame;
     }
 
-    public static long nativeLayersDrawn() { return nativeLayersDrawn; }
+    public static long nativeLayersDrawn() {
+        return nativeLayersDrawn;
+    }
 
     private static List<Clouds.Layer> nativeFrame(Level level, Clouds.NativeLayer nativeLayer) {
         var extras = Clouds.additions(level, nativeLayer);
@@ -115,22 +129,58 @@ public final class CloudRendering {
 
     //? if >=26.1 {
 
-    /** A vanilla cloud renderer that loads its own copy of the cloud texture (26.1). */
+    /**
+     * A vanilla cloud renderer that loads its own copy of the cloud texture (26.1).
+     */
     private static final class LayerRenderer extends net.minecraft.client.renderer.CloudRenderer {
         void load() {
-            net.minecraft.server.packs.resources.ResourceManager resources = Minecraft.getInstance().getResourceManager();
+            net.minecraft.server.packs.resources.ResourceManager resources = Minecraft.getInstance()
+                                                                                      .getResourceManager();
             net.minecraft.util.profiling.ProfilerFiller profiler = net.minecraft.util.profiling.InactiveProfiler.INSTANCE;
             this.apply(this.prepare(resources, profiler), resources, profiler);
         }
     }
 
     private static final List<LayerRenderer> RENDERERS = new ArrayList<>();
+    private static final com.mojang.blaze3d.pipeline.RenderPipeline CLOUD_LAYER =
+            new LayerPipeline("fancy", net.minecraft.client.renderer.RenderPipelines.CLOUDS);
+    private static final com.mojang.blaze3d.pipeline.RenderPipeline FLAT_LAYER =
+            new LayerPipeline("flat", net.minecraft.client.renderer.RenderPipelines.FLAT_CLOUDS);
+
+    private static final class LayerPipeline extends com.mojang.blaze3d.pipeline.RenderPipeline {
+        LayerPipeline(String name, com.mojang.blaze3d.pipeline.RenderPipeline source) {
+            super(dev.golem.core.Ids.of("golemcore", "pipeline/golem_clouds_" + name),
+                    source.getVertexShader(), source.getFragmentShader(), source.getShaderDefines(),
+                    source.getSamplers(), source.getUniforms(), source.getColorTargetState(),
+                    source.getDepthStencilState(),
+                    source.getPolygonMode(), source.isCull(), source.getVertexFormat(), source.getVertexFormatMode(),
+                    source.getSortKey());
+        }
+    }
+
+    /**
+     * Native cloud geometry for addon-owned decks, outside Iris's vanilla-cloud program override.
+     */
+    public static com.mojang.blaze3d.pipeline.RenderPipeline layerPipeline(
+            com.mojang.blaze3d.pipeline.RenderPipeline original) {
+        return original == net.minecraft.client.renderer.RenderPipelines.CLOUDS ? CLOUD_LAYER : FLAT_LAYER;
+    }
+
+    private static boolean drawingLayers;
+
+    /**
+     * Additional cloud draws need the same shader-pack world target as other native world effects.
+     */
+    public static boolean isDrawingLayers() {
+        return drawingLayers;
+    }
 
     /**
      * 26.1: draws the client level's layers in place of vanilla's clouds. False (vanilla draws) when the level is not
      * registered with {@link Clouds}.
      */
-    public static boolean render(net.minecraft.client.CloudStatus status, int range, net.minecraft.world.phys.Vec3 camera) {
+    public static boolean render(net.minecraft.client.CloudStatus status, int range,
+                                 net.minecraft.world.phys.Vec3 camera) {
         net.minecraft.client.multiplayer.ClientLevel level = Minecraft.getInstance().level;
         if (!Clouds.replaces(level)) return false;
         List<Clouds.Layer> layers = Clouds.layers(level, dev.golem.core.client.FrameTime.partialTick());
@@ -138,7 +188,9 @@ public final class CloudRendering {
         return true;
     }
 
-    /** Called after the native renderer, with its actual color, height and clock; no second color transform. */
+    /**
+     * Called after the native renderer, with its actual color, height and clock; no second color transform.
+     */
     public static void renderAdditions(int color, CloudStatus status, float bottomY, int range,
                                        Vec3 camera, long gameTime, float partialTick) {
         var level = Minecraft.getInstance().level;
@@ -162,10 +214,16 @@ public final class CloudRendering {
             Clouds.Layer layer = layers.get(i);
             LayerRenderer renderer = RENDERERS.get(i);
             int argb = net.minecraft.util.ARGB.colorFromFloat(layer.alpha(), layer.red(), layer.green(), layer.blue());
-            net.minecraft.world.phys.Vec3 shifted = new net.minecraft.world.phys.Vec3(camera.x + layer.shiftX(), camera.y,
+            net.minecraft.world.phys.Vec3 shifted = new net.minecraft.world.phys.Vec3(camera.x + layer.shiftX(),
+                    camera.y,
                     camera.z + layer.shiftZ());
             // Replacement clocks are zero; additions retain the native clock and apply only their relative drift.
-            renderer.render(argb, status, layer.height() + 0.33F, range, shifted, gameTime, partialTick);
+            drawingLayers = true;
+            try {
+                renderer.render(argb, status, layer.height() + 0.33F, range, shifted, gameTime, partialTick);
+            } finally {
+                drawingLayers = false;
+            }
             renderer.endFrame();
             layersDrawn++;
         }

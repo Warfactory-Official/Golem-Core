@@ -17,25 +17,26 @@ import java.util.List;
  * game one.
  *
  * <pre>{@code
- * java dev.golem.core.dejson.DejsonMain write  <out> <authored> com.hbm.blocks.ModBlockModels …
- * java dev.golem.core.dejson.DejsonMain verify <out> <authored> com.hbm.blocks.ModBlockModels …
+ * java dev.golem.core.dejson.DejsonMain write  <out> <authored> <namespace> com.hbm.blocks.ModBlockModels …
+ * java dev.golem.core.dejson.DejsonMain verify <out> <authored> <namespace> com.hbm.blocks.ModBlockModels …
  * }</pre>
  */
 public final class DejsonMain {
 
-    private DejsonMain() {}
+    private DejsonMain() {
+    }
 
     public static void main(String[] args) throws Exception {
-        if (args.length < 3) {
+        if (args.length < 4) {
             throw new IllegalArgumentException(
-                    "usage: DejsonMain <write|verify> <out> <authored> <declaring class>...");
+                    "usage: DejsonMain <write|verify> <out> <authored> <namespace> <declaring class>...");
         }
         String mode = args[0];
         Path out = Path.of(args[1]);
         Path authored = Path.of(args[2]);
         Data.authoredRoot(authored);
 
-        for (int index = 3; index < args.length; index++) {
+        for (int index = 4; index < args.length; index++) {
             declare(args[index]);
         }
 
@@ -58,7 +59,7 @@ public final class DejsonMain {
             throw new IllegalStateException(report.toString());
         }
 
-        List<String> missingSprites = DejsonWriter.missingSprites(authored);
+        List<String> missingSprites = DejsonWriter.missingSprites(authored, args[3]);
         if (!missingSprites.isEmpty()) {
             StringBuilder report = new StringBuilder(missingSprites.size()
                     + " declared sprite(s) have no texture file:");

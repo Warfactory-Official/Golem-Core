@@ -40,12 +40,15 @@ public abstract class CompatParticle extends
         net.minecraft.client.particle.SingleQuadParticle
         //?} else {
         /*net.minecraft.client.particle.TextureSheetParticle
-        *///?}
+         *///?}
 {
 
-    /** Full sky+block light, the modern spelling of 1.12's {@code 0xF000F0}. */
+    /**
+     * Full sky+block light, the modern spelling of 1.12's {@code 0xF000F0}.
+     */
     private static final int FULLBRIGHT = 0xF000F0;
 
+    private int lightOverride = -1;
     private ParticleLayer golemLayer = ParticleLayer.TRANSLUCENT;
     private boolean golemFaint;
     private boolean planeOriented;
@@ -56,11 +59,16 @@ public abstract class CompatParticle extends
     // PARTICLE_SNIPPET keeps the vanilla particle atlas bindings while this replaces only blend/depth.
     // The loader hooks register this pipeline alongside their normal particle pipeline registration.
     public static final RenderPipeline ADDITIVE_PIPELINE = RenderPipeline.builder(RenderPipelines.PARTICLE_SNIPPET)
-            .withLocation("pipeline/golem_particle_additive")
-            .withColorTargetState(new ColorTargetState(BlendFunction.ADDITIVE))
-            .withDepthStencilState(new DepthStencilState(DepthStencilState.DEFAULT.depthTest(), false)).build();
+                                                                         .withLocation(
+                                                                                 "pipeline/golem_particle_additive")
+                                                                         .withColorTargetState(new ColorTargetState(
+                                                                                 BlendFunction.ADDITIVE))
+                                                                         .withDepthStencilState(new DepthStencilState(
+                                                                                 DepthStencilState.DEFAULT.depthTest(),
+                                                                                 false)).build();
     private static final net.minecraft.client.particle.SingleQuadParticle.Layer ADDITIVE_LAYER =
-            new net.minecraft.client.particle.SingleQuadParticle.Layer(true, TextureAtlas.LOCATION_PARTICLES, ADDITIVE_PIPELINE);
+            new net.minecraft.client.particle.SingleQuadParticle.Layer(true, TextureAtlas.LOCATION_PARTICLES,
+                    ADDITIVE_PIPELINE);
     //?}
     //? if <26.1 {
     /*private static final net.minecraft.client.particle.ParticleRenderType ADDITIVE_LAYER =
@@ -132,7 +140,7 @@ public abstract class CompatParticle extends
     }
 
     protected CompatParticle(ClientLevel level, double x, double y, double z,
-            double xa, double ya, double za, TextureAtlasSprite sprite) {
+                             double xa, double ya, double za, TextureAtlasSprite sprite) {
         //? if >=26.1 {
         super(level, x, y, z, xa, ya, za, sprite);
         //?} else {
@@ -141,7 +149,9 @@ public abstract class CompatParticle extends
         *///?}
     }
 
-    /** Chooses how this particle's quad is drawn. Call from the subclass constructor. */
+    /**
+     * Chooses how this particle's quad is drawn. Call from the subclass constructor.
+     */
     protected final void setLayer(ParticleLayer layer) {
         this.golemLayer = layer;
     }
@@ -156,14 +166,18 @@ public abstract class CompatParticle extends
         this.golemFaint = true;
     }
 
-    /** Makes the quad lie in a world-oriented plane instead of facing the camera. */
+    /**
+     * Makes the quad lie in a world-oriented plane instead of facing the camera.
+     */
     public final void setPlaneOrientation(float yaw, float pitch) {
         this.planeOriented = true;
         this.planeYaw = yaw;
         this.planePitch = pitch;
     }
 
-    /** The layer this particle draws with. */
+    /**
+     * The layer this particle draws with.
+     */
     public final ParticleLayer layer() {
         return this.golemLayer;
     }
@@ -177,7 +191,9 @@ public abstract class CompatParticle extends
         this.quadSize = size;
     }
 
-    /** The current quad edge length. */
+    /**
+     * The current quad edge length.
+     */
     protected final float quadSize() {
         return this.quadSize;
     }
@@ -201,8 +217,8 @@ public abstract class CompatParticle extends
     public net.minecraft.client.particle.SingleQuadParticle.FacingCameraMode getFacingCameraMode() {
         if (this.planeOriented) {
             return (target, camera, partialTick) -> target.identity()
-                    .rotateY((float) Math.toRadians(this.planeYaw))
-                    .rotateX((float) Math.toRadians(this.planePitch));
+                                                          .rotateY((float) Math.toRadians(this.planeYaw))
+                                                          .rotateX((float) Math.toRadians(this.planePitch));
         }
         if (!this.isFlatOnGround()) return super.getFacingCameraMode();
         return (target, camera, partialTick) -> target.rotationX((float) (-Math.PI / 2D));
@@ -220,7 +236,8 @@ public abstract class CompatParticle extends
      * <p>Do <b>not</b> put GL state changes here: there is nowhere for them to go on 26.1. A particle
      * that needs a different blend mode wants a {@link ParticleLayer}.
      */
-    protected void updateForFrame(float partialTick) {}
+    protected void updateForFrame(float partialTick) {
+    }
 
     /**
      * Receives one quad of a particle that draws several: {@code d*} offset the particle's own
@@ -250,7 +267,7 @@ public abstract class CompatParticle extends
     //? if >=26.1 {
     @Override
     public void extract(net.minecraft.client.renderer.state.level.QuadParticleRenderState renderState,
-            net.minecraft.client.Camera camera, float partialTick) {
+                        net.minecraft.client.Camera camera, float partialTick) {
         this.updateForFrame(partialTick);
 
         org.joml.Quaternionf rotation = new org.joml.Quaternionf();
@@ -338,18 +355,23 @@ public abstract class CompatParticle extends
     }
     *///?}
 
-    // The light hook is named getLightCoords on 26.1 and getLightColor below it. Both have the same
-    // contract (packed sky/block light for this particle at partialTick), so the override is
-    // duplicated rather than facaded: there is nothing to translate beyond the name.
+    /**
+     * Packed sky/block light, or -1 for the particle layer's lighting.
+     */
+    protected final void setLightOverride(int light) {
+        lightOverride = light;
+    }
+
     //? if >=26.1 {
     @Override
     protected int getLightCoords(float partialTick) {
-        return this.golemLayer.isFullbright() ? FULLBRIGHT : super.getLightCoords(partialTick);
+        return lightOverride >= 0 ? lightOverride : this.golemLayer.isFullbright() ? FULLBRIGHT : super.getLightCoords(
+                partialTick);
     }
     //?} else {
     /*@Override
     protected int getLightColor(float partialTick) {
-        return this.golemLayer.isFullbright() ? FULLBRIGHT : super.getLightColor(partialTick);
+        return lightOverride >= 0 ? lightOverride : this.golemLayer.isFullbright() ? FULLBRIGHT : super.getLightColor(partialTick);
     }
     *///?}
 

@@ -1,30 +1,51 @@
 package dev.golem.core.world;
 
 import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.Level;
 
 import dev.golem.core.GolemCore;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.TicketType;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.LevelChunk;
+import org.jspecify.annotations.Nullable;
 
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.WeakHashMap;
 
-/** Chunk access whose shape changed across the supported range. */
+/**
+ * Chunk access whose shape changed across the supported range.
+ */
 public final class Chunks {
 
-    private Chunks() {}
+    private Chunks() {
+    }
 
-    /** The lowest buildable y of {@code level} (1.21.2 {@code getMinY}; earlier {@code getMinBuildHeight}). */
+    /**
+     * A full chunk already in memory, without requesting loading or generation.
+     */
+    public static @Nullable LevelChunk loaded(Level level, int chunkX, int chunkZ) {
+        if (level instanceof ServerLevel server) return server.getChunkSource().getChunkNow(chunkX, chunkZ);
+        //? if >=1.21 {
+        return (LevelChunk) level.getChunk(chunkX, chunkZ,
+                net.minecraft.world.level.chunk.status.ChunkStatus.FULL, false);
+        //?} else {
+        /*return (LevelChunk) level.getChunk(chunkX, chunkZ,
+                net.minecraft.world.level.chunk.ChunkStatus.FULL, false);
+        *///?}
+    }
+
+    /**
+     * The lowest buildable y of {@code level} (1.21.2 {@code getMinY}; earlier {@code getMinBuildHeight}).
+     */
     public static int minY(LevelReader level) {
         //? if >=1.21.2 {
         return level.getMinY();
         //?} else {
         /*return level.getMinBuildHeight();
-        *///?}
+         *///?}
     }
 
     /**
@@ -76,7 +97,7 @@ public final class Chunks {
         level.getChunkSource().addTicketWithRadius(LOAD_ONLY, pos, 0);
         //?} else {
         /*level.getChunkSource().addRegionTicket(LOAD_ONLY, pos, 0, pos);
-        *///?}
+         *///?}
     }
 
     /**
@@ -91,7 +112,9 @@ public final class Chunks {
             TicketType.create("golem_ticking", Comparator.comparingLong(ChunkPos::toLong));
     *///?}
 
-    /** Radius 2 is ticket level 31 (entity-ticking), the level of a forced chunk. */
+    /**
+     * Radius 2 is ticket level 31 (entity-ticking), the level of a forced chunk.
+     */
     private static final int TICKING_RADIUS = 2;
 
     /**
@@ -104,19 +127,24 @@ public final class Chunks {
         level.getChunkSource().addTicketWithRadius(TICKING, pos, TICKING_RADIUS);
         //?} else {
         /*level.getChunkSource().addRegionTicket(TICKING, pos, TICKING_RADIUS, pos);
-        *///?}
+         *///?}
     }
 
-    /** Drops the claim taken by {@link #claimTicking}. */
+    /**
+     * Drops the claim taken by {@link #claimTicking}.
+     */
     public static void releaseTicking(ServerLevel level, int chunkX, int chunkZ) {
         ChunkPos pos = new ChunkPos(chunkX, chunkZ);
         //? if >=26.1 {
         level.getChunkSource().removeTicketWithRadius(TICKING, pos, TICKING_RADIUS);
         //?} else {
         /*level.getChunkSource().removeRegionTicket(TICKING, pos, TICKING_RADIUS, pos);
-        *///?}
+         *///?}
     }
-    /** Waits until a caller-held chunk ticks entities and has read its stored ones; takes and releases no claim. */
+
+    /**
+     * Waits until a caller-held chunk ticks entities and has read its stored ones; takes and releases no claim.
+     */
     public static void loadEntityTicking(ServerLevel level, int chunkX, int chunkZ) {
         var cache = level.getChunkSource();
         // A FULL chunk can already be cached while its newly claimed entity-ticking future is still unloaded.
@@ -149,7 +177,9 @@ public final class Chunks {
         *///?}
     }
 
-    /** Waits for a caller-held chunk's native send dependencies, including lighting, before a player send. */
+    /**
+     * Waits for a caller-held chunk's native send dependencies, including lighting, before a player send.
+     */
     public static LevelChunk loadForSending(ServerLevel level, int chunkX, int chunkZ) {
         loadEntityTicking(level, chunkX, chunkZ);
         var cache = level.getChunkSource();
@@ -167,7 +197,7 @@ public final class Chunks {
         return holder.getChunkToSend();
         //?} else {
         /*return holder.getTickingChunk();
-        *///?}
+         *///?}
     }
 
     /**
@@ -185,7 +215,9 @@ public final class Chunks {
         return chunk instanceof LevelChunk full ? full : null;
     }
 
-    /** Drops a claim taken by {@link #claimForLoading}. */
+    /**
+     * Drops a claim taken by {@link #claimForLoading}.
+     */
     public static synchronized void releaseForLoading(ServerLevel level, int chunkX, int chunkZ) {
         long key = pack(chunkX, chunkZ);
         Map<Long, Integer> refs = LOAD_REFS.get(level);
@@ -206,7 +238,7 @@ public final class Chunks {
         level.getChunkSource().removeTicketWithRadius(LOAD_ONLY, pos, 0);
         //?} else {
         /*level.getChunkSource().removeRegionTicket(LOAD_ONLY, pos, 0, pos);
-        *///?}
+         *///?}
     }
 
     /**
@@ -220,7 +252,9 @@ public final class Chunks {
         return (chunkX & 0xFFFFFFFFL) | ((long) chunkZ << 32);
     }
 
-    /** The chunk containing a block position, as a {@link #key(int, int)}. */
+    /**
+     * The chunk containing a block position, as a {@link #key(int, int)}.
+     */
     public static long keyOfBlock(int blockX, int blockZ) {
         return key(net.minecraft.core.SectionPos.blockToSectionCoord(blockX),
                 net.minecraft.core.SectionPos.blockToSectionCoord(blockZ));
@@ -234,12 +268,16 @@ public final class Chunks {
         return keyOfBlock(pos.getMinBlockX(), pos.getMinBlockZ());
     }
 
-    /** A chunk's x, read through the bounds rather than the field {@link #key(ChunkPos)} avoids. */
+    /**
+     * A chunk's x, read through the bounds rather than the field {@link #key(ChunkPos)} avoids.
+     */
     public static int chunkX(ChunkPos pos) {
         return net.minecraft.core.SectionPos.blockToSectionCoord(pos.getMinBlockX());
     }
 
-    /** A chunk's z, read the same way as {@link #chunkX(ChunkPos)}. */
+    /**
+     * A chunk's z, read the same way as {@link #chunkX(ChunkPos)}.
+     */
     public static int chunkZ(ChunkPos pos) {
         return net.minecraft.core.SectionPos.blockToSectionCoord(pos.getMinBlockZ());
     }
@@ -265,7 +303,7 @@ public final class Chunks {
         int minY = level.getMinY();
         //?} else {
         /*int minY = level.getMinBuildHeight();
-        *///?}
+         *///?}
         int height = level.getHeight();
         return level.getChunkSource().chunkMap.read(new ChunkPos(chunkX, chunkZ)).handle((stored, error) -> {
             if (error != null || stored == null || stored.isEmpty()) return null;
@@ -273,7 +311,8 @@ public final class Chunks {
         });
     }
 
-    private static int @org.jspecify.annotations.Nullable [] savedHeights(net.minecraft.nbt.CompoundTag chunk, String key,
+    private static int @org.jspecify.annotations.Nullable [] savedHeights(net.minecraft.nbt.CompoundTag chunk,
+                                                                          String key,
                                                                           int minY, int height) {
         //? if >=26.1 {
         String status = chunk.getStringOr("Status", "");

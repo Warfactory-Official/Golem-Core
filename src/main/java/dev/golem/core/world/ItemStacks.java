@@ -2,8 +2,14 @@ package dev.golem.core.world;
 
 import dev.golem.core.Ids;
 import dev.golem.core.data.GolemComponent;
+import dev.golem.core.data.Tags;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.item.BlockItem;
+import org.jspecify.annotations.Nullable;
 //? if >=1.20.5 {
 import net.minecraft.core.component.DataComponents;
 //?}
@@ -12,7 +18,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 //?} else {
 /*import net.minecraft.network.FriendlyByteBuf;
-*///?}
+ *///?}
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -22,10 +28,41 @@ import net.minecraft.core.NonNullList;
 
 import java.util.List;
 
-/** Version-neutral operations on item stacks whose vanilla APIs changed between supported versions. */
+/**
+ * Version-neutral operations on item stacks whose vanilla APIs changed between supported versions.
+ */
 public final class ItemStacks {
 
-    private ItemStacks() {}
+    private ItemStacks() {
+    }
+
+    public static boolean hasUseRemainder(ItemStack stack) {
+        //? if >=1.21.2 {
+        return stack.has(DataComponents.USE_REMAINDER);
+        //?} else {
+        /*return false;
+         *///?}
+    }
+
+    /**
+     * Stored block-entity data belongs only to its registered type.
+     */
+    public static @Nullable CompoundTag blockEntityData(ItemStack stack, BlockEntityType<?> type) {
+        //? if >=26.1 {
+        var data = stack.get(DataComponents.BLOCK_ENTITY_DATA);
+        return data == null || data.type() != type ? null : data.getUnsafe();
+        //?} elif >=1.20.5 {
+        /*var data = stack.get(DataComponents.BLOCK_ENTITY_DATA);
+        if (data == null) return null;
+        var tag = data.getUnsafe();
+        return Tags.getStringOr(tag, "id", "").equals(
+                BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(type).toString()) ? tag : null;
+        *///?} else {
+        /*var tag = BlockItem.getBlockEntityData(stack);
+        return tag != null && Tags.getStringOr(tag, "id", "").equals(
+                BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(type).toString()) ? tag : null;
+        *///?}
+    }
 
     /**
      * A codec for one stack that tolerates an empty one, for storing a stack inside something else.
@@ -38,7 +75,7 @@ public final class ItemStacks {
         return ItemStack.OPTIONAL_CODEC;
         //?} else {
         /*return ItemStack.CODEC;
-        *///?}
+         *///?}
     }
 
     /**
@@ -51,11 +88,13 @@ public final class ItemStacks {
      * other {@code minecraft:} component (which has no NBT counterpart there) is skipped. The old
      * {@code ItemStack.CODEC} cannot parse this spelling: it fails on the missing {@code Count} field.
      */
-    public static java.util.Optional<ItemStack> withComponents(ItemStack template, com.google.gson.JsonObject components,
-            com.mojang.serialization.DynamicOps<com.google.gson.JsonElement> ops) {
+    public static java.util.Optional<ItemStack> withComponents(ItemStack template,
+                                                               com.google.gson.JsonObject components,
+                                                               com.mojang.serialization.DynamicOps<com.google.gson.JsonElement> ops) {
         //? if >=1.20.5 {
         com.google.gson.JsonObject stack = new com.google.gson.JsonObject();
-        stack.addProperty("id", net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(template.getItem()).toString());
+        stack.addProperty("id",
+                net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(template.getItem()).toString());
         stack.addProperty("count", template.getCount());
         stack.add("components", components);
         return ItemStack.OPTIONAL_CODEC.parse(ops, stack).result();
@@ -93,7 +132,8 @@ public final class ItemStacks {
             if (!net.minecraft.core.registries.BuiltInRegistries.ITEM.containsKey(Ids.parse(node))) {
                 return com.mojang.serialization.DataResult.error(() -> "Unknown item: " + id);
             }
-            return com.mojang.serialization.DataResult.success(net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(Ids.parse(node)));
+            return com.mojang.serialization.DataResult.success(
+                    net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(Ids.parse(node)));
         }, item -> Ids.canonicalItemId(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item).toString()));
     }
 
@@ -104,13 +144,15 @@ public final class ItemStacks {
      * back. Below 1.20.5 a {@link GolemComponent}'s value is re-encoded with its codec (1.20.1 keeps a boolean as a byte),
      * the damage value is {@code minecraft:damage} when not zero, and any other NBT key is converted as it is.
      */
-    public static com.google.gson.JsonObject modernJson(ItemStack stack, com.mojang.serialization.DynamicOps<com.google.gson.JsonElement> ops) {
+    public static com.google.gson.JsonObject modernJson(ItemStack stack,
+                                                        com.mojang.serialization.DynamicOps<com.google.gson.JsonElement> ops) {
         com.google.gson.JsonObject out = new com.google.gson.JsonObject();
         if (stack.isEmpty()) return out;
         java.util.TreeMap<String, com.google.gson.JsonElement> components = new java.util.TreeMap<>();
         //? if >=1.20.5 {
         com.google.gson.JsonElement encoded = ItemStack.OPTIONAL_CODEC.encodeStart(ops, stack).result().orElse(null);
-        if (encoded != null && encoded.isJsonObject() && encoded.getAsJsonObject().get("components") instanceof com.google.gson.JsonObject patch) {
+        if (encoded != null && encoded.isJsonObject() && encoded.getAsJsonObject()
+                                                                .get("components") instanceof com.google.gson.JsonObject patch) {
             for (var entry : patch.entrySet()) components.put(entry.getKey(), entry.getValue());
         }
         //?} else {
@@ -124,7 +166,8 @@ public final class ItemStacks {
         }
         if (stack.getDamageValue() != 0) components.put("minecraft:damage", new com.google.gson.JsonPrimitive(stack.getDamageValue()));
         *///?}
-        out.addProperty("id", Ids.canonicalItemId(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()).toString()));
+        out.addProperty("id", Ids.canonicalItemId(
+                net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()).toString()));
         out.addProperty("count", stack.getCount());
         if (!components.isEmpty()) {
             com.google.gson.JsonObject sorted = new com.google.gson.JsonObject();
@@ -134,13 +177,15 @@ public final class ItemStacks {
         return out;
     }
 
-    /** Returns whether both stacks have the same item and item data, ignoring their counts. */
+    /**
+     * Returns whether both stacks have the same item and item data, ignoring their counts.
+     */
     public static boolean sameItemAndData(ItemStack first, ItemStack second) {
         //? if >=1.20.5 {
         return ItemStack.isSameItemSameComponents(first, second);
         //?} else {
         /*return ItemStack.isSameItemSameTags(first, second);
-        *///?}
+         *///?}
     }
 
     /**
@@ -153,10 +198,12 @@ public final class ItemStacks {
         return ItemStack.hashItemAndComponents(stack);
         //?} else {
         /*return java.util.Objects.hash(stack.getItem(), stack.getTag());
-        *///?}
+         *///?}
     }
 
-    /** Compares item data while ignoring durability, matching the old wildcard filter. */
+    /**
+     * Compares item data while ignoring durability, matching the old wildcard filter.
+     */
     public static boolean sameItemAndDataIgnoringDamage(ItemStack first, ItemStack second) {
         //? if >=1.20.5 {
         ItemStack firstCopy = first.copy();
@@ -207,13 +254,17 @@ public final class ItemStacks {
         *///?}
     }
 
-    /** Tests an item registry id without exposing the registry lookup spelling to consumers. */
+    /**
+     * Tests an item registry id without exposing the registry lookup spelling to consumers.
+     */
     public static boolean matchesItemId(ItemStack stack, String id) {
         if (stack == null || stack.isEmpty()) return false;
         return stack.is(net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(Ids.parse(id)));
     }
 
-    /** Tests one integer component, or its namespaced legacy NBT representation on 1.20.1. */
+    /**
+     * Tests one integer component, or its namespaced legacy NBT representation on 1.20.1.
+     */
     public static boolean matchesIntComponent(ItemStack stack, String key, int value) {
         //? if >=1.21.1 {
         net.minecraft.core.component.DataComponentType<?> type =
@@ -221,7 +272,7 @@ public final class ItemStacks {
         return type != null && stack.has(type) && Integer.valueOf(value).equals(stack.get(type));
         //?} else {
         /*return stack.hasTag() && stack.getTag().contains(key, 3) && stack.getTag().getInt(key) == value;
-        *///?}
+         *///?}
     }
 
     /**
@@ -242,10 +293,12 @@ public final class ItemStacks {
                 && value.equals(primitive.getAsString());
         //?} else {
         /*return stack.hasTag() && stack.getTag().contains(key, 8) && stack.getTag().getString(key).equals(value);
-        *///?}
+         *///?}
     }
 
-    /** Tests that a named item component is absent on the stack. */
+    /**
+     * Tests that a named item component is absent on the stack.
+     */
     public static boolean matchesAbsentComponent(ItemStack stack, String key) {
         //? if >=1.21.1 {
         net.minecraft.core.component.DataComponentType<?> type =
@@ -253,10 +306,12 @@ public final class ItemStacks {
         return type != null && !stack.has(type);
         //?} else {
         /*return !stack.hasTag() || !stack.getTag().contains(key);
-        *///?}
+         *///?}
     }
 
-    /** Copies a stack while replacing its count. */
+    /**
+     * Copies a stack while replacing its count.
+     */
     public static ItemStack copyWithCount(ItemStack stack, int count) {
         //? if >=1.20.5 {
         return stack.copyWithCount(count);
@@ -275,9 +330,9 @@ public final class ItemStacks {
         if (stack.isEmpty()) return false;
         //? if >=1.21 {
         return stack.getOrDefault(net.minecraft.core.component.DataComponents.ATTRIBUTE_MODIFIERS,
-                        net.minecraft.world.item.component.ItemAttributeModifiers.EMPTY).modifiers().stream()
-                .anyMatch(entry -> entry.attribute().value()
-                        == net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE.value());
+                            net.minecraft.world.item.component.ItemAttributeModifiers.EMPTY).modifiers().stream()
+                    .anyMatch(entry -> entry.attribute().value()
+                            == net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE.value());
         //?} else {
         /*return stack.getAttributeModifiers(EquipmentSlot.MAINHAND)
                 .containsKey(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
@@ -299,7 +354,8 @@ public final class ItemStacks {
             stack.set(type, net.minecraft.world.item.component.ItemAttributeModifiers.EMPTY);
         } else {
             var def = stack.getItem().components().get(type);
-            if (def != null) stack.set(type, def); else stack.remove(type);
+            if (def != null) stack.set(type, def);
+            else stack.remove(type);
         }
         //?} else {
         /*if (suppressed) {
@@ -310,12 +366,15 @@ public final class ItemStacks {
         *///?}
     }
 
-    /** Whether {@link #suppressAttributeModifiers} currently holds this stack's modifiers off. */
+    /**
+     * Whether {@link #suppressAttributeModifiers} currently holds this stack's modifiers off.
+     */
     public static boolean attributeModifiersSuppressed(ItemStack stack) {
         //? if >=1.20.5 {
         var value = stack.get(net.minecraft.core.component.DataComponents.ATTRIBUTE_MODIFIERS);
         return value != null && value.modifiers().isEmpty()
-                && !value.equals(stack.getItem().components().get(net.minecraft.core.component.DataComponents.ATTRIBUTE_MODIFIERS));
+                && !value.equals(
+                stack.getItem().components().get(net.minecraft.core.component.DataComponents.ATTRIBUTE_MODIFIERS));
         //?} else {
         /*return stack.getTag() != null && stack.getTag().contains("AttributeModifiers", 9)
                 && stack.getTag().getList("AttributeModifiers", 10).isEmpty();
@@ -328,7 +387,8 @@ public final class ItemStacks {
      * {@code attackDamage} and {@code attackSpeed} are absolute additions, {@code movement} a base multiplier (0: none).
      * {@link #suppressAttributeModifiers} with {@code false} gives the item's own modifiers back.
      */
-    public static void overrideMainHandAttributes(ItemStack stack, float attackDamage, float attackSpeed, double movement) {
+    public static void overrideMainHandAttributes(ItemStack stack, float attackDamage, float attackSpeed,
+                                                  double movement) {
         if (stack.isEmpty()) return;
         // >=1.21.1, not the >=1.20.5 of the component's other users: it follows Tools.attributes, whose
         // id-keyed AttributeModifier is 1.21; 1.20.5-1.21.0 would need a third (UUID + component) branch.
@@ -343,46 +403,56 @@ public final class ItemStacks {
         *///?}
     }
 
-    /** Damages a held item and broadcasts its break animation across the callback signature change. */
+    /**
+     * Damages a held item and broadcasts its break animation across the callback signature change.
+     */
     public static void hurtAndBreak(ItemStack stack, int amount, Player player, InteractionHand hand) {
         //? if >=1.21.1 {
         stack.hurtAndBreak(amount, player,
                 hand == InteractionHand.MAIN_HAND ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND);
         //?} else {
         /*stack.hurtAndBreak(amount, player, owner -> owner.broadcastBreakEvent(hand));
-        *///?}
+         *///?}
     }
 
-    /** Copies the source stack's mutable custom state onto an already-configured output stack. */
+    /**
+     * Copies the source stack's mutable custom state onto an already-configured output stack.
+     */
     public static void copyCustomState(ItemStack source, ItemStack output) {
         //? if >=1.20.5 {
         output.applyComponents(source.getComponentsPatch());
         //?} else {
         /*if (source.hasTag()) output.getOrCreateTag().merge(source.getTag().copy());
-        *///?}
+         *///?}
     }
 
-    /** Copies only the user-assigned display name between transformed container items. */
+    /**
+     * Copies only the user-assigned display name between transformed container items.
+     */
     public static void copyCustomName(ItemStack source, ItemStack output) {
         //? if >=1.20.5 {
         net.minecraft.network.chat.Component name = source.get(net.minecraft.core.component.DataComponents.CUSTOM_NAME);
         if (name != null) output.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, name);
         //?} else {
         /*if (source.hasCustomHoverName()) output.setHoverName(source.getHoverName());
-        *///?}
+         *///?}
     }
 
-    /** Applies the vanilla custom name and lore used by machines that print a message stack. */
+    /**
+     * Applies the vanilla custom name and lore used by machines that print a message stack.
+     */
     public static void setNameAndLore(ItemStack stack, String name, List<String> lines) {
         //? if >=1.20.5 {
         stack.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,
                 net.minecraft.network.chat.Component.literal(name));
         stack.set(net.minecraft.core.component.DataComponents.LORE,
                 new net.minecraft.world.item.component.ItemLore(lines.stream()
-                        .<net.minecraft.network.chat.Component>map(line ->
-                                net.minecraft.network.chat.Component.literal(line)
-                                        .withStyle(net.minecraft.ChatFormatting.GRAY))
-                        .toList()));
+                                                                     .<net.minecraft.network.chat.Component>map(line ->
+                                                                             net.minecraft.network.chat.Component.literal(
+                                                                                        line)
+                                                                                                                 .withStyle(
+                                                                                                                         net.minecraft.ChatFormatting.GRAY))
+                                                                     .toList()));
         //?} else {
         /*net.minecraft.nbt.CompoundTag display = stack.getOrCreateTagElement("display");
         net.minecraft.nbt.ListTag lore = new net.minecraft.nbt.ListTag();
@@ -396,13 +466,15 @@ public final class ItemStacks {
         *///?}
     }
 
-    /** Returns the plain text of vanilla lore lines, regardless of component or legacy NBT storage. */
+    /**
+     * Returns the plain text of vanilla lore lines, regardless of component or legacy NBT storage.
+     */
     public static List<String> loreLines(ItemStack stack) {
         //? if >=1.20.5 {
         net.minecraft.world.item.component.ItemLore lore =
                 stack.get(net.minecraft.core.component.DataComponents.LORE);
         return lore == null ? List.of() : lore.lines().stream()
-                .map(net.minecraft.network.chat.Component::getString).toList();
+                                              .map(net.minecraft.network.chat.Component::getString).toList();
         //?} else {
         /*if (!stack.hasTag()) return List.of();
         net.minecraft.nbt.CompoundTag display = stack.getTag().getCompound("display");
@@ -418,7 +490,9 @@ public final class ItemStacks {
         *///?}
     }
 
-    /** Reads one slot from block-entity state carried by an item. */
+    /**
+     * Reads one slot from block-entity state carried by an item.
+     */
     public static ItemStack carriedItem(ItemStack carrier, String legacyInventoryKey, int slotCount, int slot) {
         if (slot < 0 || slot >= slotCount) return ItemStack.EMPTY;
         //? if >=1.20.5 {
@@ -440,7 +514,9 @@ public final class ItemStacks {
         *///?}
     }
 
-    /** Reads an integer from an item's carried block custom data. */
+    /**
+     * Reads an integer from an item's carried block custom data.
+     */
     public static int carriedInt(ItemStack carrier, String key) {
         //? if >=1.20.5 {
         net.minecraft.world.item.component.CustomData data =
@@ -448,10 +524,12 @@ public final class ItemStacks {
         return data == null ? 0 : dev.golem.core.data.Tags.getIntOr(data.copyTag(), key, 0);
         //?} else {
         /*return legacyCarriedData(carrier).getInt(key);
-        *///?}
+         *///?}
     }
 
-    /** Reads a string from an item's carried block custom data; empty when absent or not a string. */
+    /**
+     * Reads a string from an item's carried block custom data; empty when absent or not a string.
+     */
     public static String carriedString(ItemStack carrier, String key) {
         //? if >=1.20.5 {
         net.minecraft.world.item.component.CustomData data =
@@ -459,10 +537,12 @@ public final class ItemStacks {
         return data == null ? "" : dev.golem.core.data.Tags.getStringOr(data.copyTag(), key, "");
         //?} else {
         /*return dev.golem.core.data.Tags.getStringOr(legacyCarriedData(carrier), key, "");
-        *///?}
+         *///?}
     }
 
-    /** Writes a boolean into an item's carried block custom data, where {@link #carriedBoolean} reads it; false removes it. */
+    /**
+     * Writes a boolean into an item's carried block custom data, where {@link #carriedBoolean} reads it; false removes it.
+     */
     public static void setCarriedBoolean(ItemStack carrier, String key, boolean value) {
         if (!value) {
             removeCarried(carrier, key);
@@ -477,10 +557,12 @@ public final class ItemStacks {
                 net.minecraft.world.item.component.CustomData.of(tag));
         //?} else {
         /*carrier.getOrCreateTagElement("BlockEntityTag").putBoolean(key, true);
-        *///?}
+         *///?}
     }
 
-    /** Writes a long into an item's carried block custom data, where {@link #carriedLong} reads it. */
+    /**
+     * Writes a long into an item's carried block custom data, where {@link #carriedLong} reads it.
+     */
     public static void setCarriedLong(ItemStack carrier, String key, long value) {
         //? if >=1.20.5 {
         net.minecraft.world.item.component.CustomData data =
@@ -491,10 +573,12 @@ public final class ItemStacks {
                 net.minecraft.world.item.component.CustomData.of(tag));
         //?} else {
         /*carrier.getOrCreateTagElement("BlockEntityTag").putLong(key, value);
-        *///?}
+         *///?}
     }
 
-    /** Reads a long from an item's carried block custom data. */
+    /**
+     * Reads a long from an item's carried block custom data.
+     */
     public static long carriedLong(ItemStack carrier, String key) {
         //? if >=1.20.5 {
         net.minecraft.world.item.component.CustomData data =
@@ -502,10 +586,12 @@ public final class ItemStacks {
         return data == null ? 0L : dev.golem.core.data.Tags.getLongOr(data.copyTag(), key, 0L);
         //?} else {
         /*return legacyCarriedData(carrier).getLong(key);
-        *///?}
+         *///?}
     }
 
-    /** Removes a key from an item's carried block custom data, and the data itself once it is empty. */
+    /**
+     * Removes a key from an item's carried block custom data, and the data itself once it is empty.
+     */
     public static void removeCarried(ItemStack carrier, String key) {
         //? if >=1.20.5 {
         net.minecraft.world.item.component.CustomData data =
@@ -526,16 +612,20 @@ public final class ItemStacks {
         *///?}
     }
 
-    /** Whether a stack differs from a fresh stack of its item (any component patch; any tag before 1.20.5). */
+    /**
+     * Whether a stack differs from a fresh stack of its item (any component patch; any tag before 1.20.5).
+     */
     public static boolean isPlain(ItemStack stack) {
         //? if >=1.20.5 {
         return stack.getComponentsPatch().isEmpty();
         //?} else {
         /*return !stack.hasTag();
-        *///?}
+         *///?}
     }
 
-    /** Reads a boolean from an item's carried block custom data. */
+    /**
+     * Reads a boolean from an item's carried block custom data.
+     */
     public static boolean carriedBoolean(ItemStack carrier, String key) {
         //? if >=1.20.5 {
         net.minecraft.world.item.component.CustomData data =
@@ -543,7 +633,7 @@ public final class ItemStacks {
         return data != null && dev.golem.core.data.Tags.getBooleanOr(data.copyTag(), key, false);
         //?} else {
         /*return legacyCarriedData(carrier).getBoolean(key);
-        *///?}
+         *///?}
     }
 
     //? if <1.20.5 {
@@ -571,69 +661,81 @@ public final class ItemStacks {
     }
     *///?}
 
-    /** Runs the vanilla crafted-item callback despite its level parameter changing across versions. */
+    /**
+     * Runs the vanilla crafted-item callback despite its level parameter changing across versions.
+     */
     public static void onCraftedBy(ItemStack stack, Player player, int count) {
         //? if >=26.1 {
         stack.onCraftedBy(player, count);
         //?} else {
         /*stack.onCraftedBy(player.level(), player, count);
-        *///?}
+         *///?}
     }
 
-    /** Encodes a possibly-empty stack using the native format for the target version. */
+    /**
+     * Encodes a possibly-empty stack using the native format for the target version.
+     */
     public static void writeOptional(
             //? if >=1.20.5 {
             RegistryFriendlyByteBuf
-            //?} else {
-            /*FriendlyByteBuf
-            *///?}
-            buffer, ItemStack stack) {
+                    //?} else {
+                    /*FriendlyByteBuf
+                     *///?}
+                    buffer, ItemStack stack) {
         //? if >=1.20.5 {
         ItemStack.OPTIONAL_STREAM_CODEC.encode(buffer, stack);
         //?} else {
         /*buffer.writeItem(stack);
-        *///?}
+         *///?}
     }
 
-    /** Decodes a stack written by {@link #writeOptional}. */
+    /**
+     * Decodes a stack written by {@link #writeOptional}.
+     */
     public static ItemStack readOptional(
             //? if >=1.20.5 {
             RegistryFriendlyByteBuf
-            //?} else {
-            /*FriendlyByteBuf
-            *///?}
-            buffer) {
+                    //?} else {
+                    /*FriendlyByteBuf
+                     *///?}
+                    buffer) {
         //? if >=1.20.5 {
         return ItemStack.OPTIONAL_STREAM_CODEC.decode(buffer);
         //?} else {
         /*return buffer.readItem();
-        *///?}
+         *///?}
     }
 
-    /** Returns the food properties attached to this stack's item, or {@code null} when it is not food. */
+    /**
+     * Returns the food properties attached to this stack's item, or {@code null} when it is not food.
+     */
     public static FoodProperties foodProperties(ItemStack stack) {
         //? if >=1.21 {
         return stack.get(net.minecraft.core.component.DataComponents.FOOD);
         //?} else {
         /*return stack.getItem().getFoodProperties();
-        *///?}
+         *///?}
     }
 
-    /** Creates food properties despite the builder's saturation method rename. */
+    /**
+     * Creates food properties despite the builder's saturation method rename.
+     */
     public static FoodProperties food(int nutrition, float saturationModifier) {
         return food(nutrition, saturationModifier, false);
     }
 
-    /** Creates food properties, optionally allowing consumption at a full hunger bar. */
+    /**
+     * Creates food properties, optionally allowing consumption at a full hunger bar.
+     */
     public static FoodProperties food(int nutrition, float saturationModifier, boolean alwaysEdible) {
         //? if >=1.20.5 {
         FoodProperties.Builder builder = new FoodProperties.Builder().nutrition(nutrition)
-                .saturationModifier(saturationModifier);
+                                                                     .saturationModifier(saturationModifier);
         //? if >=1.21.1 {
         if (alwaysEdible) builder.alwaysEdible();
         //?} else {
         /*if (alwaysEdible) builder.alwaysEat();
-        *///?}
+         *///?}
         return builder.build();
         //?} else {
         /*FoodProperties.Builder builder = new FoodProperties.Builder().nutrition(nutrition)
@@ -643,22 +745,26 @@ public final class ItemStacks {
         *///?}
     }
 
-    /** Returns the nutrition value across the pre-record and record-shaped food APIs. */
+    /**
+     * Returns the nutrition value across the pre-record and record-shaped food APIs.
+     */
     public static int foodNutrition(FoodProperties food) {
         //? if >=1.21 {
         return food.nutrition();
         //?} else {
         /*return food.getNutrition();
-        *///?}
+         *///?}
     }
 
-    /** Returns the constructor-level saturation modifier, not the computed saturation amount. */
+    /**
+     * Returns the constructor-level saturation modifier, not the computed saturation amount.
+     */
     public static float foodSaturationModifier(FoodProperties food) {
         //? if >=1.21 {
         return food.nutrition() == 0 ? 0F : food.saturation() / (food.nutrition() * 2F);
         //?} else {
         /*return food.getSaturationModifier();
-        *///?}
+         *///?}
     }
 
     /**
@@ -702,7 +808,8 @@ public final class ItemStacks {
      * {@code ItemStack.consume(count, player)}: shrinks the stack unless the player is in creative. The
      * method arrived in 1.20.5; before it, this is the vanilla creative check spelled out.
      */
-    public static void consume(ItemStack stack, int count, net.minecraft.world.entity.@org.jspecify.annotations.Nullable LivingEntity player) {
+    public static void consume(ItemStack stack, int count,
+                               net.minecraft.world.entity.@org.jspecify.annotations.Nullable LivingEntity player) {
         //? if >=1.21 {
         stack.consume(count, player);
         //?} else {
@@ -712,7 +819,9 @@ public final class ItemStacks {
         *///?}
     }
 
-    /** Every slot carried by an item (the CONTAINER component; the legacy block-entity "Items" list before 1.20.5). */
+    /**
+     * Every slot carried by an item (the CONTAINER component; the legacy block-entity "Items" list before 1.20.5).
+     */
     public static NonNullList<ItemStack> carriedItems(ItemStack carrier, int slotCount) {
         NonNullList<ItemStack> items = NonNullList.withSize(slotCount, ItemStack.EMPTY);
         //? if >=1.20.5 {
@@ -726,7 +835,9 @@ public final class ItemStacks {
         return items;
     }
 
-    /** Packs {@code items} onto the carrier the way {@link #carriedItems} reads them. */
+    /**
+     * Packs {@code items} onto the carrier the way {@link #carriedItems} reads them.
+     */
     public static void setCarriedItems(ItemStack carrier, List<ItemStack> items) {
         //? if >=1.20.5 {
         carrier.set(net.minecraft.core.component.DataComponents.CONTAINER,
@@ -739,7 +850,9 @@ public final class ItemStacks {
         *///?}
     }
 
-    /** Whether {@code stack} may go into an item store: vanilla's shulker-box rule, and nothing that carries items. */
+    /**
+     * Whether {@code stack} may go into an item store: vanilla's shulker-box rule, and nothing that carries items.
+     */
     public static boolean fitsInContainerItem(ItemStack stack) {
         if (!stack.getItem().canFitInsideContainerItems()) return false;
         //? if >=1.20.5 {
@@ -747,7 +860,7 @@ public final class ItemStacks {
                 stack.get(net.minecraft.core.component.DataComponents.BUNDLE_CONTENTS);
         return (bundle == null || bundle.isEmpty())
                 && stack.getOrDefault(net.minecraft.core.component.DataComponents.CONTAINER,
-                        net.minecraft.world.item.component.ItemContainerContents.EMPTY)
+                                net.minecraft.world.item.component.ItemContainerContents.EMPTY)
                         .equals(net.minecraft.world.item.component.ItemContainerContents.EMPTY);
         //?} else {
         /*net.minecraft.nbt.CompoundTag tag = stack.getTag();
@@ -805,7 +918,9 @@ public final class ItemStacks {
         *///?}
     }
 
-    /** A book and quill holding {@code pages} (WRITABLE_BOOK_CONTENT from 1.20.5, the "pages" string list before). */
+    /**
+     * A book and quill holding {@code pages} (WRITABLE_BOOK_CONTENT from 1.20.5, the "pages" string list before).
+     */
     public static ItemStack writableBook(List<String> pages) {
         ItemStack book = new ItemStack(net.minecraft.world.item.Items.WRITABLE_BOOK);
         //? if >=1.20.5 {
@@ -821,7 +936,9 @@ public final class ItemStacks {
         return book;
     }
 
-    /** The pages of a book and quill; empty when it has none. */
+    /**
+     * The pages of a book and quill; empty when it has none.
+     */
     public static List<String> writableBookPages(ItemStack book) {
         List<String> out = new java.util.ArrayList<>();
         //? if >=1.20.5 {
@@ -838,26 +955,30 @@ public final class ItemStacks {
         return out;
     }
 
-    /** Sets the stack's display name (CUSTOM_NAME component / legacy display tag). */
+    /**
+     * Sets the stack's display name (CUSTOM_NAME component / legacy display tag).
+     */
     public static void setCustomName(ItemStack stack, net.minecraft.network.chat.Component name) {
         //? if >=1.20.5 {
         stack.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, name);
         //?} else {
         /*stack.setHoverName(name);
-        *///?}
+         *///?}
     }
 
-    /** The compressed NBT size of a stack, for 1.7-style "too big to drop" guards. */
+    /**
+     * The compressed NBT size of a stack, for 1.7-style "too big to drop" guards.
+     */
     public static int compressedSize(ItemStack stack, net.minecraft.core.HolderLookup.Provider registries) {
         try {
             //? if >=1.20.5 {
             net.minecraft.nbt.Tag encoded = ItemStack.CODEC.encodeStart(
-                    net.minecraft.resources.RegistryOps.create(net.minecraft.nbt.NbtOps.INSTANCE, registries), stack)
-                    .result().orElse(null);
+                                                             net.minecraft.resources.RegistryOps.create(net.minecraft.nbt.NbtOps.INSTANCE, registries), stack)
+                                                           .result().orElse(null);
             if (!(encoded instanceof net.minecraft.nbt.CompoundTag tag)) return 0;
             //?} else {
             /*net.minecraft.nbt.CompoundTag tag = stack.save(new net.minecraft.nbt.CompoundTag());
-            *///?}
+             *///?}
             java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
             net.minecraft.nbt.NbtIo.writeCompressed(tag, out);
             return out.size();
@@ -866,13 +987,15 @@ public final class ItemStacks {
         }
     }
 
-    /** The stack's custom display name, or null (CUSTOM_NAME component / legacy display tag). */
+    /**
+     * The stack's custom display name, or null (CUSTOM_NAME component / legacy display tag).
+     */
     public static net.minecraft.network.chat.@org.jspecify.annotations.Nullable Component customName(ItemStack stack) {
         //? if >=1.20.5 {
         return stack.get(net.minecraft.core.component.DataComponents.CUSTOM_NAME);
         //?} else {
         /*return stack.hasCustomHoverName() ? stack.getHoverName() : null;
-        *///?}
+         *///?}
     }
 
     /**
@@ -889,10 +1012,12 @@ public final class ItemStacks {
         stack.set(net.minecraft.core.component.DataComponents.MAX_STACK_SIZE, size);
         //?} else {
         /*stack.getOrCreateTag().putInt(LEGACY_MAX_STACK_SIZE, size);
-        *///?}
+         *///?}
     }
 
-    /** The tag key {@link #setMaxStackSize} writes below 1.20.5; unused (and never written) from 1.20.5 on. */
+    /**
+     * The tag key {@link #setMaxStackSize} writes below 1.20.5; unused (and never written) from 1.20.5 on.
+     */
     public static final String LEGACY_MAX_STACK_SIZE = "golem:max_stack_size";
 
     /**
@@ -910,12 +1035,16 @@ public final class ItemStacks {
         *///?}
     }
 
-    /** Caps the stack at {@code max} (1.20.5 {@code limitSize}). */
+    /**
+     * Caps the stack at {@code max} (1.20.5 {@code limitSize}).
+     */
     public static void limitSize(ItemStack stack, int max) {
         if (stack.getCount() > max) stack.setCount(max);
     }
 
-    /** A player head showing {@code player}'s skin (legacy {@code SkullOwner}, modern profile component). */
+    /**
+     * A player head showing {@code player}'s skin (legacy {@code SkullOwner}, modern profile component).
+     */
     public static ItemStack playerHead(Player player) {
         ItemStack head = new ItemStack(net.minecraft.world.item.Items.PLAYER_HEAD);
         //? if >=26.1 {
@@ -926,7 +1055,7 @@ public final class ItemStacks {
                 new net.minecraft.world.item.component.ResolvableProfile(player.getGameProfile()));
         *///?} else {
         /*head.getOrCreateTag().putString("SkullOwner", player.getGameProfile().getName());
-        *///?}
+         *///?}
         return head;
     }
 }

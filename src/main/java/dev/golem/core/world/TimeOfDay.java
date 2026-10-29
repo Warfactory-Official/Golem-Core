@@ -8,9 +8,11 @@ import dev.golem.core.net.GolemNetwork;
 import dev.golem.core.net.GolemPayload;
 import dev.golem.core.platform.Lifecycle;
 import dev.golem.core.platform.Platform;
+
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
@@ -41,12 +43,16 @@ import net.minecraft.world.level.Level;
  */
 public final class TimeOfDay {
 
-    private TimeOfDay() {}
+    private TimeOfDay() {
+    }
 
     private static final String DATA_ID = "golemcore:time_of_day";
     private static final Set<ResourceKey<Level>> OWN = ConcurrentHashMap.newKeySet();
     private static final Set<ResourceKey<Level>> NATIVE = ConcurrentHashMap.newKeySet();
-    /** Client: each own-clock dimension's last update, as (day time, client game time at receipt, advancing). */
+    private static final Map<ResourceKey<Level>, Long> FIXED = new ConcurrentHashMap<>();
+    /**
+     * Client: each own-clock dimension's last update, as (day time, client game time at receipt, advancing).
+     */
     private static final Map<ResourceKey<Level>, long[]> CLIENT = new ConcurrentHashMap<>();
     private static boolean hooked;
 
@@ -55,7 +61,8 @@ public final class TimeOfDay {
      * calling it again for the same dimension does nothing.
      */
     public static synchronized void ownClock(ResourceKey<Level> dimension) {
-        if (NATIVE.contains(dimension)) throw new IllegalStateException(dimension + " already uses its native world clock");
+        if (NATIVE.contains(dimension))
+            throw new IllegalStateException(dimension + " already uses its native world clock");
         OWN.add(dimension);
         hook();
     }
@@ -67,51 +74,80 @@ public final class TimeOfDay {
         if (Platform.isClient()) {
             GolemNetwork.registerPlayToClient(SyncPayload.CODEC, (payload, context) -> {
                 if (context == null || context.level() == null) return;
-                CLIENT.put(payload.dimension(), new long[] {payload.time(), context.level().getGameTime(),
+                CLIENT.put(payload.dimension(), new long[]{payload.time(), context.level().getGameTime(),
                         payload.advancing() ? 1 : 0});
             });
         }
         Lifecycle.onServerTick(TimeOfDay::tick);
+        Lifecycle.onServerStarted(server -> {
+            for (var entry : FIXED.entrySet()) {
+                var level = server.getLevel(entry.getKey());
+                if (level == null) continue;
+                set(level, entry.getValue());
+                //? if >=26.1 {
+                server.clockManager().setPaused(level.dimensionType().defaultClock().orElseThrow(), true);
+                //?}
+            }
+        });
         Lifecycle.onEntityLoad((entity, level) -> {
             if (entity instanceof ServerPlayer player && OWN.contains(level.dimension())) send(level, player);
         });
     }
 
-    /** Uses the dimension type's own native world clock; Minecraft saves, ticks and synchronizes it. */
+    /**
+     * Uses the dimension type's own native world clock; Minecraft saves, ticks and synchronizes it.
+     */
     public static synchronized void nativeClock(ResourceKey<Level> dimension) {
         //? if >=26.1 {
-        if (OWN.contains(dimension)) throw new IllegalStateException(dimension + " already uses a saved time-of-day counter");
+        if (OWN.contains(dimension))
+            throw new IllegalStateException(dimension + " already uses a saved time-of-day counter");
         NATIVE.add(dimension);
         hook();
         //?} else {
         /*throw new UnsupportedOperationException("Native world clocks require Minecraft 26.1");
-        *///?}
+         *///?}
     }
 
-    /** Whether {@code level} keeps its own time of day ({@link #ownClock} or {@link #nativeClock}). */
+    /**
+     * Whether {@code level} keeps its own time of day ({@link #ownClock} or {@link #nativeClock}).
+     */
     public static boolean hasOwnClock(Level level) {
         return OWN.contains(level.dimension()) || NATIVE.contains(level.dimension());
     }
 
-    /** {@link #nativeClock} on 26.1, else {@link #ownClock}; call at mod construction on both sides. */
+    /**
+     * {@link #nativeClock} on 26.1, else {@link #ownClock}; call at mod construction on both sides.
+     */
     public static synchronized void autoClock(ResourceKey<Level> dimension) {
         //? if >=26.1 {
         nativeClock(dimension);
         //?} else {
         /*ownClock(dimension);
-        *///?}
+         *///?}
     }
 
-    /** Whether {@code level} runs on its dimension type's native world clock (false on every node below 26.1). */
+    /**
+     * Gives the dimension a constant own-clock time, including its first client frame.
+     */
+    public static synchronized void fixedClock(ResourceKey<Level> dimension, long time) {
+        FIXED.put(dimension, time);
+        autoClock(dimension);
+    }
+
+    /**
+     * Whether {@code level} runs on its dimension type's native world clock (false on every node below 26.1).
+     */
     public static boolean isNative(Level level) {
         //? if >=26.1 {
         return NATIVE.contains(level.dimension());
         //?} else {
         /*return false;
-        *///?}
+         *///?}
     }
 
-    /** Whether the dimension {@code dimension} keeps its own time of day ({@link #ownClock}). */
+    /**
+     * Whether the dimension {@code dimension} keeps its own time of day ({@link #ownClock}).
+     */
     public static boolean hasOwnClock(ResourceKey<Level> dimension) {
         return OWN.contains(dimension) || NATIVE.contains(dimension);
     }
@@ -123,11 +159,16 @@ public final class TimeOfDay {
     public static void release(ResourceKey<Level> dimension) {
         OWN.remove(dimension);
         NATIVE.remove(dimension);
+        FIXED.remove(dimension);
         CLIENT.remove(dimension);
     }
 
-    /** The level's time of day in ticks: its own clock when it has one, otherwise vanilla's day time. */
+    /**
+     * The level's time of day in ticks: its own clock when it has one, otherwise vanilla's day time.
+     */
     public static long get(Level level) {
+        var fixed = FIXED.get(level.dimension());
+        if (fixed != null) return fixed;
         //? if >=26.1 {
         if (NATIVE.contains(level.dimension())) {
             return level.clockManager().getTotalTicks(level.dimensionType().defaultClock().orElseThrow());
@@ -147,42 +188,49 @@ public final class TimeOfDay {
      * day time (before 26.1 shared by all dimensions with the overworld; on 26.1 the dimension type's default clock).
      */
     public static void set(ServerLevel level, long time) {
+        long value = FIXED.getOrDefault(level.dimension(), time);
         //? if >=26.1 {
         if (NATIVE.contains(level.dimension())) {
-            level.getServer().clockManager().setTotalTicks(level.dimensionType().defaultClock().orElseThrow(), time);
+            level.getServer().clockManager().setTotalTicks(level.dimensionType().defaultClock().orElseThrow(), value);
             return;
         }
         //?}
         if (OWN.contains(level.dimension())) {
             Data data = data(level);
-            data.time = time;
+            data.time = value;
             data.setDirty();
             for (ServerPlayer player : level.players()) send(level, player);
             return;
         }
         //? if >=26.1 {
-        level.dimensionType().defaultClock().ifPresent(clock -> level.getServer().clockManager().setTotalTicks(clock, time));
+        level.dimensionType().defaultClock()
+             .ifPresent(clock -> level.getServer().clockManager().setTotalTicks(clock, value));
         //?} else {
-        /*level.setDayTime(time);
-        *///?}
+        /*level.setDayTime(value);
+         *///?}
     }
 
-    /** Vanilla's day time for {@code level}, ignoring any own clock. */
+    /**
+     * Vanilla's day time for {@code level}, ignoring any own clock.
+     */
     public static long vanilla(Level level) {
         //? if >=26.1 {
         return level.getDefaultClockTime();
         //?} else {
         /*return level.getDayTime();
-        *///?}
+         *///?}
     }
 
-    /** Whether the daylight cycle game rule lets time of day advance in {@code level}. */
+    /**
+     * Whether the daylight cycle game rule lets time of day advance in {@code level}.
+     */
     public static boolean advancing(ServerLevel level) {
+        if (FIXED.containsKey(level.dimension())) return false;
         //? if >=26.1 {
         return level.getGameRules().get(net.minecraft.world.level.gamerules.GameRules.ADVANCE_TIME);
         //?} else {
         /*return level.getGameRules().getBoolean(net.minecraft.world.level.GameRules.RULE_DAYLIGHT);
-        *///?}
+         *///?}
     }
 
     private static void tick(MinecraftServer server) {
@@ -211,7 +259,9 @@ public final class TimeOfDay {
         return CompatSavedData.get(level, DATA_ID, Data::new, Data.CODEC);
     }
 
-    /** One level's own clock; saved as {@code {time: <ticks>}} (1.7 {@code CelestialBodyData.time}). */
+    /**
+     * One level's own clock; saved as {@code {time: <ticks>}} (1.7 {@code CelestialBodyData.time}).
+     */
     static final class Data extends CompatSavedData<Data> {
         static final Codec<Data> CODEC = RecordCodecBuilder.create(instance -> instance.group(
                 Codec.LONG.optionalFieldOf("time", 0L).forGetter(data -> data.time)
@@ -233,10 +283,13 @@ public final class TimeOfDay {
         }
     }
 
-    /** S2C: one own-clock dimension's time of day now, and whether it is advancing. */
+    /**
+     * S2C: one own-clock dimension's time of day now, and whether it is advancing.
+     */
     record SyncPayload(ResourceKey<Level> dimension, long time, boolean advancing) implements GolemPayload {
 
-        static final GolemCodec<SyncPayload> CODEC = GolemCodec.of(SyncPayload.class, Ids.of("golemcore", "time_of_day"),
+        static final GolemCodec<SyncPayload> CODEC = GolemCodec.of(SyncPayload.class,
+                Ids.of("golemcore", "time_of_day"),
                 (payload, buffer) -> {
                     buffer.writeUtf(Ids.keyId(payload.dimension()).toString());
                     buffer.writeLong(payload.time());
@@ -247,12 +300,12 @@ public final class TimeOfDay {
 
         @Override
         public
-                //? if >=26.1 {
-                net.minecraft.resources.Identifier
-                //?} else {
-                /*net.minecraft.resources.ResourceLocation
-                *///?}
-                id() {
+            //? if >=26.1 {
+        net.minecraft.resources.Identifier
+        //?} else {
+        /*net.minecraft.resources.ResourceLocation
+         *///?}
+        id() {
             return CODEC.id();
         }
     }

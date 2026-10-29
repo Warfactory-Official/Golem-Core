@@ -1,6 +1,7 @@
 package dev.golem.core.fluid;
 
 import java.util.Optional;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.sounds.SoundEvent;
@@ -60,7 +61,9 @@ public abstract class WorldFluid extends FlowingFluid {
         return bucket == null ? Items.AIR : bucket;
     }
 
-    /** 1.7 {@code BlockFluidClassic} never makes sources. */
+    /**
+     * 1.7 {@code BlockFluidClassic} never makes sources.
+     */
     //? if >=26.1 {
     @Override
     protected boolean canConvertToSource(net.minecraft.server.level.ServerLevel level) {
@@ -94,9 +97,12 @@ public abstract class WorldFluid extends FlowingFluid {
         return handle.spec.tickDelay();
     }
 
-    /** Nothing washes this fluid away: in 1.7 another liquid could not flow into a fluid block's space either. */
+    /**
+     * Nothing washes this fluid away: in 1.7 another liquid could not flow into a fluid block's space either.
+     */
     @Override
-    protected boolean canBeReplacedWith(FluidState state, BlockGetter level, BlockPos pos, Fluid other, Direction direction) {
+    protected boolean canBeReplacedWith(FluidState state, BlockGetter level, BlockPos pos, Fluid other,
+                                        Direction direction) {
         return false;
     }
 
@@ -116,13 +122,26 @@ public abstract class WorldFluid extends FlowingFluid {
 
     @Override
     public Optional<SoundEvent> getPickupSound() {
-        return Optional.of(handle.spec.physics() == WorldFluids.Physics.LAVA ? SoundEvents.BUCKET_FILL_LAVA : SoundEvents.BUCKET_FILL);
+        return Optional.of(
+                handle.spec.physics() == WorldFluids.Physics.LAVA ? SoundEvents.BUCKET_FILL_LAVA : SoundEvents.BUCKET_FILL);
     }
 
     //? if >=26.1 {
     @Override
-    public void tick(net.minecraft.server.level.ServerLevel level, BlockPos pos, BlockState blockState, FluidState fluidState) {
-        if (blockState.getBlock() instanceof FluidBlock block) block.flowTick(level, pos, blockState, level.getRandom());
+    protected void entityInside(Level level, BlockPos pos, net.minecraft.world.entity.Entity entity,
+                                net.minecraft.world.entity.InsideBlockEffectApplier effects) {
+        if (handle.spec.physics() == WorldFluids.Physics.WATER) {
+            effects.apply(net.minecraft.world.entity.InsideBlockEffectType.EXTINGUISH);
+        } else {
+            super.entityInside(level, pos, entity, effects);
+        }
+    }
+
+    @Override
+    public void tick(net.minecraft.server.level.ServerLevel level, BlockPos pos, BlockState blockState,
+                     FluidState fluidState) {
+        if (blockState.getBlock() instanceof FluidBlock block)
+            block.flowTick(level, pos, blockState, level.getRandom());
     }
     //?} else {
     /*@Override
@@ -146,7 +165,9 @@ public abstract class WorldFluid extends FlowingFluid {
     }
     *///?}
 
-    /** The full block. */
+    /**
+     * The full block.
+     */
     static final class Source extends WorldFluid {
 
         Source(WorldFluids.Handle handle) {
@@ -164,7 +185,9 @@ public abstract class WorldFluid extends FlowingFluid {
         }
     }
 
-    /** A partial block: {@code level} 1..7 is how much of a block it holds. */
+    /**
+     * A partial block: {@code level} 1..7 is how much of a block it holds.
+     */
     static final class Flowing extends WorldFluid {
 
         Flowing(WorldFluids.Handle handle) {

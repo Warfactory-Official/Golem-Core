@@ -2,13 +2,17 @@ package dev.golem.harness.api;
 
 import com.google.gson.JsonObject;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Reusable environment builders. Layer 1 is slash commands; layer 2 places blocks through the
  * player's own hands so a mod's placement code runs; scenarios compose both.
  */
 public final class Fixtures {
 
-    private Fixtures() {}
+    private Fixtures() {
+    }
 
     /**
      * Force-loads and builds a flat stone platform centred on {@code (x, y, z)} with {@code radius},
@@ -36,8 +40,8 @@ public final class Fixtures {
         c.cmd("time set day");
         c.cmd("weather clear");
         c.cmd("kill @e[type=!player]");
-        c.cmd("fill " + (x - radius) + " " + y + " " + (z - radius) + " " + (x + radius) + " " + y + " " + (z + radius) + " " + block);
-        c.cmd("fill " + (x - radius) + " " + (y + 1) + " " + (z - radius) + " " + (x + radius) + " " + (y + 8) + " " + (z + radius) + " minecraft:air");
+        fill(c, x - radius, y, z - radius, x + radius, y, z + radius, block);
+        fill(c, x - radius, y + 1, z - radius, x + radius, y + 8, z + radius, "minecraft:air");
         c.waitTicks(2);
         c.teleport(x + 0.5, y + 1, z + 0.5);
         c.look(0, 0);
@@ -46,7 +50,65 @@ public final class Fixtures {
         Expect.block(c, x, y, z, block);
     }
 
-    /** Clears the player's inventory and gives one stack. */
+    /**
+     * Fills an ordered cuboid in batches within vanilla's default 32,768-block limit.
+     */
+    public static void fill(Client c, int x1, int y1, int z1, int x2, int y2, int z2, String block) {
+        int width = x2 - x1 + 1, height = y2 - y1 + 1, depth = z2 - z1 + 1;
+        if ((long) width * height * depth <= 32_768) {
+            c.cmd("fill " + x1 + " " + y1 + " " + z1 + " " + x2 + " " + y2 + " " + z2 + " " + block);
+        } else if (width >= height && width >= depth) {
+            int middle = x1 + (x2 - x1) / 2;
+            fill(c, x1, y1, z1, middle, y2, z2, block);
+            fill(c, middle + 1, y1, z1, x2, y2, z2, block);
+        } else if (height >= depth) {
+            int middle = y1 + (y2 - y1) / 2;
+            fill(c, x1, y1, z1, x2, middle, z2, block);
+            fill(c, x1, middle + 1, z1, x2, y2, z2, block);
+        } else {
+            int middle = z1 + (z2 - z1) / 2;
+            fill(c, x1, y1, z1, x2, y2, middle, block);
+            fill(c, x1, y1, middle + 1, x2, y2, z2, block);
+        }
+    }
+
+    /**
+     * Waits for matching light and rebuilt sections; the first air sample must be fully sunlit.
+     */
+    public static void waitForSkylight(Client c, int[]... positions) {
+        long deadline = System.nanoTime() + 30_000_000_000L;
+        List<String> samples;
+        boolean sectionsBuilt;
+        do {
+            samples = new ArrayList<>();
+            boolean lit = true;
+            for (int i = 0; i < positions.length; i++) {
+                var position = new JsonObject();
+                position.addProperty("x", positions[i][0]);
+                position.addProperty("y", positions[i][1]);
+                position.addProperty("z", positions[i][2]);
+                position.addProperty("server", false);
+                var client = c.query("block", position);
+                position.addProperty("server", true);
+                var server = c.query("block", position);
+                samples.add(position + " client=" + client + " server=" + server);
+                if (!client.get("loaded").getAsBoolean() || !server.get("loaded").getAsBoolean()) {
+                    lit = false;
+                    continue;
+                }
+                int clientLight = client.get("light").getAsInt(), serverLight = server.get("light").getAsInt();
+                if (clientLight != serverLight || i == 0 && serverLight != 15) lit = false;
+            }
+            sectionsBuilt = c.status().get("sections_built").getAsBoolean();
+            if (lit && sectionsBuilt) return;
+            c.waitTicks(1);
+        } while (System.nanoTime() < deadline);
+        throw new AssertionError("Scene lighting not ready: sectionsBuilt=" + sectionsBuilt + ", samples=" + samples);
+    }
+
+    /**
+     * Gives one stack and lets the inventory update reach the client.
+     */
     public static void give(Client c, String itemId, int count) {
         c.cmd("give @s " + itemId + " " + count);
         c.waitTicks(2);
@@ -57,7 +119,14 @@ public final class Fixtures {
         c.waitTicks(1);
         give(c, itemId, count);
         c.hotbar(1);
-        c.waitTicks(1);
+        long deadline = System.nanoTime() + 5_000_000_000L;
+        JsonObject held;
+        do {
+            held = c.player().getAsJsonObject("main_hand");
+            if (!held.get("empty").getAsBoolean() && held.get("id").getAsString().equals(itemId)) return;
+            c.waitTicks(1);
+        } while (System.nanoTime() < deadline);
+        throw new AssertionError("Client did not select " + count + " x " + itemId + ": " + held);
     }
 
     /**
@@ -70,7 +139,7 @@ public final class Fixtures {
         c.waitTicks(2);
         // Aim just under the top surface so the ray enters through the top face.
         c.lookAt(x + 0.5, y + 0.98, z + 0.5);
-        c.waitTicks(1);
+        waitForTarget(c, x, y, z);
         c.use(2);
         c.waitTicks(3);
         return c.block(x, y + 1, z);
@@ -89,7 +158,26 @@ public final class Fixtures {
         c.waitTicks(3);
     }
 
-    /** Places a structure template published from {@code harness/fixtures/<name>.nbt}. */
+    /**
+     * Waits for vanilla's crosshair pick to catch up with an aimed block.
+     */
+    public static void waitForTarget(Client c, int x, int y, int z) {
+        long deadline = System.nanoTime() + 5_000_000_000L;
+        JsonObject player;
+        do {
+            player = c.player();
+            if (player.get("target").getAsString().equals("BLOCK")
+                    && player.get("target_x").getAsInt() == x
+                    && player.get("target_y").getAsInt() == y
+                    && player.get("target_z").getAsInt() == z) return;
+            c.waitTicks(1);
+        } while (System.nanoTime() < deadline);
+        throw new AssertionError("Crosshair did not reach " + x + "," + y + "," + z + ": " + player);
+    }
+
+    /**
+     * Places a structure template published from {@code harness/fixtures/<name>.nbt}.
+     */
     public static void template(Client c, String name, int x, int y, int z) {
         c.cmd("place template harness:" + name + " " + x + " " + y + " " + z);
         c.waitTicks(2);

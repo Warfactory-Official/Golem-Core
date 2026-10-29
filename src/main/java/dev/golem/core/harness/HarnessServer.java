@@ -3,6 +3,7 @@ package dev.golem.core.harness;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import dev.golem.core.GolemCore;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -20,6 +21,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+
 import net.minecraft.client.Minecraft;
 
 /**
@@ -30,13 +32,17 @@ import net.minecraft.client.Minecraft;
  */
 final class HarnessServer {
 
-    /** A reply that is not ready yet. {@link #poll} returns the reply once it is, or null to wait. */
+    /**
+     * A reply that is not ready yet. {@link #poll} returns the reply once it is, or null to wait.
+     */
     interface Pending {
         JsonObject poll(Minecraft minecraft);
 
-        /** Ticks to wait before replying with a timeout error. */
-        default long timeoutTicks() {
-            return 20L * 60L;
+        /**
+         * Wall-clock milliseconds to wait before replying with a timeout error.
+         */
+        default long timeoutMillis() {
+            return 60_000L;
         }
     }
 
@@ -44,7 +50,8 @@ final class HarnessServer {
         final JsonObject json;
         final CompletableFuture<JsonObject> reply = new CompletableFuture<>();
         Pending pending;
-        long deadline;
+        long deadlineNanos;
+        long timeoutMillis;
 
         Request(JsonObject json) {
             this.json = json;
@@ -55,7 +62,8 @@ final class HarnessServer {
     private static final List<Request> waiting = new ArrayList<>();
     private static volatile boolean running;
 
-    private HarnessServer() {}
+    private HarnessServer() {
+    }
 
     static void start(int port) {
         Thread thread = new Thread(() -> serve(port), "golem-harness-server");
@@ -81,7 +89,8 @@ final class HarnessServer {
 
     private static void handle(Socket socket) {
         try (socket;
-             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
+             BufferedReader in = new BufferedReader(
+                     new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
              Writer out = new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8)) {
             String line;
             while ((line = in.readLine()) != null) {
@@ -109,7 +118,9 @@ final class HarnessServer {
         }
     }
 
-    /** Runs on the client thread each tick: executes new requests and re-polls waiting ones. */
+    /**
+     * Runs on the client thread each tick: executes new requests and re-polls waiting ones.
+     */
     static void drain(Minecraft minecraft) {
         Request request;
         while ((request = incoming.poll()) != null) {
@@ -125,8 +136,8 @@ final class HarnessServer {
                 GolemCore.LOG.error("[harness] pending command failed", t);
                 reply = Json.error(String.valueOf(t));
             }
-            if (reply == null && Harness.tick() >= waitingRequest.deadline) {
-                reply = Json.error("timeout after " + waitingRequest.pending.timeoutTicks() + " ticks");
+            if (reply == null && System.nanoTime() >= waitingRequest.deadlineNanos) {
+                reply = Json.error("timeout after " + waitingRequest.timeoutMillis + " ms");
             }
             if (reply != null) {
                 it.remove();
@@ -141,9 +152,9 @@ final class HarnessServer {
             Object result = HarnessCommands.dispatch(minecraft, name, request.json);
             if (result instanceof Pending pending) {
                 request.pending = pending;
-                long timeout = request.json.has("timeout_ticks")
-                        ? request.json.get("timeout_ticks").getAsLong() : pending.timeoutTicks();
-                request.deadline = Harness.tick() + timeout;
+                request.timeoutMillis = request.json.has("timeout_ms")
+                        ? request.json.get("timeout_ms").getAsLong() : pending.timeoutMillis();
+                request.deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(request.timeoutMillis);
                 JsonObject first = pending.poll(minecraft);
                 if (first != null) {
                     request.reply.complete(first);
