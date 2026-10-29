@@ -3,16 +3,49 @@
 Each release has a `## <version>` section; the release workflow uploads only the section matching
 `mod.version` in gradle.properties.
 
+## 1.0.3
+
+Use GemRender 0.1.20.
+
+### Added
+- World facades for dimension mods: teleports that keep rotation (`Teleports`), a level's own weather (`Weathers`) and
+  time of day (`TimeOfDay`), live bed, respawn and burning rules (`WorldAttributes`, `Respawns`), portal creation
+  (`Portals`), water evaporation by position (`Evaporation`), fishing loot categories (`FishingLoot`) and light queries
+  (`LightLevels`).
+- Entity and death hooks: callbacks after each server entity tick (`EntityTicks`), death vetoes that run before drops
+  (`Deaths`), entity removal and the initial state sent to a new tracker (`Tracking`).
+- Integer opening data for menus whose layout depends on server state.
+- `Wearable`: a non-armour item worn in an armour slot, taken by shift-click, mobs and the armour slot.
+- `Remainders`: crafting leftovers for another mod's items.
+- Grouped and resource-backed item models on the legacy nodes (`GroupedModels`, `UnbakedModels`), item-model aliases
+  (`ItemModels`) and particle, HUD and sky registration seams.
+- `GuiDraw.aboveSlots` and `GuiDraw.tooltipStratum`: overlays and hand-drawn tooltip panels sit above a menu's slot items
+  on every node.
+- `gui.TextSearch`: search bars match through Just Enough Characters (pinyin) when it is installed.
+- Development harness: matching client and integrated-server tick rates, and screenshots that wait for a finished frame.
+
+### Fixed
+- 1.21.1 hung on world exit while terrain was still generating.
+- Held weapons left camera space under an Iris shader pack on 26.1.
+- Mirrored Gem parts were culled, so offhand gun models were inside out.
+- Wind charges ran block removal hooks meant for real explosions.
+- Loot `set_count` on 1.20.1 clamped to the stack size (`golemcore:set_count`); integer count ranges keep their counts.
+- Chest loot rolls that came out empty were kept on Fabric.
+- GemRender lighting sampled the wrong lightmap texel when instance and embedded light were combined.
+- Loaded-chunk queries blocked while generation was pending.
+- Recipe-table replacements were lost before the recipe manager reloaded.
+- Recipe-viewer queries ignored hidden categories.
+- `CompatFallingEntity` lost the carried block, fall time and drop flags on save.
+- Water-physics fluids did not put out burning entities on Fabric; creative-tab insertions lost their position on older
+  nodes; armour model selection, before-chat overlays and container dragging differed between nodes.
+
+### Changed
+- Dev runs use GemRender 0.1.20.
+- `BlockChanges` no longer needs a mixin.
+
 ## 1.0.2
 
 ### Added
-
-- GemRender materials sample lightmap texel centers after combining instance and embedded lighting.
-- Integer opening data for menus whose layouts depend on server state.
-- Callbacks after individual server entity ticks, through the same phase on every supported node.
-- Development harness control for matching client and integrated-server tick rates across all supported nodes.
-- World policies for bed rules, respawn destinations, portal creation and fixed clocks across the supported nodes.
-- Public item-model aliases, loaded-chunk lookup, entity tracking and particle/HUD registration seams.
 - Item data on scripted recipe outputs: `ItemPatch` (components from 1.20.5, NBT on 1.20.1) and
   `RecipeFields.ItemOut.data`, filled by both KubeJS adapters, so a scripted output such as a vehicle crate keeps its data.
 - Facades for configurable data: the `golemcore:looting` loot condition and `LootFunctions`, dynamic data maps
@@ -27,18 +60,6 @@ Each release has a `## <version>` section; the release workflow uploads only the
 - Recipe viewer tab-order queries for JEI and REI.
 
 ### Fixed
-
-- Recipe-viewer queries respect hidden categories and report whether the recipe screen actually opened.
-- Development screenshots wait for completed rendered frames, and harness deadlines retain wall-clock duration at
-  accelerated tick rates.
-- Integer loot-count ranges retain their authored counts on nodes whose vanilla function clamps to item stack limits.
-- Loaded-chunk queries return immediately while generation is pending.
-- Recipe-table replacements remain active until the recipe manager reloads, and schemas describe shared requirement
-  flags.
-- Death notifications fire after loader vetoes have cleared and before drops.
-- Water-physics fluids extinguish entities on Fabric; creative-tab insertions retain their requested position on older
-  nodes.
-- Armour geometry selection, before-chat overlays and container dragging retain the same behavior across nodes.
 - Gem machines were invisible under a shader pack on 26.1 with GemRender; `GemBER` draws them while a pack is in use.
 - World fluid blocks (`FluidBlock`) are `LiquidBlock`s, so Voxy can bake them instead of crashing; vanilla fluid ticks
   and lava mixing stay off.
