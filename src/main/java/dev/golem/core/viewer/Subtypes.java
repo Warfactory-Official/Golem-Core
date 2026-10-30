@@ -18,6 +18,9 @@ public interface Subtypes {
     /** Stacks differ when any of these components differs. */
     void components(Item item, GolemComponent<?>... components);
 
+    /** Stacks are apart in the ingredient list but one ingredient to recipe lookups (a 1.7 wildcard-metadata output). */
+    void listed(Item item, GolemComponent<?>... components);
+
     /** Stacks differ when the interpreter's strings differ. */
     void interpreter(Item item, Function<ItemStack, String> interpreter);
 

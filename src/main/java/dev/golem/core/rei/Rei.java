@@ -6,6 +6,7 @@ import dev.golem.core.data.GolemComponent;
 import dev.golem.core.viewer.Subtypes;
 import dev.golem.core.viewer.ViewerType;
 import me.shedaniel.rei.api.common.category.CategoryIdentifier;
+import me.shedaniel.rei.api.common.entry.comparison.ComparisonContext;
 import me.shedaniel.rei.api.common.entry.comparison.ItemComparatorRegistry;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -45,14 +46,13 @@ public final class Rei {
             @Override
             public void components(Item item, GolemComponent<?>... components) {
                 if (components.length == 0) return;
-                registry.register((context, stack) -> {
-                    StringBuilder key = new StringBuilder();
-                    for (GolemComponent<?> component : components) {
-                        Object value = component.get(stack).orElse(null);
-                        key.append('|').append(value == null ? "" : value);
-                    }
-                    return hash(key);
-                }, item);
+                registry.register((context, stack) -> key(stack, components), item);
+            }
+
+            @Override
+            public void listed(Item item, GolemComponent<?>... components) {
+                if (components.length == 0) return;
+                registry.register((context, stack) -> context == ComparisonContext.FUZZY ? 0 : key(stack, components), item);
             }
 
             @Override
@@ -60,6 +60,15 @@ public final class Rei {
                 registry.register((context, stack) -> hash(interpreter.apply(stack)), item);
             }
         });
+    }
+
+    private static long key(ItemStack stack, GolemComponent<?>... components) {
+        StringBuilder key = new StringBuilder();
+        for (GolemComponent<?> component : components) {
+            Object value = component.get(stack).orElse(null);
+            key.append('|').append(value == null ? "" : value);
+        }
+        return hash(key);
     }
 
     private static long hash(CharSequence text) {

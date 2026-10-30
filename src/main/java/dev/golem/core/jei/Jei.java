@@ -2,8 +2,10 @@ package dev.golem.core.jei;
 
 //? if jei {
 
+import dev.golem.core.data.GolemComponent;
 import dev.golem.core.viewer.TransferAction;
 import mezz.jei.api.constants.VanillaTypes;
+import mezz.jei.api.ingredients.subtypes.UidContext;
 import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.transfer.IRecipeTransferError;
@@ -202,6 +204,21 @@ public final class Jei {
             return subtype.toString();
         });
         *///?}
+    }
+
+    /** {@code Subtypes.listed}: recipe lookups use {@link UidContext#Recipe}, which sees no subtype. */
+    public static void registerListedSubtypes(ISubtypeRegistration registration, Item item,
+                                              GolemComponent<?>... components) {
+        if (components.length == 0) return;
+        registration.registerSubtypeInterpreter(item, (stack, context) -> {
+            if (context == UidContext.Recipe) return "";
+            StringBuilder subtype = new StringBuilder();
+            for (GolemComponent<?> component : components) {
+                Object value = component.get(stack).orElse(null);
+                subtype.append('|').append(value == null ? "" : value);
+            }
+            return subtype.toString();
+        });
     }
 
     /** Registers an item whose identity includes state that is not a data component. */

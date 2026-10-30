@@ -4,6 +4,7 @@ package dev.golem.core.jei;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import dev.golem.core.data.GolemComponent;
 import dev.golem.core.harness.HarnessQueryRegistry;
 import dev.golem.core.viewer.Subtypes;
 import dev.golem.core.viewer.TransferAction;
@@ -56,8 +57,13 @@ public final class JeiViewer {
     public static void subtypes(ISubtypeRegistration registration, Subtypes.Declarations declarations) {
         declarations.register(new Subtypes() {
             @Override
-            public void components(Item item, dev.golem.core.data.GolemComponent<?>... components) {
+            public void components(Item item, GolemComponent<?>... components) {
                 Jei.registerFromDataComponentTypes(registration, item, components);
+            }
+
+            @Override
+            public void listed(Item item, GolemComponent<?>... components) {
+                Jei.registerListedSubtypes(registration, item, components);
             }
 
             @Override
@@ -183,6 +189,9 @@ public final class JeiViewer {
                             .limitFocus(List.of(focus)).get().count();
                     if (count > 0) counts.addProperty(type.id(), count);
                 }
+                long crafting = runtime.getRecipeManager().createRecipeLookup(RecipeTypes.CRAFTING)
+                        .limitFocus(List.of(focus)).get().count();
+                if (crafting > 0) counts.addProperty("minecraft:crafting", crafting);
                 out.addProperty("stack", held.toString());
                 out.add("counts", counts);
                 return out;
