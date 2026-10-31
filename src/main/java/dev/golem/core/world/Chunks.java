@@ -156,7 +156,7 @@ public final class Chunks {
         /*level.getServer().managedBlock(() -> {
             // the chunk's status change that requests its entities runs on the chunk executor, not the server's
             cache.pollTask();
-            level.entityManager.processPendingLoads();
+            ((dev.golem.core.mixin.EntitySectionsAccess) level.entityManager).golem$processPendingLoads();
             return level.areEntitiesLoaded(pack(chunkX, chunkZ));
         });
         *///?}

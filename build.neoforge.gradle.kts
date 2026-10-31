@@ -199,6 +199,8 @@ tasks.processResources {
         // Respawns: 1.21+ picks the point in ServerPlayer (MixinRespawnSelection).
         "legacy_respawn_mixins" to "",
         "physics_mixins" to "",
+        // Chunks.loadEntityTicking before 26.1 (EntitySectionsAccess).
+        "entity_load_mixins" to if (mcVersion.substringBefore('.').toInt() < 26) ", \"EntitySectionsAccess\"" else "",
         // dev.golem.core.gametest.TestChunks: a 26.1 test waits until its whole plot is entity-ticking.
         "gametest_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinGameTestChunks\"" else "",
         // NeoForge 1.21.1 still calls getRailMaxSpeed/onMinecartPass; 26.1 declares but no longer calls them.

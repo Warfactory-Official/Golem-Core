@@ -35,7 +35,7 @@
     "MixinServerLevelWeather",
     "MixinWeatherCommand",
     "MixinSlotSyncDrop",
-    "MixinSlotSyncCreative"${gametest_mixins}${rail_mixins}${unload_mixins}${sky_mixins}${physics_mixins}${glider_mixins}
+    "MixinSlotSyncCreative"${entity_load_mixins}${gametest_mixins}${rail_mixins}${unload_mixins}${sky_mixins}${physics_mixins}${glider_mixins}
   ],
   "client": [
     "MixinClientConnectionSession",

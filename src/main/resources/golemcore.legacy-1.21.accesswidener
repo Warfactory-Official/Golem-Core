@@ -37,7 +37,6 @@ mutable field net/minecraft/client/particle/ParticleEngine RENDER_ORDER Ljava/ut
 accessible method net/minecraft/server/level/ServerChunkCache runDistanceManagerUpdates ()Z
 accessible method net/minecraft/server/level/ServerChunkCache getVisibleChunkIfPresent (J)Lnet/minecraft/server/level/ChunkHolder;
 accessible field net/minecraft/server/level/ServerLevel entityManager Lnet/minecraft/world/level/entity/PersistentEntitySectionManager;
-accessible method net/minecraft/world/level/entity/PersistentEntitySectionManager processPendingLoads ()V
 
 # EntityInterpolation: adjust the active yaw target without restarting its position interpolation.
 accessible field net/minecraft/world/entity/LivingEntity lerpSteps I

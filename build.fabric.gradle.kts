@@ -172,6 +172,8 @@ tasks.processResources {
         "legacy_respawn_mixins" to if (stonecutter.eval(mcVersion, "<1.21")) ", \"MixinPlayerListRespawns\"" else "",
         // The 1.20.5 physics attributes, backported on 1.20.1 only (dev.golem.core.world.Physics).
         "physics_mixins" to if (mcVersion.startsWith("1.20.")) ", \"MixinLegacyAttributeSupplier\", \"MixinLegacyLivingPhysics\", \"MixinLegacyFabricGravity\"" else "",
+        // Chunks.loadEntityTicking before 26.1 (EntitySectionsAccess).
+        "entity_load_mixins" to if (mcVersion.substringBefore('.').toInt() < 26) ", \"EntitySectionsAccess\"" else "",
         // dev.golem.core.gametest.TestChunks: a 26.1 test waits until its whole plot is entity-ticking.
         "gametest_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinGameTestChunks\"" else "",
         // Fabric API has no minecart events, so every Fabric node calls the rail hooks through a mixin.
