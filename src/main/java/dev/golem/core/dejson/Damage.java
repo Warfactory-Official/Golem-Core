@@ -40,6 +40,8 @@ public final class Damage {
     public static final String IS_EXPLOSION = "minecraft:is_explosion";
     public static final String IS_FIRE = "minecraft:is_fire";
     public static final String IS_PROJECTILE = "minecraft:is_projectile";
+    /** From 1.20.5 vanilla knocks the victim of attacker-less damage in a random direction unless the type has this. */
+    public static final String NO_KNOCKBACK = "minecraft:no_knockback";
 
     private Damage() {}
 
