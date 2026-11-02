@@ -94,6 +94,17 @@ public final class Hook<T> implements Iterable<T> {
         rebuild();
     }
 
+    /** Removes the first registration of {@code listener} in any phase; whether one was found. */
+    public synchronized boolean remove(T listener) {
+        for (List<T> phase : byPhase.values()) {
+            if (phase.remove(listener)) {
+                rebuild();
+                return true;
+            }
+        }
+        return false;
+    }
+
     /** Makes every listener of {@code first} run before every listener of {@code second}. */
     public synchronized void addPhaseOrdering(String first, String second) {
         if (first.equals(second)) throw new IllegalArgumentException("a phase cannot run before itself: " + first);

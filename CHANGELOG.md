@@ -24,6 +24,8 @@ Use GemRender 0.1.20.
 - `gui.TextSearch`: search bars match through Just Enough Characters (pinyin) when it is installed.
 - `Subtypes.listed`: variants shown apart in JEI and REI that all match one recipe, like a 1.7 wildcard output.
 - Development harness: matching client and integrated-server tick rates, and screenshots that wait for a finished frame.
+- `Protection`: land-protection mods register a provider that can refuse block changes and entity harm from explosions,
+  spreading effects and hazards, per chunk or per position; `Explosions` and mob griefing ask it on every node.
 
 ### Fixed
 - 1.21.1 hung on world exit while terrain was still generating.

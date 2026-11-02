@@ -1,6 +1,7 @@
 package dev.golem.core.hook;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -70,5 +71,16 @@ class HookTest {
         hook.register(() -> Verdict.ALLOW);
         assertEquals(Verdict.DENY, hook.invoker().get());
         assertTrue(Verdict.PASS.orElse(true));
+    }
+
+    @Test
+    void removeDropsListenerAndRebuilds() {
+        Hook<Consumer<List<String>>> hook = recording();
+        Consumer<List<String>> a = log -> log.add("a");
+        hook.register(a);
+        hook.register(log -> log.add("b"));
+        assertTrue(hook.remove(a));
+        assertEquals(List.of("b"), run(hook));
+        assertFalse(hook.remove(a));
     }
 }
