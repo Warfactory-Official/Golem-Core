@@ -3,6 +3,26 @@
 Each release has a `## <version>` section; the release workflow uploads only the section matching
 `mod.version` in gradle.properties.
 
+## 1.0.4
+
+### Added
+- `Protection`: land-protection mods register a provider that can refuse block changes and entity harm from explosions,
+  spreading effects and hazards, per chunk or per position; `Explosions` and mob griefing ask it on every node.
+- GameTests: `GameTestHelpers.detachedServerPlayer` (a player that never joined, so other mods' login handlers stay
+  quiet) and `setOp`.
+- Computer components: `ComputerComponent`, `@ComputerMethod`, `ComputerPorts` and `Computers.expose` describe one
+  component per block without naming a computer mod. They are served as CC: Tweaked peripherals on every node and as
+  OpenComputers: Rebooted components on 1.21.1 NeoForge (cables, cases and Adapters).
+- `Hud.addCameraOverlay`: fullscreen helmet and camera overlays drawn under the hotbar and crosshair on every node.
+- `Damage.NO_KNOCKBACK`: damage types with no attacker that must not knock the victim in a random direction (1.20.5+).
+
+### Fixed
+- A 1.20.1 Forge server with Canary, or any mod that overwrites `processPendingLoads` privately, failed at "Preparing
+  level".
+
+### Changed
+- `PeripheralPorts` is now `ComputerPorts`.
+
 ## 1.0.3
 
 Use GemRender 0.1.20.
@@ -24,10 +44,6 @@ Use GemRender 0.1.20.
 - `gui.TextSearch`: search bars match through Just Enough Characters (pinyin) when it is installed.
 - `Subtypes.listed`: variants shown apart in JEI and REI that all match one recipe, like a 1.7 wildcard output.
 - Development harness: matching client and integrated-server tick rates, and screenshots that wait for a finished frame.
-- `Protection`: land-protection mods register a provider that can refuse block changes and entity harm from explosions,
-  spreading effects and hazards, per chunk or per position; `Explosions` and mob griefing ask it on every node.
-- GameTests: `GameTestHelpers.detachedServerPlayer` (a player that never joined, so other mods' login handlers stay
-  quiet) and `setOp`.
 
 ### Fixed
 - 1.21.1 hung on world exit while terrain was still generating.
