@@ -21,6 +21,60 @@ public final class Hud {
         for (var renderer : BEFORE_CHAT) draw(graphics, renderer);
     }
     *///?}
+    //? if fabric && <26.1 {
+    /*private static final List<Consumer<GuiGraphics>> CAMERA = new ArrayList<>();
+
+    public static void drawCameraOverlays(GuiGraphics graphics) {
+        for (var renderer : CAMERA) drawUnderHud(graphics, renderer);
+    }
+    *///?}
+
+    //? if >=26.1 {
+
+    /** Draws a fullscreen helmet overlay with vanilla's pumpkin blur, beneath the crosshair and hotbar. */
+    public static void addCameraOverlay(String namespace, String path, Consumer<GuiGraphicsExtractor> renderer) {
+        //?} else {
+        /*public static void addCameraOverlay(String namespace, String path, Consumer<GuiGraphics> renderer) {
+         *///?}
+        //? if fabric && >=26.1 {
+        /*net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.attachElementAfter(
+                net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements.MISC_OVERLAYS,
+                Ids.of(namespace, path), (graphics, _) -> renderer.accept(graphics));
+        *///?} elif fabric {
+        /*CAMERA.add(renderer);
+         *///?} elif neoforge {
+        dev.golem.core.platform.NeoForgeEntrypoint.modBus().addListener(
+                (net.neoforged.neoforge.client.event.RegisterGuiLayersEvent event) ->
+                        event.registerAbove(net.neoforged.neoforge.client.gui.VanillaGuiLayers.CAMERA_OVERLAYS,
+                                Ids.of(namespace, path), (graphics, deltaTracker) -> drawUnderHud(graphics, renderer)));
+        //?} elif forge {
+        /*dev.golem.core.platform.ForgeEntrypoint.modBus().addListener(
+                (net.minecraftforge.client.event.RegisterGuiOverlaysEvent event) ->
+                        event.registerAbove(net.minecraftforge.client.gui.overlay.VanillaGuiOverlay.HELMET.id(),
+                                namespace + "/" + path, (gui, graphics, partialTick, width, height) -> drawUnderHud(graphics, renderer)));
+        *///?}
+    }
+
+    /** 1.20.1 shares one depth buffer across the HUD, so an overlay under it writes no depth, like vanilla's pumpkin. */
+    //? if >=26.1 {
+    private static void drawUnderHud(GuiGraphicsExtractor graphics, Consumer<GuiGraphicsExtractor> renderer) {
+        renderer.accept(graphics);
+    }
+    //?} elif >=1.20.5 {
+    /*private static void drawUnderHud(GuiGraphics graphics, Consumer<GuiGraphics> renderer) {
+        renderer.accept(graphics);
+    }
+    *///?} else {
+    /*private static void drawUnderHud(GuiGraphics graphics, Consumer<GuiGraphics> renderer) {
+        graphics.flush();
+        com.mojang.blaze3d.systems.RenderSystem.disableDepthTest();
+        com.mojang.blaze3d.systems.RenderSystem.depthMask(false);
+        renderer.accept(graphics);
+        graphics.flush();
+        com.mojang.blaze3d.systems.RenderSystem.depthMask(true);
+        com.mojang.blaze3d.systems.RenderSystem.enableDepthTest();
+    }
+    *///?}
 
     //? if >=26.1 {
 

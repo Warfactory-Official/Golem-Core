@@ -5,7 +5,7 @@ import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 // Fabric before 26.1 has only a post-HUD callback. Cancel the dedicated heart and armour methods where available.
 // Armour on 1.20.1 and air on both older versions are inline in Gui.renderPlayerHealth: zero at their individual
 // scalar reads draws no icons. ModifyExpressionValue composes with other consumers without changing entity state.
-// Vanilla has no insertion API; widening anonymous layer fields cannot add a before-chat callback.
+// Vanilla has no insertion API; widening anonymous layer fields cannot add a before-chat or camera-overlay callback.
 //? if fabric && <26.1 {
 
 /*import dev.golem.core.client.VanillaHud;
@@ -31,6 +31,19 @@ public abstract class MixinLegacyHudRows {
             "Lnet/minecraft/client/gui/components/ChatComponent;render(Lnet/minecraft/client/gui/GuiGraphics;III)V"))
     private void golem$beforeChat(CallbackInfo callback, @Local(argsOnly = true) GuiGraphics graphics) {
         Hud.drawBeforeChat(graphics);
+    }
+    ^///?}
+
+    //? if >=1.21 {
+    @Inject(method = "renderCameraOverlays", at = @At("TAIL"))
+    private void golem$cameraOverlays(CallbackInfo callback, @Local(argsOnly = true) GuiGraphics graphics) {
+        Hud.drawCameraOverlays(graphics);
+    }
+    //?} else {
+    /^@Inject(method = "render", at = @At(value = "INVOKE", ordinal = 0, target =
+            "Lnet/minecraft/client/multiplayer/MultiPlayerGameMode;getPlayerMode()Lnet/minecraft/world/level/GameType;"))
+    private void golem$cameraOverlays(CallbackInfo callback, @Local(argsOnly = true) GuiGraphics graphics) {
+        Hud.drawCameraOverlays(graphics);
     }
     ^///?}
 
