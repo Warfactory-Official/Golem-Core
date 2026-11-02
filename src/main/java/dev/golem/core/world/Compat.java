@@ -547,12 +547,12 @@ public final class Compat {
 
     /**
      * Whether a mob may break {@code state} at {@code pos}. Vanilla has no such question; the loader
-     * events that answer it are not bridged, so this is the permissive Fabric answer everywhere.
+     * events that answer it are not bridged, so the only objectors are {@link Protection} providers.
      */
     public static boolean canEntityDestroyBlock(ServerLevel level, net.minecraft.core.BlockPos pos,
                                                 net.minecraft.world.level.block.state.BlockState state,
                                                 net.minecraft.world.entity.LivingEntity entity) {
-        return true;
+        return Protection.mayAlter(level, pos, Protection.Source.of(entity), Protection.Cause.TERRAFORM);
     }
 
     /**

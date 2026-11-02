@@ -71,4 +71,15 @@ class HookTest {
         assertEquals(Verdict.DENY, hook.invoker().get());
         assertTrue(Verdict.PASS.orElse(true));
     }
+
+    @Test
+    void removeDropsListenerAndRebuilds() {
+        Hook<Consumer<List<String>>> hook = recording();
+        Consumer<List<String>> a = log -> log.add("a");
+        hook.register(a);
+        hook.register(log -> log.add("b"));
+        assertTrue(hook.remove(a));
+        assertEquals(List.of("b"), run(hook));
+        assertTrue(!hook.remove(a));
+    }
 }

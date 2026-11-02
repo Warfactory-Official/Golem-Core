@@ -108,13 +108,20 @@ public final class Explosions {
      */
     public static void explode(Level level, @Nullable Entity source, @Nullable LivingEntity owner, double x, double y,
                                double z, float radius, boolean fire, Level.ExplosionInteraction interaction) {
+        explode(level, source, owner, null, x, y, z, radius, fire, interaction);
+    }
+
+    /** {@code responsible} overrides the {@link Protection.Source} otherwise derived from {@code source}. */
+    public static void explode(Level level, @Nullable Entity source, @Nullable LivingEntity owner,
+                               Protection.@Nullable Source responsible, double x, double y, double z, float radius,
+                               boolean fire, Level.ExplosionInteraction interaction) {
         if (!(level instanceof ServerLevel server)) {
             level.explode(source, x, y, z, radius, fire, interaction);
             return;
         }
         //? if >=1.21.1 {
         DamageSource damage = owner == null ? null : level.damageSources().explosion(source, owner);
-        level.explode(source, damage, new LegacyDamage(), x, y, z, radius, fire, interaction);
+        level.explode(source, damage, new LegacyDamage(server, source, responsible), x, y, z, radius, fire, interaction);
         //?} else {
         /*java.util.List<Hit> hits = new java.util.ArrayList<>();
         // No damage hook here: vanilla hurts with the 7 factor and opens the invulnerability window, and a second
@@ -130,7 +137,7 @@ public final class Explosions {
             hits.add(new Hit(living, (float) (int) ((exposed * exposed + exposed) / 2.0D * LEGACY_FACTOR * reach + 1.0D)));
         }
 
-        level.explode(source, x, y, z, radius, fire, interaction);
+        level.explode(source, null, new Guarded(server, source, responsible), x, y, z, radius, fire, interaction);
 
         LivingEntity credited = owner != null ? owner : source instanceof LivingEntity living ? living
                 : source instanceof net.minecraft.world.entity.projectile.Projectile projectile
@@ -142,8 +149,38 @@ public final class Explosions {
         *///?}
     }
 
+    /** Vetoes block destruction and entity damage that {@link Protection} providers deny. */
+    private static class Guarded extends ExplosionDamageCalculator {
+        private final Level level;
+        private final Protection.Source source;
+        private final Protection.Gate gate;
+
+        Guarded(Level level, @Nullable Entity source, Protection.@Nullable Source responsible) {
+            this.level = level;
+            this.source = responsible != null ? responsible : Protection.Source.of(source);
+            this.gate = Protection.gate(level, this.source, Protection.Cause.EXPLOSION);
+        }
+
+        @Override
+        public boolean shouldBlockExplode(Explosion explosion, net.minecraft.world.level.BlockGetter getter, BlockPos pos,
+                                          BlockState state, float power) {
+            return gate.mayAlter(pos);
+        }
+
+        //? if >=1.21 {
+        @Override
+        public boolean shouldDamageEntity(Explosion explosion, Entity entity) {
+            return Protection.mayHarm(level, entity, source, Protection.Hazard.BLAST);
+        }
+        //?}
+    }
+
     //? if >=1.21.1 {
-    private static final class LegacyDamage extends ExplosionDamageCalculator {
+    private static final class LegacyDamage extends Guarded {
+        LegacyDamage(Level level, @Nullable Entity source, Protection.@Nullable Source responsible) {
+            super(level, source, responsible);
+        }
+
         // One hurt carries the final 1.7 damage.
         //? if >=26.1 {
         @Override
