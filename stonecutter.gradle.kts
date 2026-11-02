@@ -42,6 +42,8 @@ stonecutter parameters {
     constants["jade"] = !(node.project.findProperty("deps.jade") as String?).isNullOrBlank()
     // True only where the node declares Applied Energistics 2 coordinates (an optional peer; dev.golem.core.ae2).
     constants["ae2"] = !(node.project.findProperty("deps.ae2") as String?).isNullOrBlank()
+    // True only where the node declares OpenComputers: Rebooted coordinates (an optional peer; dev.golem.core.opencomputers).
+    constants["opencomputers"] = !(node.project.findProperty("deps.oc") as String?).isNullOrBlank()
 
     swaps["mc_version"] = "\"${node.metadata.version}\";"
 

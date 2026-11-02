@@ -28,10 +28,10 @@ final class FabricPeripherals {
         return lookup().find(level, pos, side);
     }
 
-    static void exposeBlocks(PeripheralPorts ports, Predicate<Block> carriers) {
+    static void exposeBlocks(ComputerPorts ports, Predicate<Block> carriers) {
         lookup().registerFallback((level, pos, state, be, side) ->
                 level instanceof ServerLevel server && carriers.test(state.getBlock())
-                        ? ports.at(server, pos, state, be, side) : null);
+                        ? ComputerCraftPeripheral.of(ports.at(server, pos, state, be, side)) : null);
     }
 }
 *///?}

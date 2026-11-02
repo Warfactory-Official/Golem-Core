@@ -135,6 +135,11 @@ repositories {
         forRepository { maven("https://maven.latvian.dev/releases") { name = "LatvianDev" } }
         filter { includeGroup("dev.latvian.mods") }
     }
+    // OpenComputers: Rebooted's API jar (the optional `opencomputers` peer, see deps.oc).
+    exclusiveContent {
+        forRepository { maven("https://maven.michiyo.me/releases") { name = "Michiyo" } }
+        filter { includeGroup("li.cil.oc") }
+    }
     // Jade (the optional `jade` peer, see deps.jade), published on Modrinth's maven.
     exclusiveContent {
         forRepository { maven("https://api.modrinth.com/maven") { name = "Modrinth" } }
@@ -308,6 +313,11 @@ dependencies {
     // Jade, compile-only and per-node optional: dev.golem.core.jade shows dev.golem.core.info declarations in Jade's
     // HUD (26.x and 15.x API lines). A node without deps.jade compiles the adapter out (`jade`).
     (findProperty("deps.jade") as String?)?.takeIf { it.isNotBlank() }?.let { compileOnly("maven.modrinth:jade:$it") }
+    // OpenComputers: Rebooted, compile-only: dev.golem.core.opencomputers serves dev.golem.core.computer components to
+    // OC cables and Adapters. A node without deps.oc compiles the adapter out (`opencomputers`).
+    (findProperty("deps.oc") as String?)?.takeIf { it.isNotBlank() }?.let {
+        compileOnly("li.cil.oc:opencomputers:$it:api") { isTransitive = false }
+    }
 
     // Applied Energistics 2, compile-only and per-node optional: dev.golem.core.ae2 serves dev.golem.core.autocraft
     // (crafting machines on AE2's lookup, storage cell contents). A node without deps.ae2 compiles it out (`ae2`).

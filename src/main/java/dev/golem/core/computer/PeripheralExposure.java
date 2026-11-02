@@ -21,9 +21,9 @@ import org.jspecify.annotations.Nullable;
  *   <li>Fabric: a fallback on {@code PeripheralLookup}, the Fabric API block lookup CC reads.</li>
  * </ul>
  *
- * <p>The peripheral API itself ({@code IPeripheral}, {@code @LuaFunction}) is identical on every node; only this
- * registration differs. CC: Tweaked is optional: without it {@link #exposeBlocks} does nothing and loads none of
- * its types. Call once from common init, while the mod bus still accepts listeners.
+ * <p>Each lookup answers a {@link ComputerCraftPeripheral} over the mod's {@link ComputerComponent}. CC: Tweaked is
+ * optional: without it {@link #exposeBlocks} does nothing and loads none of its types. {@link Computers#expose} calls
+ * it once from common init, while the mod bus still accepts listeners.
  */
 public final class PeripheralExposure {
 
@@ -37,7 +37,7 @@ public final class PeripheralExposure {
     }
 
     /** Asks {@code ports} for a peripheral on the blocks {@code carriers} accepts. */
-    public static void exposeBlocks(PeripheralPorts ports, Predicate<Block> carriers) {
+    public static void exposeBlocks(ComputerPorts ports, Predicate<Block> carriers) {
         if (!available()) return;
         //? if neoforge {
         NeoPeripherals.exposeBlocks(ports, carriers);
@@ -55,6 +55,11 @@ public final class PeripheralExposure {
      * <p>1.20.1 Forge has no public query for provider peripherals, so there this asks the providers registered
      * through {@link #exposeBlocks}, which is the code CC's own lookup calls.
      */
+    /** The component behind a peripheral {@link #find} answered, or null for another mod's peripheral. */
+    public static @Nullable ComputerComponent component(@Nullable IPeripheral peripheral) {
+        return peripheral instanceof ComputerCraftPeripheral wrapped ? wrapped.component() : null;
+    }
+
     public static @Nullable IPeripheral find(ServerLevel level, BlockPos pos, @Nullable Direction side) {
         if (!available()) return null;
         //? if neoforge {

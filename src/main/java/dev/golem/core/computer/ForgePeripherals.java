@@ -24,12 +24,12 @@ final class ForgePeripherals {
 
     private ForgePeripherals() {}
 
-    static void exposeBlocks(PeripheralPorts ports, Predicate<Block> carriers) {
+    static void exposeBlocks(ComputerPorts ports, Predicate<Block> carriers) {
         IPeripheralProvider provider = (level, pos, side) -> {
             if (!(level instanceof ServerLevel server)) return LazyOptional.empty();
             BlockState state = server.getBlockState(pos);
             if (!carriers.test(state.getBlock())) return LazyOptional.empty();
-            IPeripheral peripheral = ports.at(server, pos, state, server.getBlockEntity(pos), side);
+            IPeripheral peripheral = ComputerCraftPeripheral.of(ports.at(server, pos, state, server.getBlockEntity(pos), side));
             return peripheral == null ? LazyOptional.empty() : LazyOptional.of(() -> peripheral);
         };
         PROVIDERS.add(provider);

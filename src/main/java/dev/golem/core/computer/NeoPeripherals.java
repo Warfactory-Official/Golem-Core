@@ -19,12 +19,12 @@ final class NeoPeripherals {
 
     private NeoPeripherals() {}
 
-    static void exposeBlocks(PeripheralPorts ports, Predicate<Block> carriers) {
+    static void exposeBlocks(ComputerPorts ports, Predicate<Block> carriers) {
         dev.golem.core.platform.NeoForgeEntrypoint.modBus().addListener((RegisterCapabilitiesEvent event) -> {
             Block[] blocks = BuiltInRegistries.BLOCK.stream().filter(carriers).toArray(Block[]::new);
             if (blocks.length == 0) return;
             event.registerBlock(PeripheralCapability.get(), (level, pos, state, be, side) ->
-                    level instanceof ServerLevel server ? ports.at(server, pos, state, be, side) : null, blocks);
+                    level instanceof ServerLevel server ? ComputerCraftPeripheral.of(ports.at(server, pos, state, be, side)) : null, blocks);
         });
     }
 
