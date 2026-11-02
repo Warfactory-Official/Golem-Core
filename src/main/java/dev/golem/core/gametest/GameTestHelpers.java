@@ -17,6 +17,7 @@ import dev.golem.core.net.GolemNetwork;
 import net.minecraft.gametest.framework.GameTestRunner;
 //?}
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.players.PlayerList;
 import net.minecraft.server.network.ServerGamePacketListenerImpl;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
@@ -27,10 +28,12 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
 import io.netty.util.ReferenceCountUtil;
+import com.mojang.authlib.GameProfile;
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 //? if >=1.21 {
 import net.minecraft.server.network.CommonListenerCookie;
@@ -284,6 +287,33 @@ public final class GameTestHelpers {
      */
     public static ServerPlayer mockServerPlayerInLevel(GameTestHelper helper) {
         return survivalServerPlayerInLevel(helper);
+    }
+
+    /**
+     * A server player in the level that never joined: no player-list entry, no connection, no login events, so mods
+     * that answer a login with packets stay quiet. Position it before use.
+     */
+    public static ServerPlayer detachedServerPlayer(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        GameProfile profile = new GameProfile(UUID.randomUUID(), "test-detached-player");
+        //? if >=1.21 {
+        return new ServerPlayer(level.getServer(), level, profile,
+                net.minecraft.server.level.ClientInformation.createDefault());
+        //?} else {
+        /*return new ServerPlayer(level.getServer(), level, profile);
+        *///?}
+    }
+
+    /** Makes {@code player} a server operator, or removes it; ops are saved, so a test removes what it adds. */
+    public static void setOp(ServerPlayer player, boolean op) {
+        PlayerList players = player.level().getServer().getPlayerList();
+        //? if >=26.1 {
+        net.minecraft.server.players.NameAndId id = new net.minecraft.server.players.NameAndId(player.getGameProfile());
+        //?} else {
+        /*GameProfile id = player.getGameProfile();
+        *///?}
+        if (op) players.op(id);
+        else players.deop(id);
     }
 
     /** A survival-mode server player placed in the level. Works on Forge 1.20.1, whose login hooks need a channel. */

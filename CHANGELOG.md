@@ -26,6 +26,8 @@ Use GemRender 0.1.20.
 - Development harness: matching client and integrated-server tick rates, and screenshots that wait for a finished frame.
 - `Protection`: land-protection mods register a provider that can refuse block changes and entity harm from explosions,
   spreading effects and hazards, per chunk or per position; `Explosions` and mob griefing ask it on every node.
+- GameTests: `GameTestHelpers.detachedServerPlayer` (a player that never joined, so other mods' login handlers stay
+  quiet) and `setOp`.
 
 ### Fixed
 - 1.21.1 hung on world exit while terrain was still generating.
