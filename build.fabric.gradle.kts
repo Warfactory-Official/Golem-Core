@@ -321,6 +321,11 @@ dependencies {
         }
     }
 
+    // EMI, compile-only and per-node optional (see the NeoForge buildscript); intermediary-mapped.
+    (findProperty("deps.emi") as String?)?.takeIf { it.isNotBlank() }?.let {
+        (if (obfuscated) "modCompileOnly" else "compileOnly")("maven.modrinth:emi:$it") { isTransitive = false }
+    }
+
     // Jade, compile-only and per-node optional (see the NeoForge buildscript); intermediary-mapped below 26.1.
     (findProperty("deps.jade") as String?)?.takeIf { it.isNotBlank() }?.let {
         (if (obfuscated) "modCompileOnly" else "compileOnly")("maven.modrinth:jade:$it") { isTransitive = false }

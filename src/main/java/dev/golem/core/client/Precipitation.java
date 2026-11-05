@@ -1,5 +1,6 @@
 package dev.golem.core.client;
 
+import dev.golem.core.platform.Platform;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -103,6 +104,9 @@ public final class Precipitation {
         }
     }
 
+    /** Mods that replace vanilla's rain and snow from inside its weather code (Particle Rain, Pretty Rain). */
+    private static final List<String> WEATHER_MODS = List.of("particlerain");
+
     private static final Map<ResourceKey<Level>, Renderer> RENDERERS = new ConcurrentHashMap<>();
     private static long quadsDrawn;
 
@@ -118,6 +122,14 @@ public final class Precipitation {
                     + existing.getClass().getName() + "; one mod draws a dimension's rain and snow");
         }
         if (dev.golem.core.platform.Platform.isClient()) dev.golem.core.render.PrecipitationRendering.install(dimension);
+    }
+
+    /**
+     * Whether a mod that replaces vanilla's weather is loaded. A mod drawing plain rain leaves the dimension unregistered
+     * then, since a registered dimension skips the vanilla method that mod hooks.
+     */
+    public static boolean weatherModLoaded() {
+        return WEATHER_MODS.stream().anyMatch(Platform::isModLoaded);
     }
 
     /** Whether {@code level} is a client level whose weather a {@link Renderer} draws. */

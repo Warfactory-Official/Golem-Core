@@ -1,6 +1,8 @@
 package dev.golem.core.world;
 
 import dev.golem.core.Ids;
+import java.util.ArrayList;
+import java.util.Map;
 import java.util.Optional;
 import java.util.List;
 import net.minecraft.world.item.ItemStack;
@@ -33,6 +35,29 @@ public final class Recipes {
         //?} else {
         /*return level.getRecipeManager().byKey(id).isPresent();
         *///?}
+    }
+
+    /**
+     * Every smelting recipe the level's manager holds, one (input, result) pair per input item. Empty on 26.1, whose
+     * client has no recipes.
+     */
+    public static List<Map.Entry<ItemStack, ItemStack>> smeltingPairs(Level level) {
+        List<Map.Entry<ItemStack, ItemStack>> pairs = new ArrayList<>();
+        //? if <26.1 {
+        /*for (var entry : level.getRecipeManager().getAllRecipesFor(RecipeType.SMELTING)) {
+            //? if >=1.21.1 {
+            var recipe = entry.value();
+            //?} else {
+            /^var recipe = entry;
+            ^///?}
+            ItemStack result = recipe.getResultItem(level.registryAccess());
+            if (result.isEmpty() || recipe.getIngredients().isEmpty()) continue;
+            for (ItemStack input : recipe.getIngredients().get(0).getItems()) {
+                pairs.add(Map.entry(input.copyWithCount(1), result.copy()));
+            }
+        }
+        *///?}
+        return pairs;
     }
 
     /**
