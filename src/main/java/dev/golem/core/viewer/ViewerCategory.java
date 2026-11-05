@@ -55,6 +55,11 @@ public abstract class ViewerCategory<T> {
     /** Places one recipe's slots. */
     public abstract void setRecipe(SlotLayout builder, T recipe);
 
+    /** The recipe's own id ({@code ns:path}) for viewers that show one, or null when it has none. */
+    public String recipeId(T recipe) {
+        return null;
+    }
+
     /** Draws one recipe's background and extras; the mouse is in the category's coordinates. */
     public void draw(T recipe,
             //? if >=26.1 {

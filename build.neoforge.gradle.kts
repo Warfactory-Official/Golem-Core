@@ -310,6 +310,9 @@ dependencies {
         compileOnly("me.shedaniel:RoughlyEnoughItems-api-neoforge:$rei")
     }
 
+    // EMI, compile-only and per-node optional: dev.golem.core.emi feeds the same viewer declarations to EMI.
+    (findProperty("deps.emi") as String?)?.takeIf { it.isNotBlank() }?.let { compileOnly("maven.modrinth:emi:$it") }
+
     // Jade, compile-only and per-node optional: dev.golem.core.jade shows dev.golem.core.info declarations in Jade's
     // HUD (26.x and 15.x API lines). A node without deps.jade compiles the adapter out (`jade`).
     (findProperty("deps.jade") as String?)?.takeIf { it.isNotBlank() }?.let { compileOnly("maven.modrinth:jade:$it") }

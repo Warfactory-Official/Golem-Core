@@ -207,6 +207,9 @@ dependencies {
         (findProperty("deps.rei_architectury") as String?)?.takeIf { it.isNotBlank() }?.let { modCompileOnly("dev.architectury:architectury-forge:$it") }
     }
 
+    // EMI, compile-only and per-node optional (see the NeoForge buildscript); its Forge jar is SRG-mapped.
+    (findProperty("deps.emi") as String?)?.takeIf { it.isNotBlank() }?.let { modCompileOnly("maven.modrinth:emi:$it") }
+
     // Jade 11, compile-only and per-node optional (see the NeoForge buildscript); its Forge jar is SRG-mapped.
     (findProperty("deps.jade") as String?)?.takeIf { it.isNotBlank() }?.let { modCompileOnly("maven.modrinth:jade:$it") }
 
