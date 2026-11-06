@@ -126,10 +126,25 @@ class DejsonVocabularyTest {
         BiomeModifiers.addFeatures("hbm", "tfc_test", "#hbm:has_feature/tfc_test", "#minecraft:is_overworld",
                 List.of("hbm:bedrock_ore"), BiomeModifiers.UNDERGROUND_ORES);
         assertEquals(json("{'type':'neoforge:add_features','biomes':{'type':'neoforge:and','values':["
-                + "'#hbm:has_feature/tfc_test',{'type':'neoforge:not','value':'#minecraft:is_overworld'}]},"
+                + "'#hbm:biome_modifier/tfc_test/biomes',{'type':'neoforge:not','value':'#hbm:biome_modifier/tfc_test/excluded'}]},"
                 + "'features':'hbm:bedrock_ore','step':'underground_ores'}"),
                 DejsonWriter.files().get("data/hbm/neoforge/biome_modifier/tfc_test.json"));
         assertEquals("forge:and", DejsonWriter.files().get("data/hbm/forge/biome_modifier/tfc_test.json")
                 .getAsJsonObject("biomes").get("type").getAsString());
+        assertEquals(json("{'replace':false,'values':[{'id':'#minecraft:is_overworld','required':false}]}"),
+                DejsonWriter.files().get("data/hbm/tags/worldgen/biome/biome_modifier/tfc_test/excluded.json"));
+        assertEquals(json("{'replace':false,'values':[{'id':'#hbm:has_feature/tfc_test','required':false}]}"),
+                DejsonWriter.files().get("data/hbm/tags/worldgen/biome/biome_modifier/tfc_test/biomes.json"));
+    }
+
+    @Test
+    void featureModifierExcludingABiomeNeedsNoTagOfItsOwn() {
+        BiomeModifiers.addFeatures("hbm", "direct_test", "minecraft:plains", "minecraft:desert",
+                List.of("hbm:bedrock_ore"), BiomeModifiers.UNDERGROUND_ORES);
+        assertEquals(json("{'type':'neoforge:add_features','biomes':{'type':'neoforge:and','values':["
+                + "'minecraft:plains',{'type':'neoforge:not','value':'minecraft:desert'}]},"
+                + "'features':'hbm:bedrock_ore','step':'underground_ores'}"),
+                DejsonWriter.files().get("data/hbm/neoforge/biome_modifier/direct_test.json"));
+        assertEquals(null, DejsonWriter.files().get("data/hbm/tags/worldgen/biome/biome_modifier/direct_test/excluded.json"));
     }
 }

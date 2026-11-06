@@ -86,6 +86,8 @@ public final class BiomeModifiers {
         }
         JsonArray list = new JsonArray();
         features.forEach(list::add);
+        String ownBiomes = excluded == null ? biomes : ownTag(namespace, name, "biomes", biomes);
+        String ownExcluded = excluded == null ? null : ownTag(namespace, name, "excluded", excluded);
         for (String loader : new String[] {"neoforge", "forge"}) {
             JsonObject modifier = new JsonObject();
             modifier.addProperty("type", loader + ":add_features");
@@ -94,9 +96,9 @@ public final class BiomeModifiers {
             } else {
                 JsonObject not = new JsonObject();
                 not.addProperty("type", loader + ":not");
-                not.addProperty("value", excluded);
+                not.addProperty("value", ownExcluded);
                 JsonArray both = new JsonArray();
-                both.add(biomes);
+                both.add(ownBiomes);
                 both.add(not);
                 JsonObject set = new JsonObject();
                 set.addProperty("type", loader + ":and");
@@ -112,6 +114,15 @@ public final class BiomeModifiers {
             Data.declare("data/" + namespace + "/" + loader + "/biome_modifier/" + name + ".json", modifier);
         }
         DECLARED.add(new Declaration(namespace, name, biomes, excluded, List.copyOf(features), step));
+    }
+
+    // NeoForge composites add listeners to a tag's shared set in a plain list and 26.1 decodes registry files in
+    // parallel, so two files naming one tag can crash a world load. A biome id decodes to a set of its own.
+    private static String ownTag(String namespace, String name, String role, String biomes) {
+        if (!biomes.startsWith("#")) return biomes;
+        String path = "biome_modifier/" + name + "/" + role;
+        Features.biomeTag(namespace, path, new String[0], biomes);
+        return "#" + namespace + ":" + path;
     }
 
     /**
