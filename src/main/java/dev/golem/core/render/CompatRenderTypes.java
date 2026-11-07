@@ -275,6 +275,11 @@ public final class CompatRenderTypes {
         return AdditiveRenderType.triangles();
     }
 
+    /** {@link #additiveTriangles()} drawn inside an old {@code glDisable(GL_FOG)}: no fog on any node. */
+    public static RenderType additiveTrianglesWithoutFog() {
+        return AdditiveRenderType.trianglesFogless();
+    }
+
     /**
      * {@link #additive()} that still writes depth: an old renderer that disabled culling and blended additively but
      * never called {@code glDepthMask(false)}, so its near faces hide the far faces of the same glow.

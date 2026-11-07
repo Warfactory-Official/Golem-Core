@@ -49,6 +49,7 @@ public abstract class CompatParticle extends
     private int lightOverride = -1;
     private ParticleLayer golemLayer = ParticleLayer.TRANSLUCENT;
     private boolean golemFaint;
+    private boolean golemFogless;
     private boolean planeOriented;
     private float planeYaw;
     private float planePitch;
@@ -116,7 +117,7 @@ public abstract class CompatParticle extends
         java.util.List<net.minecraft.client.particle.ParticleRenderType> order =
                 new java.util.ArrayList<>(net.minecraft.client.particle.ParticleEngine.RENDER_ORDER);
         for (net.minecraft.client.particle.ParticleRenderType type : java.util.List.of(ADDITIVE_LAYER,
-                FaintParticleLayers.TRANSLUCENT, FaintParticleLayers.ADDITIVE)) {
+                FaintParticleLayers.TRANSLUCENT, FaintParticleLayers.ADDITIVE, FaintParticleLayers.FOGLESS_ADDITIVE)) {
             if (!order.contains(type)) order.add(type);
         }
         net.minecraft.client.particle.ParticleEngine.RENDER_ORDER = java.util.List.copyOf(order);
@@ -157,7 +158,14 @@ public abstract class CompatParticle extends
         this.golemFaint = true;
     }
 
-    /** Makes the quad lie in a world-oriented plane instead of facing the camera. */
+    /** 1.7's additive pass inside {@code glDisable(GL_FOG)}: fog would light a black-backed sprite as a square. */
+    protected final void drawAdditiveWithoutFog() {
+        this.setLayer(ParticleLayer.ADDITIVE);
+        this.golemFaint = true;
+        this.golemFogless = true;
+    }
+
+    /** 1.7's flat quad: in XZ before {@code glRotated(yaw, Y)}, {@code glRotated(pitch, X)}, both faces drawn. */
     public final void setPlaneOrientation(float yaw, float pitch) {
         this.planeOriented = true;
         this.planeYaw = yaw;
@@ -203,7 +211,7 @@ public abstract class CompatParticle extends
         if (this.planeOriented) {
             return (target, camera, partialTick) -> target.identity()
                     .rotateY((float) Math.toRadians(this.planeYaw))
-                    .rotateX((float) Math.toRadians(this.planePitch));
+                    .rotateX((float) Math.toRadians(this.planePitch - 90F));
         }
         if (!this.isFlatOnGround()) return super.getFacingCameraMode();
         return (target, camera, partialTick) -> target.rotationX((float) (-Math.PI / 2D));
@@ -272,6 +280,14 @@ public abstract class CompatParticle extends
                 this.getU0(), this.getU1(), this.getV0(), this.getV1(),
                 net.minecraft.util.ARGB.colorFromFloat(this.alpha, this.rCol, this.gCol, this.bCol),
                 light), partialTick);
+        if (!this.planeOriented) return;
+        org.joml.Quaternionf back = new org.joml.Quaternionf(rotation).rotateX((float) Math.PI);
+        this.emitQuads((dx, dy, dz, size) -> renderState.add(this.getLayer(),
+                baseX + dx, baseY + dy, baseZ + dz,
+                back.x, back.y, back.z, back.w, size,
+                this.getU0(), this.getU1(), this.getV0(), this.getV1(),
+                net.minecraft.util.ARGB.colorFromFloat(this.alpha, this.rCol, this.gCol, this.bCol),
+                light), partialTick);
     }
     //?} else {
     /*@Override
@@ -287,7 +303,7 @@ public abstract class CompatParticle extends
         /^// 1.20.1 has no FacingCameraMode seam; the camera's own rotation is all there is.
         rotation = this.planeOriented
                 ? new org.joml.Quaternionf().rotateY((float) Math.toRadians(this.planeYaw))
-                        .rotateX((float) Math.toRadians(this.planePitch))
+                        .rotateX((float) Math.toRadians(this.planePitch - 90F))
                 : new org.joml.Quaternionf(camera.rotation());
         ^///?}
         if (this.roll != 0.0F) {
@@ -316,6 +332,11 @@ public abstract class CompatParticle extends
             golemQuadVertex(buffer, rotation, x, y, z,  sx,  1F, size, this.getU1(), this.getV0(), light);
             golemQuadVertex(buffer, rotation, x, y, z, -sx,  1F, size, this.getU0(), this.getV0(), light);
             golemQuadVertex(buffer, rotation, x, y, z, -sx, -1F, size, this.getU0(), this.getV1(), light);
+            if (!this.planeOriented) return;
+            golemQuadVertex(buffer, rotation, x, y, z, -sx, -1F, size, this.getU0(), this.getV1(), light);
+            golemQuadVertex(buffer, rotation, x, y, z, -sx,  1F, size, this.getU0(), this.getV0(), light);
+            golemQuadVertex(buffer, rotation, x, y, z,  sx,  1F, size, this.getU1(), this.getV0(), light);
+            golemQuadVertex(buffer, rotation, x, y, z,  sx, -1F, size, this.getU1(), this.getV1(), light);
         }, partialTick);
     }
 
@@ -360,6 +381,7 @@ public abstract class CompatParticle extends
     //? if >=26.1 {
     @Override
     protected net.minecraft.client.particle.SingleQuadParticle.Layer getLayer() {
+        if (this.golemFogless) return FaintParticleLayers.FOGLESS_ADDITIVE;
         if (this.golemFaint) {
             return this.golemLayer == ParticleLayer.ADDITIVE ? FaintParticleLayers.ADDITIVE : FaintParticleLayers.TRANSLUCENT;
         }
@@ -369,6 +391,7 @@ public abstract class CompatParticle extends
     //?} else {
     /*@Override
     public net.minecraft.client.particle.ParticleRenderType getRenderType() {
+        if (this.golemFogless) return FaintParticleLayers.FOGLESS_ADDITIVE;
         if (this.golemFaint) {
             return this.golemLayer == ParticleLayer.ADDITIVE ? FaintParticleLayers.ADDITIVE : FaintParticleLayers.TRANSLUCENT;
         }

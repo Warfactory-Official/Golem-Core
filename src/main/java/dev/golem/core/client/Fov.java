@@ -19,7 +19,7 @@ public final class Fov {
     private static Modifier modifier = (held, fov, partialTick) -> fov;
     private static boolean registered;
 
-    /** Installs the one client FOV callback used by the mod. */
+    /** Installs the one client FOV callback used by the mod. It changes the level's FOV, never the hand's. */
     public static void register(Modifier modifier) {
         if (registered) return;
         registered = true;
@@ -27,12 +27,14 @@ public final class Fov {
 
         //? if neoforge {
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
-                (net.neoforged.neoforge.client.event.ViewportEvent.ComputeFov event) ->
-                        event.setFOV(apply((float) event.getFOV(), (float) event.getPartialTick())));
+                (net.neoforged.neoforge.client.event.ViewportEvent.ComputeFov event) -> {
+                    if (event.usedConfiguredFov()) event.setFOV(apply((float) event.getFOV(), (float) event.getPartialTick()));
+                });
         //?} elif forge {
         /*net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(
-                (net.minecraftforge.client.event.ViewportEvent.ComputeFov event) ->
-                        event.setFOV(apply((float) event.getFOV(), (float) event.getPartialTick())));
+                (net.minecraftforge.client.event.ViewportEvent.ComputeFov event) -> {
+                    if (event.usedConfiguredFov()) event.setFOV(apply((float) event.getFOV(), (float) event.getPartialTick()));
+                });
         *///?}
     }
 

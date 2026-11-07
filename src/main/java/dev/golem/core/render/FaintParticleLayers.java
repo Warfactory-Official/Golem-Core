@@ -27,7 +27,8 @@ import net.minecraft.client.renderer.texture.TextureAtlas;
  * particle whose whole alpha is below that (1.7's white-phosphorus haze peaks at 0.025) is not drawn at all. The only
  * difference here is that test: {@code golemcore:particle_faint} is vanilla's particle program with the discard moved to
  * alpha 0, over vanilla's own particle vertex shader. Without the depth write a faint quad cannot hide what is drawn
- * after it, which is why the two go together.
+ * after it, which is why the two go together. {@link #FOGLESS_ADDITIVE} also leaves out the fog, for a 1.7 particle
+ * drawn inside {@code glDisable(GL_FOG)}.
  */
 final class FaintParticleLayers {
 
@@ -47,39 +48,47 @@ final class FaintParticleLayers {
             .withDepthStencilState(new DepthStencilState(DepthStencilState.DEFAULT.depthTest(), false))
             .build());
 
+    private static final RenderPipeline FOGLESS_ADDITIVE_PIPELINE = WorldPipelines.add(RenderPipeline.builder(RenderPipelines.PARTICLE_SNIPPET)
+            .withLocation("pipeline/golem_particle_fogless_additive")
+            .withFragmentShader(dev.golem.core.Ids.parse("golemcore:core/particle_fogless"))
+            .withColorTargetState(new ColorTargetState(BlendFunction.ADDITIVE))
+            .withDepthStencilState(new DepthStencilState(DepthStencilState.DEFAULT.depthTest(), false))
+            .build());
+
     static final SingleQuadParticle.Layer TRANSLUCENT =
             new SingleQuadParticle.Layer(true, TextureAtlas.LOCATION_PARTICLES, TRANSLUCENT_PIPELINE);
     static final SingleQuadParticle.Layer ADDITIVE =
             new SingleQuadParticle.Layer(true, TextureAtlas.LOCATION_PARTICLES, ADDITIVE_PIPELINE);
+    static final SingleQuadParticle.Layer FOGLESS_ADDITIVE =
+            new SingleQuadParticle.Layer(true, TextureAtlas.LOCATION_PARTICLES, FOGLESS_ADDITIVE_PIPELINE);
     //?} else {
-    /*private static final String SHADER = "golemcore:particle_faint";
-    private static ShaderInstance translucentShader;
-    private static ShaderInstance additiveShader;
+    /*private static final String[] SHADERS = {"golemcore:particle_faint", "golemcore:particle_faint",
+            "golemcore:particle_fogless"};
+    private static final ShaderInstance[] LOADED = new ShaderInstance[SHADERS.length];
     private static boolean reloadRegistered;
 
     // One program per blend: the program's apply() resets the blend (on 1.20.1 from its JSON, which states none on
     // purpose), and the hook run after it sets this layer's own again. See NoiseDisplacedRenderType for the 1.20.1 trap.
-    private static ShaderInstance shader(boolean additive) {
+    // Variant 0 is translucent, 1 additive, 2 additive without fog.
+    private static ShaderInstance shader(int variant) {
         if (!reloadRegistered) {
             reloadRegistered = true;
             dev.golem.core.client.ClientResourceReloads.register("golemcore", "particle_faint", () -> {
-                if (translucentShader != null) translucentShader.close();
-                if (additiveShader != null) additiveShader.close();
-                translucentShader = null;
-                additiveShader = null;
+                for (int i = 0; i < LOADED.length; i++) {
+                    if (LOADED[i] != null) LOADED[i].close();
+                    LOADED[i] = null;
+                }
             });
         }
-        ShaderInstance shader = additive ? additiveShader : translucentShader;
-        if (shader != null) return shader;
+        if (LOADED[variant] != null) return LOADED[variant];
+        boolean additive = variant > 0;
         try {
-            shader = ShaderLoader.load(Minecraft.getInstance().getResourceManager(), SHADER, DefaultVertexFormat.PARTICLE,
-                    () -> blend(additive));
+            LOADED[variant] = ShaderLoader.load(Minecraft.getInstance().getResourceManager(), SHADERS[variant],
+                    DefaultVertexFormat.PARTICLE, () -> blend(additive));
         } catch (java.io.IOException e) {
-            throw new IllegalStateException("Could not load shader " + SHADER, e);
+            throw new IllegalStateException("Could not load shader " + SHADERS[variant], e);
         }
-        if (additive) additiveShader = shader;
-        else translucentShader = shader;
-        return shader;
+        return LOADED[variant];
     }
 
     private static void blend(boolean additive) {
@@ -93,10 +102,11 @@ final class FaintParticleLayers {
         }
     }
 
-    static final ParticleRenderType TRANSLUCENT = layer(false);
-    static final ParticleRenderType ADDITIVE = layer(true);
+    static final ParticleRenderType TRANSLUCENT = layer(0);
+    static final ParticleRenderType ADDITIVE = layer(1);
+    static final ParticleRenderType FOGLESS_ADDITIVE = layer(2);
 
-    private static ParticleRenderType layer(boolean additive) {
+    private static ParticleRenderType layer(int variant) {
         return new ParticleRenderType() {
             //? if >=1.21 {
             @Override
@@ -123,16 +133,17 @@ final class FaintParticleLayers {
             ^///?}
 
             private void setup() {
-                ShaderInstance shader = shader(additive);
+                ShaderInstance shader = shader(variant);
                 RenderSystem.setShader(() -> shader);
                 RenderSystem.depthMask(false);
                 RenderSystem.setShaderTexture(0, TextureAtlas.LOCATION_PARTICLES);
-                blend(additive);
+                blend(variant > 0);
             }
 
             @Override
             public String toString() {
-                return additive ? "GOLEM_PARTICLE_FAINT_ADDITIVE" : "GOLEM_PARTICLE_FAINT";
+                return variant == 2 ? "GOLEM_PARTICLE_FOGLESS_ADDITIVE"
+                        : variant == 1 ? "GOLEM_PARTICLE_FAINT_ADDITIVE" : "GOLEM_PARTICLE_FAINT";
             }
         };
     }

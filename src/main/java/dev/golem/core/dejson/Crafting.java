@@ -89,6 +89,15 @@ public final class Crafting {
         return declare(namespace, id, recipe);
     }
 
+    /** A smoker recipe, at vanilla's one hundred ticks. */
+    public static JsonObject smoke(String namespace, String id, String ingredient, String result, double experience) {
+        JsonObject recipe = cooking("minecraft:smoking", id, experience);
+        recipe.addProperty("cookingtime", 100);
+        recipe.addProperty("ingredient", requireIngredient(ingredient));
+        recipe.add("result", result(result, 1));
+        return declare(namespace, id, recipe);
+    }
+
     /**
      * A shaped recipe: a pattern, one ingredient per symbol used in it, and a result.
      *
