@@ -1,6 +1,7 @@
 package dev.golem.core.mixin;
 
 import dev.golem.core.world.HeldItemState;
+import dev.golem.core.world.HeldItems;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.ItemInHandRenderer;
@@ -21,6 +22,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * its {@code shouldInstantlyReplaceVisibleItem} on 26.1, Forge's and NeoForge's own re-equip hook in
  * between. The head answers it first by replacing the stack the renderer is showing with the one now
  * held, so whatever the version asks next compares a stack with itself.
+ *
+ * <p>{@link HeldItems} answers the same question for data any item may carry.
  *
  * <p>The tail answers {@link HeldItemState#compatHoldsRaised}: the raise of a 1.7 item, recomputed after vanilla's
  * update so the frames after this tick already draw it. Ladder (AGENTS.md §7): vanilla has no say in the raise target
@@ -74,7 +77,8 @@ public abstract class MixinHeldItemState {
 
     @Unique
     private static ItemStack golem$shown(ItemStack shown, ItemStack held) {
-        return shown != held && shown.getItem() instanceof HeldItemState item
-                && item.compatIsSameHeldItem(shown, held) ? held : shown;
+        if (shown == held) return shown;
+        boolean same = shown.getItem() instanceof HeldItemState item && item.compatIsSameHeldItem(shown, held);
+        return same || HeldItems.sameApartFromIgnored(shown, held) ? held : shown;
     }
 }

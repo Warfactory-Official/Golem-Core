@@ -320,7 +320,7 @@ public final class GolemComponent<T> {
         //? if >=1.21.1 {
         stack.remove(component.get());
         //?} else {
-        /*if (stack.hasTag()) stack.getTag().remove(key);
+        /*stack.removeTagKey(key);
         *///?}
         return previous;
     }
