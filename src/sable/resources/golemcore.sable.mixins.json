@@ -5,6 +5,7 @@
   "plugin": "dev.golem.core.sable.mixin.SableMixinPlugin",
   "compatibilityLevel": "JAVA_21",
   "mixins": ["MixinSubLevelAssemblyHelper"],
+  "client": ["MixinCompatParticle"],
   "injectors": {
     "defaultRequire": 1
   }

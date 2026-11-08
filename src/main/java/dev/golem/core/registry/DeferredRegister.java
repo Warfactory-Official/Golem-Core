@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
@@ -17,6 +18,7 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.material.MapColor;
 
 /**
  * Cross-loader registration helper. Mirrors the ergonomics of NeoForge's {@code DeferredRegister}
@@ -312,18 +314,34 @@ public class DeferredRegister<T> {
     /** Specialized register for {@link Block}s. */
     public static class Blocks extends DeferredRegister<Block> {
 
+        private static final Map<String, Function<String, MapColor>> MAP_COLORS = new ConcurrentHashMap<>();
+
         protected Blocks(String namespace) {
             super(() -> Registries.BLOCK, namespace);
+        }
+
+        /**
+         * The map colour each block of {@code namespace} starts from, by block name; a block's own properties may still
+         * set another. Without one a block is {@link MapColor#NONE}, which vanilla and Xaero's maps draw as the ground.
+         */
+        public static void defaultMapColors(String namespace, Function<String, MapColor> byName) {
+            MAP_COLORS.put(namespace, byName);
+        }
+
+        private BlockBehaviour.Properties initial(String name) {
+            Function<String, MapColor> byName = MAP_COLORS.get(namespace);
+            MapColor color = byName == null ? null : byName.apply(name);
+            return color == null ? BlockBehaviour.Properties.of() : BlockBehaviour.Properties.of().mapColor(color);
         }
 
         public <B extends Block> RegistryObject<B> registerBlock(String name, Function<BlockBehaviour.Properties, ? extends B> factory, UnaryOperator<BlockBehaviour.Properties> properties) {
             String id = namespace + ":" + name;
             //? if >=26.1 {
             return register(name, key -> Substitutions.resolve(Substitutions.BLOCK, id, factory)
-                    .apply(properties.apply(BlockBehaviour.Properties.of()).setId(key)));
+                    .apply(properties.apply(initial(name)).setId(key)));
             //?} else {
             /*return register(name, key -> Substitutions.resolve(Substitutions.BLOCK, id, factory)
-                    .apply(properties.apply(BlockBehaviour.Properties.of())));
+                    .apply(properties.apply(initial(name))));
             *///?}
         }
 

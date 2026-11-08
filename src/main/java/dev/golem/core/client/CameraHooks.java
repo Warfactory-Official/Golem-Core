@@ -59,6 +59,21 @@ public final class CameraHooks {
         return offset;
     }
 
+    /** Degrees added to the camera's yaw once it is placed, as {@link #PITCH}; offsets of every listener add up. */
+    @FunctionalInterface
+    public interface Yaw {
+        float yawOffset(Entity entity);
+    }
+
+    public static final dev.golem.core.hook.Hook<Yaw> YAW = dev.golem.core.hook.Hook.notifying();
+
+    public static float yawOffset(Entity entity) {
+        if (entity == null || YAW.isEmpty()) return 0F;
+        float offset = 0F;
+        for (Yaw listener : YAW) offset += listener.yawOffset(entity);
+        return offset;
+    }
+
     /** The detached camera distance after every {@link #DISTANCE} listener (vanilla's when there are none). */
     public static float thirdPersonDistance(Entity entity, float distance) {
         if (!(entity instanceof Player player) || DISTANCE.isEmpty()) return distance;

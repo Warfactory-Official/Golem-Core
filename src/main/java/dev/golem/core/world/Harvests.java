@@ -4,6 +4,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
@@ -13,6 +14,7 @@ import net.minecraft.world.level.block.GameMasterBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
+import org.jspecify.annotations.Nullable;
 
 /** Server block harvesting with an explicit tool, including tools held in the off hand. */
 public final class Harvests {
@@ -64,6 +66,28 @@ public final class Harvests {
         // Never let the level drop the loot here: the harvest branch drops through playerDestroy with the
         // real tool, and a second loot roll from destroyBlock(pos, true) doubled every drop on 1.20.1.
         return level.destroyBlock(pos, false, player);
+    }
+
+    /**
+     * What a player's break does after the drops: the block's {@code spawnAfterBreak} and the experience a vanilla break
+     * pops (ore XP; silk touch and other enchantments applied as each version does).
+     */
+    public static void afterBreak(ServerLevel level, BlockPos pos, BlockState state, @Nullable BlockEntity blockEntity,
+                                  @Nullable Entity breaker, ItemStack tool) {
+        //? if neoforge {
+        state.spawnAfterBreak(level, pos, tool, false);
+        int xp = net.minecraft.world.item.enchantment.EnchantmentHelper.processBlockExperience(level, tool,
+                state.getExpDrop(level, pos, blockEntity, breaker, tool));
+        if (xp > 0) state.getBlock().popExperience(level, pos, xp);
+        //?} elif forge {
+        /*state.spawnAfterBreak(level, pos, tool, false);
+        int fortune = tool.getEnchantmentLevel(net.minecraft.world.item.enchantment.Enchantments.BLOCK_FORTUNE);
+        int silk = tool.getEnchantmentLevel(net.minecraft.world.item.enchantment.Enchantments.SILK_TOUCH);
+        int xp = state.getExpDrop(level, level.random, pos, fortune, silk);
+        if (xp > 0) state.getBlock().popExperience(level, pos, xp);
+        *///?} else {
+        /*state.spawnAfterBreak(level, pos, tool, true);
+        *///?}
     }
 
     /** Posts the loader's block-break event (or Fabric's BEFORE callback); false when a listener cancels. */

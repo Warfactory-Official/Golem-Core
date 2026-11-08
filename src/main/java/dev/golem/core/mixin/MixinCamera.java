@@ -22,9 +22,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * event, and 26.1's {@code camera_distance} attribute is server-synced entity state, not a client view setting; one
  * argument modifier here serves all six nodes the same way.
  *
- * <p>{@link CameraHooks#PITCH} turns the placed camera by re-setting its rotation at the end of the method that placed
- * it, through vanilla's protected {@code setRotation}. Rung 2: NeoForge and Forge have {@code ComputeCameraAngles},
- * fabric-api has no camera-angle event; the TAIL inject serves all six nodes the same way and leaves the position alone.
+ * <p>{@link CameraHooks#PITCH} and {@link CameraHooks#YAW} turn the placed camera by re-setting its rotation at the end
+ * of the method that placed it, through vanilla's protected {@code setRotation}. Rung 2: NeoForge and Forge have
+ * {@code ComputeCameraAngles}, fabric-api has no camera-angle event; the TAIL inject serves all six nodes the same way and
+ * leaves the position alone.
  */
 @Mixin(net.minecraft.client.Camera.class)
 public abstract class MixinCamera {
@@ -64,16 +65,18 @@ public abstract class MixinCamera {
     @Inject(method = "alignWithEntity", at = @At("TAIL"))
     private void golem$pitchOffset(float partialTick, CallbackInfo ci) {
         net.minecraft.client.Camera camera = (net.minecraft.client.Camera) (Object) this;
-        float offset = CameraHooks.pitchOffset(camera.entity());
-        if (offset != 0F) setRotation(camera.yRot(), camera.xRot() + offset);
+        float pitch = CameraHooks.pitchOffset(camera.entity());
+        float yaw = CameraHooks.yawOffset(camera.entity());
+        if (pitch != 0F || yaw != 0F) setRotation(camera.yRot() + yaw, camera.xRot() + pitch);
     }
     //?} else {
     /*@Inject(method = "setup", at = @At("TAIL"))
     private void golem$pitchOffset(net.minecraft.world.level.BlockGetter level, Entity entity, boolean detached,
             boolean mirror, float partialTick, CallbackInfo ci) {
         net.minecraft.client.Camera camera = (net.minecraft.client.Camera) (Object) this;
-        float offset = CameraHooks.pitchOffset(entity);
-        if (offset != 0F) setRotation(camera.getYRot(), camera.getXRot() + offset);
+        float pitch = CameraHooks.pitchOffset(entity);
+        float yaw = CameraHooks.yawOffset(entity);
+        if (pitch != 0F || yaw != 0F) setRotation(camera.getYRot() + yaw, camera.getXRot() + pitch);
     }
     *///?}
 
