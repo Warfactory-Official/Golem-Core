@@ -9,8 +9,11 @@ import java.util.WeakHashMap;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.HumanoidModel;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
 
 //? if >=26.1 {
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
@@ -105,17 +108,15 @@ public final class PlayerRenderHooks {
     }
 
     /**
-     * The player's render position relative to the camera, in world axes: 1.7's {@code (x, y, z)} of
-     * {@code RenderPlayer.doRender}, where a {@code RenderPlayerEvent.Pre} transform was applied before the renderer
-     * translated there. To rotate about the camera as 1.7 did, translate by its negation, rotate, translate back.
+     * The player's position relative to 1.7's render origin, in world axes: the {@code (x, y, z)} of
+     * {@code RenderPlayer.doRender}, measured from {@code RenderManager.renderPos}, the viewing entity's eye. The third
+     * person pull-back was already in the view matrix there, so a {@code RenderPlayerEvent.Pre} rotation turned about
+     * the viewer's head, not the camera. To rotate about that origin, translate by the negation, rotate, translate back.
      */
-    public static net.minecraft.world.phys.Vec3 renderOffset(Player player, float partialTick) {
-        //? if >=26.1 {
-        net.minecraft.world.phys.Vec3 camera = net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera().position();
-        //?} else {
-        /*net.minecraft.world.phys.Vec3 camera = net.minecraft.client.Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
-        *///?}
-        return player.getPosition(partialTick).subtract(camera);
+    public static Vec3 renderOffset(Player player, float partialTick) {
+        Entity viewer = Minecraft.getInstance().getCameraEntity();
+        if (viewer == null) viewer = player;
+        return player.getPosition(partialTick).subtract(viewer.getEyePosition(partialTick));
     }
 
     public static void apply(Player player, PoseStack pose, float partialTick) {
