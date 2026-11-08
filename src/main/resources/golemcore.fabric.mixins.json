@@ -18,6 +18,7 @@
   ],
   "client": [
     "MixinCameraFov",
+    "MixinFovMultiplier",
     "MixinFogRendererModifiers"${legacy_client_mixins}${debug_line_mixins}
   ],
   "server": [],

@@ -37,6 +37,15 @@ public final class Platform {
         *///?}
     }
 
+    /** The namespace other mods' common tags live in: {@code forge} on Forge, {@code c} everywhere else. */
+    public static String conventionNamespace() {
+        //? if forge {
+        /*return "forge";
+        *///?} else {
+        return "c";
+        //?}
+    }
+
     /** Whether the current loader has loaded {@code modId}. */
     public static boolean isModLoaded(String modId) {
         //? if fabric {

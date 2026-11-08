@@ -109,7 +109,8 @@ public final class GuiDraw {
      *
      * <p>Vanilla names a blit's source region in texels, and below 26.1 no overload takes UVs. This draws the
      * whole texture into an oversized rectangle and lets the screen edge crop it, which needs no texture
-     * dimensions and behaves the same on every version.
+     * dimensions and behaves the same on every version. Outside 0..1 the texture repeats, as 1.7's default
+     * {@code GL_REPEAT} sampler does.
      */
     public static void blitUvFullscreen(
             //? if >=26.1 {
@@ -123,8 +124,15 @@ public final class GuiDraw {
         if (uSpan <= 0F || vSpan <= 0F) return;
         int width = Math.round(graphics.guiWidth() / uSpan);
         int height = Math.round(graphics.guiHeight() / vSpan);
-        blitUv(graphics, texture, Math.round(-u0 * width), Math.round(-v0 * height), width, height,
-                0F, 0F, 1F, 1F, 1, 1);
+        int firstX = Math.floorMod(Math.round(-u0 * width), width);
+        int firstY = Math.floorMod(Math.round(-v0 * height), height);
+        if (firstX > 0) firstX -= width;
+        if (firstY > 0) firstY -= height;
+        for (int y = firstY; y < graphics.guiHeight(); y += height) {
+            for (int x = firstX; x < graphics.guiWidth(); x += width) {
+                blitUv(graphics, texture, x, y, width, height, 0F, 0F, 1F, 1F, 1, 1);
+            }
+        }
     }
 
     /**

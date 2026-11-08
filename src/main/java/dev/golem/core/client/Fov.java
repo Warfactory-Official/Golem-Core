@@ -38,6 +38,40 @@ public final class Fov {
         *///?}
     }
 
+    private static Modifier multiplier = (held, fov, partialTick) -> fov;
+    private static boolean multiplierRegistered;
+
+    /**
+     * Installs the one callback on the local player's FOV multiplier, 1.7's {@code FOVUpdateEvent}: it runs once a
+     * tick, and vanilla eases the camera halfway to the result each tick. {@code partialTick} is the last frame's.
+     */
+    public static void registerMultiplier(Modifier modifier) {
+        if (multiplierRegistered) return;
+        multiplierRegistered = true;
+        multiplier = modifier;
+
+        //? if neoforge {
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.client.event.ComputeFovModifierEvent event) -> {
+                    if (event.getPlayer() == Minecraft.getInstance().player)
+                        event.setNewFovModifier(applyMultiplier(event.getNewFovModifier()));
+                });
+        //?} elif forge {
+        /*net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(
+                (net.minecraftforge.client.event.ComputeFovModifierEvent event) -> {
+                    if (event.getPlayer() == Minecraft.getInstance().player)
+                        event.setNewFovModifier(applyMultiplier(event.getNewFovModifier()));
+                });
+        *///?}
+    }
+
+    /** Applies {@link #registerMultiplier}'s callback to the local player's FOV multiplier for this tick. */
+    public static float applyMultiplier(float fovMultiplier) {
+        Minecraft minecraft = Minecraft.getInstance();
+        ItemStack held = minecraft.player == null ? ItemStack.EMPTY : minecraft.player.getMainHandItem();
+        return multiplier.apply(held, fovMultiplier, Frames.partialTick());
+    }
+
     private static volatile float lastWorldFov = Float.NaN;
     private static boolean recording;
 

@@ -19,7 +19,8 @@ import net.minecraft.sounds.SoundSource;
  * scenario (master stays 0: the clients stay silent, and the master-volume skip comes after the listeners on every
  * node). {@code "false"} restores the previous volumes.
  *
- * <p>Line format: {@code [harness-sound] id=<event> source=<category> x=<x> y=<y> z=<z> volume=<v> pitch=<p>}.
+ * <p>Line format: {@code [harness-sound] id=<event> source=<category> x=<x> y=<y> z=<z> volume=<v> pitch=<p>
+ * file=<the resolved sound file>}.
  */
 final class HarnessSounds {
 
@@ -71,9 +72,10 @@ final class HarnessSounds {
                 volume = Float.NaN;
                 pitch = Float.NaN;
             }
+            String file = sound.getSound() == null ? "none" : String.valueOf(sound.getSound().getLocation());
             HarnessLog.add(String.format(Locale.ROOT,
-                    "[harness-sound] id=%s source=%s x=%.2f y=%.2f z=%.2f volume=%.3f pitch=%.3f",
-                    id, sound.getSource().getName(), sound.getX(), sound.getY(), sound.getZ(), volume, pitch));
+                    "[harness-sound] id=%s source=%s x=%.2f y=%.2f z=%.2f volume=%.3f pitch=%.3f file=%s",
+                    id, sound.getSource().getName(), sound.getX(), sound.getY(), sound.getZ(), volume, pitch, file));
         } catch (Throwable t) {
             HarnessLog.add("[harness-sound] unreadable sound: " + t);
         }
