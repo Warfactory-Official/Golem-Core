@@ -33,8 +33,8 @@ import net.minecraft.world.level.BlockAndTintGetter;
  * filled cells, tints grass by the biome it was cut from, and draws every model quirk (connected
  * fences, stair shapes, cross-shaped plants) with the same code as the terrain.
  *
- * <p>Light and tint are frozen when the scoop is cut. A chunk of ground in flight is lit by where it
- * came from, as in 1.7, and the jar stays independent of the level once it exists.
+ * <p>Light and tint are frozen when the scoop is cut and the jar stays independent of the level once it
+ * exists; a holder that flies it somewhere else relights it with {@link #setLight}.
  */
 public final class WorldInAJar implements BlockAndTintGetter {
 
@@ -122,6 +122,12 @@ public final class WorldInAJar implements BlockAndTintGetter {
         this.grassTint = level.getBlockTint(pos, BiomeColors.GRASS_COLOR_RESOLVER);
         this.foliageTint = level.getBlockTint(pos, BiomeColors.FOLIAGE_COLOR_RESOLVER);
         this.waterTint = level.getBlockTint(pos, BiomeColors.WATER_COLOR_RESOLVER);
+    }
+
+    /** Every cell's block and sky light from now on, 0 to 15 each. */
+    public void setLight(int blockLight, int skyLight) {
+        this.blockLight = blockLight;
+        this.skyLight = skyLight;
     }
 
     public void setBlock(int x, int y, int z, BlockState state) {

@@ -46,9 +46,12 @@ public final class DynamicLights {
         }
     }
 
-    /** Whether lights are shaded this frame; false means providers are not polled. */
+    /**
+     * Whether lights are shaded this frame; false means providers are not polled. GemRender builds without Iris
+     * support (1.20.1 Forge with Oculus, 26.1) never see a pack, hence the pack check here.
+     */
     public static boolean shading() {
-        return supported() && GemLights.shading();
+        return supported() && !ShaderPacks.inUse() && GemLights.shading();
     }
 
     private static boolean supported() {

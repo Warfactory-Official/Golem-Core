@@ -6,6 +6,7 @@ import dev.architectury.fluid.FluidStack;
 
 import dev.golem.core.fluid.FluidUnits;
 import dev.golem.core.viewer.Drawable;
+import dev.golem.core.viewer.FluidIcons;
 import dev.golem.core.viewer.Role;
 import dev.golem.core.viewer.SlotLayout;
 import dev.golem.core.viewer.ViewerCategory;
@@ -37,6 +38,8 @@ public final class ReiDisplay<T> implements Display {
         final Role role;
         final int x, y;
         final List<EntryStack<?>> entries = new ArrayList<>();
+        /** The fluids its fluid icons stand for: found by lookups, never drawn. */
+        final List<EntryStack<?>> iconFluids = new ArrayList<>();
         Drawable background;
         int backgroundX, backgroundY;
         final List<SlotLayout.TooltipCallback> tooltips = new ArrayList<>();
@@ -49,16 +52,31 @@ public final class ReiDisplay<T> implements Display {
 
         @Override
         public SlotLayout.Slot addItemStacks(List<ItemStack> list) {
-            for (var stack : list) if (stack != null && !stack.isEmpty()) entries.add(EntryStacks.of(stack));
+            for (var stack : list) {
+                if (stack == null || stack.isEmpty()) continue;
+                entries.add(EntryStacks.of(stack));
+                FluidIcons.Amount fluid = FluidIcons.fluidOf(stack);
+                // an icon without an amount still needs one: REI reads an empty fluid stack as no fluid
+                if (fluid != null) iconFluids.add(fluidEntry(fluid.fluid(), Math.max(1, fluid.milliBuckets())));
+            }
             return this;
         }
 
         @Override
         public SlotLayout.Slot addFluidStack(Fluid fluid, long milliBuckets) {
-            var amount = Math.multiplyExact(milliBuckets,
-                    FluidStack.bucketAmount() / FluidUnits.MB_PER_BUCKET);
-            entries.add(EntryStacks.of(fluid, amount));
+            entries.add(fluidEntry(fluid, milliBuckets));
             return this;
+        }
+
+        private static EntryStack<?> fluidEntry(Fluid fluid, long milliBuckets) {
+            return EntryStacks.of(fluid, Math.multiplyExact(milliBuckets, FluidStack.bucketAmount() / FluidUnits.MB_PER_BUCKET));
+        }
+
+        List<EntryStack<?>> lookups() {
+            if (iconFluids.isEmpty()) return entries;
+            List<EntryStack<?>> all = new ArrayList<>(entries);
+            all.addAll(iconFluids);
+            return all;
         }
 
         @Override
@@ -104,8 +122,8 @@ public final class ReiDisplay<T> implements Display {
         List<RecordedSlot> all = new ArrayList<>(slots);
         all.addAll(invisible);
         for (RecordedSlot slot : all) {
-            if (slot.role == Role.INPUT) inputs.add(EntryIngredient.of(slot.entries));
-            else if (slot.role == Role.OUTPUT) outputs.add(EntryIngredient.of(slot.entries));
+            if (slot.role == Role.INPUT) inputs.add(EntryIngredient.of(slot.lookups()));
+            else if (slot.role == Role.OUTPUT) outputs.add(EntryIngredient.of(slot.lookups()));
         }
     }
 

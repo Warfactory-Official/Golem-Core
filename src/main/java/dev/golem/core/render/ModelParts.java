@@ -29,10 +29,7 @@ public final class ModelParts {
 
     /** Renders {@code part} at {@code pose} into an already-acquired buffer. */
     public static void render(PoseStack.Pose pose, ModelPart part, VertexConsumer buffer, int light, int overlay) {
-        PoseStack local = new PoseStack();
-        local.last().pose().set(pose.pose());
-        local.last().normal().set(pose.normal());
-        part.render(local, buffer, light, overlay);
+        part.render(Poses.copyOf(pose), buffer, light, overlay);
     }
 
     /** Submits {@code part} as custom geometry drawn with {@code type}. */

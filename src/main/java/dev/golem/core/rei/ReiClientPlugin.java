@@ -2,6 +2,7 @@ package dev.golem.core.rei;
 
 //? if rei {
 
+import com.google.gson.JsonObject;
 import dev.golem.core.Ids;
 import dev.golem.core.viewer.Subtypes;
 import dev.golem.core.viewer.TransferAction;
@@ -131,6 +132,23 @@ public abstract class ReiClientPlugin implements REIClientPlugin {
                 out.addProperty("result", result);
                 return out;
             }
+            if (op.equals("lookup")) {
+                // displays of the plugins' categories whose outputs (recipes) or inputs (uses) hold the fluid
+                EntryStack<?> wanted = EntryStacks.of(BuiltInRegistries.FLUID.getOptional(Ids.parse(params.get("fluid").getAsString())).orElseThrow());
+                JsonObject recipes = new JsonObject();
+                JsonObject uses = new JsonObject();
+                for (ReiClientPlugin plugin : PLUGINS) {
+                    for (ViewerType<?> type : plugin.categories.keySet()) {
+                        for (Display display : DisplayRegistry.getInstance().get(Rei.id(type).<Display>cast())) {
+                            count(recipes, type.id(), display.getOutputEntries(), wanted);
+                            count(uses, type.id(), display.getInputEntries(), wanted);
+                        }
+                    }
+                }
+                out.add("recipes", recipes);
+                out.add("uses", uses);
+                return out;
+            }
             if (op.equals("uses")) {
                 net.minecraft.world.item.Item item = BuiltInRegistries.ITEM.getValue(Ids.parse(params.get("item").getAsString()));
                 out.addProperty("opened", ViewSearchBuilder.builder().addUsagesFor(EntryStacks.of(item)).open());
@@ -167,6 +185,15 @@ public abstract class ReiClientPlugin implements REIClientPlugin {
             out.add("ids", ids);
             return out;
         });
+    }
+
+    private static void count(JsonObject counts, String id, List<EntryIngredient> ingredients, EntryStack<?> wanted) {
+        for (EntryIngredient ingredient : ingredients) {
+            if (EntryIngredients.testFuzzy(ingredient, wanted)) {
+                counts.addProperty(id, counts.has(id) ? counts.get(id).getAsInt() + 1 : 1);
+                return;
+            }
+        }
     }
 
     //? if <26.1 {

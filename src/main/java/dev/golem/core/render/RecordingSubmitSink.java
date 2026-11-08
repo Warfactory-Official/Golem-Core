@@ -7,8 +7,6 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-import org.joml.Matrix3f;
-import org.joml.Matrix4f;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -29,7 +27,7 @@ public final class RecordingSubmitSink implements SubmitSink {
 
     private sealed interface Entry permits GeometryEntry, ItemEntry, TextEntry, BlockEntry, MovingBlockEntry,
             BlockEntityEntry { int order(); }
-    private record GeometryEntry(int order, Matrix4f pose, Matrix3f normal, RenderType renderType,
+    private record GeometryEntry(int order, PoseStack pose, RenderType renderType,
                                  CustomGeometry geometry) implements Entry {}
     private record ItemEntry(int order, PoseStack poseStack, CompatItemRenderState item, int light,
                              int overlay) implements Entry {}
@@ -85,8 +83,7 @@ public final class RecordingSubmitSink implements SubmitSink {
         // kept reference draws every entry at that stack level with the pose held at flush time. A
         // renderer that accumulates joint transforms between submissions (the assembly machine's
         // arms) would draw its parts on top of each other.
-        PoseStack.Pose pose = poseStack.last();
-        sink().add(new GeometryEntry(order, new Matrix4f(pose.pose()), new Matrix3f(pose.normal()), renderType, geometry));
+        sink().add(new GeometryEntry(order, Poses.copyOf(poseStack.last()), renderType, geometry));
     }
 
     @Override
@@ -94,44 +91,34 @@ public final class RecordingSubmitSink implements SubmitSink {
         if (item.isEmpty()) return;
         // The PoseStack is copied, not snapshotted to a Pose: ItemRenderer needs a full stack to push
         // and pop around its own transforms, and the caller is free to pop before the flush.
-        PoseStack copy = new PoseStack();
-        copy.last().pose().set(poseStack.last().pose());
-        copy.last().normal().set(poseStack.last().normal());
+        PoseStack copy = Poses.copyOf(poseStack.last());
         sink().add(new ItemEntry(order, copy, item, light, overlay));
-    }
-
-    private static PoseStack copyOf(PoseStack poseStack) {
-        PoseStack copy = new PoseStack();
-        copy.last().pose().set(poseStack.last().pose());
-        copy.last().normal().set(poseStack.last().normal());
-        return copy;
     }
 
     @Override
     public void submitBlock(PoseStack poseStack, CompatBlockRenderState block, int light, int overlay) {
         if (block.isEmpty() || block.state == null) return;
-        sink().add(new BlockEntry(order, copyOf(poseStack), block.state, light, overlay));
+        sink().add(new BlockEntry(order, Poses.copyOf(poseStack.last()), block.state, light, overlay));
     }
 
     @Override
     public void submitMovingBlock(PoseStack poseStack, CompatMovingBlock block) {
         if (block.isEmpty() || block.blockState() == null || block.level == null || block.pos == null) return;
-        sink().add(new MovingBlockEntry(order, copyOf(poseStack), block.blockState(), block.level, block.pos,
-                block.seedPos == null ? block.pos : block.seedPos));
+        sink().add(new MovingBlockEntry(order, Poses.copyOf(poseStack.last()), block.blockState(), block.level,
+                block.pos, block.seedPos == null ? block.pos : block.seedPos));
     }
 
     @Override
     public void submitBlockEntity(PoseStack poseStack, CompatBlockEntityRenderState blockEntity) {
         if (blockEntity.isEmpty() || blockEntity.blockEntity == null) return;
-        sink().add(new BlockEntityEntry(order, copyOf(poseStack), blockEntity.blockEntity, blockEntity.partialTicks));
+        sink().add(new BlockEntityEntry(order, Poses.copyOf(poseStack.last()), blockEntity.blockEntity,
+                blockEntity.partialTicks));
     }
 
     @Override
     public void submitText(PoseStack poseStack, Font font, float x, float y, FormattedCharSequence text,
                            boolean shadow, Font.DisplayMode mode, int light, int color, int background) {
-        PoseStack copy = new PoseStack();
-        copy.last().pose().set(poseStack.last().pose());
-        copy.last().normal().set(poseStack.last().normal());
+        PoseStack copy = Poses.copyOf(poseStack.last());
         sink().add(new TextEntry(order, copy, font, x, y, text, shadow, mode, light,
                 dev.golem.core.gui.GuiDraw.textColor(color), background));
     }
@@ -162,10 +149,7 @@ public final class RecordingSubmitSink implements SubmitSink {
                     }
                     // flatCutout: 1.7 drew these with GL_LIGHTING off; see FlatCutoutRenderType.flatten
                     if (FlatCutoutRenderType.isFlat(e.renderType())) buffer = FlatCutoutRenderType.flatten(buffer);
-                    PoseStack poseStack = new PoseStack();
-                    poseStack.last().pose().set(e.pose());
-                    poseStack.last().normal().set(e.normal());
-                    e.geometry().render(poseStack.last(), buffer);
+                    e.geometry().render(e.pose().last(), buffer);
                 } else if (entry instanceof ItemEntry e) {
                     e.item().draw(e.poseStack(), bufferSource, e.light(), e.overlay(), level);
                 } else if (entry instanceof BlockEntry e) {

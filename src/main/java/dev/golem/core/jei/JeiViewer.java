@@ -4,6 +4,7 @@ package dev.golem.core.jei;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import dev.golem.core.Ids;
 import dev.golem.core.data.GolemComponent;
 import dev.golem.core.harness.HarnessQueryRegistry;
 import dev.golem.core.viewer.Subtypes;
@@ -14,6 +15,8 @@ import dev.golem.core.viewer.ViewerType;
 import mezz.jei.api.constants.RecipeTypes;
 import mezz.jei.api.constants.VanillaTypes;
 import mezz.jei.api.helpers.IJeiHelpers;
+import mezz.jei.api.ingredients.IIngredientTypeWithSubtypes;
+import mezz.jei.api.recipe.IFocus;
 import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.registration.IExtraIngredientRegistration;
 import mezz.jei.api.registration.IGuiHandlerRegistration;
@@ -24,10 +27,12 @@ import mezz.jei.api.registration.IRecipeTransferRegistration;
 import mezz.jei.api.registration.ISubtypeRegistration;
 import mezz.jei.api.runtime.IJeiRuntime;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.material.Fluid;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -168,6 +173,16 @@ public final class JeiViewer {
         if (!Jei.showHiddenIngredients(runtime)) plugin.hidden(stacks -> Jei.removeItemStacks(runtime, stacks));
     }
 
+    private static <T> IFocus<T> fluidFocus(IJeiRuntime runtime, RecipeIngredientRole role,
+            IIngredientTypeWithSubtypes<Fluid, T> type, Fluid fluid) {
+        for (T ingredient : runtime.getIngredientManager().getAllIngredients(type)) {
+            if (type.getBase(ingredient) == fluid) {
+                return runtime.getJeiHelpers().getFocusFactory().createFocus(role, type, ingredient);
+            }
+        }
+        return null;
+    }
+
     /**
      * The harness query {@code jei} (dev clients only): {@code op=open category=ns:path} opens JEI's recipe screen on
      * one category, as clicking its tab would, and answers its title and recipe count; {@code opened} is true only when
@@ -179,10 +194,18 @@ public final class JeiViewer {
             JsonObject out = new JsonObject();
             if (params.has("focus")) {
                 // R (output) or U (input) on the main-hand stack: recipes per category, as the recipe screen counts them
+                // with fluid=ns:path, that fluid's JEI ingredient instead
                 ItemStack held = mc.player.getMainHandItem();
                 boolean output = params.get("focus").getAsString().equals("output");
-                var focus = runtime.getJeiHelpers().getFocusFactory().createFocus(
-                        output ? RecipeIngredientRole.OUTPUT : RecipeIngredientRole.INPUT, VanillaTypes.ITEM_STACK, held);
+                RecipeIngredientRole role = output ? RecipeIngredientRole.OUTPUT : RecipeIngredientRole.INPUT;
+                IFocus<?> focus = params.has("fluid")
+                        ? fluidFocus(runtime, role, runtime.getJeiHelpers().getPlatformFluidHelper().getFluidIngredientType(),
+                                BuiltInRegistries.FLUID.getOptional(Ids.parse(params.get("fluid").getAsString())).orElseThrow())
+                        : runtime.getJeiHelpers().getFocusFactory().createFocus(role, VanillaTypes.ITEM_STACK, held);
+                if (focus == null) {
+                    out.addProperty("error", "JEI lists no such fluid");
+                    return out;
+                }
                 JsonObject counts = new JsonObject();
                 for (ViewerType<?> type : TYPES.keySet()) {
                     long count = runtime.getRecipeManager().createRecipeLookup(type(type).unwrap())
@@ -192,7 +215,7 @@ public final class JeiViewer {
                 long crafting = runtime.getRecipeManager().createRecipeLookup(RecipeTypes.CRAFTING)
                         .limitFocus(List.of(focus)).get().count();
                 if (crafting > 0) counts.addProperty("minecraft:crafting", crafting);
-                out.addProperty("stack", held.toString());
+                out.addProperty("stack", params.has("fluid") ? params.get("fluid").getAsString() : held.toString());
                 out.add("counts", counts);
                 return out;
             }

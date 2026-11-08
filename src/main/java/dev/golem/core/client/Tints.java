@@ -80,6 +80,8 @@ public final class Tints {
 
     /^* Item id -> its tints, by tint index. Rebuilt on every resource reload. ^/
     private static Map<ResourceLocation, Function<ItemStack, List<Tint>>> tints = Map.of();
+    /^* One reload listener reads every namespace's declarations, however many namespaces install. ^/
+    private static boolean reloading;
     *///?}
 
     /**
@@ -106,6 +108,8 @@ public final class Tints {
             net.fabricmc.fabric.api.client.rendering.v1.ColorProviderRegistry.ITEM.register(color, item);
         }
         report(namespace, items.size());
+        if (reloading) return;
+        reloading = true;
 
         net.fabricmc.fabric.api.resource.ResourceManagerHelper
                 .get(net.minecraft.server.packs.PackType.CLIENT_RESOURCES)
@@ -132,6 +136,8 @@ public final class Tints {
                     if (!items.isEmpty()) event.register(color, items.toArray(new Item[0]));
                     report(namespace, items.size());
                 });
+        if (reloading) return;
+        reloading = true;
 
         dev.golem.core.platform.NeoForgeEntrypoint.modBus().addListener(
                 (net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent event) ->
@@ -144,6 +150,8 @@ public final class Tints {
                     if (!items.isEmpty()) event.register(color, items.toArray(new Item[0]));
                     report(namespace, items.size());
                 });
+        if (reloading) return;
+        reloading = true;
 
         dev.golem.core.platform.ForgeEntrypoint.modBus().addListener(
                 (net.minecraftforge.client.event.RegisterClientReloadListenersEvent event) ->

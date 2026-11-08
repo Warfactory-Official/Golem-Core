@@ -16,6 +16,8 @@ import dev.emi.emi.api.recipe.handler.StandardRecipeHandler;
 import dev.emi.emi.api.stack.Comparison;
 import dev.emi.emi.api.stack.EmiIngredient;
 import dev.emi.emi.api.stack.EmiStack;
+import dev.emi.emi.api.stack.FluidEmiStack;
+import dev.emi.emi.api.stack.serializer.EmiIngredientSerializer;
 import dev.emi.emi.api.widget.SlotWidget;
 import dev.emi.emi.api.widget.Widget;
 import dev.emi.emi.api.widget.WidgetHolder;
@@ -50,6 +52,7 @@ import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.material.Fluid;
 
 /^*
  * Feeds a {@link ViewerPlugin} to EMI: a mod's EMI plugin subclasses this once ({@code @EmiEntrypoint} on Forge-likes,
@@ -85,6 +88,7 @@ public abstract class EmiViewerPlugin implements EmiPlugin {
         synthetic.clear();
         usedIds.clear();
         registerSubtypes(registry);
+        registry.addIngredientSerializer(IconFluidStack.class, new IconFluidStack.Serializer());
         plugin.categories(list -> {
             for (ViewerCategory<?> category : list) {
                 EmiRecipeCategory emi = wrap(category);
@@ -127,7 +131,18 @@ public abstract class EmiViewerPlugin implements EmiPlugin {
             }
         });
         plugin.ingredients(stacks -> {
-            for (ItemStack stack : stacks) registry.addEmiStack(EmiStack.of(stack));
+            Set<Object> iconFluids = new HashSet<>();
+            for (ItemStack stack : stacks) {
+                IconFluidStack fluid = IconFluidStack.fromIcon(stack);
+                if (fluid == null) {
+                    registry.addEmiStack(EmiStack.of(stack));
+                } else if (fluid.getId().getNamespace().equals(BuiltInRegistries.ITEM.getKey(stack.getItem()).getNamespace())
+                        && iconFluids.add(fluid.getKey())) {
+                    registry.addEmiStack(fluid.setAmount(0));
+                }
+            }
+            // EMI lists every fluid: the icon replaces the mod's own, another mod's (water) stays
+            registry.removeEmiStacks(stack -> stack.getClass() == FluidEmiStack.class && iconFluids.contains(stack.getKey()));
         });
         plugin.hidden(stacks -> {
             Set<EmiStack> hidden = new HashSet<>();
@@ -328,7 +343,9 @@ public abstract class EmiViewerPlugin implements EmiPlugin {
     /^*
      * The harness query {@code emi} (dev clients only): {@code op=status} counts each plugin's categories and recipes as
      * EMI holds them; {@code op=open category} opens one tab; {@code op=fill category item} fills the open menu from the
-     * first recipe taking the item; {@code op=recipe id} reads a recipe's output slot context and sets it as the tree goal.
+     * first recipe taking the item; {@code op=recipe id} reads a recipe's output slot context and sets it as the tree goal;
+     * {@code op=lookup fluid|item [show]} counts (and opens) its recipes and uses; {@code op=index namespace} counts its
+     * fluids' list entries; {@code op=search text} sets the list's search.
      ^/
     private static synchronized void registerHarnessQuery() {
         if (harnessQuery) return;
@@ -363,6 +380,43 @@ public abstract class EmiViewerPlugin implements EmiPlugin {
                     }
                     out.addProperty("error", "no recipe");
                 }
+                case "lookup" -> {
+                    // recipes (by output) and uses (by input) of a fluid or item, per category, as EMI's R and U find them
+                    EmiStack wanted = params.has("fluid")
+                            ? EmiStack.of(BuiltInRegistries.FLUID.getOptional(Ids.parse(params.get("fluid").getAsString())).orElseThrow())
+                            : EmiStack.of(BuiltInRegistries.ITEM.getOptional(Ids.parse(params.get("item").getAsString())).orElseThrow());
+                    out.add("recipes", perCategory(manager.getRecipesByOutput(wanted)));
+                    out.add("uses", perCategory(manager.getRecipesByInput(wanted)));
+                    if (params.has("show")) {
+                        if (params.get("show").getAsString().equals("uses")) EmiApi.displayUses(wanted);
+                        else EmiApi.displayRecipes(wanted);
+                    }
+                }
+                case "search" -> EmiApi.setSearchText(params.get("text").getAsString());
+                case "index" -> {
+                    // the list entries of one namespace's fluids, by stack class, and the entries of one item
+                    String namespace = params.get("namespace").getAsString();
+                    String item = params.has("item") ? params.get("item").getAsString() : "";
+                    JsonObject classes = new JsonObject();
+                    JsonArray plain = new JsonArray();
+                    int items = 0;
+                    for (EmiStack stack : EmiApi.getIndexStacks()) {
+                        if (stack.getKey() instanceof Fluid && stack.getId().getNamespace().equals(namespace)) {
+                            String name = stack.getClass().getSimpleName();
+                            classes.addProperty(name, classes.has(name) ? classes.get(name).getAsInt() + 1 : 1);
+                            if (!(stack instanceof IconFluidStack)) plain.add(stack.getId().toString());
+                            else if (!out.has("saved")) {
+                                // what a favourite of it reads back as
+                                EmiIngredient saved = EmiIngredientSerializer.getDeserialized(EmiIngredientSerializer.getSerialized(stack));
+                                out.addProperty("saved", saved.getClass().getSimpleName() + " " + saved.equals(stack));
+                            }
+                        }
+                        if (!stack.getItemStack().isEmpty() && stack.getId().toString().equals(item)) items++;
+                    }
+                    out.add("fluids", classes);
+                    out.add("plain", plain);
+                    out.addProperty("items", items);
+                }
                 case "recipe" -> {
                     EmiRecipe recipe = manager.getRecipe(Ids.parse(params.get("id").getAsString()));
                     if (recipe == null) {
@@ -395,6 +449,15 @@ public abstract class EmiViewerPlugin implements EmiPlugin {
             }
             return out;
         });
+    }
+
+    private static JsonObject perCategory(List<EmiRecipe> recipes) {
+        JsonObject counts = new JsonObject();
+        for (EmiRecipe recipe : recipes) {
+            String id = recipe.getCategory().getId().toString();
+            counts.addProperty(id, counts.has(id) ? counts.get(id).getAsInt() + 1 : 1);
+        }
+        return counts;
     }
 
     private static boolean outputHasContext(EmiRecipe recipe) {

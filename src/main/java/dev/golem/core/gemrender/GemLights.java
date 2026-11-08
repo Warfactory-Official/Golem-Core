@@ -28,6 +28,7 @@ public final class GemLights {
     public static void bind(List<DynamicLights.Provider> providers) {
         Adapter adapter = new Adapter();
         Lights.register((sink, partialTick) -> {
+            if (!DynamicLights.shading()) return;
             adapter.sink = sink;
             for (DynamicLights.Provider provider : providers) provider.collect(adapter, partialTick);
         });

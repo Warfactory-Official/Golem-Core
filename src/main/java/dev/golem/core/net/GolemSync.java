@@ -5,12 +5,11 @@ import dev.golem.core.platform.Lifecycle;
 import dev.golem.core.world.Chunks;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
+import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -29,6 +28,9 @@ import net.minecraft.world.level.chunk.LevelChunk;
  * reconciling each entry against the live tracking list rather than by a logout callback. Tracking lists
  * are resolved once per chunk per tick and shared by every entry in that chunk.
  *
+ * <p>A player is marked by its {@link ServerPlayer} object, not its UUID: a respawn replaces the object under the same
+ * UUID and sends the chunks again, so the client builds those block entities afresh and needs the wire again.
+ *
  * <p>A position whose state changes while nobody watches keeps its last published wire until its next
  * publish. A player arriving in that window is healed with the older wire first and corrected on the
  * sender's next tick.
@@ -39,7 +41,7 @@ public final class GolemSync {
 
     private static final class Entry {
         private Published published;
-        private final ObjectOpenHashSet<UUID> sent = new ObjectOpenHashSet<>(2);
+        private final ReferenceOpenHashSet<ServerPlayer> sent = new ReferenceOpenHashSet<>(2);
     }
 
     private static final Map<ServerLevel, Long2ObjectOpenHashMap<Long2ObjectOpenHashMap<Entry>>> TABLE =
@@ -213,7 +215,7 @@ public final class GolemSync {
     private static boolean inStep(Entry entry, List<ServerPlayer> watching) {
         if (entry.sent.size() != watching.size()) return false;
         for (ServerPlayer player : watching) {
-            if (!entry.sent.contains(player.getUUID())) return false;
+            if (!entry.sent.contains(player)) return false;
         }
         return true;
     }
@@ -222,7 +224,7 @@ public final class GolemSync {
         if (entry.sent.isEmpty()) return;
         entry.sent.removeIf(marked -> {
             for (ServerPlayer player : watching) {
-                if (player.getUUID().equals(marked)) return false;
+                if (player == marked) return false;
             }
             return true;
         });
@@ -238,7 +240,7 @@ public final class GolemSync {
         if (published == null) return;
         List<ServerPlayer> fresh = null;
         for (ServerPlayer player : watching) {
-            if (!entry.sent.add(player.getUUID())) continue;
+            if (!entry.sent.add(player)) continue;
             if (fresh == null) fresh = new ArrayList<>(2);
             fresh.add(player);
         }

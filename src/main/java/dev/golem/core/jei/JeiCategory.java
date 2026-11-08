@@ -4,10 +4,12 @@ package dev.golem.core.jei;
 
 import dev.golem.core.fluid.FluidUnits;
 import dev.golem.core.viewer.Drawable;
+import dev.golem.core.viewer.FluidIcons;
 import dev.golem.core.viewer.Role;
 import dev.golem.core.viewer.SlotLayout;
 import dev.golem.core.viewer.ViewerCategory;
 import mezz.jei.api.gui.builder.IRecipeLayoutBuilder;
+import mezz.jei.api.gui.builder.IIngredientAcceptor;
 import mezz.jei.api.gui.builder.IRecipeSlotBuilder;
 import mezz.jei.api.gui.drawable.IDrawable;
 import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
@@ -52,7 +54,7 @@ final class JeiCategory<T> extends AbstractRecipeCategory<T> {
         category.setRecipe(new SlotLayout() {
             @Override
             public SlotLayout.Slot addSlot(Role role, int x, int y) {
-                return new JeiSlot(builder.addSlot(role(role), x, y));
+                return new JeiSlot(builder.addSlot(role(role), x, y), builder, role);
             }
 
             @Override
@@ -83,14 +85,27 @@ final class JeiCategory<T> extends AbstractRecipeCategory<T> {
 
     private final class JeiSlot implements SlotLayout.Slot {
         private final IRecipeSlotBuilder slot;
+        private final IRecipeLayoutBuilder builder;
+        private final Role role;
 
-        JeiSlot(IRecipeSlotBuilder slot) {
+        JeiSlot(IRecipeSlotBuilder slot, IRecipeLayoutBuilder builder, Role role) {
             this.slot = slot;
+            this.builder = builder;
+            this.role = role;
         }
 
+        /** A fluid icon stays the slot's stack; the fluid it stands for is filed beside it for lookups. */
         @Override
         public SlotLayout.Slot addItemStacks(List<ItemStack> stacks) {
             slot.addItemStacks(stacks);
+            if (role == Role.CRAFTING_STATION) return this;
+            IIngredientAcceptor<?> fluids = null;
+            for (ItemStack stack : stacks) {
+                FluidIcons.Amount amount = FluidIcons.fluidOf(stack);
+                if (amount == null) continue;
+                if (fluids == null) fluids = builder.addInvisibleIngredients(role(role));
+                fluids.addFluidStack(amount.fluid(), Math.max(1, amount.milliBuckets()) * fluidUnitsPerMb);
+            }
             return this;
         }
 

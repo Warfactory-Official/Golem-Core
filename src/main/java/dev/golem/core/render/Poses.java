@@ -20,6 +20,24 @@ public final class Poses {
 
     private Poses() {}
 
+    /**
+     * A fresh stack whose top draws exactly as {@code pose}. From 1.21 a non-uniform scale leaves the normal matrix
+     * unnormalized and flags the pose so normals are normalized when written; copying the two matrices drops the flag
+     * and the diffuse light fades with the scale. 1.20.1 keeps its normal matrix near unit length itself.
+     */
+    public static PoseStack copyOf(PoseStack.Pose pose) {
+        PoseStack copy = new PoseStack();
+        //? if >=26.1 {
+        copy.last().set(pose);
+        //?} elif >=1.21 {
+        /*copy.mulPose(pose.pose());
+        *///?} else {
+        /*copy.last().pose().set(pose.pose());
+        copy.last().normal().set(pose.normal());
+        *///?}
+        return copy;
+    }
+
     /** Applies an affine model matrix, including its mirrored/nonuniform normal transform. */
     public static void mulPose(PoseStack poseStack, Matrix4f transform) {
         //? if >=1.20.5 {

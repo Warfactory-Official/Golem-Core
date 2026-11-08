@@ -252,9 +252,7 @@ public final class WorldEffects {
     /** Submission order is stable within a priority; GUI/hand previews are never carried into a world frame. */
     public static void submit(PoseStack pose, RenderType type, int order, SubmitSink.CustomGeometry geometry) {
         if (!isCollecting()) return;
-        PoseStack copy = new PoseStack();
-        copy.last().pose().set(pose.last().pose());
-        copy.last().normal().set(pose.last().normal());
+        PoseStack copy = Poses.copyOf(pose.last());
         Matrix4f modelView = dispatchingHooks ? new Matrix4f(HOOK_MODEL_VIEW)
                 : new Matrix4f(RenderSystem.getModelViewMatrix());
         ENTRIES.add(new Entry(order, copy, modelView, captureDrawState(), type, geometry));
@@ -268,9 +266,7 @@ public final class WorldEffects {
                                   float y, int color, boolean shadow, net.minecraft.client.gui.Font.DisplayMode mode,
                                   int backgroundColor, int light) {
         if (!isCollecting()) return;
-        PoseStack copy = new PoseStack();
-        copy.last().pose().set(pose.last().pose());
-        copy.last().normal().set(pose.last().normal());
+        PoseStack copy = Poses.copyOf(pose.last());
         Matrix4f modelView = dispatchingHooks ? new Matrix4f(HOOK_MODEL_VIEW)
                 : new Matrix4f(RenderSystem.getModelViewMatrix());
         ENTRIES.add(new Entry(order, copy, modelView, captureDrawState(), null, null, (drawPose, buffers) ->

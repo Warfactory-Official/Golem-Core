@@ -294,8 +294,12 @@ public final class GameTestHelpers {
      * that answer a login with packets stay quiet. Position it before use.
      */
     public static ServerPlayer detachedServerPlayer(GameTestHelper helper) {
+        return detachedServerPlayer(helper, new GameProfile(UUID.randomUUID(), "test-detached-player"));
+    }
+
+    /** {@link #detachedServerPlayer(GameTestHelper)} for {@code profile}: a second player object for the same player. */
+    public static ServerPlayer detachedServerPlayer(GameTestHelper helper, GameProfile profile) {
         ServerLevel level = helper.getLevel();
-        GameProfile profile = new GameProfile(UUID.randomUUID(), "test-detached-player");
         //? if >=1.21 {
         return new ServerPlayer(level.getServer(), level, profile,
                 net.minecraft.server.level.ClientInformation.createDefault());

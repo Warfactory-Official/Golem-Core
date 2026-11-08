@@ -45,7 +45,11 @@ final class ViewerRecipe<T> implements EmiRecipe {
 
         @Override
         public SlotLayout.Slot addItemStacks(List<ItemStack> list) {
-            for (ItemStack stack : list) if (stack != null && !stack.isEmpty()) stacks.add(EmiStack.of(stack));
+            for (ItemStack stack : list) {
+                if (stack == null || stack.isEmpty()) continue;
+                IconFluidStack fluid = IconFluidStack.fromIcon(stack);
+                stacks.add(fluid != null ? fluid : EmiStack.of(stack));
+            }
             return this;
         }
 
@@ -93,7 +97,8 @@ final class ViewerRecipe<T> implements EmiRecipe {
         protected void addSlotTooltip(List<ClientTooltipComponent> list) {
             if (!slot.tooltips.isEmpty() && !slot.stacks.isEmpty()) {
                 // the alternative EMI's list ingredient is drawing this second
-                ItemStack shown = slot.stacks.get((int) (System.currentTimeMillis() / 1000 % slot.stacks.size())).getItemStack();
+                EmiStack current = slot.stacks.get((int) (System.currentTimeMillis() / 1000 % slot.stacks.size()));
+                ItemStack shown = current instanceof IconFluidStack fluid ? fluid.icon() : current.getItemStack();
                 if (!shown.isEmpty()) {
                     List<Component> lines = new ArrayList<>();
                     for (SlotLayout.TooltipCallback callback : slot.tooltips) callback.addLines(shown, lines);
