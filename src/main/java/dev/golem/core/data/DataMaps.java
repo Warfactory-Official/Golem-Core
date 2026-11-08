@@ -127,6 +127,7 @@ public final class DataMaps {
         private final Codec<V> codec;
         private volatile Map<String, V> byId = Map.of();
         private volatile List<Map.Entry<String, V>> byTag = List.of();
+        private List<JsonElement> stack = List.of();
 
         /** Fires after the values changed (a datapack load, a client sync), on that side's thread. */
         public final Hook<Runnable> changed = Hook.notifying();
@@ -215,8 +216,16 @@ public final class DataMaps {
             return byTag;
         }
 
+        /** Loads the files of the last load again with {@code patches} after them, as patch files apply. */
+        public synchronized void loadWith(List<JsonElement> patches) {
+            List<JsonElement> all = new ArrayList<>(stack);
+            all.addAll(patches);
+            load(all);
+        }
+
         /** Replaces the values with the merge of {@code stack}, lowest priority first, as a datapack load does. */
         public synchronized void load(List<JsonElement> stack) {
+            this.stack = List.copyOf(stack);
             Map<String, V> ids = new LinkedHashMap<>();
             Map<String, V> tags = new LinkedHashMap<>();
             for (JsonElement element : stack) {

@@ -120,6 +120,7 @@ public abstract class CompatContainerScreen<T extends AbstractContainerMenu> ext
     /** Runs this screen's own tooltips, then vanilla's hovered-item one. See {@link #extractOwnTooltip}. */
     @Override
     protected final void extractTooltip(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        GuiDraw.beginOwnTooltips();
         this.extractOwnTooltip(graphics, mouseX, mouseY);
         super.extractTooltip(graphics, mouseX, mouseY);
     }
@@ -217,6 +218,7 @@ public abstract class CompatContainerScreen<T extends AbstractContainerMenu> ext
         // item tooltip first, this screen's own over it. The net effect matches 26.1's first-writer
         // rule for the only case that arises in practice, a region tooltip over a slot.
         super.renderTooltip(graphics, mouseX, mouseY);
+        GuiDraw.beginOwnTooltips();
         this.extractOwnTooltip(graphics, mouseX, mouseY);
     }
 

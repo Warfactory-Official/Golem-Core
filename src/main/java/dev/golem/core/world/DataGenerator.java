@@ -45,6 +45,8 @@ public final class DataGenerator {
     public static final String SOURCES = "golem.data.sources";
     public static final String MANIFEST = "manifest.txt";
     public static final String ERRORS = "errors.txt";
+    /** {@code <namespace>/tags/<registry>/<path>.json <first Minecraft version>} per line, for {@link TagSource#since}. */
+    public static final String TAGS_SINCE = "tags_since.txt";
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 
@@ -104,8 +106,10 @@ public final class DataGenerator {
         Path pack = root.resolve("pack");
         Files.deleteIfExists(root.resolve(MANIFEST));
         Files.deleteIfExists(root.resolve(ERRORS));
+        Files.deleteIfExists(root.resolve(TAGS_SINCE));
         deleteTree(pack);
         Map<String, Integer> manifest = new TreeMap<>();
+        Map<String, String> tagsSince = new TreeMap<>();
         Map<String, String> errors = new TreeMap<>();
         int total = 0;
         for (DataSources owner : owners) {
@@ -114,6 +118,15 @@ public final class DataGenerator {
                 String key = owner.namespace() + "/" + source.folder();
                 // one broken source must not hide the others: write the rest, then fail without a manifest
                 try {
+                    if (source instanceof TagSource tags) {
+                        // a tag file is its own manifest entry: tag folders also hold declared and authored tags
+                        for (String row : tags.rows().keySet()) manifest.put(TagSource.file(row), 1);
+                        for (Map.Entry<String, String> first : tags.since().entrySet()) {
+                            tagsSince.put(TagSource.file(first.getKey()), first.getValue());
+                        }
+                        total += writeTags(tags, registries, pack.resolve("data"));
+                        continue;
+                    }
                     int rows = write(source, registries, data.resolve(source.folder()));
                     manifest.merge(key, rows, Integer::sum);
                     total += rows;
@@ -134,6 +147,7 @@ public final class DataGenerator {
             Files.writeString(root.resolve(ERRORS), lines(errors, ": "), StandardCharsets.UTF_8);
             throw new IllegalStateException(errors.size() + " source(s) failed: " + errors.keySet() + " (see " + ERRORS + ")");
         }
+        if (!tagsSince.isEmpty()) Files.writeString(root.resolve(TAGS_SINCE), lines(tagsSince, " "), StandardCharsets.UTF_8);
         Files.writeString(root.resolve(MANIFEST), lines(manifest, " "), StandardCharsets.UTF_8);
         return total;
     }
@@ -163,6 +177,16 @@ public final class DataGenerator {
             writeFile(folder.resolve(row.getKey() + ".json"), file, where);
         }
         return rows.size();
+    }
+
+    private static int writeTags(TagSource source, HolderLookup.Provider registries, Path data) throws IOException {
+        for (Map.Entry<String, List<String>> row : source.rows().entrySet()) {
+            String where = source.describe() + " tag " + row.getKey();
+            JsonElement file = source.encode(row.getValue(), registries);
+            if (!source.decode(file, registries).equals(row.getValue())) throw new IllegalStateException(where + " does not round-trip");
+            writeFile(data.resolve(TagSource.file(row.getKey())), file, where);
+        }
+        return source.rows().size();
     }
 
     private static void writeFile(Path path, JsonElement file, String where) throws IOException {

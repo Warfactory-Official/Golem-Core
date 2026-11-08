@@ -4,7 +4,13 @@ package dev.golem.core.jei;
 
 import dev.golem.core.data.GolemComponent;
 import dev.golem.core.viewer.TransferAction;
+import dev.golem.core.gui.GuiDraw;
 import mezz.jei.api.constants.VanillaTypes;
+import mezz.jei.api.gui.handlers.IGuiClickableArea;
+import mezz.jei.api.gui.handlers.IGuiContainerHandler;
+import mezz.jei.api.recipe.IFocusFactory;
+import mezz.jei.api.runtime.IRecipesGui;
+import net.minecraft.client.renderer.Rect2i;
 import mezz.jei.api.ingredients.subtypes.UidContext;
 import mezz.jei.api.gui.ingredient.IRecipeSlotsView;
 import mezz.jei.api.recipe.RecipeIngredientRole;
@@ -27,6 +33,7 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.MenuType;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -100,7 +107,31 @@ public final class Jei {
     public static void addRecipeClickArea(IGuiHandlerRegistration registration,
                                           Class<? extends AbstractContainerScreen<?>> screenClass,
                                           int x, int y, int width, int height, JeiRecipeType<?> type) {
-        registration.addRecipeClickArea(screenClass, x, y, width, height, type.unwrap());
+        IGuiClickableArea area = IGuiClickableArea.createBasic(x, y, width, height, type.unwrap());
+        IGuiClickableArea quiet = new IGuiClickableArea() {
+            @Override
+            public Rect2i getArea() {
+                return area.getArea();
+            }
+
+            @Override
+            public void onClick(IFocusFactory focusFactory, IRecipesGui recipesGui) {
+                area.onClick(focusFactory, recipesGui);
+            }
+
+            // the screen's own hover over the same area wins, as it did over NEI's transfer-rect hint
+            @Override
+            public boolean isTooltipEnabled() {
+                return !GuiDraw.ownTooltipShown();
+            }
+        };
+        registration.addGuiContainerHandler(screenClass, new IGuiContainerHandler<AbstractContainerScreen<?>>() {
+            @Override
+            public Collection<IGuiClickableArea> getGuiClickableAreas(AbstractContainerScreen<?> screen, double mouseX,
+                                                                      double mouseY) {
+                return List.of(quiet);
+            }
+        });
     }
 
     /** Registers JEI's slot-range transfer handler without exposing its version-specific recipe type. */

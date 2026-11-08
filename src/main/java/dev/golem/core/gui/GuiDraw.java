@@ -263,6 +263,19 @@ public final class GuiDraw {
      * Screen override) also maps to {@code renderTooltip}, so a string swap would be non-injective
      * and would corrupt the source on the reverse pass.
      */
+    private static int ownTooltipPass;
+    private static int tooltipPass = -1;
+
+    /** Starts a screen's own-tooltip pass for this frame (called by {@link CompatContainerScreen}). */
+    public static void beginOwnTooltips() {
+        ownTooltipPass++;
+    }
+
+    /** Whether the screen drew a tooltip of its own in this frame's pass; a recipe viewer's hint then stays hidden. */
+    public static boolean ownTooltipShown() {
+        return tooltipPass == ownTooltipPass;
+    }
+
     public static void tooltip(
             //? if >=26.1 {
             GuiGraphicsExtractor graphics,
@@ -273,6 +286,7 @@ public final class GuiDraw {
             java.util.List<net.minecraft.network.chat.Component> lines,
             java.util.Optional<net.minecraft.world.inventory.tooltip.TooltipComponent> image,
             int mouseX, int mouseY) {
+        tooltipPass = ownTooltipPass;
         //? if >=26.1 {
         graphics.setTooltipForNextFrame(font, lines, image, mouseX, mouseY);
         //?} else {
