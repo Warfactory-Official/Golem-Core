@@ -3,6 +3,46 @@
 Each release has a `## <version>` section; the release workflow uploads only the section matching
 `mod.version` in gradle.properties.
 
+## 1.0.5
+
+Use GemRender 0.1.20.
+
+### Added
+- EMI support on 1.21.1 and 1.20.1: every viewer category a mod declares becomes a native EMI category, with recipe ids,
+  favourites, the recipe tree and recipe filling (EMI has no 26.1 build).
+- `viewer.FluidIcons`: a slot that shows a fluid as an item stands for that fluid in EMI, JEI and REI, so looking up a
+  fluid finds the mod's recipes.
+- `Fov.registerMultiplier`: zoom through the eased per-tick FOV multiplier, which keeps other mods' FOV modifiers and
+  leaves the hand's FOV alone.
+- `Harvests.afterBreak`: ore experience through each loader's own rule for tools that break blocks themselves.
+- `HeldItems`: components whose change alone does not re-equip the held item.
+- `Poses.copyOf`, `CameraHooks` pitch and yaw offsets, `EntityInterpolation` for interpolated projectiles.
+- `Surface.flat`: alpha-tested, unlit, depth-writing Gem parts; fog-free particle and additive triangle types.
+- `Crafting.smoke` for smoker recipes, `TagSource` for tags generated from the running game, and
+  `DeferredRegister.Blocks.defaultMapColors`.
+- `Precipitation.weatherModLoaded()`: weather renderers stand aside for Particle Rain and Pretty Rain.
+- `Platform.conventionNamespace()`: `c` or `forge`.
+
+### Fixed
+- Stereo sounds were heard at full volume at any distance; they fade out linearly like 1.7's sound system.
+- Particles whose fade dipped below zero flashed at full opacity for a frame.
+- A 26.1 NeoForge world could fail to load with an `ArrayIndexOutOfBoundsException` in biome modifiers; exclusions get
+  their own tags.
+- Additive effects drew as plain alpha blending on 1.20.1.
+- Gun aiming changed the hand's FOV on NeoForge and Forge.
+- Plane particles faced the wrong way and drew one face only.
+- After a respawn, block entities synced through `GolemSync` (casts, battery sockets) showed empty until rejoining.
+- Non-uniformly scaled models were dark on 1.21.1 and 26.1.
+- Old-AI mobs used the new-AI melee reach; `CompatMeleeAttackGoal.inReach` gives them 1.7's.
+- Dynamic lights stood down only for GemRender's own shader-pack check; Oculus and 26.1 Iris now count too.
+- Blocks had no map colour, so vanilla and Xaero's maps showed the ground under them.
+- On Sable ships, smoke and steam particles without physics stuck inside blocks.
+- Tints registered their reload listener more than once.
+- Player-rider poses turned about the camera instead of the viewer's eye, throwing riders across the sky in third
+  person.
+- Under a shader pack on 1.20.1 and 1.21.1, textured sky parts (suns, planets, skyboxes) were hidden by the pack's sky.
+- JEI click-area hints printed over a screen's own tooltip.
+
 ## 1.0.4
 
 ### Added
