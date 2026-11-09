@@ -44,6 +44,8 @@ accessible field net/minecraft/world/entity/LivingEntity jumping Z
 
 # client.Sounds.source: the OpenAL source of a live channel, for per-source parameters; no getter.
 accessible field com/mojang/blaze3d/audio/Channel source I
+# harness.HarnessSounds: a private channel to check stereo falloff through Channel's own calls.
+accessible method com/mojang/blaze3d/audio/Channel create ()Lcom/mojang/blaze3d/audio/Channel;
 accessible field net/minecraft/client/renderer/LevelRenderer skyRenderer Lnet/minecraft/client/renderer/SkyRenderer;
 accessible field net/minecraft/client/renderer/SkyRenderer starBuffer Lcom/mojang/blaze3d/buffers/GpuBuffer;
 accessible field com/mojang/blaze3d/opengl/GlBuffer handle I

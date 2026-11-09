@@ -278,7 +278,7 @@ public abstract class CompatParticle extends
                 baseX + dx, baseY + dy, baseZ + dz,
                 rotation.x, rotation.y, rotation.z, rotation.w, size,
                 this.getU0(), this.getU1(), this.getV0(), this.getV1(),
-                net.minecraft.util.ARGB.colorFromFloat(this.alpha, this.rCol, this.gCol, this.bCol),
+                this.golemColor(),
                 light), partialTick);
         if (!this.planeOriented) return;
         org.joml.Quaternionf back = new org.joml.Quaternionf(rotation).rotateX((float) Math.PI);
@@ -286,7 +286,7 @@ public abstract class CompatParticle extends
                 baseX + dx, baseY + dy, baseZ + dz,
                 back.x, back.y, back.z, back.w, size,
                 this.getU0(), this.getU1(), this.getV0(), this.getV1(),
-                net.minecraft.util.ARGB.colorFromFloat(this.alpha, this.rCol, this.gCol, this.bCol),
+                this.golemColor(),
                 light), partialTick);
     }
     //?} else {
@@ -348,17 +348,31 @@ public abstract class CompatParticle extends
         //? if >=1.21 {
         buffer.addVertex(corner.x(), corner.y(), corner.z())
                 .setUv(u, v)
-                .setColor(this.rCol, this.gCol, this.bCol, this.alpha)
+                .setColor(golemChannel(this.rCol), golemChannel(this.gCol), golemChannel(this.bCol),
+                        golemChannel(this.alpha))
                 .setLight(light);
         //?} else {
         /^buffer.vertex(corner.x(), corner.y(), corner.z())
                 .uv(u, v)
-                .color(this.rCol, this.gCol, this.bCol, this.alpha)
+                .color(golemChannel(this.rCol), golemChannel(this.gCol), golemChannel(this.bCol),
+                        golemChannel(this.alpha))
                 .uv2(light)
                 .endVertex();
         ^///?}
     }
     *///?}
+
+    //? if >=26.1 {
+    private int golemColor() {
+        return net.minecraft.util.ARGB.colorFromFloat(golemChannel(this.alpha), golemChannel(this.rCol),
+                golemChannel(this.gCol), golemChannel(this.bCol));
+    }
+    //?}
+
+    /** 1.7's Tessellator clamped each channel; packing a fade below zero wraps it to nearly opaque. */
+    private static float golemChannel(float value) {
+        return Math.max(0F, Math.min(1F, value));
+    }
 
     /** Packed sky/block light, or -1 for the particle layer's lighting. */
     protected final void setLightOverride(int light) {

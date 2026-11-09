@@ -74,6 +74,8 @@ final class GemModels {
                 case SOLID -> builder.cutout(CutoutShaders.OFF).build();
                 case CUTOUT, CUTOUT_CULL -> builder.cutout(CutoutShaders.ONE_TENTH).build();
                 case CUTOUT_NO_CULL -> perFace(builder.cutout(CutoutShaders.ONE_TENTH).backfaceCulling(false));
+                case FLAT -> builder.cutout(CutoutShaders.ONE_TENTH).backfaceCulling(false)
+                        .cardinalLightingMode(CardinalLightingMode.OFF).build();
                 case TRANSLUCENT -> perFace(builder.transparency(Transparency.TRANSLUCENT)
                         .cutout(CutoutShaders.ONE_TENTH)
                         .backfaceCulling(false));

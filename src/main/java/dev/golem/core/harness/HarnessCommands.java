@@ -315,6 +315,7 @@ final class HarnessCommands {
             case "log": return HarnessLog.tail(Json.integer(req, "lines", 50), Json.str(req, "filter", ""),
                 req.has("since") ? req.get("since").getAsLong() : -1L);
             case "gem": return HarnessQueries.gem(mc, req);
+            case "stereo_falloff": return HarnessSounds.stereoFalloff(req);
             case "recipe_table": {
                 // what the client received in Golem Core's recipe-table sync for {"table": "<ns>:<name>"}
                 JsonObject out = new JsonObject();

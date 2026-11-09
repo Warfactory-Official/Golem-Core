@@ -34,6 +34,7 @@ public final class Surface {
         CUTOUT,
         CUTOUT_CULL,
         CUTOUT_NO_CULL,
+        FLAT,
         TRANSLUCENT,
         TRANSLUCENT_EMISSIVE,
         PLASMA_GLOW
@@ -65,6 +66,11 @@ public final class Surface {
     /** Alpha-tested and drawn from both sides, for thin geometry authored as a single sheet. */
     public static Surface cutoutNoCull(String texture) {
         return new Surface(texture, Blend.CUTOUT_NO_CULL);
+    }
+
+    /** Alpha-tested, unculled, unlit, depth written: with {@code light(FULLBRIGHT)}, 1.7's {@code fullbright(true)}. */
+    public static Surface flat(String texture) {
+        return new Surface(texture, Blend.FLAT);
     }
 
     public static Surface solid(String texture) {
@@ -135,6 +141,7 @@ public final class Surface {
                 case CUTOUT -> CompatRenderTypes.entityCutoutCull(Ids.parse(texture));
                 case CUTOUT_CULL -> CompatRenderTypes.entityCutoutCull(Ids.parse(texture));
                 case CUTOUT_NO_CULL -> CompatRenderTypes.entityCutoutNoCull(Ids.parse(texture));
+                case FLAT -> CompatRenderTypes.flatCutout(Ids.parse(texture));
                 case TRANSLUCENT -> CompatRenderTypes.entityTranslucent(Ids.parse(texture), false);
                 case TRANSLUCENT_EMISSIVE -> CompatRenderTypes.entityTranslucentEmissive(Ids.parse(texture));
                 case PLASMA_GLOW -> CompatRenderTypes.plasmaGlow(Ids.parse(texture));

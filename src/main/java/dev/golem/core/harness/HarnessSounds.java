@@ -1,13 +1,22 @@
 package dev.golem.core.harness;
 
+import com.google.gson.JsonObject;
+import com.mojang.blaze3d.audio.Channel;
+import com.mojang.blaze3d.audio.SoundBuffer;
+import dev.golem.core.client.Sounds;
+import java.nio.ByteBuffer;
 import java.util.EnumMap;
 import java.util.Locale;
 import java.util.Map;
+import javax.sound.sampled.AudioFormat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.client.sounds.SoundEventListener;
 import net.minecraft.client.sounds.WeighedSoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.phys.Vec3;
+import org.lwjgl.openal.AL10;
+import org.lwjgl.system.MemoryUtil;
 
 /**
  * Records every sound the client starts as a {@code [harness-sound]} line in the harness log, so a scenario can prove
@@ -53,6 +62,34 @@ final class HarnessSounds {
             saved.clear();
         }
         return previous;
+    }
+
+    /** A silent channel {@code distance} ahead of the listener, set up in vanilla's {@code play} order: its gain. */
+    static JsonObject stereoFalloff(JsonObject req) {
+        int channels = req.has("channels") ? req.get("channels").getAsInt() : 2;
+        float distance = req.has("distance") ? req.get("distance").getAsFloat() : 0F;
+        float max = req.has("max") ? req.get("max").getAsFloat() : 16F;
+        float[] listener = new float[3];
+        AL10.alGetListenerfv(AL10.AL_POSITION, listener);
+        ByteBuffer pcm = MemoryUtil.memCalloc(4410 * 2 * channels);
+        SoundBuffer buffer = new SoundBuffer(pcm, new AudioFormat(44100F, 16, channels, true, false));
+        Channel channel = Channel.create();
+        JsonObject out = new JsonObject();
+        try {
+            channel.setVolume(1F);
+            channel.linearAttenuation(max);
+            channel.setSelfPosition(new Vec3(listener[0], listener[1], listener[2] + distance));
+            channel.setRelative(false);
+            channel.attachStaticBuffer(buffer);
+            channel.updateStream();
+            int source = Sounds.source(channel);
+            out.addProperty("channels", AL10.alGetBufferi(AL10.alGetSourcei(source, AL10.AL_BUFFER), AL10.AL_CHANNELS));
+            out.addProperty("gain", AL10.alGetSourcef(source, AL10.AL_GAIN));
+        } finally {
+            channel.destroy();
+            buffer.discardAlBuffer();
+        }
+        return out;
     }
 
     private static void record(SoundInstance sound) {
