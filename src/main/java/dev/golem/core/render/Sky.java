@@ -533,6 +533,14 @@ public final class Sky {
         return texShader;
     }
 
+    /^*
+     * Under a shader pack, vanilla's {@code position_tex_color}: Iris swaps it for the pack's textured sky program, as it
+     * does for vanilla's sun. A pack never sees a mod's own program and draws its sky over it.
+     ^/
+    private static java.util.function.Supplier<net.minecraft.client.renderer.ShaderInstance> texProgram() {
+        return dev.golem.core.client.ShaderPacks.inUse() ? GameRenderer::getPositionTexColorShader : Sky::texShader;
+    }
+
     private static void blend(Blend blend) {
         RenderSystem.enableBlend();
         RenderSystem.blendFuncSeparate(GlStateManager.SourceFactor.SRC_ALPHA,
@@ -546,7 +554,7 @@ public final class Sky {
             RenderSystem.setShader(GameRenderer::getPositionColorShader);
         } else {
             texBlend = blend;
-            RenderSystem.setShader(Sky::texShader);
+            RenderSystem.setShader(texProgram());
             ResourceLocation location;
             if (texture.celestial == -1) {
                 location = dev.golem.core.Ids.of(texture.namespace, texture.path);
@@ -600,7 +608,7 @@ public final class Sky {
             RenderSystem.setShader(GameRenderer::getPositionColorShader);
         } else {
             texBlend = blend;
-            RenderSystem.setShader(Sky::texShader);
+            RenderSystem.setShader(texProgram());
             RenderSystem.setShaderTexture(0, dev.golem.core.Ids.of(texture.namespace, texture.path));
         }
         RenderSystem.enableBlend();
