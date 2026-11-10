@@ -1,0 +1,678 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Golem Profile</title>
+<style>
+:root {
+  --bg: #f6f7f9; --panel: #ffffff; --text: #1d2330; --muted: #5d6677; --line: #dde1e8; --accent: #3b6fd8;
+  --good: #1e9e5a; --warn: #c98a00; --bad: #d23c3c; --hover: #eef2fa; --code: #f0f2f6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14171d; --panel: #1c2028; --text: #e3e7ee; --muted: #98a1b2; --line: #2d333f; --accent: #6f9bff;
+    --good: #3ccf7e; --warn: #f0b429; --bad: #ff6b6b; --hover: #252b36; --code: #232833;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14171d; --panel: #1c2028; --text: #e3e7ee; --muted: #98a1b2; --line: #2d333f; --accent: #6f9bff;
+  --good: #3ccf7e; --warn: #f0b429; --bad: #ff6b6b; --hover: #252b36; --code: #232833;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+header { padding: 14px 20px; border-bottom: 1px solid var(--line); background: var(--panel); display: flex; flex-wrap: wrap; gap: 10px 24px; align-items: baseline; }
+header h1 { margin: 0; font-size: 18px; }
+header .meta { color: var(--muted); font-size: 13px; }
+nav { display: flex; flex-wrap: wrap; gap: 2px; padding: 0 16px; background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
+nav button { background: none; border: 0; border-bottom: 2px solid transparent; color: var(--muted); padding: 10px 12px; font: inherit; cursor: pointer; }
+nav button.on { color: var(--text); border-bottom-color: var(--accent); }
+main { padding: 16px 20px 60px; max-width: 1500px; margin: 0 auto; }
+section { display: none; } section.on { display: block; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; margin-bottom: 16px; }
+.panel h2 { font-size: 15px; margin: 0 0 10px; }
+.panel p.hint { color: var(--muted); margin: -4px 0 10px; font-size: 13px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.card .k { color: var(--muted); font-size: 12px; } .card .v { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.card .s { color: var(--muted); font-size: 12px; }
+.good { color: var(--good); } .warn { color: var(--warn); } .bad { color: var(--bad); }
+.verdict { font-size: 15px; } .verdict li { margin: 4px 0; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; cursor: pointer; user-select: none; white-space: nowrap; background: var(--panel); }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.code { font-family: ui-monospace, Consolas, monospace; font-size: 12px; word-break: break-all; }
+tr:hover td { background: var(--hover); }
+.tablewrap { overflow-x: auto; max-width: 100%; }
+.bar { height: 6px; background: var(--accent); border-radius: 3px; opacity: .7; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+select, input[type=text], button.btn { background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; font: inherit; }
+button.btn { cursor: pointer; } button.btn:hover { background: var(--hover); }
+input[type=text] { min-width: 220px; }
+canvas { display: block; width: 100%; }
+.chart { position: relative; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--muted); margin-top: 4px; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+#tip { position: fixed; pointer-events: none; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font-size: 12px; max-width: 560px; box-shadow: 0 4px 16px rgba(0,0,0,.25); display: none; z-index: 20; }
+#tip b { font-family: ui-monospace, Consolas, monospace; word-break: break-all; font-weight: 600; }
+.crumbs { font-size: 12px; color: var(--muted); margin-bottom: 6px; word-break: break-all; }
+.crumbs a { color: var(--accent); cursor: pointer; }
+.flamewrap { overflow-x: hidden; overflow-y: auto; scrollbar-gutter: stable; max-height: 78vh; border: 1px solid var(--line); border-radius: 6px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 16px; }
+.muted { color: var(--muted); }
+.kv td:first-child { color: var(--muted); width: 220px; }
+code { background: var(--code); padding: 1px 4px; border-radius: 4px; font-size: 12px; }
+@media (max-width: 600px) { main { padding: 12px 16px 40px; } nav { flex-wrap: nowrap; overflow-x: auto; } nav button { white-space: nowrap; }
+  .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } .grid2 { grid-template-columns: 1fr; } input[type=text] { min-width: 0; width: 100%; } }
+</style>
+</head>
+<body>
+<header><h1>Golem profile</h1><span class="meta" id="meta"></span>
+  <span style="flex:1"></span>
+  <button class="btn" id="theme">Theme</button>
+  <button class="btn" id="dl">Download JSON</button></header>
+<nav id="nav"></nav>
+<main id="main"></main>
+<div id="tip"></div>
+<script id="data" type="application/json">/*GOLEM_PROFILE*/null</script>
+<script>
+"use strict";
+const D = JSON.parse(document.getElementById("data").textContent);
+const $ = (s, r = document) => r.querySelector(s);
+const el = (tag, attrs = {}, ...kids) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") e.className = v; else if (k === "html") e.innerHTML = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v);
+  }
+  for (const k of kids.flat()) if (k != null) e.append(k.nodeType ? k : document.createTextNode(String(k)));
+  return e;
+};
+const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const fmt = (v, d = 1) => v == null || isNaN(v) ? "–" : Number(v).toLocaleString(undefined, {minimumFractionDigits: d, maximumFractionDigits: d});
+const ms = v => fmt(v, v < 10 ? 2 : 1) + " ms";
+const pct = (a, b) => b > 0 ? fmt(100 * a / b, 1) + "%" : "–";
+const tip = $("#tip");
+function showTip(ev, html) { tip.innerHTML = html; tip.style.display = "block";
+  const x = Math.min(ev.clientX + 14, innerWidth - tip.offsetWidth - 8), y = Math.min(ev.clientY + 14, innerHeight - tip.offsetHeight - 8);
+  tip.style.left = x + "px"; tip.style.top = y + "px"; }
+function hideTip() { tip.style.display = "none"; }
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;"}[c]));
+
+const client = D.probes && D.probes.client && !D.probes.client.error ? D.probes.client : null;
+const server = D.probes && D.probes.server && !D.probes.server.error ? D.probes.server : null;
+const sampler = D.sampler || {threads: []};
+const jfr = D.jfr || null;
+const threadNamed = n => sampler.threads.find(t => t.name === n);
+
+// Which mod or library a frame belongs to; mirrors CodeGroups so the flame graph colours match the tables.
+const GROUPS = [["java.", "Java"], ["javax.", "Java"], ["jdk.", "Java"], ["sun.", "Java"], ["com.sun.", "Java"],
+  ["net.minecraft.", "Minecraft"], ["com.mojang.", "Minecraft"], ["org.lwjgl.", "LWJGL (OpenGL, GLFW, OpenAL)"],
+  ["net.neoforged.", "NeoForge"], ["net.minecraftforge.", "Forge"], ["cpw.mods.", "Forge"], ["net.fabricmc.", "Fabric"],
+  ["org.spongepowered.", "Mixin"], ["dev.golem.", "Golem Core"], ["com.hbm.", "HBM"], ["dev.engine_room.flywheel.", "Flywheel"],
+  ["me.jellysquid.mods.sodium.", "Sodium"], ["net.caffeinemc.mods.sodium.", "Sodium"], ["net.irisshaders.", "Iris"]];
+function groupOf(frame) {
+  const m = /\.([a-zA-Z]+\$[a-z0-9]+\$([a-z0-9_]+)\$)/.exec(frame);
+  if (m) return "mixin from " + m[2];
+  for (const [p, g] of GROUPS) if (frame.startsWith(p)) return g;
+  return frame.split(".").slice(0, 2).join(".");
+}
+const PALETTE = {"Java": [215, 8, 62], "Minecraft": [140, 45, 48], "LWJGL (OpenGL, GLFW, OpenAL)": [28, 80, 52],
+  "NeoForge": [210, 60, 55], "Forge": [210, 60, 55], "Fabric": [40, 40, 58], "Mixin": [300, 30, 58],
+  "Golem Core": [265, 55, 62], "HBM": [355, 65, 58], "Flywheel": [185, 55, 45], "Sodium": [190, 60, 50], "Iris": [320, 55, 60]};
+function colorOf(frame, dim) {
+  if (frame.startsWith("[")) return dim ? "hsla(0,0%,55%,.35)" : "hsl(0,0%,58%)";
+  const g = groupOf(frame);
+  let c = PALETTE[g];
+  if (!c) { let h = 0; for (const ch of g) h = (h * 31 + ch.charCodeAt(0)) % 360; c = [h, 50, 52]; }
+  let h = 0; for (const ch of frame) h = (h * 17 + ch.charCodeAt(0)) % 9;
+  return `hsla(${c[0]},${c[1]}%,${c[2] - 4 + h}%,${dim ? .3 : 1})`;
+}
+
+/* ---------- small charts ---------- */
+// The selected time range in seconds, shared by every chart drawn with {brush: true}; null means the whole capture.
+let SELECTION = null;
+const brushCharts = new Set(), selectionListeners = [];
+function setSelection(range, final) {
+  SELECTION = range && range[1] - range[0] > 0.01 ? range : null;
+  for (const c of brushCharts) c.redraw();
+  if (final) for (const f of selectionListeners) f(SELECTION);
+}
+function lineChart(series, opts = {}) {
+  const wrap = el("div", {class: "chart"});
+  const canvas = el("canvas", {height: opts.height || 220, style: `height:${opts.height || 220}px`});
+  wrap.append(canvas);
+  const legend = el("div", {class: "legend"});
+  for (const s of series) legend.append(el("span", {}, el("i", {style: `background:${s.color}`}), s.label));
+  for (const r of opts.refs || []) legend.append(el("span", {}, el("i", {style: `background:${r.color};height:2px`}), r.label));
+  wrap.append(legend);
+  let frame = null, dragFrom = null;
+  const timeAt = ev => { const r = canvas.getBoundingClientRect();
+    return Math.max(0, Math.min(frame.tMax, (ev.clientX - r.left - frame.L) / frame.w * frame.tMax)); };
+  const draw = () => {
+    const dpr = devicePixelRatio || 1, W = canvas.clientWidth, H = opts.height || 220;
+    if (!W) return;
+    canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr); canvas.style.height = H + "px";
+    const g = canvas.getContext("2d"); g.scale(dpr, dpr);
+    const L = 46, R = 8, T = 8, B = 22, w = W - L - R, h = H - T - B;
+    let tMax = opts.tMax || 0, vMax = 0;
+    for (const s of series) for (let i = 0; i < s.t.length; i++) { tMax = Math.max(tMax, s.t[i]); vMax = Math.max(vMax, s.v[i]); }
+    if (opts.cap) vMax = Math.min(vMax, opts.cap(vMax, series));
+    for (const r of opts.refs || []) if (r.v < vMax * 3) vMax = Math.max(vMax, r.v * 1.1);
+    vMax = vMax || 1; tMax = tMax || 1;
+    frame = {L, w, tMax};
+    if (opts.brush && SELECTION) {
+      g.fillStyle = css("--accent"); g.globalAlpha = .16;
+      g.fillRect(L + w * SELECTION[0] / tMax, T, w * (SELECTION[1] - SELECTION[0]) / tMax, h); g.globalAlpha = 1;
+    }
+    g.font = "11px system-ui"; g.fillStyle = css("--muted"); g.strokeStyle = css("--line"); g.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) { const y = T + h - h * i / 4; g.beginPath(); g.moveTo(L, y); g.lineTo(L + w, y); g.stroke();
+      g.fillText(fmt(vMax * i / 4, vMax < 4 ? 1 : 0), 4, y + 4); }
+    const ticks = Math.max(2, Math.min(10, Math.floor(w / 90)));
+    for (let i = 0; i <= ticks; i++) { const x = L + w * i / ticks; g.fillText(fmt(tMax * i / ticks, tMax / ticks < 2 ? 1 : 0) + "s", x - 8, H - 6); }
+    for (const r of opts.refs || []) { const y = T + h - h * Math.min(1, r.v / vMax); g.strokeStyle = r.color; g.setLineDash([4, 4]);
+      g.beginPath(); g.moveTo(L, y); g.lineTo(L + w, y); g.stroke(); g.setLineDash([]); }
+    for (const s of series) {
+      // Max per pixel column, so one long frame among thousands still shows.
+      const cols = new Float32Array(Math.ceil(w) + 1).fill(-1);
+      for (let i = 0; i < s.t.length; i++) { const x = Math.round(w * s.t[i] / tMax); if (s.v[i] > cols[x]) cols[x] = s.v[i]; }
+      g.strokeStyle = s.color; g.lineWidth = 1.3; g.beginPath(); let started = false;
+      for (let x = 0; x < cols.length; x++) { if (cols[x] < 0) continue; const y = T + h - h * Math.min(1, cols[x] / vMax);
+        if (!started) { g.moveTo(L + x, y); started = true; } else g.lineTo(L + x, y); }
+      g.stroke();
+    }
+  };
+  canvas.onmousemove = ev => {
+    if (!frame) return;
+    const t = timeAt(ev);
+    if (dragFrom != null) { setSelection([Math.min(dragFrom, t), Math.max(dragFrom, t)], false); hideTip(); return; }
+    let html = `<div>${fmt(t, 2)} s</div>`;
+    for (const s of series) { let best = -1, bestD = 1e9;
+      for (let i = 0; i < s.t.length; i++) { const d = Math.abs(s.t[i] - t); if (d < bestD) { bestD = d; best = i; } }
+      if (best >= 0 && bestD < frame.tMax / frame.w * 4) html += `<div><span style="color:${s.color}">■</span> ${esc(s.label)}: ${fmt(s.v[best], 2)} ${opts.unit || ""}</div>`; }
+    if (opts.brush) html += `<div class="muted">drag to select seconds, double-click to clear</div>`;
+    showTip(ev, html); };
+  canvas.onmouseleave = hideTip;
+  if (opts.brush) {
+    brushCharts.add(wrap); canvas.style.cursor = "crosshair";
+    canvas.onmousedown = ev => { if (frame) { dragFrom = timeAt(ev); ev.preventDefault(); } };
+    addEventListener("mouseup", ev => { if (dragFrom == null) return; const t = timeAt(ev), from = dragFrom; dragFrom = null;
+      setSelection([Math.min(from, t), Math.max(from, t)], true); });
+    canvas.ondblclick = () => setSelection(null, true);
+  }
+  new ResizeObserver(() => draw()).observe(canvas); wrap.redraw = draw;
+  return wrap;
+}
+
+/* ---------- sortable tables ---------- */
+function table(columns, rows, opts = {}) {
+  const wrap = el("div");
+  let sortCol = opts.sort ?? -1, desc = true, filter = "";
+  const limit = opts.limit || 300;
+  if (opts.filter) {
+    const box = el("input", {type: "text", placeholder: "Filter…"});
+    box.oninput = () => { filter = box.value.toLowerCase(); render(); };
+    wrap.append(el("div", {class: "controls"}, box, opts.extra || null));
+  }
+  const tbl = el("table"); wrap.append(el("div", {class: "tablewrap"}, tbl));
+  const maxOf = columns.map((c, i) => c.bar ? Math.max(...rows.map(r => r[i] || 0), 1e-9) : 0);
+  function render() {
+    let shown = rows;
+    if (filter) shown = shown.filter(r => r.some(v => String(v).toLowerCase().includes(filter)));
+    if (sortCol >= 0) shown = [...shown].sort((a, b) => {
+      const x = a[sortCol], y = b[sortCol];
+      const c = typeof x === "number" && typeof y === "number" ? x - y : String(x).localeCompare(String(y));
+      return desc ? -c : c; });
+    const head = el("tr", {}, columns.map((c, i) => el("th", {class: c.num ? "n" : "", onclick: () => {
+      desc = sortCol === i ? !desc : true; sortCol = i; render(); }}, c.name + (sortCol === i ? (desc ? " ▾" : " ▴") : ""))));
+    const body = shown.slice(0, limit).map(r => el("tr", {}, columns.map((c, i) => {
+      const v = r[i];
+      const td = el("td", {class: (c.num ? "n" : "") + (c.code ? " code" : "")}, c.fmt ? c.fmt(v, r) : v);
+      if (c.bar) td.append(el("div", {class: "bar", style: `width:${Math.max(1, 100 * (v || 0) / maxOf[i])}%`}));
+      return td; })));
+    tbl.replaceChildren(el("thead", {}, head), el("tbody", {}, body));
+    if (!shown.length) tbl.append(el("tr", {}, el("td", {colspan: columns.length, class: "muted"}, filter ? "No rows match the filter" : "None recorded")));
+    if (shown.length > limit) tbl.append(el("tr", {}, el("td", {colspan: columns.length, class: "muted"}, `${shown.length - limit} more rows; filter to narrow`)));
+  }
+  render();
+  return wrap;
+}
+const kvValue = (k, v) => Array.isArray(v) ? v.join(", ") : typeof v === "object" && v ? JSON.stringify(v)
+  : /Mb$/.test(k) && typeof v === "number" ? (v >= 1024 ? fmt(v / 1024, 1) + " GB" : fmt(v, 0) + " MB")
+  : k === "seconds" && typeof v === "number" ? fmt(v, 2) + " s" : String(v);
+const kv = obj => el("table", {class: "kv"}, Object.entries(obj).map(([k, v]) => el("tr", {}, el("td", {}, k), el("td", {}, kvValue(k, v)))));
+const panel = (title, hint, ...kids) => el("div", {class: "panel"}, el("h2", {}, title), hint ? el("p", {class: "hint"}, hint) : null, ...kids);
+const card = (k, v, s, cls) => el("div", {class: "card"}, el("div", {class: "k"}, k), el("div", {class: "v " + (cls || "")}, v), s ? el("div", {class: "s"}, s) : null);
+
+/* ---------- flame graph ---------- */
+const toNode = a => ({n: a[0], t: a[1], s: a[2], c: (a[3] || []).map(toNode)});
+function invert(root) {
+  // Bottom-up: every node's self time is filed under its own frame, then its callers.
+  const out = {n: root.n, t: 0, s: 0, c: [], m: new Map()};
+  const path = [];
+  (function walk(node) {
+    path.push(node.n);
+    if (node.s > 0) {
+      let cur = out; cur.t += node.s;
+      for (let i = path.length - 1; i >= 1; i--) {
+        let next = cur.m.get(path[i]);
+        if (!next) { next = {n: path[i], t: 0, s: 0, c: [], m: new Map()}; cur.m.set(path[i], next); cur.c.push(next); }
+        next.t += node.s; cur = next;
+      }
+      cur.s += node.s;
+    }
+    for (const k of node.c) walk(k);
+    path.pop();
+  })(root);
+  (function sort(n) { n.c.sort((a, b) => b.t - a.t); n.c.forEach(sort); delete n.m; })(out);
+  return out;
+}
+function flameGraph(root, unit) {
+  const wrap = el("div");
+  const crumbs = el("div", {class: "crumbs"});
+  const box = el("div", {class: "flamewrap"});
+  const canvas = el("canvas");
+  box.append(canvas); wrap.append(crumbs, box);
+  const ROW = 18;
+  let zoom = [root], query = "", hits = [];
+  function depthOf(n) { let d = 0; for (const k of n.c) d = Math.max(d, depthOf(k)); return d + 1; }
+  wrap.search = q => { query = q.toLowerCase(); draw(); };
+  function matches(n) { return query && n.n.toLowerCase().includes(query); }
+  function draw() {
+    const top = zoom[zoom.length - 1], W = box.clientWidth || 800, dpr = devicePixelRatio || 1;
+    const rows = zoom.length - 1 + Math.min(depthOf(top), 400);
+    const H = rows * ROW + 4;
+    canvas.width = W * dpr; canvas.height = H * dpr; canvas.style.height = H + "px";
+    const g = canvas.getContext("2d"); g.scale(dpr, dpr); g.font = "11px ui-monospace, Consolas, monospace";
+    g.clearRect(0, 0, W, H); hits = [];
+    let matched = 0;
+    const rect = (n, x, y, w, dim) => {
+      g.fillStyle = colorOf(n.n, dim); g.fillRect(x, y, Math.max(w - 0.5, 0.5), ROW - 1);
+      if (matches(n)) { g.strokeStyle = css("--text"); g.lineWidth = 2; g.strokeRect(x + 1, y + 1, w - 2.5, ROW - 3); }
+      if (w > 30) { g.fillStyle = dim ? css("--muted") : "#111"; const label = n.n.replace(/^.*\.([^.]+\.[^.]+)$/, "$1");
+        const text = w > g.measureText(n.n).width + 8 ? n.n : label; g.save(); g.beginPath(); g.rect(x, y, w - 2, ROW); g.clip();
+        g.fillText(text, x + 3, y + 12.5); g.restore(); }
+      hits.push([x, y, w, n]);
+    };
+    zoom.slice(0, -1).forEach((n, i) => rect(n, 0, i * ROW, W, true));
+    const scale = W / (top.t || 1);
+    (function walk(n, x, depth) {
+      const w = n.t * scale; if (w < 0.4 || depth > 400) return;
+      if (matches(n)) matched += n.t;
+      rect(n, x, (zoom.length - 1 + depth) * ROW, w, false);
+      let cx = x; for (const k of n.c) { walk(k, cx, depth + 1); cx += k.t * scale; }
+    })(top, 0, 0);
+    crumbs.replaceChildren(...zoom.flatMap((n, i) => [i ? " › " : "", el("a", {onclick: () => { zoom = zoom.slice(0, i + 1); draw(); }},
+      n.n.replace(/^.*\.([^.]+\.[^.]+)$/, "$1"))]),
+      query ? el("span", {}, `   search: ${fmt(matched, 1)} ${unit} (${pct(matched, top.t)} of view; outer matches only)`) : "");
+  }
+  const find = (ev) => { const r = canvas.getBoundingClientRect(), x = ev.clientX - r.left, y = ev.clientY - r.top;
+    for (const h of hits) if (x >= h[0] && x < h[0] + h[2] && y >= h[1] && y < h[1] + ROW) return h[3]; return null; };
+  canvas.onmousemove = ev => { const n = find(ev); if (!n) return hideTip(); const base = zoom[0].t || 1;
+    showTip(ev, `<b>${esc(n.n)}</b><div>${esc(groupOf(n.n))}</div><div>total ${fmt(n.t, 1)} ${unit} (${pct(n.t, base)})</div><div>self ${fmt(n.s, 1)} ${unit} (${pct(n.s, base)})</div><div class="muted">click to zoom</div>`); };
+  canvas.onmouseleave = hideTip;
+  canvas.onclick = ev => { const n = find(ev); if (!n) return; const i = zoom.indexOf(n);
+    if (i >= 0) zoom = zoom.slice(0, i + 1); else {
+      // Rebuild the ancestor chain from the current view's root to the clicked node.
+      const chain = []; (function seek(cur, acc) { if (cur === n) { chain.push(...acc, cur); return true; }
+        for (const k of cur.c) if (seek(k, [...acc, cur])) return true; return false; })(zoom[zoom.length - 1], []);
+      zoom = [...zoom.slice(0, -1), ...chain]; }
+    draw(); };
+  new ResizeObserver(() => draw()).observe(box);
+  wrap.redraw = draw;
+  return wrap;
+}
+
+/* ---------- derived numbers ---------- */
+const frameStats = client && client.frames && client.frames.count ? client.frames : null;
+const fps = v => v > 0 ? 1000 / v : 0;
+function lowFps(series, fraction) {
+  // "1% low": average FPS over the slowest 1% of frames, as frame-time tools report it.
+  if (!series || !series.v || !series.v.length) return null;
+  const sorted = [...series.v].sort((a, b) => b - a), n = Math.max(1, Math.floor(sorted.length * fraction));
+  let sum = 0; for (let i = 0; i < n; i++) sum += sorted[i]; return 1000 / (sum / n);
+}
+const DRIVER_WAITS = /glfwSwapBuffers|nglfwSwapBuffers|glFinish|glClientWaitSync|glGetQueryObject|glFenceSync|glMapBuffer|nglMapBufferRange/;
+const IDLE_WAITS = /Thread\.sleep|Object\.wait|Unsafe\.park|LockSupport\.park|glfwWaitEvents|nglfwWaitEventsTimeout/;
+function waitShare(thread, pattern) {
+  // Share of a thread's sampled time whose innermost frame matches: driver waits (buffer swap, syncs) or idling (FPS cap).
+  if (!thread) return null;
+  let wait = 0;
+  for (const [name, self] of thread.methods) if (pattern.test(name)) wait += self;
+  return thread.timeMs ? wait / thread.timeMs : null;
+}
+
+/* ---------- sections ---------- */
+const sections = [];
+function section(id, title, build) { sections.push({id, title, build}); }
+
+section("overview", "Overview", () => {
+  const out = [];
+  const cards = el("div", {class: "cards"});
+  const render = threadNamed("Render thread"), serverThread = threadNamed("Server thread");
+  if (frameStats) {
+    const mean = frameStats.mean, p99 = frameStats.p99;
+    const scope = client.frameScope === "level render" ? " (level render, Fabric)" : "";
+    cards.append(card("Average FPS" + scope, fmt(fps(mean), 0), `${fmt(frameStats.count, 0)} frames, mean ${ms(mean)}`, fps(mean) < 30 ? "bad" : fps(mean) < 60 ? "warn" : "good"),
+      card("1% low FPS", fmt(lowFps(frameStats, .01), 0), `p99 frame ${ms(p99)}`, lowFps(frameStats, .01) < 30 ? "bad" : ""),
+      card("0.1% low FPS", fmt(lowFps(frameStats, .001), 0), `worst frame ${ms(frameStats.max)}`),
+      card("CPU time per frame", client.cpu.count ? ms(client.cpu.mean) : "–", client.cpu.count ? `p95 ${ms(client.cpu.p95)}` : ""),
+      card("GPU time per frame", client.gpu && client.gpu.count ? ms(client.gpu.mean) : "–", client.gpu && client.gpu.count ? `p95 ${ms(client.gpu.p95)}` : (client.gpuError || "")));
+  }
+  const ticks = server && server.ticks;
+  if (ticks && ticks.count) {
+    const tps = Math.min(20, 1000 / Math.max(50, ticks.mean));
+    cards.append(card("MSPT (mean)", ms(ticks.mean), `p95 ${ms(ticks.p95)}, max ${ms(ticks.max)}`, ticks.mean > 50 ? "bad" : ticks.mean > 35 ? "warn" : "good"),
+      card("TPS (from MSPT)", fmt(tps, 1), `${fmt(ticks.count, 0)} ticks measured`, tps < 19.5 ? "bad" : "good"));
+  }
+  if (D.memory && D.memory.length) {
+    const last = D.memory[D.memory.length - 1], first = D.memory[0];
+    cards.append(card("Heap used", fmt(last[1], 0) + " MB", `of ${fmt(D.system.maxHeapMb, 0)} MB max`, last[1] / D.system.maxHeapMb > .85 ? "bad" : ""),
+      card("GC time", ms(last[5] - first[5]), `${last[4] - first[4]} collections`));
+  }
+  if (jfr) cards.append(card("Allocation rate", fmt(jfr.allocatedMb / D.meta.seconds, 0) + " MB/s", "estimated from JFR samples"));
+  out.push(panel("Summary", `${fmt(D.meta.seconds, 1)} s captured on ${D.meta.side}`, cards));
+
+  const findings = [];
+  const wait = waitShare(render, DRIVER_WAITS), idle = waitShare(render, IDLE_WAITS);
+  if (frameStats && client.gpu && client.gpu.count) {
+    const gpuShare = client.gpu.mean / frameStats.mean;
+    if (gpuShare > .85) findings.push(["bad", `GPU-bound: the GPU is busy for ${pct(client.gpu.mean, frameStats.mean)} of each frame. Look at the render passes tab for the expensive pass.`]);
+    else if (client.cpu.mean / frameStats.mean > .7) findings.push(["warn", `CPU-bound on the render thread: ${pct(client.cpu.mean, frameStats.mean)} of each frame is CPU work before the buffer swap. See the flame graph for the Render thread.`]);
+  }
+  if (idle != null && idle > .25) findings.push(["muted", `The render thread sleeps or waits ${pct(idle, 1)} of the time: an FPS cap (also the unfocused-window cap), or waiting on another thread. Busy time is what matters then: CPU per frame above.`]);
+  if (wait != null && wait > .25) findings.push(["warn", `The render thread spends ${pct(wait, 1)} of its time waiting on the driver (buffer swap or sync). With VSync or an FPS cap this is expected; otherwise the GPU is behind.`]);
+  if (client && client.setup && client.setup.vsync) findings.push(["muted", "VSync was on: frame times are capped at the display's refresh rate."]);
+  if (ticks && ticks.count && ticks.p95 > 50) findings.push(["bad", `Server ticks run over budget: p95 ${ms(ticks.p95)} against 50 ms. Check the Server thread flame graph and the tick spikes.`]);
+  for (const s of D.spikes || []) if (s.count) findings.push(["muted", `${s.count} ${s.label} on the ${s.thread}; their own call tree is under Flame graph → spikes.`]);
+  const gcs = jfr && jfr.gc ? jfr.gc : [];
+  const worstGc = gcs.reduce((m, g) => Math.max(m, g[4]), 0);
+  if (worstGc > 50) findings.push(["warn", `A GC pause took ${ms(worstGc)}, a visible stutter. Allocation sites are in the Memory tab.`]);
+  if (D.meta.jfrError) findings.push(["muted", "Flight recorder unavailable: " + D.meta.jfrError]);
+  if (render) {
+    // A group under every sample is the launcher, not work.
+    const mods = render.groups.filter(g => !["Java", "Minecraft", "LWJGL (OpenGL, GLFW, OpenAL)"].includes(g[0]) && g[2] < render.timeMs * .98).slice(0, 5)
+      .map(g => `${g[0]} ${pct(g[2], render.timeMs)}`).join(", ");
+    if (mods) findings.push(["", `Render thread time spent inside mod code (inclusive): ${mods}.`]);
+  }
+  if (serverThread) {
+    const mods = serverThread.groups.filter(g => !["Java", "Minecraft"].includes(g[0]) && g[2] < serverThread.timeMs * .98).slice(0, 5)
+      .map(g => `${g[0]} ${pct(g[2], serverThread.timeMs)}`).join(", ");
+    if (mods) findings.push(["", `Server thread time spent inside mod code (inclusive): ${mods}.`]);
+  }
+  out.push(panel("Findings", "Automatic hints; the tabs hold the evidence.", el("ul", {class: "verdict"}, findings.map(f => el("li", {class: f[0]}, f[1])))));
+
+  if (frameStats) {
+    const series = [{t: frameStats.t, v: frameStats.v, color: css("--accent"), label: "frame interval"}];
+    if (client.cpu.count) series.push({t: client.cpu.t, v: client.cpu.v, color: css("--warn"), label: "CPU in frame"});
+    if (client.gpu && client.gpu.count) series.push({t: client.gpu.t, v: client.gpu.v, color: css("--good"), label: "GPU"});
+    out.push(panel("Frame times (ms)", "Each pixel column shows the slowest frame in it. Hover for values; the Timeline tab selects seconds and shows what ran then.",
+      lineChart(series, {unit: "ms", tMax: D.meta.seconds, refs: [{v: 16.7, color: css("--good"), label: "60 FPS"}, {v: 33.3, color: css("--bad"), label: "30 FPS"}],
+        cap: (m) => Math.max(frameStats.p99 * 2.5, 40)})));
+  }
+  if (ticks && ticks.count) out.push(panel("Server tick times (ms)", null, lineChart([{t: ticks.t, v: ticks.v, color: css("--accent"), label: "tick"}],
+    {unit: "ms", tMax: D.meta.seconds, refs: [{v: 50, color: css("--bad"), label: "50 ms budget"}]})));
+  return out;
+});
+
+section("timeline", "Timeline", () => {
+  const seconds = D.meta.seconds, out = [];
+  const timelines = sampler.timelines || [];
+  const rangeLabel = el("b", {});
+  const clear = el("button", {class: "btn", onclick: () => setSelection(null, true)}, "Clear selection");
+  out.push(panel("Timeline", "Drag across any chart below to pick the seconds you care about (for example where the lag starts); everything under the charts is rebuilt for that range. Double-click a chart to go back to the whole capture.",
+    el("div", {class: "controls"}, el("span", {}, "Range: "), rangeLabel, clear)));
+  if (frameStats) {
+    const series = [{t: frameStats.t, v: frameStats.v, color: css("--accent"), label: "frame interval"}];
+    if (client.cpu.count) series.push({t: client.cpu.t, v: client.cpu.v, color: css("--warn"), label: "CPU in frame"});
+    if (client.gpu && client.gpu.count) series.push({t: client.gpu.t, v: client.gpu.v, color: css("--good"), label: "GPU"});
+    out.push(panel("Frame times (ms)", null, lineChart(series, {brush: true, unit: "ms", tMax: seconds, height: 200,
+      refs: [{v: 16.7, color: css("--good"), label: "60 FPS"}, {v: 33.3, color: css("--bad"), label: "30 FPS"}], cap: () => Math.max(frameStats.p99 * 2.5, 40)})));
+  }
+  const passSeries = client && client.passSeries ? client.passSeries : [];
+  if (passSeries.length) {
+    const hue = i => `hsl(${(i * 137) % 360},65%,55%)`;
+    const kind = el("select", {}, el("option", {value: "gpu"}, "GPU time per pass"), el("option", {value: "cpu"}, "CPU time per pass"));
+    const holder = el("div");
+    let chart = null;
+    const show = () => { if (chart) brushCharts.delete(chart);
+      chart = lineChart(passSeries.filter(p => p[kind.value].count).map((p, i) =>
+        ({t: p[kind.value].t, v: p[kind.value].v, color: hue(i), label: p.pass})), {brush: true, unit: "ms", tMax: seconds, height: 200});
+      holder.replaceChildren(chart); };
+    kind.onchange = show; show();
+    out.push(panel("Render passes over time (ms)", "Which pass grew when the frame time jumped.", el("div", {class: "controls"}, kind), holder));
+  }
+  const ticks = server && server.ticks;
+  if (ticks && ticks.count) out.push(panel("Server tick times (ms)", null, lineChart([{t: ticks.t, v: ticks.v, color: css("--accent"), label: "tick"}],
+    {brush: true, unit: "ms", tMax: seconds, height: 160, refs: [{v: 50, color: css("--bad"), label: "50 ms budget"}]})));
+  if (D.memory && D.memory.length) out.push(panel("Heap (MB)", null, lineChart([{t: D.memory.map(r => r[0]), v: D.memory.map(r => r[1]), color: css("--accent"), label: "heap used"}],
+    {brush: true, unit: "MB", tMax: seconds, height: 140})));
+
+  const summary = el("div");
+  out.push(panel("In this range", null, summary));
+  const pick = el("select", {}, timelines.map((t, i) => el("option", {value: i}, t.thread)));
+  const mode = el("select", {}, el("option", {value: "down"}, "top-down"), el("option", {value: "up"}, "bottom-up"));
+  const search = el("input", {type: "text", placeholder: "Search frames"});
+  const graphHolder = el("div"), tableHolder = el("div");
+  if (timelines.length) out.push(panel("Call tree for this range", "Built from the main-thread samples taken inside the selected seconds.",
+    el("div", {class: "controls"}, pick, mode, search), graphHolder), panel("Hot methods and mods in this range", null, tableHolder));
+  let graph = null;
+  const inRange = (t, r) => !r || (t >= r[0] && t <= r[1]);
+  function stats(series, r) {
+    if (!series || !series.t) return null;
+    let n = 0, sum = 0, max = 0;
+    for (let i = 0; i < series.t.length; i++) if (inRange(series.t[i], r)) { n++; sum += series.v[i]; max = Math.max(max, series.v[i]); }
+    return n ? {n, mean: sum / n, max} : null;
+  }
+  function update(r) {
+    rangeLabel.textContent = r ? `${fmt(r[0], 2)} s to ${fmt(r[1], 2)} s (${fmt(r[1] - r[0], 2)} s)` : `whole capture (${fmt(seconds, 1)} s)`;
+    clear.disabled = !r;
+    const cards = el("div", {class: "cards"});
+    const f = frameStats && stats(frameStats, r), c = client && stats(client.cpu, r), gp = client && stats(client.gpu, r), tk = ticks && stats(ticks, r);
+    if (f) cards.append(card("Frames", fmt(f.n, 0), `mean ${ms(f.mean)} (${fmt(1000 / f.mean, 0)} FPS), worst ${ms(f.max)}`, f.mean > 33.3 ? "bad" : ""));
+    if (c) cards.append(card("CPU per frame", ms(c.mean), `worst ${ms(c.max)}`));
+    if (gp) cards.append(card("GPU per frame", ms(gp.mean), `worst ${ms(gp.max)}`));
+    if (tk) cards.append(card("Ticks", fmt(tk.n, 0), `mean ${ms(tk.mean)}, worst ${ms(tk.max)}`, tk.max > 50 ? "bad" : ""));
+    const gcs = (jfr && jfr.gc ? jfr.gc : []).filter(g => inRange(g[0], r));
+    cards.append(card("GC pauses", fmt(gcs.length, 0), gcs.length ? `longest ${ms(Math.max(...gcs.map(g => g[4])))}` : ""));
+    const kids = [cards];
+    const passRows = passSeries.map(p => { const pc = stats(p.cpu, r), pg = stats(p.gpu, r);
+      return [p.pass, pc ? pc.mean : 0, pc ? pc.max : 0, pg ? pg.mean : 0, pg ? pg.max : 0]; });
+    if (passRows.length) kids.push(table([{name: "pass"}, {name: "CPU mean", num: true, fmt: ms, bar: true}, {name: "CPU max", num: true, fmt: ms},
+      {name: "GPU mean", num: true, fmt: ms, bar: true}, {name: "GPU max", num: true, fmt: ms}], passRows));
+    summary.replaceChildren(...kids);
+    if (timelines.length) showTree(r);
+  }
+  function showTree(r) {
+    const built = rangeProfile(timelines[pick.value], r);
+    let root = built.root;
+    if (mode.value === "up") root = invert(root);
+    graph = flameGraph(root, "ms"); graphHolder.replaceChildren(graph); graph.search(search.value);
+    tableHolder.replaceChildren(el("div", {class: "grid2"},
+      table([{name: "method", code: true}, {name: "self", num: true, fmt: ms, bar: true}, {name: "total", num: true, fmt: ms, bar: true},
+        {name: "total %", num: true, fmt: (v, row) => pct(row[2], built.root.t)}], built.methods.map(m => [...m, m[2]]), {sort: 1, filter: true, limit: 150}),
+      table([{name: "mod or library"}, {name: "self", num: true, fmt: ms, bar: true}, {name: "total", num: true, fmt: ms, bar: true},
+        {name: "total %", num: true, fmt: (v, row) => pct(row[2], built.root.t)}], built.groups.map(m => [...m, m[2]]), {sort: 2})));
+  }
+  pick.onchange = mode.onchange = () => showTree(SELECTION);
+  search.oninput = () => graph && graph.search(search.value);
+  selectionListeners.push(update);
+  requestAnimationFrame(() => update(SELECTION));
+  return out;
+});
+
+// A call tree, method table and mod table for one thread's samples inside range r (seconds), or all of them.
+function rangeProfile(tl, r) {
+  const lo = r ? r[0] * 1e4 : -Infinity, hi = r ? r[1] * 1e4 : Infinity, w = tl.intervalMs;
+  const root = {n: tl.thread, t: 0, s: 0, c: [], m: new Map()};
+  const paths = new Map(), methods = new Map(), groups = new Map();
+  const pathOf = node => { let p = paths.get(node); if (p) return p; p = [];
+    for (let x = node; x !== 0; x = tl.parents[x]) p.push(tl.frames[tl.nodeFrames[x]]); p.reverse(); paths.set(node, p); return p; };
+  const bump = (map, key, self, total) => { let e = map.get(key); if (!e) { e = [key, 0, 0]; map.set(key, e); } e[1] += self; e[2] += total; };
+  for (let i = 0; i < tl.t.length; i++) {
+    if (tl.t[i] < lo || tl.t[i] > hi) continue;
+    let path = pathOf(tl.n[i]);
+    if (!path.length) path = [`[${tl.states[tl.s[i]].toLowerCase()}, no Java frames]`];
+    let cur = root; cur.t += w;
+    const seen = new Set(), seenGroups = new Set();
+    for (const frame of path) {
+      let next = cur.m.get(frame);
+      if (!next) { next = {n: frame, t: 0, s: 0, c: [], m: new Map()}; cur.m.set(frame, next); cur.c.push(next); }
+      next.t += w; cur = next;
+      if (!seen.has(frame)) { seen.add(frame); bump(methods, frame, 0, w); }
+      const g = groupOf(frame); if (!seenGroups.has(g)) { seenGroups.add(g); bump(groups, g, 0, w); }
+    }
+    cur.s += w;
+    const top = path[path.length - 1]; bump(methods, top, w, 0); bump(groups, groupOf(top), w, 0);
+  }
+  (function sort(n) { n.c.sort((a, b) => b.t - a.t); n.c.forEach(sort); delete n.m; })(root);
+  const rows = map => [...map.values()].sort((a, b) => b[2] - a[2]);
+  return {root, methods: rows(methods), groups: rows(groups)};
+}
+
+if (client && client.passes && client.passes.length) section("passes", "Render passes", () => {
+  const rows = client.passes;
+  const gpuTotal = rows.reduce((a, r) => a + r[4], 0), cpuTotal = rows.reduce((a, r) => a + r[2], 0);
+  return [panel("Time per render pass", "Like a GPU trace: GPU timestamps between the loader's render-stage events. A pass is named after the event that ends it, so it holds everything drawn since the previous one. " +
+      "GPU time counts when the GPU reached each marker, so a pass that waits on the CPU also shows here. On 26.1 entities and block entities are drawn in the feature passes.",
+    table([{name: "pass"}, {name: "frames", num: true, fmt: v => fmt(v, 0)}, {name: "CPU mean", num: true, fmt: ms, bar: true}, {name: "CPU max", num: true, fmt: ms},
+      {name: "GPU mean", num: true, fmt: ms, bar: true}, {name: "GPU max", num: true, fmt: ms}, {name: "GPU share", num: true, fmt: (v, r) => pct(r[4], gpuTotal)}],
+      rows.map(r => [...r, r[4]]))),
+    panel("Notes", null, el("p", {}, `Sum of pass means: CPU ${ms(cpuTotal)}, GPU ${ms(gpuTotal)} per frame. Frame scope: ${client.frameScope}.`))];
+});
+
+section("flame", "Flame graph", () => {
+  const sources = [];
+  for (const t of sampler.threads) sources.push({label: `${t.name} (wall clock, ${fmt(t.timeMs / 1000, 1)} s)`, tree: t.tree, unit: "ms"});
+  for (const s of D.spikes || []) if (s.profile) sources.push({label: `spikes: ${s.thread}, ${s.label} (${s.count})`, tree: s.profile.tree, unit: "ms"});
+  if (jfr && jfr.cpuTree) sources.push({label: "JFR CPU samples, bottom-up (running Java only)", tree: jfr.cpuTree, unit: "ms", inverted: true});
+  if (jfr && jfr.allocationTree) sources.push({label: "JFR allocations, bottom-up", tree: jfr.allocationTree, unit: "KB", inverted: true});
+  if (!sources.length) return [panel("Flame graph", "No samples were recorded.")];
+  const pick = el("select", {}, sources.map((s, i) => el("option", {value: i}, s.label)));
+  const mode = el("select", {}, el("option", {value: "down"}, "top-down (callers above callees)"), el("option", {value: "up"}, "bottom-up (hot methods first)"));
+  const search = el("input", {type: "text", placeholder: "Search frames, e.g. com.hbm or RenderMachine"});
+  const holder = el("div");
+  let graph = null;
+  const show = () => {
+    const s = sources[pick.value]; let root = toNode(s.tree);
+    mode.disabled = !!s.inverted;
+    if (!s.inverted && mode.value === "up") root = invert(root);
+    graph = flameGraph(root, s.unit); holder.replaceChildren(graph); graph.search(search.value);
+  };
+  pick.onchange = show; mode.onchange = show; search.oninput = () => graph && graph.search(search.value);
+  requestAnimationFrame(show);
+  return [panel("Flame graph", "Width is time. Click a frame to zoom, click the trail to go back. Colours follow the code's mod. " +
+      `The wall-clock sampler sees every state, so the main threads include waiting; pools count running samples only. Sampling: main threads every ${sampler.mainIntervalMs} ms, other threads every ${sampler.poolIntervalMs} ms.`,
+    el("div", {class: "controls"}, pick, mode, search), holder)];
+});
+
+section("methods", "Methods", () => {
+  if (!sampler.threads.length) return [panel("Methods", "No samples were recorded.")];
+  const pick = el("select", {}, sampler.threads.map((t, i) => el("option", {value: i}, t.name)));
+  const kind = el("select", {}, el("option", {value: "methods"}, "methods"), el("option", {value: "classes"}, "classes"), el("option", {value: "groups"}, "mods and libraries"));
+  const holder = el("div");
+  const show = () => { const t = sampler.threads[pick.value];
+    holder.replaceChildren(table([{name: kind.value === "groups" ? "mod or library" : kind.value.slice(0, -1), code: kind.value !== "groups"},
+      {name: "self", num: true, fmt: v => ms(v), bar: true}, {name: "self %", num: true, fmt: (v, r) => pct(r[1], t.timeMs)},
+      {name: "total", num: true, fmt: v => ms(v), bar: true}, {name: "total %", num: true, fmt: (v, r) => pct(r[3], t.timeMs)}],
+      t[kind.value].map(r => [r[0], r[1], r[1], r[2], r[2]]), {sort: kind.value === "groups" ? 3 : 1, filter: true})); };
+  pick.onchange = show; kind.onchange = show; show();
+  const out = [panel("Hot methods", "Self: samples with the method on top of the stack. Total: samples with it anywhere on the stack.",
+    el("div", {class: "controls"}, pick, kind), holder)];
+  if (jfr && jfr.executionTop && jfr.executionTop.length) out.push(panel("JFR execution samples",
+    "The flight recorder samples without safepoint bias, so short hot methods show more truly here. Running Java only; native and waiting time are not in it.",
+    table([{name: "thread"}, {name: "method", code: true}, {name: "samples", num: true, fmt: v => fmt(v, 0), bar: true}], jfr.executionTop, {sort: 2, filter: true})));
+  return out;
+});
+
+section("memory", "Memory and GC", () => {
+  const out = [];
+  if (D.memory && D.memory.length) out.push(panel("Heap (MB)", null, lineChart([
+    {t: D.memory.map(r => r[0]), v: D.memory.map(r => r[1]), color: css("--accent"), label: "heap used"},
+    {t: D.memory.map(r => r[0]), v: D.memory.map(r => r[2]), color: css("--muted"), label: "heap committed"}],
+    {unit: "MB", tMax: D.meta.seconds, refs: [{v: D.system.maxHeapMb, color: css("--bad"), label: "max heap"}]})));
+  if (!jfr) { out.push(panel("Flight recorder", D.meta.jfrError || "Not available.")); return out; }
+  out.push(panel("Garbage collections", `${jfr.gc.length} collections`, table([{name: "at (s)", num: true, fmt: v => fmt(v, 2)}, {name: "collector"}, {name: "cause"},
+    {name: "pause total", num: true, fmt: ms, bar: true}, {name: "longest pause", num: true, fmt: ms}, {name: "duration", num: true, fmt: ms}], jfr.gc, {sort: 3})));
+  out.push(el("div", {class: "grid2"},
+    panel("Allocation sites", `About ${fmt(jfr.allocatedMb, 0)} MB allocated (${fmt(jfr.allocatedMb / D.meta.seconds, 0)} MB/s). Site = innermost frame outside the JDK.`,
+      table([{name: "type at site", code: true}, {name: "MB", num: true, fmt: v => fmt(v, 1), bar: true}], jfr.allocationSites, {sort: 1, filter: true})),
+    panel("Allocated types", null, table([{name: "type", code: true}, {name: "MB", num: true, fmt: v => fmt(v, 1), bar: true}], jfr.allocationTypes, {sort: 1, filter: true}))));
+  return out;
+});
+
+section("threads", "Threads", () => {
+  const out = [];
+  const rows = sampler.threads.map(t => [t.name, t.timeMs, ...["RUNNABLE", "BLOCKED", "WAITING", "TIMED_WAITING"].map(s => (t.states[s] || 0))]);
+  out.push(panel("Sampled threads", "Wall-clock time by thread state. Pool threads are folded by name (digits become #).",
+    table([{name: "thread"}, {name: "sampled", num: true, fmt: ms, bar: true}, {name: "running", num: true, fmt: ms}, {name: "blocked", num: true, fmt: ms},
+      {name: "waiting", num: true, fmt: ms}, {name: "timed wait", num: true, fmt: ms}], rows, {sort: 1, filter: true})));
+  if (sampler.cpu && sampler.cpu.length) out.push(panel("CPU time per thread", "Exact CPU time each thread used during the capture, native code included.",
+    table([{name: "thread"}, {name: "CPU", num: true, fmt: ms, bar: true}, {name: "of capture", num: true, fmt: (v, r) => pct(r[1], D.meta.seconds * 1000)}],
+      sampler.cpu.map(r => [r[0], r[1], r[1]]), {sort: 1, filter: true})));
+  if (jfr && jfr.cpu && jfr.cpu.length) out.push(panel("Process CPU load", "Share of all cores, sampled every second.", lineChart([
+    {t: jfr.cpu.map(r => r[0]), v: jfr.cpu.map(r => 100 * r[1]), color: css("--accent"), label: "game"},
+    {t: jfr.cpu.map(r => r[0]), v: jfr.cpu.map(r => 100 * r[2]), color: css("--muted"), label: "whole machine"}], {unit: "%", tMax: D.meta.seconds, height: 180})));
+  if (jfr && jfr.locks && jfr.locks.length) out.push(panel("Lock contention", "Threads that waited at least 1 ms to enter a synchronized block.",
+    table([{name: "monitor at site (thread)", code: true}, {name: "times", num: true, fmt: v => fmt(v, 0)}, {name: "total wait", num: true, fmt: ms, bar: true},
+      {name: "longest", num: true, fmt: ms}], jfr.locks, {sort: 2, filter: true})));
+  if (sampler.idle && sampler.idle.length) out.push(panel("Idle threads", "Threads never seen running.",
+    el("p", {class: "muted"}, sampler.idle.map(r => r[0]).join(", "))));
+  out.push(panel("Profiler overhead", null, el("p", {}, `${fmt(sampler.mainSamples, 0)} main-thread samples and ${fmt(sampler.poolSamples, 0)} full dumps; the sampler spent ${ms(sampler.overheadMs)} taking them (${pct(sampler.overheadMs, sampler.elapsedMs)} of the capture).`)));
+  return out;
+});
+
+section("world", "World", () => {
+  const out = [];
+  const census = (rows, what) => table([{name: what, code: true}, {name: "count", num: true, fmt: v => fmt(v, 0), bar: true}], rows || [], {sort: 1, filter: true, limit: 200});
+  if (client && client.census && client.census.entities) {
+    out.push(el("div", {class: "grid2"},
+      panel("Block entities within 64 blocks", "Most block-entity renderers draw within 64 blocks, so these are the ones a frame can pay for.", census(client.census.blockEntitiesWithin64, "block entity")),
+      panel(`Block entities loaded on the client (${fmt(client.census.loadedChunks, 0)} chunks)`, null, census(client.census.blockEntities, "block entity")),
+      panel(`Entities in the client level (${fmt(client.census.entityCount, 0)})`, null, census(client.census.entities, "entity"))));
+  }
+  const empty = server && server.levels ? server.levels.filter(l => !l.loadedChunks).map(l => l.name) : [];
+  if (empty.length) out.push(el("p", {class: "muted"}, `Not loaded during the capture: ${empty.join(", ")}.`));
+  if (server && server.levels) for (const level of server.levels.filter(l => l.loadedChunks)) out.push(el("div", {class: "grid2"},
+    panel(`${level.name}: entities`, `${fmt(level.loadedChunks, 0)} loaded chunks`, census(level.entities, "entity")),
+    panel(`${level.name}: block entities near players`, `${fmt(level.chunksAroundPlayers, 0)} chunks within view distance of a player`, census(level.blockEntitiesAroundPlayers, "block entity"))));
+  if (!out.length) out.push(panel("World", "No census was taken."));
+  return out;
+});
+
+section("system", "System", () => {
+  const sys = {...D.system}; delete sys.mods; delete sys.jvmArgs;
+  const out = [el("div", {class: "grid2"}, panel("Capture", null, kv(D.meta)), panel("Machine and JVM", null, kv(sys)))];
+  if (client && client.setup) out.push(panel("Graphics setup", null, kv(client.setup)));
+  out.push(panel("JVM arguments", "Paths under your home folder are shown as ~; arguments that look like secrets are left out.",
+    el("p", {}, (D.system.jvmArgs || []).map(a => el("code", {}, a)).flatMap(c => [c, " "]))));
+  out.push(panel(`Mods (${(D.system.mods || []).length})`, null, table([{name: "id", code: true}, {name: "version", code: true}], D.system.mods || [], {sort: -1, filter: true, limit: 1000})));
+  return out;
+});
+
+/* ---------- wiring ---------- */
+$("#meta").textContent = `${D.meta.created.replace("_", " ")} · ${D.meta.side} · Minecraft ${D.meta.minecraft} ${D.meta.loader} · Golem Core ${D.meta.golemCore || "?"} · ${fmt(D.meta.seconds, 1)} s`;
+const built = {};
+function open(id) {
+  for (const b of $("#nav").children) b.classList.toggle("on", b.dataset.id === id);
+  for (const s of $("#main").children) s.classList.toggle("on", s.id === id);
+  if (!built[id]) { const s = sections.find(x => x.id === id); $("#" + id).append(...s.build()); built[id] = true; }
+  try { localStorage.setItem("golem-profile-tab", id); } catch (e) { /* storage blocked */ }
+}
+for (const s of sections) {
+  $("#nav").append(el("button", {"data-id": s.id, onclick: () => open(s.id)}, s.title));
+  $("#main").append(el("section", {id: s.id}));
+}
+let first = "overview"; try { const t = localStorage.getItem("golem-profile-tab"); if (sections.some(s => s.id === t)) first = t; } catch (e) { /* storage blocked */ }
+open(first);
+$("#dl").onclick = () => { const a = el("a", {href: URL.createObjectURL(new Blob([JSON.stringify(D)], {type: "application/json"})), download: `profile-${D.meta.created}-${D.meta.side}.json`}); a.click(); };
+$("#theme").onclick = () => { const r = document.documentElement, dark = r.dataset.theme ? r.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  r.dataset.theme = dark ? "light" : "dark"; brushCharts.clear(); selectionListeners.length = 0;
+  // Canvas colours are read at draw time, so every built tab is rebuilt in the new theme.
+  let current = "overview";
+  for (const s of $("#main").children) { if (s.classList.contains("on")) current = s.id; delete built[s.id]; s.replaceChildren(); }
+  open(current); };
+</script>
+</body>
+</html>

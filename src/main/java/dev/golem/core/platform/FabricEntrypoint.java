@@ -1,6 +1,7 @@
 package dev.golem.core.platform;
 
 import dev.golem.core.client.UnbakedModels;
+import dev.golem.core.profiler.ProfilerCommands;
 
 //? if fabric {
 /*import dev.golem.core.GolemCore;
@@ -29,6 +30,7 @@ public class FabricEntrypoint implements ModInitializer {
         dev.golem.core.world.RecipeTables.init();
         dev.golem.core.world.LootCounts.init();
         dev.golem.core.data.DataFiles.init();
+        ProfilerCommands.init();
         // The GUI scene renderer must be registered before the game renderer builds its PiP list.
         if (Platform.isClient()) dev.golem.core.gui.GuiScenes.bootstrap();
         // Every Golem-based mod's golemcore:entry, in dependency order, and the registries filled once.

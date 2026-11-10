@@ -1,6 +1,7 @@
 package dev.golem.core.platform;
 
 import dev.golem.core.client.UnbakedModels;
+import dev.golem.core.profiler.ProfilerCommands;
 
 //? if forge {
 /*import dev.golem.core.GolemCore;
@@ -21,6 +22,8 @@ public final class ForgeEntrypoint {
         dev.golem.core.world.RecipeTables.init();
         dev.golem.core.world.LootCounts.init();
         dev.golem.core.data.DataFiles.init();
+        ProfilerCommands.init();
+        if (Platform.isClient()) ProfilerCommands.initClient();
         if (Platform.isClient()) dev.golem.core.data.DataFiles.initClient();
         if (Platform.isClient()) UnbakedModels.initialize();
         if (Platform.isClient()) dev.golem.core.world.RecipeTables.initClient();

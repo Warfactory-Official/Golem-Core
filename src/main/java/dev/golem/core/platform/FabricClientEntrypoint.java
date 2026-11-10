@@ -14,6 +14,7 @@ public final class FabricClientEntrypoint implements ClientModInitializer {
     public void onInitializeClient() {
         dev.golem.core.world.RecipeTables.initClient();
         dev.golem.core.data.DataFiles.initClient();
+        dev.golem.core.profiler.ProfilerCommands.initClient();
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents.CLIENT_STARTED.register(
                 client -> dev.golem.core.net.GolemNetwork.flushClientRegistrations());
     }

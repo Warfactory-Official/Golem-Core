@@ -1,5 +1,7 @@
 package dev.golem.core.platform;
 
+import java.util.Map;
+import java.util.TreeMap;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -80,6 +82,21 @@ public final class Platform {
         /*return net.minecraftforge.fml.ModList.get().getModContainerById(modId)
                 .map(c -> c.getModInfo().getVersion().toString()).orElse(null);
         *///?}
+    }
+
+    /** Every loaded mod's id and version, sorted by id. */
+    public static Map<String, String> loadedMods() {
+        Map<String, String> mods = new TreeMap<>();
+        //? if fabric {
+        /*for (var mod : net.fabricmc.loader.api.FabricLoader.getInstance().getAllMods()) {
+            mods.put(mod.getMetadata().getId(), mod.getMetadata().getVersion().getFriendlyString());
+        }
+        *///?} elif neoforge {
+        for (var mod : net.neoforged.fml.ModList.get().getMods()) mods.put(mod.getModId(), mod.getVersion().toString());
+        //?} elif forge {
+        /*for (var mod : net.minecraftforge.fml.ModList.get().getMods()) mods.put(mod.getModId(), mod.getVersion().toString());
+        *///?}
+        return mods;
     }
 
     /** Whether {@code player} is the loader's fake player (a machine or block acting as a player). */
