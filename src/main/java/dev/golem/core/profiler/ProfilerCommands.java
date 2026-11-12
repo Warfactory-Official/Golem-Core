@@ -55,6 +55,12 @@ public final class ProfilerCommands {
         MinecraftServer server = source.getServer();
         Profiler.Listener listener = new Profiler.Listener() {
             @Override
+            public void writing() {
+                server.execute(() -> source.sendSuccess(() -> Component.literal(
+                        "Capture finished, writing the report. Keep the server running until it is saved."), true));
+            }
+
+            @Override
             public void finished(Path report) {
                 server.execute(() -> source.sendSuccess(() -> Component.literal("Profile saved to "
                         + Profiler.directory().getParent().relativize(report)), true));
@@ -123,6 +129,10 @@ public final class ProfilerCommands {
     /** The action-bar countdown a capture shows to whoever started it. */
     static Component countdown(int secondsLeft) {
         return Component.literal("Profiling: " + secondsLeft + "s Left").withStyle(ChatFormatting.GOLD);
+    }
+
+    static Component writingNotice() {
+        return Component.literal("Profiling: writing report").withStyle(ChatFormatting.GOLD);
     }
 
     static Component busy() {

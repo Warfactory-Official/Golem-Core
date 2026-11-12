@@ -91,7 +91,7 @@ final class GemModels {
 
     private static Material perFace(SimpleMaterial.Builder builder) {
         //? if >=26.1 {
-        if (!GemRender.UNFIXED) return builder.build();
+        if (GemRender.FORK && !GemRender.UNFIXED) return builder.build();
         return builder.shaders(PER_FACE).cardinalLightingMode(CardinalLightingMode.OFF).build();
         //?} else {
         /*return builder.build();

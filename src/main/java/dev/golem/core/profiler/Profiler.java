@@ -59,6 +59,9 @@ public final class Profiler {
 
     /** Called on the capture thread; implementations hop to their own thread to talk to players. */
     public interface Listener {
+        /** The capture ended and the report is being written, which can take several seconds. */
+        void writing();
+
         void finished(Path report);
 
         void failed(String reason);
@@ -139,14 +142,15 @@ public final class Profiler {
             samplerThread.setDaemon(true);
             samplerThread.setPriority(Thread.MAX_PRIORITY);
             samplerThread.start();
-            Thread thread = new Thread(() -> {
+            // The report's call trees are as deep as the deepest sampled stack, and Gson writes them recursively.
+            Thread thread = new Thread(null, () -> {
                 try {
                     run();
                 } finally {
                     sampler.stop();
                     finished(this);
                 }
-            }, "Golem profiler");
+            }, "Golem profiler", 256L << 20);
             thread.setDaemon(true);
             thread.start();
         }
@@ -161,8 +165,11 @@ public final class Profiler {
                 double elapsed = (System.nanoTime() - startNanos) / 1e9;
                 sampler.stop();
                 for (Probe probe : probes) probe.stop();
-                listener.finished(write(elapsed));
-            } catch (Exception | LinkageError failure) {
+                listener.writing();
+                Path report = write(elapsed);
+                GolemCore.LOG.info("Profile saved to {}", report);
+                listener.finished(report);
+            } catch (Exception | LinkageError | VirtualMachineError failure) {
                 GolemCore.LOG.error("Profiler capture failed", failure);
                 for (Probe probe : probes) probe.stop();
                 listener.failed(String.valueOf(failure));
@@ -208,8 +215,9 @@ public final class Profiler {
                 try {
                     report.add("jfr", jfr.finish(dir.resolve(base + ".jfr")));
                     meta.addProperty("jfrFile", base + ".jfr");
-                } catch (IOException | RuntimeException failed) {
-                    // A dump or parse failure costs the JFR sections only, not the capture.
+                } catch (IOException | RuntimeException | VirtualMachineError failed) {
+                    // A dump or parse failure, or a recording too large to read back, costs the JFR sections only.
+                    GolemCore.LOG.warn("Profiler could not read its flight recording", failed);
                     jfrError = String.valueOf(failed);
                 }
             }
@@ -240,8 +248,17 @@ public final class Profiler {
             }
             report.add("spikes", spikes);
             Path html = dir.resolve(base + ".html");
-            ReportWriter.write(report, html);
-            return html;
+            try {
+                ReportWriter.write(report, html);
+                return html;
+            } catch (IOException | RuntimeException | VirtualMachineError failed) {
+                // The data still reaches the user, as plain JSON.
+                GolemCore.LOG.error("Profiler could not write {}", html, failed);
+                Files.deleteIfExists(html);
+                Path json = dir.resolve(base + ".json");
+                ReportWriter.writeJson(report, json);
+                return json;
+            }
         }
 
         private JsonObject waitForSampler() throws InterruptedException {

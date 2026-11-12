@@ -29,6 +29,15 @@ final class ProfilerClient {
         boolean started = Profiler.start(seconds, server != null ? "singleplayer" : "client", probes,
                 new Profiler.Listener() {
                     @Override
+                    public void writing() {
+                        minecraft.execute(() -> {
+                            minecraft.gui.setOverlayMessage(ProfilerCommands.writingNotice(), false);
+                            feedback.success(source, Component.literal(
+                                    "[Golem] Capture finished, writing the report. Keep the game open until it is saved."));
+                        });
+                    }
+
+                    @Override
                     public void finished(Path report) {
                         minecraft.execute(() -> feedback.success(source, Component.literal("[Golem] Profile saved: ")
                                 .append(fileLink(report))

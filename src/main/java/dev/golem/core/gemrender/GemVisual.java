@@ -94,10 +94,10 @@ final class GemVisual<T extends BlockEntity, S extends CompatRenderState>
     /**
      * Where vanilla would draw it: within its view distance unless off screen, and on 26.1 short of the render-distance
      * fog, which GemRender's 26.1 fog lacks. From the camera alone, so vanilla and this visual agree each frame.
-     * Never under a shader pack: GemRender's 26.1 Flywheel does not see Iris and draws outside the pack's targets.
+     * Under a shader pack only while Flywheel's backend draws through the pack ({@link GemRender#instancesUnderPack}).
      */
     private boolean drawsAt(Vec3 camera) {
-        if (ShaderPacks.inUse()) return false;
+        if (ShaderPacks.inUse() && !GemRender.instancesUnderPack()) return false;
         Vec3 centre = Vec3.atCenterOf(pos);
         if (!model.isOffScreen() && !centre.closerThan(camera, model.viewDistance())) return false;
         //? if >=26.1 {
@@ -142,11 +142,7 @@ final class GemVisual<T extends BlockEntity, S extends CompatRenderState>
             if (sampled != writtenLight) primed = false;
             state.lightCoords = sampled;
 
-            //? if >=26.1 {
-            Vec3 camera = ctx.camera().position();
-            //?} else {
-            /*Vec3 camera = ctx.camera().getPosition();
-            *///?}
+            Vec3 camera = camera();
             if (written && !drawsAt(camera)) {
                 hide();
                 return;

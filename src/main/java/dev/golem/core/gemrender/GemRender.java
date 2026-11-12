@@ -16,6 +16,10 @@ import dev.golem.core.render.Instancing;
 import dev.golem.core.render.gem.GemBER;
 import java.util.function.Supplier;
 //? if neoforge && >=26.1 {
+import dev.engine_room.flywheel.backend.engine.uniform.FogUniforms;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import net.caffeinemc.mods.sodium.api.blockentity.BlockEntityRenderHandler;
 //?}
 import net.minecraft.core.BlockPos;
@@ -32,6 +36,8 @@ public final class GemRender {
     private static boolean installed;
     /** GemRender 0.1.14, whose faults Core works around here and in {@link GemModels}; later releases fix them. */
     static final boolean UNFIXED = GemRenderMixinPlugin.isPatched(Platform.modVersion("gemrender"));
+    /** GemRender 0.1.21 and older's own 26.1 Flywheel: blind to Iris, and lights back faces as 26.1 vanilla does. */
+    static final boolean FORK = String.valueOf(Platform.modVersion("flywheel")).endsWith("-gemrender");
 
     private GemRender() {}
 
@@ -77,9 +83,23 @@ public final class GemRender {
                 });
         *///?}
         //? if neoforge && >=26.1 {
+        // By handle: only 0.1.14's fork has a no-argument update; upstream uploads fog itself.
+        MethodHandle fogUpdate;
+        try {
+            fogUpdate = MethodHandles.publicLookup().findStatic(FogUniforms.class, "update", MethodType.methodType(void.class));
+        } catch (ReflectiveOperationException e) {
+            GolemCore.LOG.warn("GemRender 0.1.14's Flywheel has no fog upload to call; fog stays as uploaded", e);
+            return;
+        }
+        MethodHandle update = fogUpdate;
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(net.neoforged.bus.api.EventPriority.LOWEST,
-                (net.neoforged.neoforge.client.event.ViewportEvent.RenderFog event) ->
-                        dev.engine_room.flywheel.backend.engine.uniform.FogUniforms.update());
+                (net.neoforged.neoforge.client.event.ViewportEvent.RenderFog event) -> {
+                    try {
+                        update.invokeExact();
+                    } catch (Throwable e) {
+                        throw new IllegalStateException(e);
+                    }
+                });
         //?}
     }
 
@@ -107,10 +127,20 @@ public final class GemRender {
         return GemVisual.owns(pos);
     }
 
-    /** The selected backend's path ({@code instancing}, {@code indirect}, {@code off}). */
+    /**
+     * Whether instances reach the picture under a shader pack. Flywheel's own backends stand down under one, so a
+     * backend still on is a compat mod's (Colorwheel, irisflw) drawing through the pack.
+     */
+    static boolean instancesUnderPack() {
+        return !FORK && BackendManager.isBackendOn();
+    }
+
+    /** The selected backend's path ({@code instancing}, {@code indirect}, {@code off}), namespaced unless Flywheel's. */
     static String backendName() {
         Backend backend = BackendManager.currentBackend();
-        return backend == null ? "starting" : Backend.REGISTRY.getIdOrThrow(backend).getPath();
+        if (backend == null) return "starting";
+        var id = Backend.REGISTRY.getIdOrThrow(backend);
+        return id.getNamespace().equals("flywheel") ? id.getPath() : id.toString();
     }
 
     public static Instancing.Report report() {
