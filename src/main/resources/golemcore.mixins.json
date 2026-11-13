@@ -6,6 +6,7 @@
   "compatibilityLevel": "${mixin_compatibility}",
   "mixins": [
     "MixinBeforeLevelTicks",
+    "MixinSpawnGroupPick",
     "MixinLivingEffects",
     "MixinAcceptedLivingDeath",
     "MixinAcceptedPlayerDeath",

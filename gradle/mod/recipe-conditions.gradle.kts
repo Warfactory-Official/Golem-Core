@@ -11,7 +11,7 @@ import groovy.json.JsonSlurper
 //   loader       "neoforge", "forge" or "fabric" (required)
 //
 // Every loader can skip a data file (a recipe, an advancement, a loot table) when a condition fails, and each spells
-// it differently. A mod writes its conditions once, under the neutral key "golem:conditions", and this rewrites that
+// it differently. Forge 1.20.1 is the exception for loot tables: it never reads their conditions, so they always load. A mod writes its conditions once, under the neutral key "golem:conditions", and this rewrites that
 // key in processResources' output to the node's own spelling.
 //
 // Not for removing another mod's file by shipping a never-file at its path: which mod's pack wins a path is not

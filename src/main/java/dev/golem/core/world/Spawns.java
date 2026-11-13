@@ -119,31 +119,14 @@ public final class Spawns {
 
     /** Every listener, in phase order; register through the {@code on...} method or directly, with a phase. */
     public static final dev.golem.core.hook.Hook<PotentialSpawnsHook> POTENTIAL = dev.golem.core.hook.Hook.notifying();
-    private static boolean potentialHooked;
 
     /**
-     * Registers a hook run every time the natural spawner reads the spawn list at a position (vanilla's private
-     * {@code NaturalSpawner.mobsAt}, asked once to pick a group entry and once per position to confirm it) - the
-     * modern stand-in for 1.7's {@code WorldEvent.PotentialSpawns}, which {@code WorldServer.spawnRandomCreature} and
-     * {@code canCreatureTypeSpawnHere} fired at the same two places. Forge-like loaders answer from their own
-     * {@code LevelEvent.PotentialSpawns}, which they fire from {@code mobsAt}; Fabric from
-     * {@code MixinNaturalSpawnerCheck}'s HEAD inject on {@code mobsAt}. Notification only: the list is not changed.
+     * Registers a hook run once per natural spawn group, when the spawner picks the group's entry, before any
+     * placement check ({@code MixinSpawnGroupPick}). 1.7 fired {@code WorldEvent.PotentialSpawns} there, from
+     * {@code WorldServer.spawnRandomCreature}, but only after its own position check. Notification only.
      */
     public static synchronized void onPotentialSpawns(PotentialSpawnsHook hook) {
         POTENTIAL.register(hook);
-        if (potentialHooked) return;
-        potentialHooked = true;
-        //? if neoforge {
-        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
-                (net.neoforged.neoforge.event.level.LevelEvent.PotentialSpawns event) -> {
-                    if (event.getLevel() instanceof ServerLevel level) potentialSpawns(level, event.getMobCategory(), event.getPos());
-                });
-        //?} elif forge {
-        /*net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(
-                (net.minecraftforge.event.level.LevelEvent.PotentialSpawns event) -> {
-                    if (event.getLevel() instanceof ServerLevel level) potentialSpawns(level, event.getMobCategory(), event.getPos());
-                });
-        *///?}
     }
 
     /** Runs the potential-spawn hooks. Called by the loader hooks. */
