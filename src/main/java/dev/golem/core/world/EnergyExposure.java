@@ -39,6 +39,10 @@ public final class EnergyExposure {
 
     private EnergyExposure() {}
 
+    //? if forge {
+    /*private static int forgeKeys;
+    *///?}
+
     /** Whether anything on this node can see what {@link #expose} publishes. */
     public static boolean supported() {
         //? if forgelike {
@@ -74,21 +78,19 @@ public final class EnergyExposure {
                                 },
                                 blocks.get()));
         *///?} elif forge {
-        /*Block[][] carriers = new Block[1][];
+        /*java.util.List<java.util.Set<Block>> carriers = new java.util.ArrayList<>(1);
+        // Forge refuses a second capability under one key on a block entity, and two sources may share a block.
+        var key = dev.golem.core.Ids.of("golemcore", forgeKeys++ == 0 ? "energy" : "energy_" + (forgeKeys - 1));
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.addGenericListener(
                 net.minecraft.world.level.block.entity.BlockEntity.class,
                 (net.minecraftforge.event.AttachCapabilitiesEvent<
                         net.minecraft.world.level.block.entity.BlockEntity> event) -> {
                     // Attach time is block-entity CONSTRUCTION: there is no level yet, so the block is
                     // all there is to match on and the level is resolved when the capability is asked for.
-                    if (carriers[0] == null) carriers[0] = blocks.get();
+                    if (carriers.isEmpty()) carriers.add(java.util.Set.copyOf(java.util.Arrays.asList(blocks.get())));
                     net.minecraft.world.level.block.entity.BlockEntity be = event.getObject();
-                    Block block = be.getBlockState().getBlock();
-                    for (Block candidate : carriers[0]) {
-                        if (candidate != block) continue;
-                        event.addCapability(dev.golem.core.Ids.of("golemcore", "energy"),
-                                new ForgeProvider(source, be));
-                        return;
+                    if (carriers.get(0).contains(be.getBlockState().getBlock())) {
+                        event.addCapability(key, new ForgeProvider(source, be));
                     }
                 });
         *///?} elif fabric {

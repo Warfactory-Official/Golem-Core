@@ -3,6 +3,7 @@ package dev.golem.core.emi;
 //? if emi {
 /*import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import dev.emi.emi.EmiUtil;
 import dev.emi.emi.api.render.EmiRender;
 import dev.emi.emi.api.render.EmiTooltipComponents;
 import dev.emi.emi.api.stack.EmiIngredient;
@@ -70,11 +71,17 @@ final class IconFluidStack extends FluidEmiStack {
         return Screen.getTooltipFromItem(Minecraft.getInstance(), icon);
     }
 
-    /^* The icon's own lines, which carry the amount, then the mod name. ^/
+    /^*
+     * The icon's own lines, which carry the amount, then the fluid's mod name once. EMI already ends every item tooltip
+     * with the item's mod name (its {@code ItemStackMixin}), which this replaces.
+     ^/
     @Override
     public List<ClientTooltipComponent> getTooltip() {
+        List<Component> lines = new ArrayList<>(getTooltipText());
+        String itemMod = EmiUtil.getModName(BuiltInRegistries.ITEM.getKey(icon.getItem()).getNamespace());
+        if (!lines.isEmpty() && lines.get(lines.size() - 1).getString().equals(itemMod)) lines.remove(lines.size() - 1);
         List<ClientTooltipComponent> tooltip = new ArrayList<>();
-        for (Component line : getTooltipText()) tooltip.add(ClientTooltipComponent.create(line.getVisualOrderText()));
+        for (Component line : lines) tooltip.add(ClientTooltipComponent.create(line.getVisualOrderText()));
         EmiTooltipComponents.appendModName(tooltip, BuiltInRegistries.FLUID.getKey(fluid).getNamespace());
         return tooltip;
     }

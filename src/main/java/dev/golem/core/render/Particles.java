@@ -53,6 +53,10 @@ public final class Particles {
         return new Vec3(particle.x, particle.y, particle.z);
     }
 
+    public static void noPhysics(Particle particle) {
+        particle.hasPhysics = false;
+    }
+
     /** Visits pending then active particles on the client thread; the action must not alter their collections. */
     public static void forEach(Minecraft client, Consumer<Particle> action) {
         var engine = client.particleEngine;

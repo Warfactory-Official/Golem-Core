@@ -70,6 +70,8 @@ accessible field net/minecraft/world/entity/Entity stuckSpeedMultiplier Lnet/min
 accessible field net/minecraft/client/particle/Particle x D
 accessible field net/minecraft/client/particle/Particle y D
 accessible field net/minecraft/client/particle/Particle z D
+# Particles.noPhysics: a particle's collision flag is protected with no setter.
+accessible field net/minecraft/client/particle/Particle hasPhysics Z
 # Mobs.fox*: mobs that reuse fox AI read these private goals' state.
 accessible class net/minecraft/world/entity/animal/fox/Fox$SleepGoal
 accessible class net/minecraft/world/entity/animal/fox/Fox$FoxBehaviorGoal

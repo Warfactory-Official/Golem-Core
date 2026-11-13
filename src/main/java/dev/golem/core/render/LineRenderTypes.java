@@ -32,7 +32,10 @@ public final class LineRenderTypes {
         return RenderTypes.lines();
     }
 
-    /** Lines drawn over everything: no depth test, no depth write (1.7 {@code glDisable(GL_DEPTH_TEST)}). */
+    /**
+     * Lines drawn over everything and without fog: no depth test, no depth write (1.7 {@code glDisable(GL_DEPTH_TEST)}
+     * in its render-last pass, which ran with fog off).
+     */
     public static RenderType seeThrough(float width) {
         return SEE_THROUGH;
     }
@@ -45,7 +48,7 @@ public final class LineRenderTypes {
         return BY_WIDTH.computeIfAbsent(width, w -> Factory.lines(w, false));
     }
 
-    /^* Lines drawn over everything: no depth test, no depth write (1.7 {@code glDisable(GL_DEPTH_TEST)}). ^/
+    /^* Lines drawn over everything and without fog (1.7's render-last pass): no depth test, no depth write. ^/
     public static RenderType seeThrough(float width) {
         return SEE_THROUGH.computeIfAbsent(width, w -> Factory.lines(w, true));
     }
@@ -54,6 +57,14 @@ public final class LineRenderTypes {
     private static final class Factory extends RenderType {
         private Factory() { super(null, null, null, 0, false, false, null, null); }
 
+        private static float fogStart;
+
+        // A fog start past every vertex is vanilla's own setupNoFog; lines take no texturing, so the shard is free.
+        private static final TexturingStateShard NO_FOG = new TexturingStateShard("golem_no_fog", () -> {
+            fogStart = com.mojang.blaze3d.systems.RenderSystem.getShaderFogStart();
+            com.mojang.blaze3d.systems.RenderSystem.setShaderFogStart(Float.MAX_VALUE);
+        }, () -> com.mojang.blaze3d.systems.RenderSystem.setShaderFogStart(fogStart));
+
         static RenderType lines(float width, boolean seeThrough) {
             CompositeState.CompositeStateBuilder state = CompositeState.builder()
                     .setShaderState(RENDERTYPE_LINES_SHADER)
@@ -61,7 +72,7 @@ public final class LineRenderTypes {
                     .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
                     .setCullState(NO_CULL);
             if (seeThrough) {
-                state.setDepthTestState(NO_DEPTH_TEST).setWriteMaskState(COLOR_WRITE);
+                state.setDepthTestState(NO_DEPTH_TEST).setWriteMaskState(COLOR_WRITE).setTexturingState(NO_FOG);
             } else {
                 state.setLayeringState(VIEW_OFFSET_Z_LAYERING).setOutputState(ITEM_ENTITY_TARGET)
                         .setWriteMaskState(COLOR_DEPTH_WRITE);

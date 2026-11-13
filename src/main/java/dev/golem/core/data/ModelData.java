@@ -95,7 +95,7 @@ public final class ModelData {
         //?} elif >=1.20.5 {
         /*stack.remove(DataComponents.DYED_COLOR);
         *///?} else {
-        /*if (stack.hasTag()) stack.getTag().remove(LEGACY_COLOR);
+        /*stack.removeTagKey(LEGACY_COLOR);
         *///?}
     }
 

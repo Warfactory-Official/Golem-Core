@@ -6,6 +6,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.vehicle.minecart.AbstractMinecart;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.RailBlock;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 
 /**
@@ -38,6 +39,15 @@ public class CompatRailBlock extends RailBlock {
 
     /** Called once per server tick for a cart riding this rail. */
     public void onMinecartPass(BlockState state, Level level, BlockPos pos, AbstractMinecart cart) {}
+
+    /** Vanilla 1.20.1 turns a straight rail's half turn into a quarter turn (Forge patched it); two quarters do not. */
+    @Override
+    public BlockState rotate(BlockState state, Rotation rotation) {
+        if (rotation == Rotation.CLOCKWISE_180) {
+            return super.rotate(super.rotate(state, Rotation.CLOCKWISE_90), Rotation.CLOCKWISE_90);
+        }
+        return super.rotate(state, rotation);
+    }
 
     /** The rail block a cart is riding, the loader's {@code getCurrentRailPosition}. */
     public static BlockPos railPosition(AbstractMinecart cart) {
