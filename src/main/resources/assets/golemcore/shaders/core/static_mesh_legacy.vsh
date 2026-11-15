@@ -41,6 +41,14 @@ out vec4 lightMapColor;
 out vec4 overlayColor;
 out vec2 texCoord0;
 
+#ifdef GOLEM_GEMRENDER_LIGHTS
+// GemRender's patch of the vanilla vertex stage, whose fragment stage it also patches to read these
+out vec3 _grl_pos;
+out vec3 _grl_normal;
+out vec4 _grl_lmColor;
+out float _grl_sky;
+#endif
+
 // The CPU arithmetic, operation for operation (JOML without FMA: every product and sum rounded on its own). precise
 // keeps the compiler from fusing a*b+c into one rounding or reordering, so the same floats come out.
 vec3 golem_transform_position(mat4 m, vec3 p) {
@@ -74,6 +82,10 @@ vec3 golem_transform_normal(mat3 m, vec3 n, bool normalise) {
 }
 
 void main() {
+#ifdef GOLEM_GEMRENDER_LIGHTS
+    _grl_lmColor = vec4(1.0);
+    _grl_sky = 0.0;
+#endif
     vec3 position = golem_transform_position(MeshPose, Position);
     vec3 normal = golem_transform_normal(MeshNormal, Normal, MeshNormalize != 0);
 
@@ -82,6 +94,15 @@ void main() {
     vertexDistance = fog_distance(position, FogShape);
     vertexColor = minecraft_mix_light(Light0_Direction, Light1_Direction, normal, MeshColor);
     lightMapColor = texelFetch(Sampler2, MeshLight / 16, 0);
+#ifdef GOLEM_GEMRENDER_LIGHTS
+    _grl_lmColor = lightMapColor;
+    _grl_sky = clamp(float((MeshLight / 16).y) / 15.0, 0.0, 1.0);
+    lightMapColor = max(lightMapColor, vec4(1.0 / 255.0));
+#endif
     overlayColor = texelFetch(Sampler1, MeshOverlay, 0);
     texCoord0 = UV0;
+#ifdef GOLEM_GEMRENDER_LIGHTS
+    _grl_pos = position;
+    _grl_normal = normal;
+#endif
 }

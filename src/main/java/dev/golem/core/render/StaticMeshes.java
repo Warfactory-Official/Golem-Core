@@ -6,16 +6,19 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.golem.core.GolemCore;
 import dev.golem.core.client.ClientResourceReloads;
+import dev.golem.core.gemrender.GemShaders;
 import dev.golem.core.harness.HarnessQueryRegistry;
 import dev.golem.core.platform.Platform;
 import dev.golem.core.render.gem.Geometry;
 import dev.golem.core.render.gem.Surface;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import net.minecraft.client.Minecraft;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -67,6 +70,7 @@ public final class StaticMeshes {
     private static long fallbacks;
     private static long lastSweep;
     private static String lastWrapper = "";
+    private static boolean gemRenderInputs;
     /**
      * Writers that put their vertices into the same batch a {@code BufferBuilder} would, only faster: Embeddium's
      * (1.20.1 Forge) hands entity renderers this class instead of the vanilla builder. Anything else that is not a
@@ -352,6 +356,7 @@ public final class StaticMeshes {
         json.addProperty("fallbacks", fallbacks);
         json.addProperty("backend", Backend.NAME);
         json.addProperty("last_wrapper", lastWrapper);
+        json.addProperty("gemrender_inputs", gemRenderInputs);
         return json;
     }
 
@@ -389,7 +394,21 @@ public final class StaticMeshes {
     /** The era-specific upload and draw. */
     private static final class Backend {
 
+        /** Makes the vertex stage write the inputs GemRender's patched entity fragment stage reads. */
+        private static final String GEMRENDER_LIGHTS = "GOLEM_GEMRENDER_LIGHTS";
+
         private Backend() {}
+
+        /** GemRender patches the shared fragment stage by name; an unknown patch throws, and the immediate path draws. */
+        private static boolean gemRenderLights() throws IOException {
+            if (!Instancing.isAvailable()) return false;
+            GemShaders.Patch patch = GemShaders.entityCutout(Minecraft.getInstance().getResourceManager());
+            if (patch == GemShaders.Patch.UNKNOWN) {
+                throw new IllegalStateException("GemRender patches the entity shader in a way static meshes do not repeat");
+            }
+            gemRenderInputs = patch == GemShaders.Patch.MIRRORED;
+            return gemRenderInputs;
+        }
 
         /**
          * Whether the pose would normalise a transformed normal ({@code PoseStack.Pose.transformNormal}). The flag
@@ -409,6 +428,8 @@ public final class StaticMeshes {
         private static final int RING_SLOTS = 256;
         private static com.mojang.blaze3d.vertex.@Nullable VertexFormat format;
         private static com.mojang.blaze3d.pipeline.@Nullable RenderPipeline pipeline;
+        private static com.mojang.blaze3d.pipeline.@Nullable RenderPipeline litPipeline;
+        private static @Nullable Boolean gemRenderLights;
         private static com.mojang.blaze3d.buffers.@Nullable GpuBuffer ring;
         private static int slotBytes;
         private static int slot;
@@ -441,22 +462,10 @@ public final class StaticMeshes {
          * {@code RenderPipelines.ENTITY_CUTOUT_CULL} with only the vertex shader, its input format and the one extra
          * uniform block changed, checked against the live vanilla pipeline so a patched one is never imitated.
          */
-        private static com.mojang.blaze3d.pipeline.RenderPipeline pipeline() {
+        private static com.mojang.blaze3d.pipeline.RenderPipeline pipeline() throws IOException {
             if (pipeline == null) {
                 com.mojang.blaze3d.pipeline.RenderPipeline vanilla = net.minecraft.client.renderer.RenderPipelines.ENTITY_CUTOUT_CULL;
-                com.mojang.blaze3d.pipeline.RenderPipeline built = com.mojang.blaze3d.pipeline.RenderPipeline
-                        .builder(net.minecraft.client.renderer.RenderPipelines.MATRICES_FOG_LIGHT_DIR_SNIPPET)
-                        .withLocation(dev.golem.core.Ids.of("golemcore", "pipeline/static_mesh_entity_cutout_cull"))
-                        .withVertexShader(dev.golem.core.Ids.of("golemcore", "core/static_mesh"))
-                        .withFragmentShader("core/entity")
-                        .withSampler("Sampler0")
-                        .withSampler("Sampler2")
-                        .withSampler("Sampler1")
-                        .withShaderDefine("ALPHA_CUTOUT", 0.1F)
-                        .withUniform("StaticMesh", com.mojang.blaze3d.shaders.UniformType.UNIFORM_BUFFER)
-                        .withVertexFormat(format(), com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS)
-                        .withDepthStencilState(com.mojang.blaze3d.pipeline.DepthStencilState.DEFAULT)
-                        .build();
+                com.mojang.blaze3d.pipeline.RenderPipeline built = builder("pipeline/static_mesh_entity_cutout_cull").build();
                 if (!built.getFragmentShader().equals(vanilla.getFragmentShader())
                         || !built.getShaderDefines().equals(vanilla.getShaderDefines())
                         || built.isCull() != vanilla.isCull()
@@ -470,7 +479,26 @@ public final class StaticMeshes {
                 }
                 pipeline = WorldPipelines.add(built);
             }
-            return pipeline;
+            if (gemRenderLights == null) gemRenderLights = gemRenderLights();
+            if (!gemRenderLights) return pipeline;
+            if (litPipeline == null) litPipeline = WorldPipelines.add(
+                    builder("pipeline/static_mesh_entity_cutout_cull_gemrender").withShaderDefine(GEMRENDER_LIGHTS).build());
+            return litPipeline;
+        }
+
+        private static com.mojang.blaze3d.pipeline.RenderPipeline.Builder builder(String location) {
+            return com.mojang.blaze3d.pipeline.RenderPipeline
+                    .builder(net.minecraft.client.renderer.RenderPipelines.MATRICES_FOG_LIGHT_DIR_SNIPPET)
+                    .withLocation(dev.golem.core.Ids.of("golemcore", location))
+                    .withVertexShader(dev.golem.core.Ids.of("golemcore", "core/static_mesh"))
+                    .withFragmentShader("core/entity")
+                    .withSampler("Sampler0")
+                    .withSampler("Sampler2")
+                    .withSampler("Sampler1")
+                    .withShaderDefine("ALPHA_CUTOUT", 0.1F)
+                    .withUniform("StaticMesh", com.mojang.blaze3d.shaders.UniformType.UNIFORM_BUFFER)
+                    .withVertexFormat(format(), com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS)
+                    .withDepthStencilState(com.mojang.blaze3d.pipeline.DepthStencilState.DEFAULT);
         }
 
         static Mesh upload(String name, float[] data, int vertices) {
@@ -512,7 +540,8 @@ public final class StaticMeshes {
         }
 
         /** {@code RenderType.draw} for {@code entity_cutout_cull}, with the resident mesh as the vertex buffer. */
-        static void draw(PoseStack.Pose pose, Mesh mesh, Surface surface, int light, int overlay, int color) {
+        static void draw(PoseStack.Pose pose, Mesh mesh, Surface surface, int light, int overlay, int color)
+                throws IOException {
             com.mojang.blaze3d.pipeline.RenderPipeline pipeline = pipeline();
             net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getInstance();
             com.mojang.blaze3d.buffers.GpuBufferSlice part = block(pose, light, overlay, color);
@@ -555,7 +584,8 @@ public final class StaticMeshes {
         }
 
         static void reload() {
-            // 26.1 recompiles pipelines itself after a shader reload; the ring and the format survive.
+            // 26.1 recompiles pipelines itself after a shader reload; a resource pack may change GemRender's patch
+            gemRenderLights = null;
         }
         //?} else {
         /*static final String NAME = "vertex-buffer";
@@ -589,17 +619,38 @@ public final class StaticMeshes {
             return format;
         }
 
-        private static net.minecraft.client.renderer.ShaderInstance shader() throws java.io.IOException {
+        private static net.minecraft.client.renderer.ShaderInstance shader() throws IOException {
             if (shader == null) {
                 //? if >=1.21 {
-                shader = ShaderLoader.load(net.minecraft.client.Minecraft.getInstance().getResourceManager(),
-                        "golemcore:static_mesh_legacy", format());
+                String name = "static_mesh_legacy";
                 //?} else {
-                /^shader = ShaderLoader.load(net.minecraft.client.Minecraft.getInstance().getResourceManager(),
-                        "golemcore:static_mesh_legacy120", format());
+                /^String name = "static_mesh_legacy120";
                 ^///?}
+                net.minecraft.server.packs.resources.ResourceManager resources =
+                        net.minecraft.client.Minecraft.getInstance().getResourceManager();
+                net.minecraft.server.packs.resources.ResourceProvider provider = !gemRenderLights() ? resources
+                        : location -> withDefine(resources, location, "shaders/core/" + name + ".vsh");
+                shader = ShaderLoader.load(provider, "golemcore:" + name, format());
             }
             return shader;
+        }
+
+        // The vertex source with GEMRENDER_LIGHTS defined: legacy shader JSON has no defines.
+        private static java.util.Optional<net.minecraft.server.packs.resources.Resource> withDefine(
+                net.minecraft.server.packs.resources.ResourceManager resources,
+                net.minecraft.resources.ResourceLocation location, String vertex) {
+            java.util.Optional<net.minecraft.server.packs.resources.Resource> found = resources.getResource(location);
+            if (!location.getNamespace().equals("golemcore") || !location.getPath().equals(vertex) || found.isEmpty()) {
+                return found;
+            }
+            net.minecraft.server.packs.resources.Resource original = found.get();
+            return java.util.Optional.of(new net.minecraft.server.packs.resources.Resource(original.source(), () -> {
+                try (java.io.InputStream in = original.open()) {
+                    String text = new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8)
+                            .replaceFirst("(?m)^#version.*$", "$0\n#define " + GEMRENDER_LIGHTS);
+                    return new java.io.ByteArrayInputStream(text.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                }
+            }));
         }
 
         static Mesh upload(String name, float[] data, int vertices) {
@@ -645,7 +696,7 @@ public final class StaticMeshes {
 
         // RenderType.end and draw for the entity cutout type: its state set up and cleared around the draw exactly
         // as for the batch, the resident buffer drawn with the uniforms the batch would have had.
-        static void draw(PoseStack.Pose pose, Mesh mesh, Surface surface, int light, int overlay, int color) throws java.io.IOException {
+        static void draw(PoseStack.Pose pose, Mesh mesh, Surface surface, int light, int overlay, int color) throws IOException {
             net.minecraft.client.renderer.ShaderInstance program = shader();
             net.minecraft.client.renderer.RenderType type = surface.renderType();
             type.setupRenderState();
