@@ -89,6 +89,10 @@ public final class SubLevels {
         default Vec3 carriedVelocity(Entity entity) {
             return Vec3.ZERO;
         }
+
+        default boolean prepareArea(Level level, BlockPos min, BlockPos max) {
+            return true;
+        }
     }
 
     /** A world point in one sub-level's grid, its centre of mass ({@code anchor}) and a grid box around its blocks. */
@@ -330,6 +334,14 @@ public final class SubLevels {
 
     public static Vec3 carriedVelocity(Entity entity) {
         return backend.carriedVelocity(entity);
+    }
+
+    /**
+     * Makes the box writable before a structure is placed in it: a sub-level drops writes outside the chunks near its
+     * blocks. False, with nothing changed, when the box crosses a sub-level's edge; always true on a client.
+     */
+    public static boolean prepareArea(Level level, BlockPos min, BlockPos max) {
+        return level.isClientSide() || backend.prepareArea(level, min, max);
     }
 
     /** The world box around a block-grid box: the box itself off a sub-level, else the bounds of its turned corners. */

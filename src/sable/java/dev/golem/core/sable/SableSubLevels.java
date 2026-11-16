@@ -10,10 +10,13 @@ import dev.ryanhcode.sable.companion.math.BoundingBox3dc;
 import dev.ryanhcode.sable.companion.math.Pose3dc;
 import dev.ryanhcode.sable.physics.config.block_properties.PhysicsBlockPropertyHelper;
 import dev.ryanhcode.sable.physics.config.dimension_physics.DimensionPhysicsData;
+import dev.ryanhcode.sable.api.sublevel.SubLevelContainer;
+import dev.ryanhcode.sable.sublevel.plot.LevelPlot;
 import dev.ryanhcode.sable.sublevel.ServerSubLevel;
 import dev.ryanhcode.sable.sublevel.plot.heat.SubLevelHeatMapManager;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.EmptyBlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
@@ -148,6 +151,27 @@ final class SableSubLevels implements SubLevels.Backend {
         Vector3d local = subLevel.logicalPose().orientation()
                 .transformInverse(new Vector3d(worldImpulse.x, worldImpulse.y, worldImpulse.z));
         handle.applyImpulseAtPoint(at, local);
+    }
+
+    /** Adds the plot chunks the box needs, as Sable's own {@code moveBlocks} does, plus its two-block lighting margin. */
+    @Override
+    public boolean prepareArea(Level level, BlockPos min, BlockPos max) {
+        SubLevelContainer container = SubLevelContainer.getContainer(level);
+        if (container == null) return true;
+        List<ChunkPos> missing = new ArrayList<>();
+        LevelPlot plot = null;
+        for (int cx = (min.getX() - 2) >> 4; cx <= (max.getX() + 2) >> 4; cx++) {
+            for (int cz = (min.getZ() - 2) >> 4; cz <= (max.getZ() + 2) >> 4; cz++) {
+                ChunkPos chunk = new ChunkPos(cx, cz);
+                if (!container.inBounds(chunk) || container.getChunk(chunk) != null) continue;
+                LevelPlot owner = container.getPlot(chunk);
+                if (owner == null || (plot != null && owner != plot) || !owner.contains(chunk)) return false;
+                plot = owner;
+                missing.add(chunk);
+            }
+        }
+        for (ChunkPos chunk : missing) plot.newEmptyChunk(chunk);
+        return true;
     }
 
     @Override
