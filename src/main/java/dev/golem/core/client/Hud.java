@@ -55,16 +55,15 @@ public final class Hud {
         *///?}
     }
 
-    /** 1.20.1 shares one depth buffer across the HUD, so an overlay under it writes no depth, like vanilla's pumpkin. */
+    /**
+     * Below 26.1 an overlay under the HUD neither tests nor writes depth, like vanilla's pumpkin: HUD layers are
+     * lifted in z, and a mod drawing after them near z 0 (Jade) would fail against a fullscreen depth write.
+     */
     //? if >=26.1 {
     private static void drawUnderHud(GuiGraphicsExtractor graphics, Consumer<GuiGraphicsExtractor> renderer) {
         renderer.accept(graphics);
     }
-    //?} elif >=1.20.5 {
-    /*private static void drawUnderHud(GuiGraphics graphics, Consumer<GuiGraphics> renderer) {
-        renderer.accept(graphics);
-    }
-    *///?} else {
+    //?} else {
     /*private static void drawUnderHud(GuiGraphics graphics, Consumer<GuiGraphics> renderer) {
         graphics.flush();
         com.mojang.blaze3d.systems.RenderSystem.disableDepthTest();
