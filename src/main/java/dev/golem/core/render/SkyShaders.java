@@ -254,12 +254,14 @@ final class SkyShaders {
     private static Sky.Blend applying = Sky.Blend.ALPHA;
     private static boolean applyingPremultiplied;
 
-    /^* The program JSON {@code ShaderInstance} reads; the fragment is the mod's {@code <namespace>:shaders/core/<name>.fsh}. ^/
-    private static String programJson(String namespace, String name, int samplers) {
+    /^*
+     * The program JSON {@code ShaderInstance} reads; the fragment is the mod's {@code <namespace>:shaders/core/<name>.fsh}.
+     * No samplers, as {@link Sky}'s textured program: {@link #program} assigns the units once, {@link #render} binds them.
+     ^/
+    private static String programJson(String namespace, String name) {
         StringBuilder json = new StringBuilder();
         json.append("{\"vertex\":\"golemcore:sky_shader_legacy\",\"fragment\":\"").append(namespace).append(':').append(name)
                 .append("\",\"attributes\":[\"Position\",\"UV0\"],\"samplers\":[");
-        for (int i = 0; i < samplers; i++) json.append(i == 0 ? "" : ",").append("{\"name\":\"Sampler").append(i).append("\"}");
         json.append("],\"uniforms\":[");
         String identity = "[1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0]";
         json.append("{\"name\":\"ModelViewMat\",\"type\":\"matrix4x4\",\"count\":16,\"values\":").append(identity).append("},");
@@ -276,15 +278,24 @@ final class SkyShaders {
         ShaderInstance program = PROGRAMS.get(key);
         if (program != null) return program;
         ResourceLocation jsonId = dev.golem.core.Ids.of(namespace, "shaders/core/golem_sky/" + name + ".json");
-        byte[] json = programJson(namespace, name, samplers).getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        byte[] json = programJson(namespace, name).getBytes(java.nio.charset.StandardCharsets.UTF_8);
         ResourceProvider base = Minecraft.getInstance().getResourceManager();
         ResourceProvider provider = location -> location.equals(jsonId)
                 ? java.util.Optional.of(new Resource(Minecraft.getInstance().getVanillaPackResources(),
                         () -> new java.io.ByteArrayInputStream(json)))
                 : base.getResource(location);
+        boolean[] unitsAssigned = {false};
+        ShaderInstance[] loaded = new ShaderInstance[1];
         try {
-            program = ShaderLoader.load(provider, namespace + ":golem_sky/" + name, DefaultVertexFormat.POSITION_TEX,
-                    SkyShaders::applyBlend);
+            program = ShaderLoader.load(provider, namespace + ":golem_sky/" + name, DefaultVertexFormat.POSITION_TEX, () -> {
+                applyBlend();
+                if (unitsAssigned[0]) return;
+                unitsAssigned[0] = true;
+                for (int i = 1; i < samplers; i++) {
+                    Uniform.uploadInteger(Uniform.glGetUniformLocation(loaded[0].getId(), "Sampler" + i), i);
+                }
+            });
+            loaded[0] = program;
         } catch (java.io.IOException e) {
             throw new IllegalStateException("Could not load sky shader " + key, e);
         }
@@ -312,6 +323,7 @@ final class SkyShaders {
             GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL11.GL_REPEAT);
             GlStateManager._texParameter(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL11.GL_REPEAT);
             RenderSystem.setShaderTexture(i, id);
+            Sky.bindUnit(i, texture.getId());
         }
         Uniform localUniform = program.getUniform("GolemSkyLocal");
         if (localUniform != null) localUniform.set(new Matrix4f(local));
@@ -340,6 +352,7 @@ final class SkyShaders {
         }
         BufferUploader.drawWithShader(builder.end());
         ^///?}
+        for (int i = 0; i < samplers; i++) Sky.bindUnit(i, 0);
         if (!cull) RenderSystem.enableCull();
     }
     *///?}

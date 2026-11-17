@@ -575,6 +575,7 @@ public final class Sky {
                 blend == Blend.ALPHA ? GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA : GlStateManager.DestFactor.ONE,
                 GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+        boolean ownUnit = texture != null && bindTexShaderUnit();
         VertexFormat format = texture == null ? DefaultVertexFormat.POSITION_COLOR : DefaultVertexFormat.POSITION_TEX_COLOR;
         Matrix4f m = pose.last().pose();
         int quads = v.length / (stride * 4);
@@ -601,6 +602,24 @@ public final class Sky {
         }
         BufferUploader.drawWithShader(builder.end());
         ^///?}
+        if (ownUnit) bindUnit(0, 0);
+    }
+
+    /^*
+     * The sky program declares no sampler (vanilla's {@code apply()} looks each one up per draw, a driver sync), so its
+     * unset sampler reads unit 0. False for a pack's program, which binds its own.
+     ^/
+    private static boolean bindTexShaderUnit() {
+        if (RenderSystem.getShader() != texShader) return false;
+        bindUnit(0, RenderSystem.getShaderTexture(0));
+        return true;
+    }
+
+    static void bindUnit(int unit, int texture) {
+        int active = GlStateManager._getActiveTexture();
+        RenderSystem.activeTexture(org.lwjgl.opengl.GL13.GL_TEXTURE0 + unit);
+        RenderSystem.bindTexture(texture);
+        GlStateManager._activeTexture(active);
     }
 
     /^* {@link #lines} / {@link #points}: plain images only. ^/
@@ -618,6 +637,7 @@ public final class Sky {
                 GlStateManager.SourceFactor.ONE, GlStateManager.DestFactor.ZERO);
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
         RenderSystem.lineWidth(1.0F);
+        boolean ownUnit = texture != null && bindTexShaderUnit();
         VertexFormat format = texture == null ? DefaultVertexFormat.POSITION_COLOR : DefaultVertexFormat.POSITION_TEX_COLOR;
         Matrix4f m = pose.last().pose();
         int count = (v.length / (stride * 2)) * 2;
@@ -642,6 +662,7 @@ public final class Sky {
         }
         BufferUploader.drawWithShader(builder.end());
         ^///?}
+        if (ownUnit) bindUnit(0, 0);
     }
 
     /^* Leaves the state vanilla's sky has after its own sun, moon and stars. ^/

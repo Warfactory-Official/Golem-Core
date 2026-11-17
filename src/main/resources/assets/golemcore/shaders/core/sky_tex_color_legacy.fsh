@@ -4,6 +4,7 @@
 // core/position_tex_color has it: 1.7 drew the sky with GL_ALPHA_TEST disabled, so a faint glow (a star's halo,
 // a flare at 0.25) must not be cut off. Used by Golem Core's Sky for textured quads, lines and points before 26.1.
 
+// Unit 0, bound by Sky: the JSON declares no sampler, so apply() does no per-draw location lookup.
 uniform sampler2D Sampler0;
 
 uniform vec4 ColorModulator;
