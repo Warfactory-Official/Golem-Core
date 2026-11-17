@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import dev.golem.core.client.ShaderPacks;
 import dev.golem.core.harness.mixin.HarnessContainerScreenAccessor;
+import dev.golem.core.platform.Platform;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import net.minecraft.world.phys.HitResult;
@@ -252,6 +253,7 @@ final class HarnessQueries {
                 && dev.golem.core.render.Instancing.isVisualizing(minecraft.level));
         json.addProperty("backend", report.backend());
         json.addProperty("shaderPack", ShaderPacks.inUse());
+        json.addProperty("sodium", Platform.isModLoaded("sodium"));
         json.addProperty("visuals", report.visuals());
         json.addProperty("healthy", report.healthy());
         json.addProperty("instances", report.instances());
@@ -279,6 +281,8 @@ final class HarnessQueries {
                     : String.valueOf(BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(be.getType())));
             entry.addProperty("replayed", counts[0]);
             entry.addProperty("skipped", counts[1]);
+            entry.addProperty("asked", counts[2]);
+            entry.addProperty("accepted", counts[3]);
             if (be != null) {
                 // Why vanilla may not have submitted it at all: a removed or state-invalid block entity is never
                 // extracted, and an off-screen renderer's block entity is drawn only from the level's global set.
@@ -287,13 +291,20 @@ final class HarnessQueries {
                 entry.addProperty("valid_state", be.getType().isValid(be.getBlockState()));
                 //? if >=26.1 {
                 entry.addProperty("in_global_set", minecraft.level.getGloballyRenderedBlockEntities().contains(be));
+                // NeoForge's view of the list the level renderer draws from (Sodium replaces it with its section lists).
+                //? if neoforge {
+                boolean[] listed = {false};
+                minecraft.levelRenderer.iterateVisibleBlockEntities(seen -> listed[0] |= seen == be);
+                entry.addProperty("listed", listed[0]);
+                //?}
                 net.minecraft.client.renderer.blockentity.BlockEntityRenderer<BlockEntity, ?> renderer =
                         minecraft.getBlockEntityRenderDispatcher().getRenderer(be);
                 entry.addProperty("renderer", renderer == null ? null : renderer.getClass().getSimpleName());
                 if (renderer != null) {
                     entry.addProperty("off_screen", renderer.shouldRenderOffScreen());
-                    entry.addProperty("should_render", renderer.shouldRender(be,
-                            minecraft.gameRenderer.getMainCamera().position()));
+                    var camera = minecraft.gameRenderer.getMainCamera().position();
+                    entry.addProperty("should_render", renderer instanceof dev.golem.core.render.gem.GemBER gem
+                            ? gem.shouldRenderUntraced(be, camera) : renderer.shouldRender(be, camera));
                 }
                 //?}
             }

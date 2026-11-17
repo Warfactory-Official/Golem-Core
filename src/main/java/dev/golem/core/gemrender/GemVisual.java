@@ -24,7 +24,6 @@ import java.util.function.Consumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.BlockPos;
-import net.minecraft.util.Mth;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
@@ -61,7 +60,6 @@ final class GemVisual<T extends BlockEntity, S extends CompatRenderState>
     private volatile boolean written;
     private volatile int liveSlots;
     private volatile boolean moving;
-    private volatile float reach;
     private boolean hidden;
     private boolean primed;
     private int writtenLight;
@@ -91,24 +89,10 @@ final class GemVisual<T extends BlockEntity, S extends CompatRenderState>
         return visual != null && visual.healthy && visual.written && visual.drawsAt(camera());
     }
 
-    /**
-     * Where vanilla would draw it: within its view distance unless off screen, and on 26.1 short of the render-distance
-     * fog, which GemRender's 26.1 fog lacks. From the camera alone, so vanilla and this visual agree each frame.
-     * Under a shader pack only while Flywheel's backend draws through the pack ({@link GemRender#instancesUnderPack}).
-     */
+    /** Where vanilla would draw it, from the camera alone; under a pack only if {@link GemRender#instancesUnderPack}. */
     private boolean drawsAt(Vec3 camera) {
         if (ShaderPacks.inUse() && !GemRender.instancesUnderPack()) return false;
-        Vec3 centre = Vec3.atCenterOf(pos);
-        if (!model.isOffScreen() && !centre.closerThan(camera, model.viewDistance())) return false;
-        //? if >=26.1 {
-        if (!GemRender.UNFIXED) return true;
-        double dx = centre.x - camera.x, dz = centre.z - camera.z;
-        double cylindrical = Math.max(Math.sqrt(dx * dx + dz * dz), Math.abs(centre.y - camera.y));
-        float end = Minecraft.getInstance().options.getEffectiveRenderDistance() * 16F;
-        return cylindrical + reach <= end - Mth.clamp(end / 10F, 4F, 64F);
-        //?} else {
-        /*return true;
-        *///?}
+        return model.isOffScreen() || Vec3.atCenterOf(pos).closerThan(camera, model.viewDistance());
     }
 
     private static Vec3 camera() {
@@ -170,7 +154,6 @@ final class GemVisual<T extends BlockEntity, S extends CompatRenderState>
             while (slots.size() > next) slots.remove(slots.size() - 1).instance.delete();
 
             moving = comparable && touched;
-            if (touched) measureReach();
             primed = true;
             writtenLight = sampled;
             liveSlots = slots.size();
@@ -190,15 +173,6 @@ final class GemVisual<T extends BlockEntity, S extends CompatRenderState>
             slot.instance.setChanged();
             slot.written = false;
         }
-    }
-
-    /** The farthest drawn corner from the block centre, kept as the largest seen. */
-    private void measureReach() {
-        Gem.extents(model, state, new Matrix4f(), corner -> {
-            float r = (float) Math.sqrt(Mth.square(corner.x() - 0.5F) + Mth.square(corner.y() - 0.5F)
-                    + Mth.square(corner.z() - 0.5F));
-            if (r > reach) reach = r;
-        });
     }
 
     /** Writes one part and its children, depth first, and returns the next free slot. */

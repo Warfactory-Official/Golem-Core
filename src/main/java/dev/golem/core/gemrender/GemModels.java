@@ -1,7 +1,6 @@
 package dev.golem.core.gemrender;
 
 import dev.engine_room.flywheel.api.material.CardinalLightingMode;
-import dev.engine_room.flywheel.api.material.FogShader;
 import dev.engine_room.flywheel.api.material.LightShader;
 import dev.engine_room.flywheel.api.material.Material;
 import dev.engine_room.flywheel.api.material.MaterialShaders;
@@ -14,7 +13,6 @@ import dev.engine_room.flywheel.api.vertex.MutableVertexList;
 import dev.engine_room.flywheel.lib.material.CutoutShaders;
 import dev.engine_room.flywheel.lib.material.FogShaders;
 import dev.engine_room.flywheel.lib.material.LightShaders;
-import dev.engine_room.flywheel.lib.material.SimpleFogShader;
 import dev.engine_room.flywheel.lib.material.SimpleLightShader;
 import dev.engine_room.flywheel.lib.material.SimpleMaterial;
 import dev.engine_room.flywheel.lib.material.SimpleMaterialShaders;
@@ -37,9 +35,6 @@ final class GemModels {
 
     private static final Map<Key, Built> MODELS = new ConcurrentHashMap<>();
     private static final Map<Surface, Material> MATERIALS = new ConcurrentHashMap<>();
-
-    /** GemRender 0.1.14's 26.1 Flywheel keeps 1.21's smoothstep fog; 26.1 vanilla ramps linearly. */
-    private static final FogShader FOG = vanillaFog();
 
     /** 26.1 vanilla samples the lightmap half a texel in; older vanilla and Flywheel sample at the raw coordinate. */
     private static final LightShader LIGHT = vanillaLight();
@@ -67,7 +62,7 @@ final class GemModels {
         return MATERIALS.computeIfAbsent(surface, skin -> {
             SimpleMaterial.Builder builder = SimpleMaterial.builder()
                     .texture(Ids.parse(skin.texture()))
-                    .fog(FOG)
+                    .fog(FogShaders.LINEAR)
                     .light(LIGHT)
                     .mipmap(false);
             return switch (skin.blend()) {
@@ -91,19 +86,10 @@ final class GemModels {
 
     private static Material perFace(SimpleMaterial.Builder builder) {
         //? if >=26.1 {
-        if (GemRender.FORK && !GemRender.UNFIXED) return builder.build();
+        if (GemRender.FORK) return builder.build();
         return builder.shaders(PER_FACE).cardinalLightingMode(CardinalLightingMode.OFF).build();
         //?} else {
         /*return builder.build();
-        *///?}
-    }
-
-    private static FogShader vanillaFog() {
-        //? if >=26.1 {
-        if (!GemRender.UNFIXED) return FogShaders.LINEAR;
-        return new SimpleFogShader(Ids.of("golemcore", "fog/linear.glsl"));
-        //?} else {
-        /*return FogShaders.LINEAR;
         *///?}
     }
 

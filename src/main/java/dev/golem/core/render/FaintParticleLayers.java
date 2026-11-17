@@ -40,20 +40,20 @@ final class FaintParticleLayers {
             .withFragmentShader(dev.golem.core.Ids.parse("golemcore:core/particle_faint"))
             .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
             .withDepthStencilState(new DepthStencilState(DepthStencilState.DEFAULT.depthTest(), false))
-            .build());
+            .build(), RenderPipelines.TRANSLUCENT_PARTICLE);
     private static final RenderPipeline ADDITIVE_PIPELINE = WorldPipelines.add(RenderPipeline.builder(RenderPipelines.PARTICLE_SNIPPET)
             .withLocation("pipeline/golem_particle_faint_additive")
             .withFragmentShader(dev.golem.core.Ids.parse("golemcore:core/particle_faint"))
             .withColorTargetState(new ColorTargetState(BlendFunction.ADDITIVE))
             .withDepthStencilState(new DepthStencilState(DepthStencilState.DEFAULT.depthTest(), false))
-            .build());
+            .build(), RenderPipelines.TRANSLUCENT_PARTICLE);
 
     private static final RenderPipeline FOGLESS_ADDITIVE_PIPELINE = WorldPipelines.add(RenderPipeline.builder(RenderPipelines.PARTICLE_SNIPPET)
             .withLocation("pipeline/golem_particle_fogless_additive")
             .withFragmentShader(dev.golem.core.Ids.parse("golemcore:core/particle_fogless"))
             .withColorTargetState(new ColorTargetState(BlendFunction.ADDITIVE))
             .withDepthStencilState(new DepthStencilState(DepthStencilState.DEFAULT.depthTest(), false))
-            .build());
+            .build(), RenderPipelines.TRANSLUCENT_PARTICLE);
 
     static final SingleQuadParticle.Layer TRANSLUCENT =
             new SingleQuadParticle.Layer(true, TextureAtlas.LOCATION_PARTICLES, TRANSLUCENT_PIPELINE);

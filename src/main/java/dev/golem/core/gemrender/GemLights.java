@@ -16,11 +16,6 @@ public final class GemLights {
 
     private GemLights() {}
 
-    /** 0.1.14 ships its light classes on 1.21.1 NeoForge only. */
-    public static boolean supported() {
-        return !GemRender.UNFIXED;
-    }
-
     public static boolean shading() {
         return Lights.shading();
     }

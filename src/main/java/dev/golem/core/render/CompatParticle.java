@@ -60,7 +60,7 @@ public abstract class CompatParticle extends
     public static final RenderPipeline ADDITIVE_PIPELINE = WorldPipelines.add(RenderPipeline.builder(RenderPipelines.PARTICLE_SNIPPET)
             .withLocation("pipeline/golem_particle_additive")
             .withColorTargetState(new ColorTargetState(BlendFunction.ADDITIVE))
-            .withDepthStencilState(new DepthStencilState(DepthStencilState.DEFAULT.depthTest(), false)).build());
+            .withDepthStencilState(new DepthStencilState(DepthStencilState.DEFAULT.depthTest(), false)).build(), RenderPipelines.TRANSLUCENT_PARTICLE);
     private static final net.minecraft.client.particle.SingleQuadParticle.Layer ADDITIVE_LAYER =
             new net.minecraft.client.particle.SingleQuadParticle.Layer(true, TextureAtlas.LOCATION_PARTICLES, ADDITIVE_PIPELINE);
     //?}

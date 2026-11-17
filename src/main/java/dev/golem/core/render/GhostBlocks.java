@@ -72,11 +72,12 @@ public final class GhostBlocks {
             .withShaderDefine("NO_CARDINAL_LIGHTING")
             .withSampler("Sampler1")
             .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
-            .build());
+            .build(), RenderPipelines.ENTITY_TRANSLUCENT_EMISSIVE);
 
     private static final RenderType TYPE = RenderType.create("golem_ghost_block",
             RenderSetup.builder(PIPELINE)
                     .withTexture("Sampler0", TextureAtlas.LOCATION_BLOCKS)
+                    .useLightmap()
                     .useOverlay()
                     .createRenderSetup());
     //?} else {

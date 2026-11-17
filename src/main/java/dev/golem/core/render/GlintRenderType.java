@@ -54,7 +54,7 @@ public final class GlintRenderType {
             .withVertexFormat(com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_TEX,
                     com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS)
             .withDepthStencilState(RenderPipelines.GLINT.getDepthStencilState())
-            .build());
+            .build(), RenderPipelines.GLINT);
 
     private static final Function<Identifier, RenderType> GLINT = Util.memoize(texture ->
             RenderType.create("golem_glint", RenderSetup.builder(RenderPipelines.GLINT)

@@ -40,7 +40,7 @@ public final class DynamicLights {
 
     public static void register(Provider provider) {
         PROVIDERS.add(provider);
-        if (!bound && supported()) {
+        if (!bound && Instancing.isAvailable()) {
             bound = true;
             GemLights.bind(PROVIDERS);
         }
@@ -51,10 +51,6 @@ public final class DynamicLights {
      * support (1.20.1 Forge with Oculus, 26.1) never see a pack, hence the pack check here.
      */
     public static boolean shading() {
-        return supported() && !ShaderPacks.inUse() && GemLights.shading();
-    }
-
-    private static boolean supported() {
-        return Instancing.isAvailable() && GemLights.supported();
+        return Instancing.isAvailable() && !ShaderPacks.inUse() && GemLights.shading();
     }
 }

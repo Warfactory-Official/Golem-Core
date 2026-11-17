@@ -43,7 +43,11 @@ public abstract class GemBER<T extends BlockEntity, S extends CompatRenderState>
 
     private @Nullable Model<S> model;
 
-    protected GemBER() {}
+    protected GemBER() {
+        //? if >=26.1 {
+        StaleSections.install();
+        //?}
+    }
 
     /** States this renderer's model. Runs once, on the render thread, before the first frame. */
     protected abstract void setup(Model<S> model);
@@ -70,6 +74,9 @@ public abstract class GemBER<T extends BlockEntity, S extends CompatRenderState>
             Gem.replayUninstanced(gem(), state, poseStack, sink, state.lightCoords);
         }
         if (tracing) trace(state.blockPos, owned);
+        //? if >=26.1 {
+        if (state.blockPos != null && gem().isOffScreen()) StaleSections.asked(state.blockPos);
+        //?}
         if (undeclared == null) {
             undeclaredBase = false;
             submitUndeclared(state, poseStack, sink, camera);
@@ -88,6 +95,7 @@ public abstract class GemBER<T extends BlockEntity, S extends CompatRenderState>
      * per frame.
      */
     private static volatile boolean tracing;
+    private static boolean quiet;
     private static final Map<Long, int[]> TRACE = new ConcurrentHashMap<>();
 
     /** Turns replay tracing on or off; turning it on starts every count from zero. */
@@ -96,10 +104,10 @@ public abstract class GemBER<T extends BlockEntity, S extends CompatRenderState>
         tracing = on;
     }
 
-    /** {@code {replayed, skipped}} submits at {@code pos} since tracing was switched on. */
+    /** {@code {replayed, skipped, asked, accepted}} at {@code pos} since tracing began: submits, then {@link #shouldRender} calls. */
     public static int[] traced(net.minecraft.core.BlockPos pos) {
         int[] counts = TRACE.get(pos.asLong());
-        if (counts == null) return new int[2];
+        if (counts == null) return new int[4];
         synchronized (counts) {
             return counts.clone();
         }
@@ -114,9 +122,17 @@ public abstract class GemBER<T extends BlockEntity, S extends CompatRenderState>
 
     private static void trace(net.minecraft.core.@Nullable BlockPos pos, boolean owned) {
         if (pos == null) return;
-        int[] counts = TRACE.computeIfAbsent(pos.asLong(), key -> new int[2]);
+        int[] counts = TRACE.computeIfAbsent(pos.asLong(), key -> new int[4]);
         synchronized (counts) {
             counts[owned ? 1 : 0]++;
+        }
+    }
+
+    private static void traceAsked(BlockPos pos, boolean visible) {
+        int[] counts = TRACE.computeIfAbsent(pos.asLong(), key -> new int[4]);
+        synchronized (counts) {
+            counts[2]++;
+            if (visible) counts[3]++;
         }
     }
 
@@ -149,6 +165,27 @@ public abstract class GemBER<T extends BlockEntity, S extends CompatRenderState>
      */
     @Override
     public boolean shouldRender(T blockEntity, Vec3 cameraPosition) {
+        boolean visible = visible(blockEntity, cameraPosition);
+        if (!quiet) {
+            if (tracing) traceAsked(blockEntity.getBlockPos(), visible);
+            //? if >=26.1 {
+            if (gem().isOffScreen()) StaleSections.asked(blockEntity.getBlockPos());
+            //?}
+        }
+        return visible;
+    }
+
+    /** {@link #shouldRender} without counting the call, for a query that reports it. */
+    public boolean shouldRenderUntraced(T blockEntity, Vec3 camera) {
+        quiet = true;
+        try {
+            return shouldRender(blockEntity, camera);
+        } finally {
+            quiet = false;
+        }
+    }
+
+    private boolean visible(T blockEntity, Vec3 cameraPosition) {
         BlockPos pos = blockEntity.getBlockPos();
         // On a sub-level the block sits in a far plot while it is seen elsewhere: measure in the world, never frustum-cull.
         boolean carried = blockEntity.getLevel() != null && SubLevels.isOnSubLevel(blockEntity.getLevel(), pos);

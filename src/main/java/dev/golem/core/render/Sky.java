@@ -385,7 +385,8 @@ public final class Sky {
         if (textured) builder.withSampler("Sampler0");
         if (textured && mode == VertexFormat.Mode.POINTS) builder.withShaderDefine("TEXTURED");
         // No depth state: neither tested nor written, as vanilla's CELESTIAL and STARS pipelines.
-        return WorldPipelines.add(builder.build());
+        if (mode == VertexFormat.Mode.POINTS) return WorldPipelines.add(builder.build());
+        return WorldPipelines.add(builder.build(), textured ? RenderPipelines.CELESTIAL : RenderPipelines.SUNRISE_SUNSET);
     }
 
     private static final RenderPipeline COLOR_ALPHA = pipeline("color_alpha", false, BLEND_ALPHA);

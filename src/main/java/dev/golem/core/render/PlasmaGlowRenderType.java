@@ -68,11 +68,12 @@ public final class PlasmaGlowRenderType {
             // Depth test as normal, depth WRITE off.
             .withDepthStencilState(new DepthStencilState(DepthStencilState.DEFAULT.depthTest(), false))
             .withCull(false)
-            .build());
+            .build(), RenderPipelines.ENTITY_TRANSLUCENT_EMISSIVE);
 
     private static final Function<Identifier, RenderType> BY_TEXTURE = Util.memoize(texture ->
             RenderType.create("golem_plasma_glow",
-                    RenderSetup.builder(PIPELINE).withTexture("Sampler0", texture).createRenderSetup()));
+                    RenderSetup.builder(PIPELINE).withTexture("Sampler0", texture).useLightmap().useOverlay()
+                            .createRenderSetup()));
 
     private static final RenderPipeline SEE_THROUGH_PIPELINE = WorldPipelines.add(RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
             .withLocation("pipeline/golem_plasma_glow_see_through")
@@ -86,11 +87,12 @@ public final class PlasmaGlowRenderType {
             .withVertexFormat(DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS)
             .withDepthStencilState(java.util.Optional.empty())
             .withCull(false)
-            .build());
+            .build(), RenderPipelines.ENTITY_TRANSLUCENT_EMISSIVE);
 
     private static final Function<Identifier, RenderType> SEE_THROUGH = Util.memoize(texture ->
             RenderType.create("golem_plasma_glow_see_through",
-                    RenderSetup.builder(SEE_THROUGH_PIPELINE).withTexture("Sampler0", texture).createRenderSetup()));
+                    RenderSetup.builder(SEE_THROUGH_PIPELINE).withTexture("Sampler0", texture).useLightmap().useOverlay()
+                            .createRenderSetup()));
 
     public static RenderType of(Identifier texture) {
         return BY_TEXTURE.apply(texture);

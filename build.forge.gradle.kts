@@ -138,8 +138,6 @@ tasks.processResources {
             ", \"MixinClientLevelSky\", \"MixinDimensionEffectsSky\", \"MixinOverworldFogColor\"",
         // Clouds: Forge's only seam is the effects object's renderClouds (see MixinLegacyCloudRender).
         "cloud_mixins" to ", \"MixinLegacyCloudRender\", \"MixinLegacyWeatherRender\"",
-        "gemrender_mixins" to "",
-        "gemrender_mixin_plugin" to "dev.golem.core.gemrender.mixin.GemRenderMixinPlugin",
         "pack_format" to prop("pack_format"),
         "pack_format_entry" to "\"pack_format\": ${prop("pack_format")}",
     )
@@ -250,7 +248,6 @@ mixin {
     add(sourceSets["main"], "golemcore.refmap.json")
     config("golemcore.mixins.json")
     config("golemcore.harness.mixins.json")
-    config("golemcore.gemrender.mixins.json")
 }
 
 // Stonecutter writes the shared resources in place; the legacy toolkit must see the active node's
@@ -263,7 +260,7 @@ tasks.test {
 }
 
 tasks.jar {
-    manifest.attributes["MixinConfigs"] = "golemcore.mixins.json,golemcore.harness.mixins.json,golemcore.gemrender.mixins.json"
+    manifest.attributes["MixinConfigs"] = "golemcore.mixins.json,golemcore.harness.mixins.json"
     from(files(rootProject.file("LICENSE"), rootProject.file("LICENSE.LESSER"), rootProject.file("CREDITS.txt"))) { rename { "${it}_${prop("mod.id")}" } }
 }
 

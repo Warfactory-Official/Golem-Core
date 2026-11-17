@@ -51,12 +51,13 @@ public final class FlatCutoutRenderType {
             .withVertexFormat(DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS)
             .withDepthStencilState(DepthStencilState.DEFAULT)
             .withCull(false)
-            .build());
+            .build(), RenderPipelines.ENTITY_CUTOUT);
 
     private static final Function<Identifier, RenderType> BY_TEXTURE = Util.memoize(texture ->
             RenderType.create("golem_flat_cutout", RenderSetup.builder(PIPELINE)
                     .withTexture("Sampler0", texture)
                     .useLightmap()
+                    .useOverlay()
                     .affectsCrumbling()
                     .createRenderSetup()));
 
@@ -78,12 +79,13 @@ public final class FlatCutoutRenderType {
             .withVertexFormat(DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS)
             .withDepthStencilState(new DepthStencilState(com.mojang.blaze3d.platform.CompareOp.LESS_THAN_OR_EQUAL, true, -1.0F, -10.0F))
             .withCull(false)
-            .build());
+            .build(), RenderPipelines.ENTITY_CUTOUT_Z_OFFSET);
 
     private static final Function<Identifier, RenderType> DECAL_BY_TEXTURE = Util.memoize(texture ->
             RenderType.create("golem_flat_cutout_decal", RenderSetup.builder(DECAL_PIPELINE)
                     .withTexture("Sampler0", texture)
                     .useLightmap()
+                    .useOverlay()
                     .createRenderSetup()));
 
     /** {@link #of}, depth-biased toward the camera so a sheet a hair in front of a surface never loses to it. */
@@ -108,12 +110,13 @@ public final class FlatCutoutRenderType {
                     com.mojang.blaze3d.pipeline.BlendFunction.TRANSLUCENT))
             .withDepthStencilState(DepthStencilState.DEFAULT)
             .withCull(true)
-            .build());
+            .build(), RenderPipelines.ENTITY_TRANSLUCENT_CULL);
 
     private static final Function<Identifier, RenderType> TRANSLUCENT_CULL_BY_TEXTURE = Util.memoize(texture ->
             RenderType.create("golem_flat_translucent_cull", RenderSetup.builder(TRANSLUCENT_CULL_PIPELINE)
                     .withTexture("Sampler0", texture)
                     .useLightmap()
+                    .useOverlay()
                     .createRenderSetup()));
 
     /** {@link #of}, blended translucent over what is behind it, back faces culled, depth written. */
@@ -136,12 +139,13 @@ public final class FlatCutoutRenderType {
                     com.mojang.blaze3d.pipeline.BlendFunction.TRANSLUCENT))
             .withDepthStencilState(new DepthStencilState(DepthStencilState.DEFAULT.depthTest(), false))
             .withCull(false)
-            .build());
+            .build(), RenderPipelines.ENTITY_TRANSLUCENT);
 
     private static final Function<Identifier, RenderType> TRANSLUCENT_BY_TEXTURE = Util.memoize(texture ->
             RenderType.create("golem_flat_translucent", RenderSetup.builder(TRANSLUCENT_PIPELINE)
                     .withTexture("Sampler0", texture)
                     .useLightmap()
+                    .useOverlay()
                     .createRenderSetup()));
 
     /** {@link #of}, blended translucent, unculled, without writing depth. */

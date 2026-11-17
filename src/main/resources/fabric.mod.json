@@ -26,7 +26,7 @@
     "mixins": [
         "golemcore.mixins.json",
         "golemcore.fabric.mixins.json",
-        "golemcore.harness.mixins.json"${gemrender_mixin_config}
+        "golemcore.harness.mixins.json"
     ],
     "depends": {
         "fabricloader": ">=${fabric_loader}",
@@ -34,6 +34,6 @@
         "java": ">=${java_version}"
     },
     "breaks": {
-        "gemrender": "<0.1.14"
+        "gemrender": "<0.1.21"
     }
 }

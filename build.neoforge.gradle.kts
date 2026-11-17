@@ -231,10 +231,6 @@ tasks.processResources {
             ", \"MixinClientLevelSky\", \"MixinDimensionEffectsSky\", \"MixinOverworldFogColor\"",
         // Replacement clouds use NeoForge's hook; additions append after the native renderer on both eras.
         "cloud_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinCloudRender\"" else ", \"MixinLegacyCloudRender\", \"MixinLegacyWeatherRender\"",
-        // GemRender 0.1.14 patches (26.1 only, applied by version; see GemRenderMixinPlugin)
-        "gemrender_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) "\"GameRendererBob\", \"MixinRenderContextBob\"" else "",
-        "gemrender_mixin_plugin" to "dev.golem.core.gemrender.mixin.GemRenderMixinPlugin",
-        "gemrender_mixin_config" to if (mcVersion.substringBefore('.').toInt() >= 26) "[[mixins]]\nconfig = \"golemcore.gemrender.mixins.json\"" else "",
         // The Sable integration's own mixin config (src/sable/resources), only on nodes that declare Sable.
         "sable_mixins" to if (hasSable) "[[mixins]]\nconfig = \"golemcore.sable.mixins.json\"" else "",
         "pack_format" to prop("pack_format"),
@@ -295,7 +291,6 @@ dependencies {
     if (localGemRender != null) compileOnly(localGemRender)
     else propOrNull("deps.gemrender")?.let { compileOnly("curse.maven:gemrender-1735539:$it") }
     propOrNull("deps.gemrender_flywheel")?.let { compileOnly(it) }
-    propOrNull("deps.gemrender_sodium_api")?.let { compileOnly("net.caffeinemc:sodium-neoforge-api:$it") { isTransitive = false } }
 
     // JEI, compile-only and per-node optional: the facade in dev.golem.core.jei exists to hide the
     // 19.x/29.x API split from consumers, so this library has to see whichever line the node targets.
@@ -368,6 +363,7 @@ tasks.test {
 
 // The uploaded copy of this node's jar, without the test harness.
 apply(from = rootProject.file("gradle/release-jar.gradle.kts"))
+apply(from = rootProject.file("gradle/gemrender-api.gradle.kts"))
 apply(from = rootProject.file("gradle/mod/mixin-validation.gradle.kts"))
 
 // Credits and links in the loader metadata, from the mod.* properties.

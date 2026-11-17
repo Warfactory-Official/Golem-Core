@@ -24,7 +24,7 @@ public final class LineRenderTypes {
             WorldPipelines.add(com.mojang.blaze3d.pipeline.RenderPipeline.builder(net.minecraft.client.renderer.RenderPipelines.LINES_SNIPPET)
                     .withLocation("pipeline/golem_lines_see_through")
                     .withDepthStencilState(java.util.Optional.empty())
-                    .build());
+                    .build(), net.minecraft.client.renderer.RenderPipelines.LINES);
     private static final RenderType SEE_THROUGH = RenderType.create("golem_lines_see_through",
             net.minecraft.client.renderer.rendertype.RenderSetup.builder(SEE_THROUGH_PIPELINE).createRenderSetup());
 

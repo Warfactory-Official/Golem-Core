@@ -3,6 +3,39 @@
 Each release has a `## <version>` section; the release workflow uploads only the section matching
 `mod.version` in gradle.properties.
 
+## 1.0.6
+
+GemRender 0.1.21 or newer (older versions are refused). On 26.1, GemRender 0.1.22 needs NeoForge 26.1.2.126 or newer.
+The 26.1 NeoForge jar accepts NeoForge 26.1.2.114 again (KubeJS 8.0.8 runs there).
+
+### Added
+- `/golem profiler [seconds]` (default 30, also `stop`, `status`, `open`): captures the client, and in singleplayer the
+  integrated server, and writes `<game dir>/golem/profile-*.html` (an offline viewer with frame, tick and render-pass
+  timings, a timeline, flame graphs, spikes, memory, threads and mods) plus a `.jfr`. `/golem profiler server` makes a
+  dedicated server profile itself (op 4). The seconds left show in the action bar.
+- Gem machines instance under a shader pack when Colorwheel or Iris & Oculus Flywheel Compat is installed, shadows
+  included; without one they draw on the CPU as before.
+- 26.1 runs on upstream Flywheel (GemRender 0.1.22) as well as GemRender 0.1.21's own Flywheel.
+- `SubLevels.prepareArea`: makes sure a Sable ship's plot holds a box before blocks are written into it.
+- `LivingLooks`: the hurt flash and death roll for mobs drawn through a plain `CompatEntityRenderer`.
+- `Particles.noPhysics` and `render.GeometryPoints` (records a model's vertices without drawing).
+
+### Changed
+- `Spawns.onPotentialSpawns` fires once per spawn group pick, before placement checks, as 1.7's potential-spawns event
+  did; it used to fire for every spawn attempt.
+- Forge: a block can be exposed as an energy carrier more than once (a cable and a machine on the same block).
+
+### Fixed
+- The glider and other resident models could turn the whole world white with GemRender on strict GPU drivers
+  (NTM - Continuum issue 209).
+- On 1.21.1, helmet and scope overlays hid HUD mods drawn after them, such as Jade (NTM - Continuum issue 210).
+- See-through line boxes (ore markers) were drawn in the fog colour far away on 1.21.1 and 1.20.1.
+- On 1.20.1 Fabric, straight rails in rotated structures turned the wrong way on a half turn.
+- On 1.20.1, a drained item whose colour was removed kept an empty tag and no longer stacked.
+- EMI printed the mod name twice on fluids.
+- The profiler sometimes wrote only the `.jfr` and no report; failures now reach chat and the log, and allocation
+  rates are no longer inflated by each thread's start-up.
+
 ## 1.0.5
 
 Use GemRender 0.1.20.
