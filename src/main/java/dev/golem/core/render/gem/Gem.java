@@ -417,6 +417,8 @@ public final class Gem {
         private boolean sealed;
         private int subtreeNodes;
         private int subtreeSlots;
+        /** Whether a part in this subtree may be refused by {@link #instanced}, so {@link #replayUninstanced} must walk it. */
+        private boolean mayLeave;
         private @Nullable List<Part<S>> frozen;
 
         private Part(@Nullable Geometry geometry, @Nullable Surface surface) {
@@ -725,10 +727,12 @@ public final class Gem {
             frozen = List.copyOf(children);
             subtreeNodes = 1;
             subtreeSlots = geometry == null ? 0 : 1;
+            mayLeave = order != 0 || skin != null || (surface == null ? geometry != null || mesh != null : surface.blended());
             for (Part<S> child : children) {
                 child.seal();
                 subtreeNodes += child.subtreeNodes;
                 subtreeSlots += child.subtreeSlots;
+                mayLeave |= child.mayLeave;
             }
         }
 
@@ -814,6 +818,7 @@ public final class Gem {
 
     private static <S> void draw(Part<S> part, S state, PoseStack poseStack, SubmitSink sink,
                                  Model<S> model, int defaultLight, boolean @Nullable [] reached) {
+        if (reached != null && !reached[0] && !part.mayLeave) return;
         if (!part.visible(state)) return;
         poseStack.pushPose();
         part.applyTo(poseStack, state);
