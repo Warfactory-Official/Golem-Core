@@ -477,6 +477,8 @@ public final class GolemNetwork {
      * already skip those; this is for callers that want to know before building a payload.
      */
     public static boolean canSendToPlayer(ServerPlayer player, GolemCodec<?> codec) {
+        // A FakePlayer's connection is a stub with no netty channel, and hasChannel reads attributes off it.
+        if (player.connection == null || player.connection.getConnection().channel() == null) return false;
         return player.connection.hasChannel(codec.type());
     }
 

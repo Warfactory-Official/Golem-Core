@@ -3,6 +3,11 @@
 Each release has a `## <version>` section; the release workflow uploads only the section matching
 `mod.version` in gradle.properties.
 
+## Unreleased
+
+### Fixed
+- NeoForge: sending to a player whose connection has no network channel (a fake player, a test stub) is refused quietly instead of throwing.
+
 ## 1.0.6
 
 GemRender 0.1.21 or newer (older versions are refused). On 26.1, GemRender 0.1.22 needs NeoForge 26.1.2.126 or newer.
