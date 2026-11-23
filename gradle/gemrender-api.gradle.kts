@@ -1,7 +1,7 @@
 // On 26.1 GemRender 0.1.21 and older carry their own Flywheel, and 0.1.22 nests upstream Flywheel, whose API differs.
-// Core compiles against both at once, so a call only one of them has builds cleanly and fails at runtime on the
-// other. `checkGemRenderApi` fails if a Flywheel or GemRender member that dev.golem.core.gemrender calls does not
-// resolve in each: deps.gemrender (the CurseForge GemRender, own Flywheel) and deps.gemrender_flywheel (upstream).
+// A call only one of them has builds cleanly and fails at runtime on the other. `checkGemRenderApi` fails if a Flywheel
+// or GemRender member that dev.golem.core.gemrender calls does not resolve in each: deps.gemrender_fork (the last
+// GemRender with its own Flywheel; deps.gemrender when blank) and deps.gemrender_flywheel with deps.gemrender's classes.
 
 import java.io.DataInputStream
 import java.util.zip.ZipFile
@@ -98,13 +98,15 @@ val compileJava = tasks.named("compileJava")
 fun detached(notation: String) = configurations.detachedConfiguration(dependencies.create(notation)).apply { isTransitive = false }
 
 val gemrenderId = (findProperty("deps.gemrender") as String?)?.takeIf { it.isNotBlank() }
+val forkId = (findProperty("deps.gemrender_fork") as String?)?.takeIf { it.isNotBlank() } ?: gemrenderId
 val upstreamFlywheel = (findProperty("deps.gemrender_flywheel") as String?)?.takeIf { it.isNotBlank() }
 
 // Below 26.1 every GemRender nests the same published Flywheel.
 val modern = project.name.substringBefore('.').toInt() >= 26
 
 if (modern && gemrenderId != null && upstreamFlywheel != null) {
-    val forkJar = detached("curse.maven:gemrender-1735539:$gemrenderId")
+    val forkJar = detached("curse.maven:gemrender-1735539:$forkId")
+    val gemJar = detached("curse.maven:gemrender-1735539:$gemrenderId")
     val upstreamJar = detached(upstreamFlywheel)
 
     val check = tasks.register("checkGemRenderApi") {
@@ -112,15 +114,14 @@ if (modern && gemrenderId != null && upstreamFlywheel != null) {
         description = "Fails if Core's GemRender code calls a Flywheel member missing from GemRender's own or upstream Flywheel."
         dependsOn(compileJava)
         inputs.files(mainOutput.classesDirs).withPathSensitivity(PathSensitivity.RELATIVE)
-        inputs.files(forkJar, upstreamJar)
+        inputs.files(forkJar, gemJar, upstreamJar)
         val marker = layout.buildDirectory.file("checkGemRenderApi/ok")
         outputs.file(marker)
 
         doLast {
-            val gem = forkJar.singleFile
-            val fork = readClasses(gem) { true }
+            val fork = readClasses(forkJar.singleFile) { true }
             val upstream = readClasses(upstreamJar.singleFile) { true } +
-                readClasses(gem) { it.startsWith("com/wf/gemrender/") }
+                readClasses(gemJar.singleFile) { it.startsWith("com/wf/gemrender/") }
             val refs = mutableListOf<Pair<String, Ref>>()
             val classRefs = mutableListOf<Pair<String, String>>()
             for (dir in mainOutput.classesDirs.files) {
@@ -131,7 +132,7 @@ if (modern && gemrenderId != null && upstreamFlywheel != null) {
                 }
             }
             val problems = sortedSetOf<String>()
-            for ((label, api) in listOf("GemRender $gemrenderId's own Flywheel" to fork, "upstream $upstreamFlywheel" to upstream)) {
+            for ((label, api) in listOf("GemRender $forkId's own Flywheel" to fork, "upstream $upstreamFlywheel" to upstream)) {
                 for ((user, cls) in classRefs) if (cls !in api) problems += "$user: class $cls is missing from $label"
                 for ((user, ref) in refs) {
                     if (resolves(api, ref.owner, ref.name + ":" + ref.desc) == false) {
