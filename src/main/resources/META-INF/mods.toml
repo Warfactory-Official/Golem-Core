@@ -26,10 +26,10 @@ ordering = "NONE"
 side = "BOTH"
 
 # GemRender instances gem-declared machines when installed; without it they draw through their vanilla renderers.
-# GemRender before 0.1.21 is refused (0.1.14 crashed outside a dev run; 0.1.21 is the oldest release tested with Core).
+# GemRender before 0.1.22 is refused (0.1.22 runs upstream Flywheel on 26.1 and is the oldest release tested with Core).
 [[dependencies.${mod_id}]]
 modId = "gemrender"
 mandatory = false
-versionRange = "[0.1.21,)"
+versionRange = "[0.1.22,)"
 ordering = "NONE"
 side = "CLIENT"

@@ -34,6 +34,6 @@
         "java": ">=${java_version}"
     },
     "breaks": {
-        "gemrender": "<0.1.21"
+        "gemrender": "<0.1.22"
     }
 }

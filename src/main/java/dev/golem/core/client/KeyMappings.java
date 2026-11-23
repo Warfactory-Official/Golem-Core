@@ -1,5 +1,6 @@
 package dev.golem.core.client;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import dev.golem.core.harness.HarnessHooks;
 import net.minecraft.client.KeyMapping;
 //? if >=26.1 {
@@ -122,6 +123,8 @@ public final class KeyMappings {
     public static boolean isHeld(KeyMapping mapping) {
         com.mojang.blaze3d.platform.InputConstants.Key key =
                 com.mojang.blaze3d.platform.InputConstants.getKey(mapping.saveString());
+        // GLFW rejects key -1 and logs an error on every poll
+        if (key.equals(InputConstants.UNKNOWN)) return false;
         if (key.getType() == com.mojang.blaze3d.platform.InputConstants.Type.MOUSE) {
             return MouseInput.isDown(key.getValue());
         }
