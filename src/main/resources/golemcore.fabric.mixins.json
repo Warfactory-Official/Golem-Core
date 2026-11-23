@@ -10,6 +10,7 @@
     "MixinVegetationSoil",
     "MixinNaturalSpawnerCheck",
     "MixinLivingEntityUseFinish",
+    "MixinFurnaceResultSlotTake",
     "MixinMobFinalizeSpawnCheck",
     "MixinServerLevelSpawnCancel",
     "MixinBlockItemPlaced",

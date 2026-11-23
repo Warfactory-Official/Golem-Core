@@ -41,8 +41,9 @@ public class ComponentShapelessRecipe extends CompatCustomRecipe {
         return ingredients;
     }
 
+    /** The result as crafting makes it, so viewers show what the grid gives. */
     public final ItemStack result() {
-        return result.create();
+        return finishResult(result.create());
     }
 
     //? if >=26.1 {
@@ -147,7 +148,8 @@ public class ComponentShapelessRecipe extends CompatCustomRecipe {
     public List<net.minecraft.world.item.crafting.display.RecipeDisplay> display() {
         return List.of(new net.minecraft.world.item.crafting.display.ShapelessCraftingRecipeDisplay(
                 ingredients.stream().map(ingredient -> ingredient.displayIngredient().display()).toList(),
-                new net.minecraft.world.item.crafting.display.SlotDisplay.ItemStackSlotDisplay(resultTemplate()),
+                new net.minecraft.world.item.crafting.display.SlotDisplay.ItemStackSlotDisplay(
+                        net.minecraft.world.item.ItemStackTemplate.fromNonEmptyStack(result())),
                 new net.minecraft.world.item.crafting.display.SlotDisplay.ItemSlotDisplay(Items.CRAFTING_TABLE)));
     }
     //?}
@@ -164,14 +166,14 @@ public class ComponentShapelessRecipe extends CompatCustomRecipe {
     //? if >=1.21.1 && <26.1 {
     /*@Override
     public ItemStack getResultItem(net.minecraft.core.HolderLookup.Provider registries) {
-        return result.create();
+        return result();
     }
     *///?}
 
     //? if <1.21.1 {
     /*@Override
     public ItemStack getResultItem(net.minecraft.core.RegistryAccess registries) {
-        return result.create();
+        return result();
     }
     *///?}
 

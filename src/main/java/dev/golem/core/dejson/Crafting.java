@@ -3,6 +3,7 @@ package dev.golem.core.dejson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -338,6 +339,11 @@ public final class Crafting {
         /** The same result, wearing one more component. */
         public Stack with(String component, int value) {
             return new Stack(id, count, plus(components, component, value));
+        }
+
+        /** The same result, wearing one more boolean component (a flag such as "hot"). */
+        public Stack with(String component, boolean value) {
+            return new Stack(id, count, plus(components, component, new JsonPrimitive(value)));
         }
 
         /**
