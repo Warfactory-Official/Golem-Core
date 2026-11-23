@@ -26,6 +26,11 @@ public abstract class MixinLivingHurtAccess implements LivingHurtAccess {
         return lastHurt;
     }
 
+    @Override
+    public void golem$setLastHurt(float lastHurt) {
+        this.lastHurt = lastHurt;
+    }
+
     @Shadow
     protected abstract @Nullable SoundEvent getHurtSound(
             DamageSource source);

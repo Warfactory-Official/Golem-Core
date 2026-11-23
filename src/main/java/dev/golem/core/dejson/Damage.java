@@ -37,6 +37,7 @@ public final class Damage {
     public static final String BYPASSES_ARMOR = "minecraft:bypasses_armor";
     public static final String BYPASSES_EFFECTS = "minecraft:bypasses_effects";
     public static final String BYPASSES_INVULNERABILITY = "minecraft:bypasses_invulnerability";
+    public static final String BYPASSES_COOLDOWN = "minecraft:bypasses_cooldown";
     public static final String IS_EXPLOSION = "minecraft:is_explosion";
     public static final String IS_FIRE = "minecraft:is_fire";
     public static final String IS_PROJECTILE = "minecraft:is_projectile";

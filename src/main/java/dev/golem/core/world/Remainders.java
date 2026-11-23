@@ -8,7 +8,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.level.ItemLike;
 
 /**
- * Leftovers given to another mod's item after it was built (1.7 {@code setContainerItem}), answered first by
+ * Leftovers given to an item after it was built (1.7 {@code setContainerItem}), answered first by
  * {@link Compat#craftingRemainder} on every node. Handles resolve on lookup.
  */
 public final class Remainders {

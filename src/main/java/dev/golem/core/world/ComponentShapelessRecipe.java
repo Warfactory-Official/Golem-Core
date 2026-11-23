@@ -147,7 +147,7 @@ public class ComponentShapelessRecipe extends CompatCustomRecipe {
     @Override
     public List<net.minecraft.world.item.crafting.display.RecipeDisplay> display() {
         return List.of(new net.minecraft.world.item.crafting.display.ShapelessCraftingRecipeDisplay(
-                ingredients.stream().map(ingredient -> ingredient.displayIngredient().display()).toList(),
+                ingredients.stream().map(ComponentIngredient::slotDisplay).toList(),
                 new net.minecraft.world.item.crafting.display.SlotDisplay.ItemStackSlotDisplay(
                         net.minecraft.world.item.ItemStackTemplate.fromNonEmptyStack(result())),
                 new net.minecraft.world.item.crafting.display.SlotDisplay.ItemSlotDisplay(Items.CRAFTING_TABLE)));

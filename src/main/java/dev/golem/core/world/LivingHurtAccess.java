@@ -15,6 +15,8 @@ public interface LivingHurtAccess {
 
     float golem$lastHurt();
 
+    void golem$setLastHurt(float lastHurt);
+
     /** 26.1 {@code getLastHurtByPlayer()}; the protected field before it. */
     @Nullable Player golem$lastHurtByPlayer();
 

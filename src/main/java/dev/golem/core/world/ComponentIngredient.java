@@ -3,15 +3,19 @@ package dev.golem.core.world;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.JsonOps;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import dev.golem.core.Ids;
+import dev.golem.core.hook.Hook;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.FriendlyByteBuf;
@@ -40,6 +44,9 @@ import net.minecraft.world.item.crafting.Ingredient;
  * Every constraint given has to hold. With no {@code items}, the other constraints alone decide.
  */
 public final class ComponentIngredient {
+
+    /** Completes a display stack that carries an ingredient's components (data a mod derives from them, such as a tint). */
+    public static final Hook<Consumer<ItemStack>> DISPLAY = Hook.notifying();
 
     public static final ComponentIngredient EMPTY =
             new ComponentIngredient(List.of(), Map.of(), List.of(), "", "", 0, "", false);
@@ -308,11 +315,41 @@ public final class ComponentIngredient {
                 stacks.add(Ingredients.potionStack(entry, potion));
             } else {
                 Item item = BuiltInRegistries.ITEM.getValue(Ids.parse(entry));
-                if (item != Items.AIR) stacks.add(new ItemStack(item));
+                if (item != Items.AIR) stacks.add(withComponents(new ItemStack(item)));
             }
         }
         return stacks;
     }
+
+    private ItemStack withComponents(ItemStack stack) {
+        if (components.isEmpty() && stringComponents.isEmpty()) return stack;
+        JsonObject json = new JsonObject();
+        components.forEach((key, value) -> json.add(key, new JsonPrimitive(value)));
+        stringComponents.forEach((key, value) -> json.add(key, new JsonPrimitive(value)));
+        ItemStack display = ItemStacks.withComponents(stack, json, JsonOps.INSTANCE).orElse(stack);
+        if (!test(display)) return stack;
+        for (Consumer<ItemStack> listener : DISPLAY.listeners()) listener.accept(display);
+        return display;
+    }
+
+    /** True when the stacks a viewer should show carry components that {@link #displayIngredient} cannot hold. */
+    public boolean hasDisplayComponents() {
+        return !components.isEmpty() || !stringComponents.isEmpty();
+    }
+
+    //? if >=26.1 {
+    /** The viewer slot: the stacks carrying the required components where there are any, else {@link #displayIngredient}. */
+    public net.minecraft.world.item.crafting.display.SlotDisplay slotDisplay() {
+        if (!hasDisplayComponents()) return displayIngredient().display();
+        List<net.minecraft.world.item.crafting.display.SlotDisplay> slots = displayStacks().stream()
+                .map(stack -> (net.minecraft.world.item.crafting.display.SlotDisplay)
+                        new net.minecraft.world.item.crafting.display.SlotDisplay.ItemStackSlotDisplay(
+                                net.minecraft.world.item.ItemStackTemplate.fromNonEmptyStack(stack)))
+                .toList();
+        if (slots.isEmpty()) return displayIngredient().display();
+        return slots.size() == 1 ? slots.get(0) : new net.minecraft.world.item.crafting.display.SlotDisplay.Composite(slots);
+    }
+    //?}
 
     /** A display-only ordinary ingredient; the constraints remain enforced by {@link #test}. */
     public Ingredient displayIngredient() {

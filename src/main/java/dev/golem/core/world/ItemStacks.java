@@ -98,8 +98,16 @@ public final class ItemStacks {
                 if (!component.getValue().isJsonPrimitive()) return java.util.Optional.empty();
                 copy.setDamageValue(component.getValue().getAsInt());
             } else if (!key.startsWith("minecraft:")) {
-                copy.getOrCreateTag().put(key, com.mojang.serialization.JsonOps.INSTANCE.convertTo(
-                        net.minecraft.nbt.NbtOps.INSTANCE, component.getValue()));
+                com.google.gson.JsonElement value = component.getValue();
+                // NbtOps writes every JSON number as a double; an int component reads an int tag
+                if (value.isJsonPrimitive() && value.getAsJsonPrimitive().isNumber()
+                        && value.getAsBigDecimal().stripTrailingZeros().scale() <= 0
+                        && value.getAsBigDecimal().abs().compareTo(java.math.BigDecimal.valueOf(Integer.MAX_VALUE)) <= 0) {
+                    copy.getOrCreateTag().putInt(key, value.getAsInt());
+                } else {
+                    copy.getOrCreateTag().put(key, com.mojang.serialization.JsonOps.INSTANCE.convertTo(
+                            net.minecraft.nbt.NbtOps.INSTANCE, value));
+                }
             }
         }
         return java.util.Optional.of(copy);

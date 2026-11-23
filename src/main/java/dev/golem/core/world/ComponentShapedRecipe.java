@@ -216,7 +216,7 @@ public class ComponentShapedRecipe extends CompatCustomRecipe {
                 height,
                 ingredients.stream().map(ingredient -> ingredient.isEmpty()
                         ? net.minecraft.world.item.crafting.display.SlotDisplay.Empty.INSTANCE
-                        : ingredient.displayIngredient().display()).toList(),
+                        : ingredient.slotDisplay()).toList(),
                 new net.minecraft.world.item.crafting.display.SlotDisplay.ItemStackSlotDisplay(resultTemplate()),
                 new net.minecraft.world.item.crafting.display.SlotDisplay.ItemSlotDisplay(Items.CRAFTING_TABLE)));
     }
