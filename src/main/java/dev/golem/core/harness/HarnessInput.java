@@ -116,6 +116,16 @@ final class HarnessInput {
         }
     }
 
+    /** The node's code for a scenario mouse button (0 left, 1 right, 2 middle); 26.3's SDL counts from 1. */
+    static int mouseButton(int button) {
+        return switch (button) {
+            case 0 -> InputConstants.MOUSE_BUTTON_LEFT;
+            case 1 -> InputConstants.MOUSE_BUTTON_RIGHT;
+            case 2 -> InputConstants.MOUSE_BUTTON_MIDDLE;
+            default -> button + InputConstants.MOUSE_BUTTON_LEFT;
+        };
+    }
+
     /** Whether the harness is holding keyboard key {@code key} down. */
     static boolean keyHeld(int key) {
         return held.contains(new Binding(false, key));

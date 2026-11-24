@@ -1,5 +1,9 @@
 plugins {
     id("dev.kikugie.stonecutter")
+    // One ModDev for every node, loaded here: two versions in node classloaders each install IntelliJ's idea-ext on
+    // the root project, and an IDE sync fails on the second.
+    id("net.neoforged.moddev") version "2.0.148" apply false
+    id("net.neoforged.moddev.legacyforge") version "2.0.148" apply false
 }
 
 stonecutter active "26.1-neoforge" /* [SC] DO NOT EDIT */

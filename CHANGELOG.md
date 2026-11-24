@@ -21,12 +21,24 @@ Each release has a `## <version>` section; the release workflow uploads only the
 - `PipelineStates.vertices`, `sampler`, `uniform`, `blendFunction(Factor...)` and pipeline inspection helpers, for
   26.2's bind group layouts and split vertex topology.
 - `Poses.rotate(PoseStack, Quaternionfc)`: `PoseStack.mulPose(Quaternion)`, which 26.3 renamed `rotate`.
+- `Sounds.setCategoryGain` (26.1's temporary per-category gain, backported to 1.20.1 and 1.21.1, where vanilla's
+  call re-reads the option and stops a sound at 0) and `Sounds.finalVolume`.
+- `DynamicTextures.update`: rewrites a dynamic texture in place, for textures redrawn every frame.
+- `CompatScreen.mouseDraggedCompat`; `CompatScreen` reports double-clicks on 1.20.1 and 1.21.1 by 1.21.11's rule
+  (same button, same screen, under 250 ms), where it passed `false` before.
+- `gui.Checkboxes` (no `Checkbox.builder` on 1.20.1) and `gui.SliderButton` (a release hook; 1.21.11 changed
+  `onRelease`).
 - Development checks `-Dgolem.mixinAudit=true` (applies every mixin at the first client tick) and
   `-Dgolem.pipelineAudit=true` (compiles every static Core pipeline once a world is loaded).
 
 ### Fixed
 - `chiseledBuild` built 26.2 and 26.3 with the access widener and transformers of whichever node was active; both are
   now rewritten for the node being built.
+- Harness clicks did nothing on 26.3: scenario buttons count from 0 as GLFW does, and are mapped to SDL's numbering.
+- `gui.MouseInput.button()` was SDL's numbering on 26.3 (left = 1); it counts from 0 on every node.
+- `DynamicTextures.decodePng` ran out of native stack on 1.21.1 and older for PNGs over 64 KB.
+- IntelliJ could not sync the project or a mod that includes it: two ModDev versions (2.0.141 for 1.20.1 Forge, 2.0.148
+  elsewhere) each installed idea-ext on the root project. Every node now uses ModDev 2.0.148, loaded by the root build.
 
 ## 1.0.6
 

@@ -52,6 +52,9 @@ public abstract class CompatScreen extends Screen {
 
     protected boolean mouseReleasedCompat(MouseInput event) { return false; }
 
+    /** A drag with the button held; the deltas are in GUI pixels since the last call. */
+    protected boolean mouseDraggedCompat(MouseInput event, double deltaX, double deltaY) { return false; }
+
     protected boolean keyPressedCompat(KeyInput event) { return false; }
 
     protected boolean keyReleasedCompat(KeyInput event) { return false; }
@@ -93,6 +96,11 @@ public abstract class CompatScreen extends Screen {
     }
 
     @Override
+    public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
+        return this.mouseDraggedCompat(new MouseInput(event), deltaX, deltaY) || super.mouseDragged(event, deltaX, deltaY);
+    }
+
+    @Override
     public boolean keyPressed(KeyEvent event) {
         KeyInput input = new KeyInput(event);
         boolean handled = this.keyPressedCompat(input) || this.keyPressedFocusedEditBox(input) || super.keyPressed(event);
@@ -124,17 +132,34 @@ public abstract class CompatScreen extends Screen {
                 || super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
     //?} else {
-    /*@Override
+    /*/^ The 1.21.11 MouseHandler rule: the same button, on the same screen, under 250 ms after the last handled click. ^/
+    private long lastClickMillis = Long.MIN_VALUE;
+    private int lastClickButton = -1;
+
+    @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         MouseInput input = new MouseInput(mouseX, mouseY, button);
-        return this.mouseClickedCompat(input, false) || super.mouseClicked(mouseX, mouseY, button)
-                || this.mouseClickedAfterWidgets(input, false);
+        long now = net.minecraft.Util.getMillis();
+        boolean doubleClick = lastClickButton == button && now - lastClickMillis < 250L;
+        boolean handled = this.mouseClickedCompat(input, doubleClick) || super.mouseClicked(mouseX, mouseY, button)
+                || this.mouseClickedAfterWidgets(input, doubleClick);
+        if (handled) {
+            lastClickMillis = now;
+            lastClickButton = button;
+        }
+        return handled;
     }
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
         return this.mouseReleasedCompat(new MouseInput(mouseX, mouseY, button))
                 || super.mouseReleased(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+        return this.mouseDraggedCompat(new MouseInput(mouseX, mouseY, button), deltaX, deltaY)
+                || super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
     }
 
     @Override

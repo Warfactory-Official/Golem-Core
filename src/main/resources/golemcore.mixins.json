@@ -52,7 +52,7 @@
     "MixinLightmapTint"${legacy_item_owner_mixins}${world_effect_mixins}${sky_client_mixins}${cloud_mixins},
     "MixinGliderWings",
     "MixinChannelStereoFalloff",
-    "MixinGliderCape"${glider_client_mixins}${creative_echo_mixins}
+    "MixinGliderCape"${glider_client_mixins}${creative_echo_mixins}${sound_gain_mixins}
   ],
   "server": [],
   "injectors": {

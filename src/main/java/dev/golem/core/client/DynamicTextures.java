@@ -1,7 +1,10 @@
 package dev.golem.core.client;
 
 import com.mojang.blaze3d.platform.NativeImage;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 
@@ -19,6 +22,9 @@ import net.minecraft.resources.Identifier;
  */
 public final class DynamicTextures {
 
+    /** The textures {@link #update} rewrites in place, by id. */
+    private static final Map<Object, DynamicTexture> UPDATED = new HashMap<>();
+
     private DynamicTextures() {}
 
     /** Uploads {@code argb} ({@code width * height}) as {@code id}, replacing whatever was registered there. */
@@ -30,6 +36,38 @@ public final class DynamicTextures {
             *///?}
             int width, int height, int[] argb) {
         NativeImage image = new NativeImage(width, height, false);
+        write(image, width, height, argb);
+        //? if >=1.21.11 {
+        DynamicTexture texture = new DynamicTexture(id::toString, image);
+        //?} else {
+        /*DynamicTexture texture = new DynamicTexture(image);
+        *///?}
+        Minecraft.getInstance().getTextureManager().register(id, texture);
+        UPDATED.put(id, texture);
+    }
+
+    /**
+     * As {@link #register}, but rewrites and re-uploads the pixels of the texture this class last registered as
+     * {@code id} when its size is unchanged, so a texture redrawn every frame allocates nothing.
+     */
+    public static void update(
+            //? if >=1.21.11 {
+            Identifier id,
+            //?} else {
+            /*ResourceLocation id,
+            *///?}
+            int width, int height, int[] argb) {
+        DynamicTexture texture = UPDATED.get(id);
+        NativeImage image = texture == null ? null : texture.getPixels();
+        if (image == null || image.getWidth() != width || image.getHeight() != height) {
+            register(id, width, height, argb);
+            return;
+        }
+        write(image, width, height, argb);
+        texture.upload();
+    }
+
+    private static void write(NativeImage image, int width, int height, int[] argb) {
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
                 int pixel = argb[y * width + x];
@@ -40,17 +78,14 @@ public final class DynamicTextures {
                 *///?}
             }
         }
-        //? if >=1.21.11 {
-        DynamicTexture texture = new DynamicTexture(id::toString, image);
-        //?} else {
-        /*DynamicTexture texture = new DynamicTexture(image);
-        *///?}
-        Minecraft.getInstance().getTextureManager().register(id, texture);
     }
 
-    /** Decodes a PNG into {@code 0xAARRGGBB} pixels; {@code [0]} and {@code [1]} of {@code size} receive its size. */
+    /**
+     * Decodes a PNG into {@code 0xAARRGGBB} pixels; {@code [0]} and {@code [1]} of {@code size} receive its size. Read
+     * from a stream: on 1.21.1 and older {@code NativeImage.read(byte[])} copies the file onto the 64 KB LWJGL stack.
+     */
     public static int[] decodePng(byte[] png, int[] size) throws IOException {
-        try (NativeImage image = NativeImage.read(png)) {
+        try (NativeImage image = NativeImage.read(new ByteArrayInputStream(png))) {
             int w = image.getWidth();
             int h = image.getHeight();
             int[] pixels = new int[w * h];

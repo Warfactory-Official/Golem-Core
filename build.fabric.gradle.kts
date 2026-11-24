@@ -256,6 +256,8 @@ tasks.processResources {
         "fabric_loader" to prop("deps.fabric_loader"),
         "java_version" to javaVersion.toString(),
         "mixin_compatibility" to if (javaVersion <= 17) "JAVA_17" else "JAVA_21",
+        // Sounds.setCategoryGain: 1.21.11 added SoundEngine's per-category gain; older nodes get it from these.
+        "sound_gain_mixins" to if (!modern) ", \"MixinLegacySoundGain\", \"SoundManagerAccess\"" else "",
         "legacy_item_owner_mixins" to if (!modern)
             ", \"MixinItemRenderer\"" else "",
         // EntityTicks: NeoForge's EntityTickEvent.Post has no Fabric or Forge counterpart.

@@ -1,7 +1,7 @@
 plugins {
     id("java-library")
     id("maven-publish")
-    id("net.neoforged.moddev.legacyforge") version "2.0.141"
+    id("net.neoforged.moddev.legacyforge")
 }
 
 fun prop(name: String): String = property(name) as String
@@ -103,6 +103,8 @@ tasks.processResources {
         "forge_loader_range" to prop("deps.forge_loader_range"),
         "java_version" to javaVersion.toString(),
         "mixin_compatibility" to if (javaVersion <= 17) "JAVA_17" else "JAVA_21",
+        // Sounds.setCategoryGain: 1.21.11 added SoundEngine's per-category gain; older nodes get it from these.
+        "sound_gain_mixins" to ", \"MixinLegacySoundGain\", \"SoundManagerAccess\"",
         "legacy_item_owner_mixins" to if (mcVersion.substringBefore('.').toInt() < 26)
             ", \"MixinItemRenderer\"" else "",
         // EntityTicks: NeoForge's EntityTickEvent.Post has no Fabric or Forge counterpart.

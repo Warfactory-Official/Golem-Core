@@ -107,7 +107,7 @@ final class HarnessCommands {
             return null;
         });
         handlers.put("click", (mc, req) -> {
-            int button = Json.integer(req, "button", 0);
+            int button = HarnessInput.mouseButton(Json.integer(req, "button", 0));
             if (req.has("x") && req.has("y")) HarnessInput.mouseMove(mc, req.get("x").getAsDouble(), req.get("y").getAsDouble());
             HarnessInput.Binding binding = new HarnessInput.Binding(true, button);
             int hold = Json.integer(req, "hold_ticks", 1);
