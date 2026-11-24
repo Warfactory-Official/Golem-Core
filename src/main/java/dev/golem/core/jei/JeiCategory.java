@@ -18,10 +18,10 @@ import mezz.jei.api.helpers.IJeiHelpers;
 import mezz.jei.api.recipe.IFocusGroup;
 import mezz.jei.api.recipe.RecipeIngredientRole;
 import mezz.jei.api.recipe.category.AbstractRecipeCategory;
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 //?} else {
-/*import net.minecraft.client.gui.GuiGraphics;
+/*import net.minecraft.client.gui.GuiGraphicsExtractor;
 *///?}
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
@@ -66,10 +66,10 @@ final class JeiCategory<T> extends AbstractRecipeCategory<T> {
 
     @Override
     public void draw(T recipe, IRecipeSlotsView slots,
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             GuiGraphicsExtractor graphics,
             //?} else {
-            /*GuiGraphics graphics,
+            /*GuiGraphicsExtractor graphics,
             *///?}
             double mouseX, double mouseY) {
         category.draw(recipe, graphics, mouseX, mouseY);
@@ -151,10 +151,10 @@ final class JeiCategory<T> extends AbstractRecipeCategory<T> {
 
             @Override
             public void draw(
-                    //? if >=26.1 {
+                    //? if >=1.21.11 {
                     GuiGraphicsExtractor graphics,
                     //?} else {
-                    /*GuiGraphics graphics,
+                    /*GuiGraphicsExtractor graphics,
                     *///?}
                     int x, int y) {
                 drawable.draw(graphics, x, y);

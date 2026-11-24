@@ -96,7 +96,7 @@ final class GemVisual<T extends BlockEntity, S extends CompatRenderState>
     }
 
     private static Vec3 camera() {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return Minecraft.getInstance().gameRenderer.getMainCamera().position();
         //?} else {
         /*return Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();

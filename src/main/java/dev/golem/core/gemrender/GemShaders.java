@@ -21,7 +21,7 @@ public final class GemShaders {
     /** NONE: GemRender left a resource pack's copy alone. */
     public enum Patch { NONE, MIRRORED, UNKNOWN }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private static final String NAME = "core/entity";
     private static final String FILE = "entity";
     private static final List<String> VERTEX = List.of(

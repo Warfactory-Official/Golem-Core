@@ -35,7 +35,12 @@ public class MixinHarnessWindow {
         }
     }
 
-    //? if >=26.1 {
+    //? if >=26.3 {
+    /*@Inject(method = "createWindow", at = @At("HEAD"))
+    private void golem$harnessWindowHints(CallbackInfoReturnable<Long> callback) {
+        dev.golem.core.harness.HarnessWindowHints.apply();
+    }
+    *///?} elif >=26.1 {
     @Inject(method = "createGlfwWindow", at = @At(value = "INVOKE",
             target = "Lorg/lwjgl/glfw/GLFW;glfwCreateWindow(IILjava/lang/CharSequence;JJ)J"))
     private static void golem$harnessWindowHints(CallbackInfoReturnable<Long> callback) {

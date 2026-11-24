@@ -31,7 +31,7 @@ final class HarnessWorld {
 
     static void leave(Minecraft minecraft) {
         if (minecraft.level == null) return;
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         minecraft.disconnectFromWorld(net.minecraft.client.multiplayer.ClientLevel.DEFAULT_QUIT_MESSAGE);
         //?} elif >=1.21 {
         /*minecraft.level.disconnect();
@@ -111,7 +111,7 @@ final class HarnessWorld {
                     // overlay is gone, and it cannot go while that loop holds the client thread.
                     if (mc.getOverlay() != null) return null;
                     opened = true;
-                    //? if >=26.1 {
+                    //? if >=1.21.11 {
                     CreateWorldScreen.openFresh(mc, () -> mc.setScreen(new TitleScreen()));
                     //?} else {
                     /*CreateWorldScreen.openFresh(mc, new TitleScreen());

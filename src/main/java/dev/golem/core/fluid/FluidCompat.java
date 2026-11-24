@@ -16,7 +16,7 @@ public final class FluidCompat {
 
     /** The fluid handler at {@code pos} on {@code side}, or null if there is none. */
     public static @Nullable FluidView find(Level level, BlockPos pos, @Nullable Direction side) {
-        //? if neoforge && >=26.1 {
+        //? if neoforge && >=1.21.11 {
         return NeoTransferFluids.find(level, pos, side);
         //?} elif neoforge {
         /*return NeoLegacyFluids.find(level, pos, side);
@@ -32,7 +32,7 @@ public final class FluidCompat {
      * copy, read back with {@link FluidView#container()}, never {@code stack} itself.
      */
     public static @Nullable FluidView findItem(ItemStack stack) {
-        //? if neoforge && >=26.1 {
+        //? if neoforge && >=1.21.11 {
         return NeoTransferFluids.findItem(stack);
         //?} elif neoforge {
         /*return NeoLegacyFluids.findItem(stack);

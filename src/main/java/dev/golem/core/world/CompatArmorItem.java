@@ -25,7 +25,7 @@ import net.minecraft.world.level.Level;
  * {@code getMaxDamage() == 0}: it never wears out.
  */
 public class CompatArmorItem extends
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     Item
     //?} else {
     /*net.minecraft.world.item.ArmorItem
@@ -36,7 +36,7 @@ public class CompatArmorItem extends
 
     @SuppressWarnings("unchecked")
     public CompatArmorItem(GolemArmorMaterial material, ArmorSlot slot, Item.Properties properties) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         super(configure((net.minecraft.world.item.equipment.ArmorMaterial) material.nativeMaterial(), slot,
                 properties, material.enchantmentValue()));
         //?} else if >=1.21.1 {
@@ -61,7 +61,7 @@ public class CompatArmorItem extends
      * class's constructor.
      */
     public static Item.Properties unbreakable(Item.Properties properties) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return properties.component(net.minecraft.core.component.DataComponents.UNBREAKABLE, net.minecraft.util.Unit.INSTANCE)
                 .component(net.minecraft.core.component.DataComponents.TOOLTIP_DISPLAY,
                         net.minecraft.world.item.component.TooltipDisplay.DEFAULT
@@ -106,7 +106,7 @@ public class CompatArmorItem extends
         return InteractionResult.PASS;
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     public void appendHoverText(ItemStack stack, Item.TooltipContext context,
                                 net.minecraft.world.item.component.TooltipDisplay display,
@@ -134,7 +134,7 @@ public class CompatArmorItem extends
     }
     *///?}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     public InteractionResult use(Level level, Player player, InteractionHand hand) {
         return compatUse(level, player, hand);
@@ -151,7 +151,7 @@ public class CompatArmorItem extends
     }
     *///?}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     /**
      * Applies the material, working around {@code Properties.humanoidArmor}: it calls
      * {@code enchantable(material.enchantmentValue())} unconditionally, and that throws on a value of 0

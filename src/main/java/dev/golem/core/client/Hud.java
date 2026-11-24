@@ -4,42 +4,42 @@ import dev.golem.core.Ids;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 //?} else {
-/*import net.minecraft.client.gui.GuiGraphics;
+/*import net.minecraft.client.gui.GuiGraphicsExtractor;
 *///?}
 
 /** Client HUD layers share draw order and depth composition while leaving chat above screen effects. */
 public final class Hud {
 
     private Hud() {}
-    //? if fabric && <26.1 {
-    /*private static final List<Consumer<GuiGraphics>> BEFORE_CHAT = new ArrayList<>();
+    //? if fabric && <1.21.11 {
+    /*private static final List<Consumer<GuiGraphicsExtractor>> BEFORE_CHAT = new ArrayList<>();
 
-    public static void drawBeforeChat(GuiGraphics graphics) {
+    public static void drawBeforeChat(GuiGraphicsExtractor graphics) {
         for (var renderer : BEFORE_CHAT) draw(graphics, renderer);
     }
     *///?}
-    //? if fabric && <26.1 {
-    /*private static final List<Consumer<GuiGraphics>> CAMERA = new ArrayList<>();
+    //? if fabric && <1.21.11 {
+    /*private static final List<Consumer<GuiGraphicsExtractor>> CAMERA = new ArrayList<>();
 
-    public static void drawCameraOverlays(GuiGraphics graphics) {
+    public static void drawCameraOverlays(GuiGraphicsExtractor graphics) {
         for (var renderer : CAMERA) drawUnderHud(graphics, renderer);
     }
     *///?}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
 
     /** Draws a fullscreen helmet overlay with vanilla's pumpkin blur, beneath the crosshair and hotbar. */
     public static void addCameraOverlay(String namespace, String path, Consumer<GuiGraphicsExtractor> renderer) {
         //?} else {
-        /*public static void addCameraOverlay(String namespace, String path, Consumer<GuiGraphics> renderer) {
+        /*public static void addCameraOverlay(String namespace, String path, Consumer<GuiGraphicsExtractor> renderer) {
          *///?}
-        //? if fabric && >=26.1 {
+        //? if fabric && >=1.21.11 {
         /*net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.attachElementAfter(
                 net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements.MISC_OVERLAYS,
-                Ids.of(namespace, path), (graphics, _) -> renderer.accept(graphics));
+                Ids.of(namespace, path), (graphics, delta) -> renderer.accept(graphics));
         *///?} elif fabric {
         /*CAMERA.add(renderer);
          *///?} elif neoforge {
@@ -59,12 +59,12 @@ public final class Hud {
      * Below 26.1 an overlay under the HUD neither tests nor writes depth, like vanilla's pumpkin: HUD layers are
      * lifted in z, and a mod drawing after them near z 0 (Jade) would fail against a fullscreen depth write.
      */
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private static void drawUnderHud(GuiGraphicsExtractor graphics, Consumer<GuiGraphicsExtractor> renderer) {
         renderer.accept(graphics);
     }
     //?} else {
-    /*private static void drawUnderHud(GuiGraphics graphics, Consumer<GuiGraphics> renderer) {
+    /*private static void drawUnderHud(GuiGraphicsExtractor graphics, Consumer<GuiGraphicsExtractor> renderer) {
         graphics.flush();
         com.mojang.blaze3d.systems.RenderSystem.disableDepthTest();
         com.mojang.blaze3d.systems.RenderSystem.depthMask(false);
@@ -75,17 +75,17 @@ public final class Hud {
     }
     *///?}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
 
     /** Draws a screen effect over the HUD while keeping chat and its backdrop readable above it. */
     public static void addBeforeChat(String namespace, String path, Consumer<GuiGraphicsExtractor> renderer) {
         //?} else {
-        /*public static void addBeforeChat(String namespace, String path, Consumer<GuiGraphics> renderer) {
+        /*public static void addBeforeChat(String namespace, String path, Consumer<GuiGraphicsExtractor> renderer) {
          *///?}
-        //? if fabric && >=26.1 {
+        //? if fabric && >=1.21.11 {
         /*net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.attachElementBefore(
                 net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements.CHAT,
-                Ids.of(namespace, path), (graphics, _) -> renderer.accept(graphics));
+                Ids.of(namespace, path), (graphics, delta) -> renderer.accept(graphics));
         *///?} elif fabric {
         /*BEFORE_CHAT.add(renderer);
          *///?} elif neoforge {
@@ -102,14 +102,14 @@ public final class Hud {
         *///?}
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     /** Registers an overlay drawn after the vanilla HUD. */
     public static void addLast(String namespace, String path, Consumer<GuiGraphicsExtractor> renderer) {
     //?} else {
     /*/^* Registers an overlay drawn after the vanilla HUD. ^/
-    public static void addLast(String namespace, String path, Consumer<GuiGraphics> renderer) {
+    public static void addLast(String namespace, String path, Consumer<GuiGraphicsExtractor> renderer) {
     *///?}
-        //? if fabric && >=26.1 {
+        //? if fabric && >=1.21.11 {
         /*net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry.addLast(
                 Ids.of(namespace, path), (graphics, deltaTracker) -> renderer.accept(graphics));
         *///?} elif fabric {
@@ -142,16 +142,16 @@ public final class Hud {
      * chat is (power-armour charge bars vanish while chat is visible). Flushing and clearing depth before the
      * layer reproduces "later is on top".
      */
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     public static void draw(GuiGraphicsExtractor graphics, Consumer<GuiGraphicsExtractor> renderer) {
         renderer.accept(graphics);
     }
     //?} elif >=1.20.5 {
-    /*public static void draw(GuiGraphics graphics, Consumer<GuiGraphics> renderer) {
+    /*public static void draw(GuiGraphicsExtractor graphics, Consumer<GuiGraphicsExtractor> renderer) {
         renderer.accept(graphics);
     }
     *///?} else {
-    /*public static void draw(GuiGraphics graphics, Consumer<GuiGraphics> renderer) {
+    /*public static void draw(GuiGraphicsExtractor graphics, Consumer<GuiGraphicsExtractor> renderer) {
         graphics.flush();
         com.mojang.blaze3d.systems.RenderSystem.clear(org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT,
                 net.minecraft.client.Minecraft.ON_OSX);

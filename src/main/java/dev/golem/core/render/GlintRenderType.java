@@ -1,9 +1,9 @@
 package dev.golem.core.render;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import com.mojang.blaze3d.pipeline.BlendFunction;
-import com.mojang.blaze3d.pipeline.ColorTargetState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.rendertype.RenderSetup;
 import net.minecraft.client.renderer.rendertype.RenderType;
@@ -42,18 +42,16 @@ public final class GlintRenderType {
 
     private GlintRenderType() {}
 
-    //? if >=26.1 {
-    private static final RenderPipeline ADDITIVE = WorldPipelines.add(RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET,
+    //? if >=1.21.11 {
+    private static final RenderPipeline ADDITIVE = WorldPipelines.add(PipelineStates.depthOf(PipelineStates.vertices(PipelineStates.blend(RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET,
                     RenderPipelines.FOG_SNIPPET, RenderPipelines.GLOBALS_SNIPPET)
             .withLocation("pipeline/golem_glint_additive")
             .withVertexShader("core/glint")
             .withFragmentShader("core/glint")
             .withSampler("Sampler0")
-            .withCull(false)
-            .withColorTargetState(new ColorTargetState(BlendFunction.ADDITIVE))
-            .withVertexFormat(com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_TEX,
-                    com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS)
-            .withDepthStencilState(RenderPipelines.GLINT.getDepthStencilState())
+            .withCull(false), BlendFunction.ADDITIVE)
+            , com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_TEX,
+                    VertexFormat.Mode.QUADS), RenderPipelines.GLINT)
             .build(), RenderPipelines.GLINT);
 
     private static final Function<Identifier, RenderType> GLINT = Util.memoize(texture ->

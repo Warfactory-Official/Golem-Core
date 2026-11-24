@@ -30,7 +30,7 @@ import net.minecraft.world.level.block.state.BlockState;
  * from {@link Tools} on every target, so an override sees the same default everywhere.
  */
 public class CompatToolItem extends
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         Item
         //?} else {
         /*net.minecraft.world.item.DiggerItem
@@ -68,7 +68,7 @@ public class CompatToolItem extends
 
     public CompatToolItem(Item.Properties properties, ToolTier tier, List<TagKey<Block>> mineable,
                           float attackDamage, float attackSpeed, double movement) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         super(modernProperties(properties, tier, mineable, attackDamage, attackSpeed, movement));
         //?} else if >=1.21.1 {
         /*super(Tools.vanillaTier(tier), mineable.get(0), Tools.unbreakableIfWorn(properties, tier)
@@ -84,7 +84,7 @@ public class CompatToolItem extends
         this.mineable = List.copyOf(mineable);
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private static Item.Properties modernProperties(Item.Properties properties, ToolTier tier,
                                                     List<TagKey<Block>> mineable, float attackDamage,
                                                     float attackSpeed, double movement) {
@@ -177,7 +177,7 @@ public class CompatToolItem extends
     }
     *///?}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     public void hurtEnemy(ItemStack stack, LivingEntity target, LivingEntity attacker) {
         compatHurtEnemy(stack, target, attacker);
@@ -211,7 +211,7 @@ public class CompatToolItem extends
     }
     *///?}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     public void appendHoverText(ItemStack stack, Item.TooltipContext context,
                                 net.minecraft.world.item.component.TooltipDisplay display,

@@ -13,8 +13,8 @@ public final class CustomRecipes {
     private CustomRecipes() {}
 
     public static <T extends CompatCustomRecipe> RecipeSerializer<T> serializer(Supplier<T> recipe) {
-        //? if >=26.1 {
-        return new RecipeSerializer<>(com.mojang.serialization.MapCodec.unit(recipe.get()),
+        //? if >=1.21.11 {
+        return serializerOf(com.mojang.serialization.MapCodec.unit(recipe.get()),
                 net.minecraft.network.codec.StreamCodec.unit(recipe.get()));
         //?} else if >=1.21.1 {
         /*return new RecipeSerializer<>() {
@@ -23,8 +23,8 @@ public final class CustomRecipes {
             @Override public com.mojang.serialization.MapCodec<T> codec() { return codec; }
             @Override public net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, T> streamCodec() { return stream; }
         };
-        */
-        //?} else {
+        
+        *///?} else {
         /*return new net.minecraft.world.item.crafting.SimpleCraftingRecipeSerializer<>((id, category) -> recipe.get());
         *///?}
     }
@@ -44,7 +44,7 @@ public final class CustomRecipes {
     public static <T extends ComponentCopyShapelessRecipe> RecipeSerializer<T> componentCopyShapeless(
             ComponentCopyFactory<T> factory) {
         Objects.requireNonNull(factory);
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return componentCopyShapeless26(factory);
         //?} else if >=1.21.1 {
         /*return componentCopyShapeless21(factory);
@@ -70,7 +70,7 @@ public final class CustomRecipes {
     public static <T extends ComponentShapelessRecipe> RecipeSerializer<T> componentShapeless(
             ComponentShapelessFactory<T> factory) {
         Objects.requireNonNull(factory);
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         com.mojang.serialization.MapCodec<T> codec =
                 com.mojang.serialization.codecs.RecordCodecBuilder.mapCodec(instance -> instance.group(
                         ComponentIngredient.CODEC.listOf().fieldOf("ingredients")
@@ -86,7 +86,7 @@ public final class CustomRecipes {
                         net.minecraft.world.item.ItemStackTemplate.STREAM_CODEC,
                         recipe -> recipe.resultTemplate(),
                         (ingredients, result) -> factory.create("", "", ingredients, ItemStackSpec.fromTemplate(result)));
-        return new RecipeSerializer<>(codec, stream);
+        return serializerOf(codec, stream);
         //?} else if >=1.21.1 {
         /*com.mojang.serialization.MapCodec<T> codec =
                 com.mojang.serialization.codecs.RecordCodecBuilder.mapCodec(instance -> instance.group(
@@ -151,7 +151,7 @@ public final class CustomRecipes {
     public static <T extends ComponentShapedRecipe> RecipeSerializer<T> componentShaped(
             ComponentShapedFactory<T> factory) {
         Objects.requireNonNull(factory);
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return componentShaped26(factory);
         //?} else if >=1.21.1 {
         /*return componentShaped21(factory);
@@ -164,7 +164,7 @@ public final class CustomRecipes {
     public static <T extends net.minecraft.world.item.crafting.SmeltingRecipe> RecipeSerializer<T> componentSmelting(
             ComponentSmeltingFactory<T> factory) {
         Objects.requireNonNull(factory);
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return componentSmelting26(factory);
         //?} else if >=1.21.1 {
         /*return componentSmelting21(factory);
@@ -173,7 +173,7 @@ public final class CustomRecipes {
         *///?}
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private static <T extends ComponentShapedRecipe> RecipeSerializer<T> componentShaped26(
             ComponentShapedFactory<T> factory) {
         com.mojang.serialization.Codec<java.util.Map<String, ComponentIngredient>> keyCodec =
@@ -205,11 +205,11 @@ public final class CustomRecipes {
                         recipe -> recipe.copyFrom(),
                         (pattern, key, result, copyFrom) -> factory.create("", "", pattern, key,
                                 ItemStackSpec.fromTemplate(result), copyFrom));
-        return new RecipeSerializer<>(codec, stream);
+        return serializerOf(codec, stream);
     }
     //?}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private static <T extends net.minecraft.world.item.crafting.SmeltingRecipe> RecipeSerializer<T> componentSmelting26(
             ComponentSmeltingFactory<T> factory) {
         com.mojang.serialization.MapCodec<T> codec =
@@ -236,11 +236,11 @@ public final class CustomRecipes {
                         recipe -> recipe.cookingTime(),
                         (ingredient, result, experience, cookingTime) ->
                                  factory.create("", "", ingredient, ItemStackSpec.fromTemplate(result), experience, cookingTime));
-        return new RecipeSerializer<>(codec, stream);
+        return serializerOf(codec, stream);
     }
     //?}
 
-    //? if >=1.21.1 && <26.1 {
+    //? if >=1.21.1 && <1.21.11 {
      /*private static <T extends net.minecraft.world.item.crafting.SmeltingRecipe> RecipeSerializer<T> componentSmelting21(
             ComponentSmeltingFactory<T> factory) {
         com.mojang.serialization.MapCodec<T> codec =
@@ -310,7 +310,7 @@ public final class CustomRecipes {
     }
     *///?}
 
-    //? if >=1.21.1 && <26.1 {
+    //? if >=1.21.1 && <1.21.11 {
     /*private static <T extends ComponentShapedRecipe> RecipeSerializer<T> componentShaped21(
             ComponentShapedFactory<T> factory) {
         com.mojang.serialization.Codec<java.util.Map<String, ComponentIngredient>> keyCodec =
@@ -403,7 +403,7 @@ public final class CustomRecipes {
     }
     *///?}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private static <T extends ComponentCopyShapelessRecipe> RecipeSerializer<T> componentCopyShapeless26(
             ComponentCopyFactory<T> factory) {
         com.mojang.serialization.MapCodec<T> codec =
@@ -426,11 +426,11 @@ public final class CustomRecipes {
                         recipe -> recipe.resultTemplate(),
                         (ingredients, copyFrom, result) ->
                                 factory.create("", "", ingredients, copyFrom, ItemStackSpec.fromTemplate(result)));
-        return new RecipeSerializer<>(codec, stream);
+        return serializerOf(codec, stream);
     }
     //?}
 
-    //? if >=1.21.1 && <26.1 {
+    //? if >=1.21.1 && <1.21.11 {
     /*private static <T extends ComponentCopyShapelessRecipe> RecipeSerializer<T> componentCopyShapeless21(
             ComponentCopyFactory<T> factory) {
         com.mojang.serialization.MapCodec<T> codec =
@@ -534,4 +534,22 @@ public final class CustomRecipes {
         return stack;
     }
     *///?}
+
+    //? if >=1.21.11 {
+    /** A serializer from its two codecs: a record on 26.1, an interface on 1.21.11. */
+    public static <T extends net.minecraft.world.item.crafting.Recipe<?>> RecipeSerializer<T> serializerOf(
+            com.mojang.serialization.MapCodec<T> codec,
+            net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, T> stream) {
+        //? if >=26.1 {
+        return new RecipeSerializer<>(codec, stream);
+        //?} else {
+        /*return new RecipeSerializer<>() {
+            @Override public com.mojang.serialization.MapCodec<T> codec() { return codec; }
+            @Override public net.minecraft.network.codec.StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, T> streamCodec() {
+                return stream;
+            }
+        };
+        *///?}
+    }
+    //?}
 }

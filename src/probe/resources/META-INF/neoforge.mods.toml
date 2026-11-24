@@ -1,0 +1,17 @@
+modLoader = "javafml"
+loaderVersion = "${neoforge_loader_range}"
+license = "${mod_license}"
+
+[[mods]]
+modId = "golemprobe"
+version = "${mod_version}"
+displayName = "Golem Probe (dev only)"
+authors = "${mod_author}"
+description = '''Dev-only content that exercises Golem Core without a content mod. Never shipped.'''
+
+[[dependencies.golemprobe]]
+modId = "golemcore"
+type = "required"
+versionRange = "[${mod_version},)"
+ordering = "AFTER"
+side = "BOTH"

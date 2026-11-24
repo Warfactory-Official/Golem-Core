@@ -26,13 +26,28 @@ public final class Fuels {
      * registration has flushed so the suppliers resolve.
      */
     public static void register(Map<? extends Supplier<? extends Item>, Integer> burnTimes) {
-        //? if fabric && >=26.1 {
+        //? if >=26.3 {
+        /*// 26.3 fuel is the item's cooking_fuel component (NeoForge's fuel data map is gone with it).
+        REGISTERED.add(burnTimes.keySet());
+        //? if neoforge {
+        dev.golem.core.platform.NeoForgeEntrypoint.modBus().addListener(
+                (net.neoforged.neoforge.event.ModifyDefaultComponentsEvent event) -> burnTimes.forEach((item, ticks) ->
+                        event.modify(item.get(), (components, context, key) ->
+                                components.set(net.minecraft.core.component.DataComponents.COOKING_FUEL, fuel(ticks)))));
+        //?} else {
+        /^net.fabricmc.fabric.api.item.v1.DefaultItemComponentEvents.MODIFY.register(context -> burnTimes.forEach((item, ticks) ->
+                context.modify(item.get(), components ->
+                        components.set(net.minecraft.core.component.DataComponents.COOKING_FUEL, fuel(ticks)))));
+        ^///?}
+        *///?} elif fabric && >=26.1 {
         /*// 26.1 builds fuel values per server, so the map is replayed into each builder as it is made.
         net.fabricmc.fabric.api.registry.FuelValueEvents.BUILD.register((builder, context) ->
                 burnTimes.forEach((item, ticks) -> builder.add(item.get(), ticks)));
+        *///?} elif fabric && >=1.21.11 {
+        /*net.fabricmc.fabric.api.registry.FuelRegistryEvents.BUILD.register((builder, context) ->
+                burnTimes.forEach((item, ticks) -> builder.add(item.get(), ticks)));
         *///?} elif fabric {
-        /*// Pre-26.1 fabric-api keeps one global mutable registry.
-        burnTimes.forEach((item, ticks) -> net.fabricmc.fabric.api.registry.FuelRegistry.INSTANCE.add(item.get(), ticks));
+        /*burnTimes.forEach((item, ticks) -> net.fabricmc.fabric.api.registry.FuelRegistry.INSTANCE.add(item.get(), ticks));
         *///?}
         //? if forge {
         /*java.util.concurrent.atomic.AtomicReference<Map<Item, Integer>> resolved =
@@ -53,6 +68,33 @@ public final class Fuels {
                     if (ticks != null) event.setBurnTime(ticks);
                 });
         *///?}
-        // NeoForge: nothing to do. See the class note.
+        // NeoForge before 26.3: nothing to do. See the class note.
     }
+
+    //? if >=26.3 {
+    /*private static final java.util.List<java.util.Collection<? extends Supplier<? extends Item>>> REGISTERED =
+            new java.util.concurrent.CopyOnWriteArrayList<>();
+
+    /^*
+     * A registered fuel's burn time in {@code furnace}: halved in smokers and blast furnaces, as their block entities did
+     * before 26.3 moved that halving into vanilla's own fuel providers.
+     ^/
+    public static int burnDuration(net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity furnace,
+                                   net.minecraft.world.item.ItemStack fuel, int ticks) {
+        if (!(furnace instanceof net.minecraft.world.level.block.entity.SmokerBlockEntity)
+                && !(furnace instanceof net.minecraft.world.level.block.entity.BlastFurnaceBlockEntity)) return ticks;
+        for (var items : REGISTERED) {
+            for (Supplier<? extends Item> item : items) if (fuel.is(item.get())) return ticks / 2;
+        }
+        return ticks;
+    }
+
+    /^* A fixed burn time; {@link #burnDuration} halves it in smokers and blast furnaces. ^/
+    private static net.minecraft.world.item.component.CookingFuel fuel(int ticks) {
+        return new net.minecraft.world.item.component.CookingFuel(
+                new net.minecraft.world.level.storage.loot.providers.number.ints.ResolvableInt.Constant(ticks),
+                net.minecraft.world.level.storage.loot.providers.number.floats.ResolvableFloat.fromKey(
+                        net.minecraft.world.level.storage.loot.providers.number.floats.ContextFloatProviders.COOKING_DEFAULT_SPEED_MULTIPLIER));
+    }
+    *///?}
 }

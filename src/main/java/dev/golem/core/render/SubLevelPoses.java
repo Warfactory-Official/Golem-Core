@@ -46,7 +46,7 @@ public final class SubLevelPoses {
         pose.translate(anchorInWorld.x + sub.position().x - camera.x,
                 anchorInWorld.y + sub.position().y - camera.y,
                 anchorInWorld.z + sub.position().z - camera.z);
-        pose.mulPose(new Quaternionf(sub.orientation()));
+        Poses.rotate(pose, new Quaternionf(sub.orientation()));
         pose.scale((float) sub.scale().x, (float) sub.scale().y, (float) sub.scale().z);
     }
 }

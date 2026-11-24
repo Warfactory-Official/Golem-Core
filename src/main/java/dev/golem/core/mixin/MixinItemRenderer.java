@@ -1,6 +1,6 @@
 package dev.golem.core.mixin;
 
-//? if <26.1 {
+//? if <1.21.11 {
 
 /*import dev.golem.core.render.ItemRenderContext;
 import com.mojang.blaze3d.vertex.PoseStack;

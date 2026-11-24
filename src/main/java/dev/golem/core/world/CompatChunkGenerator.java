@@ -110,7 +110,7 @@ public abstract class CompatChunkGenerator extends ChunkGenerator {
      * ticks) until something asked for it. The full chunk creates it when it promotes its pending entities.
      */
     protected static void set(ChunkAccess chunk, BlockPos.MutableBlockPos pos, BlockState state) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         chunk.setBlockState(pos, state);
         //?} else {
         /*chunk.setBlockState(pos, state, false);
@@ -127,7 +127,21 @@ public abstract class CompatChunkGenerator extends ChunkGenerator {
         chunk.getOrCreateHeightmapUnprimed(Heightmap.Types.WORLD_SURFACE_WG).update(pos.getX() & 15, pos.getY(), pos.getZ() & 15, state);
     }
 
-    //? if >=1.20.5 {
+    //? if >=26.3 {
+    /*/^* 26.3 merged noise, surface and carvers into one terrain step; this runs them in their old order. ^/
+    @Override
+    public final CompletableFuture<ChunkAccess> buildTerrain(ChunkAccess chunk, Blender blender, RandomState randomState,
+                                                             StructureManager structureManager, BiomeManager biomeManager,
+                                                             @org.jspecify.annotations.Nullable WorldGenRegion region,
+                                                             java.util.Set<net.minecraft.core.Holder<net.minecraft.world.level.biome.Biome>> possibleBiomes) {
+        fill(chunk);
+        if (region != null) {
+            surface(region, chunk);
+            carve(region, chunk);
+        }
+        return CompletableFuture.completedFuture(chunk);
+    }
+    *///?} elif >=1.20.5 {
     @Override
     public final CompletableFuture<ChunkAccess> fillFromNoise(Blender blender, RandomState randomState,
                                                               StructureManager structureManager, ChunkAccess chunk) {
@@ -145,7 +159,8 @@ public abstract class CompatChunkGenerator extends ChunkGenerator {
     *///?}
 
     // 1.21.2 dropped the carving step (only air carvers remain); before it the method ran once per step.
-    //? if >=1.21.2 {
+    //? if >=26.3 {
+    //?} elif >=1.21.2 {
     @Override
     public final void applyCarvers(WorldGenRegion region, long seed, RandomState randomState, BiomeManager biomeManager,
                                    StructureManager structureManager, ChunkAccess chunk) {
@@ -160,15 +175,23 @@ public abstract class CompatChunkGenerator extends ChunkGenerator {
     }
     *///?}
 
+    //? if <26.3 {
     @Override
     public final void buildSurface(WorldGenRegion region, StructureManager structureManager, RandomState randomState,
                                    ChunkAccess chunk) {
         surface(region, chunk);
     }
+    //?}
 
     @Override
     public void spawnOriginalMobs(WorldGenRegion region) {}
 
+    //? if >=26.3 {
+    /*@Override
+    public void addDebugScreenInfo(List<String> lines, RandomState randomState, BlockPos pos,
+                                   net.minecraft.world.level.levelgen.densityfunction.SamplerContext samplerContext) {}
+    *///?} else {
     @Override
     public void addDebugScreenInfo(List<String> lines, RandomState randomState, BlockPos pos) {}
+    //?}
 }

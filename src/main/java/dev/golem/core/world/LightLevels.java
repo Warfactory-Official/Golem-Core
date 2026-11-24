@@ -26,18 +26,22 @@ public final class LightLevels {
 
     /** {@code getBlockLightOpacity}: how much light the block at {@code pos} absorbs, 0..15. */
     public static int opacity(BlockGetter level, BlockPos pos) {
-        //? if >=1.21.2 {
+        //? if >=26.1 {
         return level.getBlockState(pos).getLightDampening();
-        //?} else {
+        //?} elif >=1.21.2 {
+        /*return level.getBlockState(pos).getLightBlock();
+        *///?} else {
         /*return level.getBlockState(pos).getLightBlock(level, pos);
         *///?}
     }
 
     /** How much light {@code state} absorbs, 0..15, from vanilla's per-state cache (position-independent). */
     public static int opacity(net.minecraft.world.level.block.state.BlockState state) {
-        //? if >=1.21.2 {
+        //? if >=26.1 {
         return state.getLightDampening();
-        //?} else {
+        //?} elif >=1.21.2 {
+        /*return state.getLightBlock();
+        *///?} else {
         /*return state.getLightBlock(net.minecraft.world.level.EmptyBlockGetter.INSTANCE, BlockPos.ZERO);
         *///?}
     }
@@ -46,7 +50,7 @@ public final class LightLevels {
     public static int lightBlockingHeight(LevelReader level, int x, int z) {
         var chunk = level.getChunk(x >> 4, z >> 4, ChunkStatus.EMPTY, false);
         var highest = chunk.getHighestFilledSectionIndex();
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         var min = chunk.getMinY();
         var max = chunk.getMaxY();
         //?} else {

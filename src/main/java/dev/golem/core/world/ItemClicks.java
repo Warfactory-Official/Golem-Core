@@ -28,7 +28,7 @@ public final class ItemClicks {
         HANDLERS.register(handler);
         if (installed) return;
         installed = true;
-        //? if fabric && >=26.1 {
+        //? if fabric && >=1.21.11 {
         /*net.fabricmc.fabric.api.event.player.UseItemCallback.EVENT.register((player, level, hand) ->
                 dispatch(player, hand));
         *///?} elif fabric {

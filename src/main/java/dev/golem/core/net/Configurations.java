@@ -20,10 +20,10 @@ import net.minecraft.network.protocol.Packet;
 //? if >=1.21 {
 import net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket;
 //?}
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.resources.Identifier;
 //?}
-//? if <26.1 {
+//? if <1.21.11 {
 /*import net.minecraft.resources.ResourceLocation;
 *///?}
 //? if >=1.21 {
@@ -98,7 +98,7 @@ public final class Configurations {
                 (payload, buffer) -> buffer.writeUtf(payload.task()), buffer -> new Ack(buffer.readUtf()));
         @Override
         public
-                //? if >=26.1 {
+                //? if >=1.21.11 {
                 Identifier
                 //?} else {
                 /*ResourceLocation

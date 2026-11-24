@@ -196,7 +196,7 @@ public abstract class ReiClientPlugin implements REIClientPlugin {
         }
     }
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*@Override
     public void registerItemComparators(me.shedaniel.rei.api.common.entry.comparison.ItemComparatorRegistry registry) {
         Rei.comparators(registry, subtypes);

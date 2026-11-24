@@ -6,10 +6,10 @@ import net.minecraft.core.component.DataComponents;
 //?}
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.Item;
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.world.item.equipment.EquipmentAssets;
 //?}
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.world.item.equipment.Equippable;
 //?}
 
@@ -32,7 +32,7 @@ public final class Armors {
     public static ArmorSlot slotOf(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return null;
         if (stack.getItem() instanceof CompatArmorItem armor) return armor.armorSlot();
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         net.minecraft.world.item.equipment.Equippable equippable =
                 stack.get(net.minecraft.core.component.DataComponents.EQUIPPABLE);
         if (equippable == null) return null;
@@ -69,7 +69,7 @@ public final class Armors {
     /** 26.1's equipment component of a {@link Wearable}; not dispensable: dispensers before 26.1 drop it. */
     public static Item.Properties equippable(
             Item.Properties properties, ArmorSlot slot, String asset) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return properties.component(DataComponents.EQUIPPABLE,
                 Equippable.builder(equipmentSlot(slot))
                         .setAsset(ResourceKey.create(

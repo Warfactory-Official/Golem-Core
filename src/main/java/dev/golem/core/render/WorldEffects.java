@@ -11,10 +11,9 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.renderer.MultiBufferSource;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.client.renderer.rendertype.RenderType;
 //?} else {
 /*import net.minecraft.client.renderer.RenderType;
@@ -25,7 +24,7 @@ public final class WorldEffects {
     /** One submission: geometry into {@code type}'s buffer, or (type null) a text run drawn into the pass's buffers. */
     private record Entry(int order, PoseStack pose, Matrix4f modelView, Runnable drawState, RenderType type,
                          SubmitSink.CustomGeometry geometry,
-                         BiConsumer<PoseStack, MultiBufferSource> buffered) {
+                         BiConsumer<PoseStack, ImmediateBuffers> buffered) {
         Entry(int order, PoseStack pose, Matrix4f modelView, Runnable drawState, RenderType type,
               SubmitSink.CustomGeometry geometry) {
             this(order, pose, modelView, drawState, type, geometry, null);
@@ -57,15 +56,25 @@ public final class WorldEffects {
             Translucency.close();
         });
         // 26.1 has no loader callback after the transparency framegraph has been composed.
-        //? if >=26.1 {
-        //? if fabric {
+        //? if >=1.21.11 {
+        //? if fabric && >=26.1 {
         /*net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.BEFORE_TRANSLUCENT_TERRAIN
                 .register(context -> beforeTranslucent());
         net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.AFTER_TRANSLUCENT_TERRAIN
                 .register(context -> captureDepth());
+        *///?} elif fabric {
+        /*net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents.BEFORE_TRANSLUCENT
+                .register(context -> beforeTranslucent());
+        // 1.21.11 has no event after translucent terrain; only particles and weather separate it from the main end.
+        net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents.END_MAIN.register(context -> captureDepth());
         *///?} elif neoforge {
+        //? if >=26.1 {
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 (net.neoforged.neoforge.client.event.RenderLevelStageEvent.AfterTranslucentFeatures event) -> beforeTranslucent());
+        //?} else {
+        /*net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.client.event.RenderLevelStageEvent.AfterEntities event) -> beforeTranslucent());
+        *///?}
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 (net.neoforged.neoforge.client.event.RenderLevelStageEvent.AfterTranslucentBlocks event) -> captureDepth());
         //?}
@@ -112,15 +121,15 @@ public final class WorldEffects {
     private static void beforeTranslucent() {
         if (!seesThroughTranslucency()) return;
         Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.levelRenderer.getTranslucentTarget() != null) return;
-        //? if <26.1 {
+        if (WorldTargets.translucent() != null) return;
+        //? if <1.21.11 {
         /*int readTarget = org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER_BINDING);
         int drawTarget = org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER_BINDING);
         *///?}
         try {
             Translucency.before(minecraft.getMainRenderTarget());
         } finally {
-            //? if <26.1 {
+            //? if <1.21.11 {
             /*com.mojang.blaze3d.platform.GlStateManager._glBindFramebuffer(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER, readTarget);
             com.mojang.blaze3d.platform.GlStateManager._glBindFramebuffer(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER, drawTarget);
             *///?}
@@ -146,28 +155,28 @@ public final class WorldEffects {
         if (!isCollecting() || ENTRIES.isEmpty()) return;
         Minecraft minecraft = Minecraft.getInstance();
         var source = minecraft.getMainRenderTarget();
-        //? if <26.1 {
+        //? if <1.21.11 {
         /*int readTarget = org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER_BINDING);
         int drawTarget = org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER_BINDING);
         *///?}
         try {
             if (worldDepth == null || worldDepth.width != source.width || worldDepth.height != source.height) {
                 if (worldDepth != null) worldDepth.destroyBuffers();
-                //? if >=26.1 {
-                worldDepth = new com.mojang.blaze3d.pipeline.TextureTarget("golem_world_effect_depth", source.width, source.height, true);
+                //? if >=1.21.11 {
+                worldDepth = Passes.target("golem_world_effect_depth", source.width, source.height, true);
                 //?} else {
                 /*worldDepth = new com.mojang.blaze3d.pipeline.TextureTarget(source.width, source.height, true, false);
                 *///?}
             }
             // Entity translucency has its own depth attachment in Fabulous. A terrain-only copy
             // loses the player/armor silhouettes; overwriting it with entity depth loses water.
-            DepthMerge.merge(worldDepth, source, minecraft.levelRenderer.getTranslucentTarget(),
-                    minecraft.levelRenderer.getItemEntityTarget());
+            DepthMerge.merge(worldDepth, source, WorldTargets.translucent(),
+                    WorldTargets.itemEntity());
             depthCaptured = true;
-            if (seesThroughTranslucency()) Translucency.after(source, minecraft.levelRenderer.getTranslucentTarget(),
-                    minecraft.levelRenderer.getItemEntityTarget());
+            if (seesThroughTranslucency()) Translucency.after(source, WorldTargets.translucent(),
+                    WorldTargets.itemEntity());
         } finally {
-            //? if <26.1 {
+            //? if <1.21.11 {
             /*com.mojang.blaze3d.platform.GlStateManager._glBindFramebuffer(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER, readTarget);
             com.mojang.blaze3d.platform.GlStateManager._glBindFramebuffer(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER, drawTarget);
             *///?}
@@ -178,7 +187,10 @@ public final class WorldEffects {
     public static void begin() {
         //? if >=26.1 {
         begin(Minecraft.getInstance().gameRenderer.getGameRenderState().levelRenderState.cameraRenderState.viewRotationMatrix);
-        //?} else {
+        //?} elif >=1.21.11 {
+        /*begin(new Matrix4f().rotation(Minecraft.getInstance().gameRenderer.getMainCamera().rotation()
+                .conjugate(new org.joml.Quaternionf())));
+        *///?} else {
         /*begin(new Matrix4f());
         *///?}
     }
@@ -270,12 +282,12 @@ public final class WorldEffects {
         Matrix4f modelView = dispatchingHooks ? new Matrix4f(HOOK_MODEL_VIEW)
                 : new Matrix4f(RenderSystem.getModelViewMatrix());
         ENTRIES.add(new Entry(order, copy, modelView, captureDrawState(), null, null, (drawPose, buffers) ->
-                font.drawInBatch(text, x, y, dev.golem.core.gui.GuiDraw.textColor(color), shadow, drawPose.last().pose(),
-                        buffers, mode, backgroundColor, light)));
+                buffers.text(font, text, x, y, dev.golem.core.gui.GuiDraw.textColor(color), shadow, drawPose.last().pose(),
+                        mode, backgroundColor, light)));
     }
 
     private static Runnable captureDrawState() {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         var projection = RenderSystem.getProjectionMatrixBuffer();
         var projectionType = RenderSystem.getProjectionType();
         var fog = RenderSystem.getShaderFog();
@@ -357,7 +369,7 @@ public final class WorldEffects {
 
     private static void useDepth(RenderTarget main, RenderTarget depth) {
         main.copyDepthFrom(depth);
-        //? if <26.1 {
+        //? if <1.21.11 {
         /*main.bindWrite(false);
         *///?}
     }
@@ -377,13 +389,13 @@ public final class WorldEffects {
             if (!isCollecting()) return;
             if (ENTRIES.isEmpty()) return;
             collecting = false;
-            MultiBufferSource.BufferSource buffers = Minecraft.getInstance().renderBuffers().bufferSource();
+            ImmediateBuffers buffers = new ImmediateBuffers();
             buffers.endBatch();
             if (!depthCaptured) throw new IllegalStateException("World effects submitted without world depth capture");
             Translucency.settle();
             RenderTarget main = Minecraft.getInstance().getMainRenderTarget();
             main.copyDepthFrom(worldDepth);
-            //? if <26.1 {
+            //? if <1.21.11 {
             /*Minecraft.getInstance().getMainRenderTarget().bindWrite(false);
             *///?}
             ENTRIES.sort(Comparator.comparingInt(Entry::order));
@@ -392,7 +404,7 @@ public final class WorldEffects {
             // enables/disables for functions other than ALWAYS, relying on each type's clear leaving the depth
             // test off. At the level-end event it is still on, so every see-through type was depth tested.
             // Start from that between-types default, and put the event's state back afterwards.
-            //? if <26.1 {
+            //? if <1.21.11 {
             /*boolean depthWasOn = org.lwjgl.opengl.GL11.glIsEnabled(org.lwjgl.opengl.GL11.GL_DEPTH_TEST);
             RenderSystem.disableDepthTest();
             Runnable drawState = restoreState;
@@ -412,7 +424,7 @@ public final class WorldEffects {
                 // Keep the world view even when a loader's last-world event restores its global stack.
                 //? if >=1.21 {
                 RenderSystem.getModelViewStack().pushMatrix().set(entry.modelView());
-                //? if <26.1 {
+                //? if <1.21.11 {
                 /*RenderSystem.applyModelViewMatrix();
                 *///?}
                 //?} else {
@@ -431,7 +443,7 @@ public final class WorldEffects {
                     if (under) useDepth(main, worldDepth);
                     //? if >=1.21 {
                     RenderSystem.getModelViewStack().popMatrix();
-                    //? if <26.1 {
+                    //? if <1.21.11 {
                     /*RenderSystem.applyModelViewMatrix();
                     *///?}
                     //?} else {

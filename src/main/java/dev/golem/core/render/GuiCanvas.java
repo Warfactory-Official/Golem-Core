@@ -7,13 +7,11 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
-//? if >=26.1 {
-import com.mojang.blaze3d.pipeline.ColorTargetState;
+//? if >=1.21.11 {
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.MeshData;
-import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
@@ -26,7 +24,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.resources.ResourceLocation;
@@ -79,17 +77,17 @@ public final class GuiCanvas {
      * screen's drawing order at this call. The painter runs at once, before this returns.
      */
     public static void draw(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             GuiGraphicsExtractor graphics,
             //?} else {
-            /*GuiGraphics graphics,
+            /*GuiGraphicsExtractor graphics,
             *///?}
             int x0, int y0, int x1, int y1, Consumer<GuiCanvas> painter) {
         if (x1 <= x0 || y1 <= y0) return;
         GuiCanvas canvas = new GuiCanvas();
         painter.accept(canvas);
         if (canvas.ops.isEmpty()) return;
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         float cx = (x0 + x1) / 2.0F, cy = (y0 + y1) / 2.0F;
         dev.golem.core.gui.GuiScenes.draw(graphics, x0, y0, x1, y1, (pose, sink, camera) -> {
             // GuiScenes' frame: origin at the rectangle's centre, GUI pixels, +Y down
@@ -213,18 +211,18 @@ public final class GuiCanvas {
         }
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private static final java.util.Map<String, RenderPipeline> PIPELINES = new java.util.concurrent.ConcurrentHashMap<>();
 
     private static RenderPipeline pipeline(boolean textured, Sky.Blend blend) {
         return PIPELINES.computeIfAbsent(textured + "|" + blend, key -> {
-            RenderPipeline.Builder builder = RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET)
+            RenderPipeline.Builder builder = PipelineStates.vertices(PipelineStates.blend(RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET)
                     .withLocation(dev.golem.core.Ids.of("golemcore", "pipeline/gui_canvas_" + (textured ? "tex_" : "color_")
                             + blend.name().toLowerCase(java.util.Locale.ROOT)))
                     .withVertexShader(textured ? "core/position_tex_color" : "core/position_color")
-                    .withFragmentShader(textured ? "core/position_tex_color" : "core/position_color")
-                    .withColorTargetState(new ColorTargetState(SkyShaders.blend(blend, true)))
-                    .withVertexFormat(textured ? DefaultVertexFormat.POSITION_TEX_COLOR : DefaultVertexFormat.POSITION_COLOR,
+                    .withFragmentShader(textured ? "core/position_tex_color" : "core/position_color"),
+                    SkyShaders.blend(blend, true))
+                    , textured ? DefaultVertexFormat.POSITION_TEX_COLOR : DefaultVertexFormat.POSITION_COLOR,
                             VertexFormat.Mode.QUADS)
                     .withCull(false);
             if (textured) builder.withSampler("Sampler0");
@@ -236,7 +234,7 @@ public final class GuiCanvas {
     private static void drawPlain(Matrix4f base, Op op, Vector3f p) {
         boolean textured = op.texture != null;
         RenderPipeline pipeline = pipeline(textured, op.blend);
-        BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS,
+        BufferBuilder builder = CompatTesselator.begin(VertexFormat.Mode.QUADS,
                 textured ? DefaultVertexFormat.POSITION_TEX_COLOR : DefaultVertexFormat.POSITION_COLOR);
         float[] v = op.v;
         for (int i = 0; i < op.vertices; i++) {
@@ -274,7 +272,7 @@ public final class GuiCanvas {
         VertexFormat format = textured ? DefaultVertexFormat.POSITION_TEX_COLOR : DefaultVertexFormat.POSITION_COLOR;
         float[] v = op.v;
         //? if >=1.21 {
-        BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, format);
+        BufferBuilder builder = CompatTesselator.begin(VertexFormat.Mode.QUADS, format);
         for (int i = 0; i < op.vertices; i++) {
             int o = i * 9;
             base.transformPosition(v[o], v[o + 1], v[o + 2], p);

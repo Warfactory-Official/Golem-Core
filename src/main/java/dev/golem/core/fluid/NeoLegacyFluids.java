@@ -1,6 +1,6 @@
 package dev.golem.core.fluid;
 
-//? if neoforge && <26.1 {
+//? if neoforge && <1.21.11 {
 /*import java.util.function.Predicate;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;

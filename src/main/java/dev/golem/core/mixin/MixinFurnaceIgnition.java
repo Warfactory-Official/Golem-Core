@@ -26,7 +26,16 @@ import org.spongepowered.asm.mixin.injection.At;
 @Mixin(AbstractFurnaceBlockEntity.class)
 public abstract class MixinFurnaceIgnition {
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
+    //? if >=26.3 {
+    /*@WrapOperation(method = "serverTick", at = @At(value = "INVOKE", target =
+            "Lnet/minecraft/world/level/block/entity/AbstractFurnaceBlockEntity;getBurnDuration(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/item/ItemStack;)I"))
+    private static int golem$ignition(AbstractFurnaceBlockEntity furnace, net.minecraft.server.level.ServerLevel level,
+                                      ItemStack fuel, Operation<Integer> original, @Local(argsOnly = true) BlockPos pos) {
+        return dev.golem.core.world.Furnaces.burnDuration(level, pos, fuel,
+                dev.golem.core.registry.Fuels.burnDuration(furnace, fuel, original.call(furnace, level, fuel)));
+    }
+    *///?} else {
     @WrapOperation(method = "serverTick", at = @At(value = "INVOKE", target =
             "Lnet/minecraft/world/level/block/entity/AbstractFurnaceBlockEntity;getBurnDuration(Lnet/minecraft/world/level/block/entity/FuelValues;Lnet/minecraft/world/item/ItemStack;)I"))
     private static int golem$ignition(AbstractFurnaceBlockEntity furnace,
@@ -36,6 +45,7 @@ public abstract class MixinFurnaceIgnition {
                                       @Local(argsOnly = true) BlockPos pos) {
         return dev.golem.core.world.Furnaces.burnDuration(level, pos, fuel, original.call(furnace, values, fuel));
     }
+    //?}
     //?} else {
     /*@WrapOperation(method = "serverTick", at = @At(value = "INVOKE", target =
             "Lnet/minecraft/world/level/block/entity/AbstractFurnaceBlockEntity;getBurnDuration(Lnet/minecraft/world/item/ItemStack;)I"))

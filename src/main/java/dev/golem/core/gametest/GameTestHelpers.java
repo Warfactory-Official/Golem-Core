@@ -39,7 +39,7 @@ import java.util.UUID;
 import net.minecraft.server.network.CommonListenerCookie;
 //?}
 
-//? if <26.1 {
+//? if <1.21.11 {
 /*import net.minecraft.gametest.framework.GameTestAssertException;
 *///?}
 
@@ -88,7 +88,7 @@ public final class GameTestHelpers {
      * would report as an error.
      */
     public static <T extends BlockEntity> T blockEntity(GameTestHelper helper, BlockPos pos, Class<T> type) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return helper.getBlockEntity(pos, type);
         //?} else {
         /*BlockEntity be = helper.getBlockEntity(pos);
@@ -186,7 +186,7 @@ public final class GameTestHelpers {
         io.netty.buffer.ByteBuf buffer = Unpooled.wrappedBuffer(wire);
         try {
             if (readVarInt(buffer) != dev.golem.core.net.GolemWire.packetId()) return null;
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             return new FriendlyByteBuf(buffer).readIdentifier().toString();
             //?} elif forge {
             /*var reader = new FriendlyByteBuf(buffer);
@@ -210,7 +210,7 @@ public final class GameTestHelpers {
         io.netty.buffer.ByteBuf buffer = Unpooled.wrappedBuffer(wire);
         readVarInt(buffer);
         FriendlyByteBuf reader = new FriendlyByteBuf(buffer);
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         reader.readIdentifier();
         //?} else {
         /*reader.readResourceLocation();
@@ -311,7 +311,7 @@ public final class GameTestHelpers {
     /** Makes {@code player} a server operator, or removes it; ops are saved, so a test removes what it adds. */
     public static void setOp(ServerPlayer player, boolean op) {
         PlayerList players = player.level().getServer().getPlayerList();
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         net.minecraft.server.players.NameAndId id = new net.minecraft.server.players.NameAndId(player.getGameProfile());
         //?} else {
         /*GameProfile id = player.getGameProfile();
@@ -422,7 +422,11 @@ public final class GameTestHelpers {
         /*if (packet instanceof net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket custom
                 && custom.payload() instanceof net.fabricmc.fabric.impl.screenhandler.Networking.OpenScreenPayload<?> opening) {
             if (!(opening.data() instanceof BlockPos position)) return null;
-            MenuType<?> menuType = net.minecraft.core.registries.BuiltInRegistries.MENU.get(opening.identifier());
+            //? if >=1.21.11 {
+            MenuType<?> menuType = net.minecraft.core.registries.BuiltInRegistries.MENU.getValue(opening.identifier());
+            //?} else {
+            /^MenuType<?> menuType = net.minecraft.core.registries.BuiltInRegistries.MENU.get(opening.identifier());
+            ^///?}
             return menuType == null ? null : new MenuOpening(menuType, opening.syncId(), position);
         }
         *///?} elif fabric {

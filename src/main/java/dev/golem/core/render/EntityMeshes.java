@@ -12,7 +12,7 @@ import org.jspecify.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.resources.Identifier;
 //?} else {
 /*import net.minecraft.resources.ResourceLocation;
@@ -51,7 +51,7 @@ public final class EntityMeshes {
      * floats, quads in emission order, in entity space (origin at the entity's feet, world axes, blocks).
      */
     public record Mesh(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier texture,
             //?} else {
             /*ResourceLocation texture,
@@ -66,7 +66,7 @@ public final class EntityMeshes {
         if (!(renderer instanceof LivingEntityRenderer living)) return null;
         Recorder recorder = new Recorder();
         PoseStack pose = new PoseStack();
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         net.minecraft.client.renderer.entity.state.LivingEntityRenderState state =
                 (net.minecraft.client.renderer.entity.state.LivingEntityRenderState) living.createRenderState(entity, partialTick);
         Collector collector = new Collector(living.getModel(), recorder);
@@ -149,6 +149,9 @@ public final class EntityMeshes {
         @Override public VertexConsumer setUv(float u, float v) { this.u = u; this.v = v; return this; }
         @Override public VertexConsumer setUv1(int u, int v) { return this; }
         @Override public VertexConsumer setUv2(int u, int v) { return this; }
+        //? if >=26.3 {
+        /*@Override public VertexConsumer setUv3(float u, float v) { return this; }
+        *///?}
         @Override public VertexConsumer setNormal(float x, float y, float z) { return this; }
         //?} else {
         /*@Override public VertexConsumer vertex(double x, double y, double z) { return begin((float) x, (float) y, (float) z); }
@@ -161,7 +164,7 @@ public final class EntityMeshes {
         @Override public void defaultColor(int r, int g, int b, int a) {}
         @Override public void unsetDefaultColor() {}
         *///?}
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         @Override public VertexConsumer setColor(int color) { return this; }
         @Override public VertexConsumer setLineWidth(float width) { return this; }
         //?}
@@ -175,6 +178,9 @@ public final class EntityMeshes {
         @Override public VertexConsumer setUv(float u, float v) { return this; }
         @Override public VertexConsumer setUv1(int u, int v) { return this; }
         @Override public VertexConsumer setUv2(int u, int v) { return this; }
+        //? if >=26.3 {
+        /*@Override public VertexConsumer setUv3(float u, float v) { return this; }
+        *///?}
         @Override public VertexConsumer setNormal(float x, float y, float z) { return this; }
         //?} else {
         /*@Override public VertexConsumer vertex(double x, double y, double z) { return this; }
@@ -187,13 +193,13 @@ public final class EntityMeshes {
         @Override public void defaultColor(int r, int g, int b, int a) {}
         @Override public void unsetDefaultColor() {}
         *///?}
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         @Override public VertexConsumer setColor(int color) { return this; }
         @Override public VertexConsumer setLineWidth(float width) { return this; }
         //?}
     };
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     /**
      * Records the renderer's main-model submission. The model is posed and drawn at once, exactly as the feature
      * renderer would draw it later ({@code setupAnim} then {@code renderToBuffer}).
@@ -214,6 +220,24 @@ public final class EntityMeshes {
             return this;
         }
 
+        //? if >=26.3 {
+        /*@Override
+        public <S> void submitModel(net.minecraft.client.model.Model<? super S> model, S state, PoseStack poseStack,
+                                    net.minecraft.client.renderer.rendertype.RenderType renderType, int lightCoords,
+                                    int overlayCoords, int tintedColor,
+                                    net.minecraft.client.renderer.texture.@Nullable UvMapping uvMapping, int outlineColor) {
+            take(model, state, poseStack, lightCoords, overlayCoords, tintedColor);
+        }
+
+        @Override
+        public <S> void submitCrumblingOverlay(net.minecraft.client.model.Model<? super S> model, S state, PoseStack poseStack,
+                                               net.minecraft.client.renderer.rendertype.RenderType renderType, int lightCoords,
+                                               int overlayCoords, int tintedColor,
+                                               net.minecraft.client.renderer.feature.ModelFeatureRenderer.CrumblingOverlay crumblingOverlay) {}
+
+        @Override public void submitTextBackground(PoseStack poseStack, float x0, float y0, float x1, float y1, int color,
+                                                   net.minecraft.client.gui.Font.DisplayMode displayMode, int lightCoords) {}
+        *///?} else {
         @Override
         public <S> void submitModel(net.minecraft.client.model.Model<? super S> model, S state, PoseStack poseStack,
                                     net.minecraft.client.renderer.rendertype.RenderType renderType, int lightCoords,
@@ -221,6 +245,12 @@ public final class EntityMeshes {
                                     net.minecraft.client.renderer.texture.@Nullable TextureAtlasSprite sprite,
                                     int outlineColor,
                                     net.minecraft.client.renderer.feature.ModelFeatureRenderer.@Nullable CrumblingOverlay crumblingOverlay) {
+            take(model, state, poseStack, lightCoords, overlayCoords, tintedColor);
+        }
+        //?}
+
+        private <S> void take(net.minecraft.client.model.Model<? super S> model, S state, PoseStack poseStack, int lightCoords,
+                              int overlayCoords, int tintedColor) {
             if (taken || model != this.model) return;
             taken = true;
             ((net.minecraft.client.model.Model) model).setupAnim(state);
@@ -229,10 +259,16 @@ public final class EntityMeshes {
 
         @Override public void submitShadow(PoseStack poseStack, float radius,
                                            List<net.minecraft.client.renderer.entity.state.EntityRenderState.ShadowPiece> pieces) {}
+        //? if >=26.2 {
+        /*@Override public void submitNameTag(PoseStack poseStack, net.minecraft.world.phys.@Nullable Vec3 attachment, int offset,
+                                            net.minecraft.network.chat.Component name, boolean seeThrough, int lightCoords,
+                                            net.minecraft.client.renderer.state.level.CameraRenderState camera) {}
+        *///?} else {
         @Override public void submitNameTag(PoseStack poseStack, net.minecraft.world.phys.@Nullable Vec3 attachment, int offset,
                                             net.minecraft.network.chat.Component name, boolean seeThrough, int lightCoords,
                                             double distanceToCameraSq,
                                             net.minecraft.client.renderer.state.level.CameraRenderState camera) {}
+        //?}
         @Override public void submitText(PoseStack poseStack, float x, float y, net.minecraft.util.FormattedCharSequence string,
                                          boolean dropShadow, net.minecraft.client.gui.Font.DisplayMode displayMode,
                                          int lightCoords, int color, int backgroundColor, int outlineColor) {}
@@ -241,6 +277,28 @@ public final class EntityMeshes {
                                           org.joml.Quaternionf rotation) {}
         @Override public void submitLeash(PoseStack poseStack,
                                           net.minecraft.client.renderer.entity.state.EntityRenderState.LeashState leashState) {}
+        //? if >=26.2 {
+        /*@Override public void submitMovingBlock(PoseStack poseStack,
+                                                net.minecraft.client.renderer.block.MovingBlockRenderState state,
+                                                int outlineColor) {}
+        //? if >=26.3 {
+        /^@Override public void submitBreakingBlockModel(PoseStack poseStack,
+                                                       List<net.minecraft.client.renderer.block.dispatch.BlockStateModelPart> parts,
+                                                       int progress, boolean isBlockTranslucent) {}
+        ^///?} else {
+        @Override public void submitBreakingBlockModel(PoseStack poseStack,
+                                                       List<net.minecraft.client.renderer.block.dispatch.BlockStateModelPart> parts,
+                                                       int progress) {}
+        //?}
+        @Override public void submitShapeOutline(PoseStack poseStack, net.minecraft.world.phys.shapes.VoxelShape shape,
+                                                 net.minecraft.client.renderer.rendertype.RenderType renderType, int color,
+                                                 float width, boolean afterTerrain) {}
+        @Override public void submitQuadParticleGroup(
+                net.minecraft.client.renderer.state.level.QuadParticleRenderState particles) {}
+        @Override public void submitGizmoPrimitives(net.minecraft.client.renderer.gizmos.DrawableGizmoPrimitives.Group group,
+                                                    net.minecraft.client.renderer.state.level.CameraRenderState camera,
+                                                    boolean onTop) {}
+        *///?} else {
         @Override public void submitModelPart(net.minecraft.client.model.geom.ModelPart modelPart, PoseStack poseStack,
                                               net.minecraft.client.renderer.rendertype.RenderType renderType, int lightCoords,
                                               int overlayCoords,
@@ -250,19 +308,43 @@ public final class EntityMeshes {
                                               int outlineColor) {}
         @Override public void submitMovingBlock(PoseStack poseStack,
                                                 net.minecraft.client.renderer.block.MovingBlockRenderState state) {}
-        @Override public void submitBlockModel(PoseStack poseStack, net.minecraft.client.renderer.rendertype.RenderType renderType,
-                                               List<net.minecraft.client.renderer.block.dispatch.BlockStateModelPart> parts,
-                                               int[] tintLayers, int lightCoords, int overlayCoords, int outlineColor) {}
+        @Override public void submitParticleGroup(ParticleGroupRenderer particleGroupRenderer) {}
+        //?}
+        //? if >=26.1 && <26.2 {
         @Override public void submitBreakingBlockModel(PoseStack poseStack,
                                                        net.minecraft.client.renderer.block.dispatch.BlockStateModel model,
                                                        long seed, int progress) {}
+        //?}
+        //? if >=26.1 {
+        @Override public void submitBlockModel(PoseStack poseStack, net.minecraft.client.renderer.rendertype.RenderType renderType,
+                                               List<net.minecraft.client.renderer.block.dispatch.BlockStateModelPart> parts,
+                                               int[] tintLayers, int lightCoords, int overlayCoords, int outlineColor) {}
+        //? if >=26.3 {
+        /*@Override public void submitItem(PoseStack poseStack, net.minecraft.world.item.ItemDisplayContext displayContext,
+                                         int lightCoords, int overlayCoords, int outlineColor, int[] tintLayers,
+                                         net.minecraft.client.resources.model.geometry.ItemQuads quads,
+                                         net.minecraft.client.renderer.item.ItemStackRenderState.FoilType foilType) {}
+        *///?} else {
         @Override public void submitItem(PoseStack poseStack, net.minecraft.world.item.ItemDisplayContext displayContext,
                                          int lightCoords, int overlayCoords, int outlineColor, int[] tintLayers,
                                          List<net.minecraft.client.resources.model.geometry.BakedQuad> quads,
                                          net.minecraft.client.renderer.item.ItemStackRenderState.FoilType foilType) {}
+        //?}
+        //?} else {
+        /*@Override public void submitBlock(PoseStack poseStack, net.minecraft.world.level.block.state.BlockState state,
+                                          int lightCoords, int overlayCoords, int outlineColor) {}
+        @Override public void submitBlockModel(PoseStack poseStack, net.minecraft.client.renderer.rendertype.RenderType renderType,
+                                               net.minecraft.client.renderer.block.dispatch.BlockStateModel model,
+                                               float red, float green, float blue, int lightCoords, int overlayCoords,
+                                               int outlineColor) {}
+        @Override public void submitItem(PoseStack poseStack, net.minecraft.world.item.ItemDisplayContext displayContext,
+                                         int lightCoords, int overlayCoords, int outlineColor, int[] tintLayers,
+                                         List<net.minecraft.client.resources.model.geometry.BakedQuad> quads,
+                                         net.minecraft.client.renderer.rendertype.RenderType renderType,
+                                         net.minecraft.client.renderer.item.ItemStackRenderState.FoilType foilType) {}
+        *///?}
         @Override public void submitCustomGeometry(PoseStack poseStack, net.minecraft.client.renderer.rendertype.RenderType renderType,
                                                    CustomGeometryRenderer customGeometryRenderer) {}
-        @Override public void submitParticleGroup(ParticleGroupRenderer particleGroupRenderer) {}
     }
     //?} else {
     /*/^*

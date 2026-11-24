@@ -11,7 +11,7 @@ import net.minecraft.world.level.block.state.BlockState;
 /** Base fire block with a version-neutral entity-inside hook. */
 public abstract class CompatFireBlock extends BaseFireBlock {
 
-    //? if >=1.21.1 {
+    //? if >=1.21.1 && <26.3 {
     private final com.mojang.serialization.MapCodec<? extends BaseFireBlock> blockCodec;
     //?}
 
@@ -30,12 +30,13 @@ public abstract class CompatFireBlock extends BaseFireBlock {
     protected <B extends CompatFireBlock> CompatFireBlock(BlockBehaviour.Properties properties, float fireDamage,
                                                           Function<BlockBehaviour.Properties, B> factory) {
         super(properties, fireDamage);
-        //? if >=1.21.1 {
+        //? if >=1.21.1 && <26.3 {
         this.blockCodec = simpleCodec(factory);
         //?}
     }
 
-    //? if >=1.21.1 {
+    // 26.3 dropped block codecs; the factory parameter stays so subclasses read the same on every node.
+    //? if >=1.21.1 && <26.3 {
     @Override
     public com.mojang.serialization.MapCodec<? extends BaseFireBlock> codec() {
         return blockCodec;
@@ -44,7 +45,7 @@ public abstract class CompatFireBlock extends BaseFireBlock {
 
     protected void onEntityInside(BlockState state, Level level, BlockPos pos, Entity entity) {}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     public void entityInside(BlockState state, Level level, BlockPos pos, Entity entity,
                              net.minecraft.world.entity.InsideBlockEffectApplier effects, boolean precise) {

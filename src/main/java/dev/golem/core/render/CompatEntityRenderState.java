@@ -8,12 +8,12 @@ package dev.golem.core.render;
  * that {@link CompatEntityRenderer} allocates and fills itself.
  */
 public class CompatEntityRenderState
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         extends net.minecraft.client.renderer.entity.state.EntityRenderState
         //?}
 {
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*/^*
      * Packed lightmap coordinates for this entity. 26.1's EntityRenderState carries this and vanilla
      * fills it during extraction; this era passes it straight to {@code render} instead, so

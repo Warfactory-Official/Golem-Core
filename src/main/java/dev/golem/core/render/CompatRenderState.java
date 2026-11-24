@@ -1,6 +1,6 @@
 package dev.golem.core.render;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
 //?} else {
 /*import net.minecraft.core.BlockPos;
@@ -21,11 +21,11 @@ import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
  * <p>Only the base fields consumers read are mirrored ({@code blockPos}, {@code lightCoords}).
  */
 public class CompatRenderState
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         extends BlockEntityRenderState
         //?}
 {
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*public BlockPos blockPos = BlockPos.ZERO;
     public int lightCoords;
     *///?}

@@ -6,7 +6,7 @@ import java.util.WeakHashMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
-//? if >=26.1 {
+//? if >=1.21.11 {
 import dev.golem.core.GolemCore;
 import dev.golem.core.registry.DeferredRegister;
 import dev.golem.core.registry.RegistryObject;
@@ -73,7 +73,7 @@ public final class TestChunks {
     static Runnable hold(ServerLevel level, BlockPos origin, int minX, int maxX, int minZ, int maxZ) {
         Range range = new Range(level, minX, maxX, minZ, maxZ);
         range.take();
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         Hold owner = BY_ORIGIN.get(origin);
         if (owner != null) owner.extras.add(range);
         //?}
@@ -90,7 +90,7 @@ public final class TestChunks {
         for (int cx = minX; cx <= maxX; cx++) {
             for (int cz = minZ; cz <= maxZ; cz++) {
                 if (!level.isPositionEntityTicking(new BlockPos(cx << 4, 0, cz << 4))) return false;
-                //? if >=26.1 {
+                //? if >=1.21.11 {
                 if (!level.areEntitiesActuallyLoadedAndTicking(new ChunkPos(cx, cz))) return false;
                 //?}
             }
@@ -149,7 +149,7 @@ public final class TestChunks {
         }
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     /** Ticket radius 2: level {@code 33 - 2 = 31}, entity-ticking, as {@code ChunkMap.FORCED_TICKET_LEVEL}. */
     private static final int TICKET_RADIUS = 2;
 
@@ -198,7 +198,12 @@ public final class TestChunks {
             } catch (IllegalStateException e) {
                 return false; // vanilla's tick reports the missing block entity
             }
-            BoundingBox box = block.getStructureBoundingBox().inflatedBy(Math.max(info.getTest().padding(), MARGIN));
+            //? if >=26.1 {
+            int padding = Math.max(info.getTest().padding(), MARGIN);
+            //?} else {
+            /*int padding = MARGIN;
+            *///?}
+            BoundingBox box = block.getStructureBoundingBox().inflatedBy(padding);
             hold = new Hold(info.getLevel(), box.minX() >> 4, box.maxX() >> 4, box.minZ() >> 4, box.maxZ() >> 4);
             HOLDS.put(info, hold);
             hold.origin = block.getStartCorner();

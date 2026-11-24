@@ -5,18 +5,38 @@ plugins {
 }
 
 fun prop(name: String): String = property(name) as String
+fun propOrNull(name: String): String? = (findProperty(name) as String?)?.takeIf { it.isNotBlank() }
 
 val mcVersion = stonecutter.current.version
 apply(from = rootProject.file("gradle/mod/gemrender-local.gradle.kts"))
 val localGemRender = extra.properties["golem.gemrender.local"]
+
+// A node with no GemRender build compiles Core's GemRender entry points from src/gemrender-absent instead.
+val gemrenderAbsent = rootProject.file("src/gemrender-absent/java")
+if (localGemRender == null && (findProperty("deps.gemrender") as String?).isNullOrBlank()) {
+    sourceSets["main"].java.srcDir(gemrenderAbsent)
+    sourceSets["main"].java.exclude {
+        !it.file.toPath().startsWith(gemrenderAbsent.toPath()) && it.relativePath.pathString.startsWith("dev/golem/core/gemrender/")
+    }
+}
 val javaVersion = prop("java_version").toInt()
-val modelEra = if (stonecutter.eval(mcVersion, ">=26.1")) "modern" else "legacy"
+// The API era the tree's guards split at: 1.21.11 already has 26.1's shapes (only its obfuscation differs).
+val modern = stonecutter.eval(mcVersion, ">=1.21.11")
+val modelEra = if (modern) "modern" else "legacy"
 val modelRoots = if (modelEra == "modern") listOf("models-modern")
     else listOf("models-legacy", "models-legacy-fabric")
 val nativeRoots = modelRoots + if (modelEra == "modern") listOf("render-fabric", "client-gametest-fabric") else emptyList()
 for (nativeRoot in nativeRoots) {
     val nativeSources = sourceSets.create(nativeRoot)
     sourceSets["main"].java.source(nativeSources.java)
+}
+
+// The dev-only probe mod (src/probe, golemprobe): content that exercises Core in dev runs and GameTests without a content
+// mod. Modern nodes only, where Core's GameTests use vanilla's empty structure. Never part of a jar.
+val probe = if (!modern) null else sourceSets.create("probe") {
+    java.exclude("dev/golem/probe/platform/neoforge/**")
+    compileClasspath += sourceSets["main"].output + sourceSets["main"].compileClasspath
+    runtimeClasspath += sourceSets["main"].output + sourceSets["main"].runtimeClasspath
 }
 
 
@@ -106,10 +126,48 @@ if (hasSable) {
 val obfuscated = mcVersion.substringBefore('.').toInt() < 26
 // Loom validates every widened member against the node's jar, so 1.21.1 (which has VehicleEntity to widen)
 // and 1.20.1 (which does not) need separate legacy files.
-val accessWidenerName = if (!obfuscated) "golemcore.accesswidener"
+val accessWidenerName = if (modern) "golemcore.accesswidener"
     else if (mcVersion.startsWith("1.21")) "golemcore.legacy-1.21.accesswidener"
     else "golemcore.legacy.accesswidener"
 val allAccessWideners = listOf("golemcore.accesswidener", "golemcore.legacy.accesswidener", "golemcore.legacy-1.21.accesswidener")
+// 1.21.11 widens 26.1's members, but Loom reads an obfuscated node's widener in the named namespace.
+val namedModernWidener = modern && obfuscated
+// The widener as the source tree holds it, carried from the active node to this one by the widener rules
+// (stonecutter.gradle.kts): the tree is in the active node's form, and Loom reads it before Stonecutter rewrites it.
+fun nodeWidener(): String {
+    @Suppress("UNCHECKED_CAST")
+    val rules = gradle.extra["golem.widenerRules"] as List<Pair<String, List<Pair<String, String>>>>
+    val active = rootProject.file("stonecutter.gradle.kts").readLines().first { it.startsWith("stonecutter active ") }
+        .substringAfter('"').substringBeforeLast('-')
+    var text = file("../../src/main/resources/$accessWidenerName").readText().replace("\r\n", "\n")
+    for ((since, pairs) in rules.reversed()) {
+        if (stonecutter.eval(active, ">=$since") && !stonecutter.eval(mcVersion, ">=$since"))
+            for ((from, to) in pairs.reversed()) text = text.replace(to, from)
+    }
+    for ((since, pairs) in rules) {
+        if (!stonecutter.eval(active, ">=$since") && stonecutter.eval(mcVersion, ">=$since"))
+            for ((from, to) in pairs) text = text.replace(from, to)
+    }
+    return text
+}
+val accessWidenerFile = if (!modern) file("../../src/main/resources/$accessWidenerName")
+    else if (!namedModernWidener) layout.buildDirectory.file("golemcore-aw/$accessWidenerName").get().asFile.also {
+        it.parentFile.mkdirs()
+        it.writeText(nodeWidener())
+    }
+    else layout.buildDirectory.file("golemcore-aw/$accessWidenerName").get().asFile.also {
+        it.parentFile.mkdirs()
+        // The 1.21.11 spellings the replacement rules give the shipped widener are applied to this copy as well.
+        var text = nodeWidener()
+            .replaceFirst("accessWidener v2 official", "accessWidener v2 named")
+            .replace("net/minecraft/client/gui/GuiGraphicsExtractor ", "net/minecraft/client/gui/GuiGraphics ")
+            .replace("net/minecraft/client/renderer/state/gui/GuiRenderState", "net/minecraft/client/gui/render/state/GuiRenderState")
+            .replace("freeBuffers Ljava/util/concurrent/ArrayBlockingQueue;", "freeBuffers Ljava/util/Queue;")
+        text = text.lines().joinToString("\n") {
+            if (it.startsWith("accessible field net/minecraft/resources/RegistryLoadTask ")) "accessible class net/minecraft/resources/RegistryDataLoader\$Loader" else it
+        }
+        it.writeText(text)
+    }
 
 dependencies {
     "minecraft"("com.mojang:minecraft:${prop("deps.minecraft")}")
@@ -135,20 +193,54 @@ dependencies {
 }
 
 loom {
-    accessWidenerPath = file("../../src/main/resources/$accessWidenerName")
+    accessWidenerPath = accessWidenerFile
+    if (probe != null) mods {
+        register(prop("mod.id")) { sourceSet(sourceSets["main"]) }
+        register("golemprobe") { sourceSet(probe) }
+    }
     runs {
         named("client") {
             client()
             configName = "Fabric Client ($mcVersion)"
             ideConfigGenerated(true)
             runDir = "runs/client"
+            if (probe != null) source(probe)
         }
         named("server") {
             server()
             configName = "Fabric Server ($mcVersion)"
             ideConfigGenerated(true)
             runDir = "runs/server"
+            if (probe != null) source(probe)
         }
+        // Headless GameTests through Fabric API's runner: `gradlew :<node>-fabric:runGametest` (the probe's tests).
+        if (probe != null) register("gametest") {
+            server()
+            configName = "Fabric GameTest ($mcVersion)"
+            ideConfigGenerated(false)
+            runDir = "runs/gametest"
+            source(probe)
+            vmArg("-Dfabric-api.gametest")
+            vmArg("-Dfabric-api.gametest.report-file=${project.file("runs/gametest/report.xml").absolutePath}")
+        }
+    }
+}
+
+tasks.matching { it.name == "runGametest" }.configureEach {
+    doFirst { delete(layout.projectDirectory.dir("runs/gametest/world")) }
+}
+
+if (probe != null) {
+    tasks.named<ProcessResources>("processProbeResources") {
+        val probeProps = mapOf("mod_version" to prop("mod.version"))
+        inputs.properties(probeProps)
+        filesMatching("fabric.mod.json") { expand(probeProps) }
+        exclude("META-INF/neoforge.mods.toml")
+        dependsOn(tasks.named("stonecutterGenerate"))
+    }
+    tasks.named<JavaCompile>("compileProbeJava") {
+        dependsOn(tasks.named("stonecutterGenerate"))
+        options.release = javaVersion
     }
 }
 
@@ -164,7 +256,7 @@ tasks.processResources {
         "fabric_loader" to prop("deps.fabric_loader"),
         "java_version" to javaVersion.toString(),
         "mixin_compatibility" to if (javaVersion <= 17) "JAVA_17" else "JAVA_21",
-        "legacy_item_owner_mixins" to if (mcVersion.substringBefore('.').toInt() < 26)
+        "legacy_item_owner_mixins" to if (!modern)
             ", \"MixinItemRenderer\"" else "",
         // EntityTicks: NeoForge's EntityTickEvent.Post has no Fabric or Forge counterpart.
         "entity_tick_mixins" to ", \"MixinEntityTicks\"",
@@ -173,9 +265,9 @@ tasks.processResources {
         // The 1.20.5 physics attributes, backported on 1.20.1 only (dev.golem.core.world.Physics).
         "physics_mixins" to if (mcVersion.startsWith("1.20.")) ", \"MixinLegacyAttributeSupplier\", \"MixinLegacyLivingPhysics\", \"MixinLegacyFabricGravity\"" else "",
         // Chunks.loadEntityTicking before 26.1 (EntitySectionsAccess).
-        "entity_load_mixins" to if (mcVersion.substringBefore('.').toInt() < 26) ", \"EntitySectionsAccess\"" else "",
+        "entity_load_mixins" to if (!modern) ", \"EntitySectionsAccess\"" else "",
         // dev.golem.core.gametest.TestChunks: a 26.1 test waits until its whole plot is entity-ticking.
-        "gametest_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinGameTestChunks\"" else "",
+        "gametest_mixins" to if (modern) ", \"MixinGameTestChunks\"" else "",
         // Fabric API has no minecart events, so every Fabric node calls the rail hooks through a mixin.
         "rail_mixins" to ", \"MixinMinecartRails\"",
         // 1.21.1 only: the world-exit unload spin (MixinChunkMapUnloadDrain).
@@ -184,23 +276,25 @@ tasks.processResources {
         "glider_mixins" to "",
         "glider_client_mixins" to "",
         // SlotSync: from 26.1 the client echoes server slot pushes from the creative screen.
-        "creative_echo_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinCreativeEchoPush\", \"MixinCreativeEchoListener\"" else "",
-        "world_effect_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinWorldEffects\", \"MixinNativeWorldTarget\"" else "",
+        "creative_echo_mixins" to if (modern) ", \"MixinCreativeEchoPush\", \"MixinCreativeEchoListener\"" else "",
+        // 26.3 has neither the GL encoder hook nor Iris.
+        "world_effect_mixins" to if (!modern) "" else if (stonecutter.eval(mcVersion, ">=26.3")) ", \"MixinWorldEffects\""
+            else ", \"MixinWorldEffects\", \"MixinNativeWorldTarget\"",
         // Dev-only, listed in the harness mixin config that releaseJar strips.
-        "client_gametest_mixins" to if (stonecutter.eval(mcVersion, ">=26.1")) ", \"MixinClientTestTimeout\"" else "",
-        "render_validation_mixins" to if (stonecutter.eval(mcVersion, ">=26.1")) ", \"MixinGlValidation\"" else "",
+        "client_gametest_mixins" to if (modern) ", \"MixinClientTestTimeout\"" else "",
+        "render_validation_mixins" to if (modern) ", \"MixinGlValidation\"" else "",
         // 1.21 paces the server through its tick-rate manager; only Fabric lacks a render-end event.
         "harness_clock_mixins" to if (stonecutter.eval(mcVersion, "<1.21")) ", \"MixinHarnessServerClock\"" else "",
         "harness_frame_mixins" to ", \"MixinHarnessFrames\"",
         // Skies.Modifier: 26.1 appends environment-attribute layers; older nodes wrap the sky darkening and the
         // client colour getters (the mixin classes are empty stubs on the other era).
-        "sky_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinEnvironmentSkyLayers\"" else ", \"MixinLevelSkyDarken\"",
-        "sky_client_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) "" else
+        "sky_mixins" to if (modern) ", \"MixinEnvironmentSkyLayers\"" else ", \"MixinLevelSkyDarken\"",
+        "sky_client_mixins" to if (modern) "" else
             ", \"MixinClientLevelSky\", \"MixinDimensionEffectsSky\", \"MixinOverworldFogColor\"",
         // Older replacements use DimensionRenderingRegistry; additions append after the native renderer on both eras.
-        "cloud_mixins" to if (mcVersion.substringBefore('.').toInt() >= 26) ", \"MixinCloudRender\", \"MixinWeatherRender\"" else ", \"MixinLegacyCloudRender\"",
+        "cloud_mixins" to if (modern) ", \"MixinCloudRender\", \"MixinWeatherRender\"" else ", \"MixinLegacyCloudRender\"",
         // Fabric has no debug-screen entry registry, so the F3 lines are appended by a mixin there.
-        "debug_line_mixins" to if (!obfuscated) ", \"MixinDebugScreenLines\"" else "",
+        "debug_line_mixins" to if (modern) ", \"MixinDebugScreenLines\"" else "",
         // 1.20.1 has no pre-removal explosion hook for blocks (1.21 added onExplosionHit); see CompatBlock.
         // MixinLegacyStackLimit: no per-stack stack size before the 1.20.5 component; see ItemStacks.setMaxStackSize.
         "legacy_explosion_mixins" to if (mcVersion.startsWith("1.20.")) ", \"MixinExplosionBlockHook\", \"MixinLegacyStackLimit\", \"MixinLegacySlotMerge\"" else "",
@@ -208,17 +302,22 @@ tasks.processResources {
         // dev.golem.core.gametest.GameTestMixinPlugin adds it when its target is present (a listed mixin with a missing
         // target fails the required config and crashed players' clients).
         "legacy_client_mixins" to ", \"MixinMouseInput\"" +
-            (if (mcVersion.substringBefore('.').toInt() < 26) ", \"MixinLegacyKeyMappingWinner\"" else "") +
-            (if (obfuscated) ", \"MixinLegacyCrosshair\"" else "") +
+            (if (!modern) ", \"MixinLegacyKeyMappingWinner\"" else "") +
+            (if (!modern) ", \"MixinLegacyCrosshair\"" else "") +
             // VanillaHud: Fabric API before 26.1 has no named HUD elements to suppress hearts/armour by.
-            (if (obfuscated) ", \"MixinLegacyHudRows\"" else ""),
+            (if (!modern) ", \"MixinLegacyHudRows\"" else ""),
         "pack_format" to prop("pack_format"),
-        "pack_format_entry" to if (mcVersion.substringBefore('.').toInt() >= 26)
-            "\"min_format\": ${prop("pack_format")}, \"max_format\": ${prop("pack_format")}" 
+        "pack_format_entry" to if (modern)
+            "\"min_format\": ${prop("pack_format")}, \"max_format\": ${prop("pack_format")}"
         else
             "\"pack_format\": ${prop("pack_format")}",
     )
     inputs.properties(props)
+    // The Jade entrypoint below depends on it, so a changed deps.jade must rerun this task.
+    inputs.property("jade", propOrNull("deps.jade") ?: "")
+    // 1.21.11's one pack.mcmeta cannot be valid for both its data format (needs supported_formats) and its
+    // resource format (forbids it); without the file the loader describes the mod's pack itself.
+    if (!(findProperty("pack_format_data") as String?).isNullOrBlank()) exclude("pack.mcmeta")
     filesMatching(listOf("fabric.mod.json", "pack.mcmeta", "*.mixins.json")) { expand(props) }
     // Only Forge generates a refmap; naming an absent one leaves the jar pointing at a file it lacks.
     filesMatching("*.mixins.json") { filter { if (it.trimStart().startsWith("\"refmap\"")) null else it } }
@@ -246,14 +345,23 @@ tasks.processResources {
         }
     }
     allAccessWideners.filter { it != accessWidenerName }.forEach { exclude(it) }
+    if (namedModernWidener) filesMatching(accessWidenerName) {
+        filter { if (it == "accessWidener v2 official") "accessWidener v2 named" else it }
+    }
     exclude(
         "META-INF/accesstransformer.cfg",
         "META-INF/golemcore.neoforge.accesstransformer.cfg",
         "META-INF/golemcore.forge.accesstransformer.cfg",
     )
     // The golem_* shaders use 26.1's pipeline format; older nodes draw the same effects with *_legacy shaders.
-    if (obfuscated) {
+    if (!modern) {
         exclude("assets/golemcore/shaders/core/golem_*")
+    }
+    // 26.3 compiles every shader to SPIR-V: its copies (explicit locations, #include) replace the shared ones.
+    if (stonecutter.eval(mcVersion, ">=26.3")) {
+        val shaders263 = rootProject.file("src/shaders-26.3")
+        exclude { !it.file.toPath().startsWith(shaders263.toPath()) && File(shaders263, it.relativePath.pathString).isFile }
+        from(shaders263)
     }
     exclude("META-INF/neoforge.mods.toml", "META-INF/mods.toml")
     // Golem Core's KubeJS plugin list names classes that exist only where the `kubejs` constant holds.
@@ -271,8 +379,41 @@ publishing {
 
 // Stonecutter rewrites the shared src/ tree in place for the active node. Both compilation and
 // resource processing must wait for that rewrite, or they consume the previous node's source state.
-tasks.compileJava { dependsOn(tasks.named("stonecutterGenerate")) }
+tasks.compileJava {
+    dependsOn(tasks.named("stonecutterGenerate"))
+    options.compilerArgs.addAll(listOf("-Xmaxerrs", "2000"))
+}
 tasks.processResources { dependsOn(tasks.named("stonecutterGenerate")) }
+
+// On modern nodes, `-Ppeers.run=true` puts the node's optional peers (JEI, REI with Cloth Config and Architectury, Jade,
+// CC: Tweaked) in the dev runs, beside the probe's content for them: on the classpath where Minecraft is unobfuscated,
+// else in the run's mods folder, which Fabric Loader remaps itself (Loom here cannot remap jars a newer Loom built). A
+// run without the flag empties that folder again. Never compiled against from here, shipped or required.
+val peerMods: Configuration by configurations.creating
+// `-Ppeers.skip=cc,rei` leaves named peers out (jei, rei, jade, cc, ae2): two peers whose own builds clash, say.
+val skippedPeers = propOrNull("peers.skip")?.split(',')?.map { it.trim() }.orEmpty()
+if (modern && propOrNull("peers.run") == "true") dependencies {
+    val run = if (obfuscated) peerMods.name else "localRuntime"
+    val jeiMc = propOrNull("deps.jei_mc")
+    if ("jei" !in skippedPeers) propOrNull("deps.jei")?.takeIf { jeiMc != null }?.let { run("mezz.jei:jei-$jeiMc-fabric:$it") { isTransitive = false } }
+    if ("jei" !in skippedPeers) propOrNull("deps.jei_config")?.takeIf { jeiMc != null }?.let { run("net.mezzdev.config:mezz_config-$jeiMc-fabric:$it") { isTransitive = false } }
+    if ("jei" !in skippedPeers) propOrNull("deps.jei_config_gui")?.takeIf { jeiMc != null }?.let { run("net.mezzdev.config:mezz_config_gui-$jeiMc-fabric:$it") { isTransitive = false } }
+    if ("rei" !in skippedPeers) propOrNull("deps.rei")?.let { run("me.shedaniel:RoughlyEnoughItems-fabric:$it") { isTransitive = false } }
+    if ("rei" !in skippedPeers) propOrNull("deps.rei_cloth")?.let { run("me.shedaniel.cloth:cloth-config-fabric:$it") { isTransitive = false } }
+    if ("rei" !in skippedPeers) propOrNull("deps.rei_architectury")?.let { run("dev.architectury:architectury-fabric:$it") { isTransitive = false } }
+    if ("jade" !in skippedPeers) propOrNull("deps.jade")?.let { run("maven.modrinth:jade:$it") { isTransitive = false } }
+    val ccMc = propOrNull("deps.cc_mc")
+    if ("cc" !in skippedPeers) propOrNull("deps.cc")?.takeIf { ccMc != null }?.let { run("cc.tweaked:cc-tweaked-$ccMc-fabric:$it") { isTransitive = false } }
+}
+if (modern) for (run in listOf("client", "server")) {
+    val modsDir = layout.projectDirectory.dir("runs/$run/mods")
+    val sync = tasks.register("syncPeerMods${run.replaceFirstChar { it.uppercase() }}") {
+        inputs.files(peerMods)
+        outputs.dir(modsDir)
+        doLast { project.sync { from(peerMods); into(modsDir) } }
+    }
+    tasks.matching { it.name == "run${run.replaceFirstChar { it.uppercase() }}" }.configureEach { dependsOn(sync) }
+}
 
 dependencies {
     // Nullness annotations. NeoForge ships jspecify transitively on 26.1 but not on older versions,
@@ -372,6 +513,8 @@ tasks.test {
 apply(from = rootProject.file("gradle/release-jar.gradle.kts"))
 apply(from = rootProject.file("gradle/gemrender-api.gradle.kts"))
 apply(from = rootProject.file("gradle/mod/mixin-validation.gradle.kts"))
+// Launch capture for the in-game harness (harness.json, harness/scenarios); inert without -Pharness.spec.
+apply(from = rootProject.file("gradle/mod/harness-spec.gradle.kts"))
 
 // Credits and links in the loader metadata, from the mod.* properties.
 apply(from = rootProject.file("gradle/mod/mod-metadata.gradle.kts"))

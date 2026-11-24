@@ -3,13 +3,13 @@ package dev.golem.core.client;
 //? if neoforge {
 import dev.golem.core.platform.NeoForgeEntrypoint;
 //?}
-//? if fabric && >=26.1 {
+//? if fabric && >=1.21.11 {
 /*import net.fabricmc.fabric.api.client.model.loading.v1.ModelLoadingPlugin;
 *///?}
-//? if fabric && >=26.1 {
+//? if fabric && >=1.21.11 {
 /*import net.fabricmc.fabric.api.client.model.loading.v1.UnbakedModelDeserializer;
 *///?}
-//? if neoforge && >=26.1 {
+//? if neoforge && >=1.21.11 {
 import net.neoforged.neoforge.client.event.ModelEvent;
 //?}
 

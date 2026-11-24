@@ -19,12 +19,12 @@ import net.minecraft.world.entity.vehicle.boat.Boat;
  */
 public abstract class CompatBoat extends Boat implements BoatControl {
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*private final Supplier<Item> dropItem;
     *///?}
 
     protected CompatBoat(EntityType<? extends Boat> type, Level level, Supplier<Item> dropItem) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         super(type, level, dropItem);
         //?} else {
         /*super(type, level);
@@ -32,7 +32,7 @@ public abstract class CompatBoat extends Boat implements BoatControl {
         *///?}
     }
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*@Override
     public Item getDropItem() {
         return dropItem.get();

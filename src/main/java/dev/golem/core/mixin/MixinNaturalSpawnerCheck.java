@@ -35,7 +35,7 @@ public abstract class MixinNaturalSpawnerCheck {
         if (Spawns.denied(mob, level, Spawns.Reason.NATURAL)) cir.setReturnValue(false);
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @WrapOperation(method = "spawnMobsForChunkGeneration", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/world/entity/Mob;checkSpawnRules(Lnet/minecraft/world/level/LevelAccessor;Lnet/minecraft/world/entity/EntitySpawnReason;)Z"))
     private static boolean golem$generationSpawnCheck(Mob mob, LevelAccessor level,

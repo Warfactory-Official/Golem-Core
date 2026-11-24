@@ -19,7 +19,7 @@ public final class Screenshots {
     /** Captures the whole main render target; the image's origin is its top-left corner. */
     public static void capture(Consumer<NativeImage> consumer) {
         Minecraft minecraft = Minecraft.getInstance();
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         net.minecraft.client.Screenshot.takeScreenshot(minecraft.getMainRenderTarget(), consumer::accept);
         //?} else {
         /*consumer.accept(net.minecraft.client.Screenshot.takeScreenshot(minecraft.getMainRenderTarget()));
@@ -41,7 +41,7 @@ public final class Screenshots {
         // NativeImage stores ABGR below 26.1, so red and blue are swapped there before comparing.
         for (int y = 0; y < image.getHeight(); y++) {
             for (int x = 0; x < image.getWidth(); x++) {
-                //? if >=26.1 {
+                //? if >=1.21.11 {
                 if (image.getPixel(x, y) == argb) image.setPixel(x, y, 0);
                 //?} else {
                 /*int abgr = (argb & 0xFF00FF00) | ((argb >> 16) & 0xFF) | ((argb & 0xFF) << 16);

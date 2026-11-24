@@ -1,6 +1,6 @@
 package dev.golem.core.render;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.opengl.GlBuffer;
 import com.mojang.blaze3d.opengl.GlRenderPass;
@@ -28,6 +28,11 @@ public final class RenderOps {
         return overlay.events;
     }
 
+    //? if <26.1 {
+    /*/^* The most free section buffers seen: the pool's size, which 1.21.11 does not keep. ^/
+    private static int poolSize;
+    *///?}
+
     /** Includes discovery, propagation, and borrowed buffers that the compile queue alone omits. */
     public static @Nullable String terrainBusy(Minecraft client) {
         var renderer = client.levelRenderer;
@@ -37,10 +42,20 @@ public final class RenderOps {
         var task = graph.fullUpdateTask;
         var state = graph.currentGraph.get();
         if (graph.needsFullUpdate || task != null && !task.isDone() || state == null) return "graph rebuild";
+        //? if >=26.2 {
+        /*if (!state.sectionsToPropagateFrom().isEmpty()) return "graph propagation";
+        *///?} else {
         if (!state.events().sectionsToPropagateFrom().isEmpty()) return "graph propagation";
+        //?}
         if (graph.needsFrustumUpdate.get()) return "frustum";
         if (!dispatcher.isQueueEmpty()) return "compile queue";
+        //? if >=26.1 {
         var inFlight = client.renderBuffers().sectionBufferPool().freeBuffers.remainingCapacity();
+        //?} else {
+        /*int free = client.renderBuffers().sectionBufferPool().getFreeBufferCount();
+        poolSize = Math.max(poolSize, free);
+        int inFlight = poolSize - free;
+        *///?}
         return inFlight == 0 ? null : inFlight + " compiles in flight";
     }
 
@@ -58,7 +73,11 @@ public final class RenderOps {
     }
 
     public static boolean validationEnabled() {
+        //? if >=26.3 {
+        /*return false;
+        *///?} else {
         return GlRenderPass.VALIDATION;
+        //?}
     }
 
 }

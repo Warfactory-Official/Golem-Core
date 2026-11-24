@@ -12,7 +12,7 @@ import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.Explosion;
 import net.minecraft.server.level.ServerLevel;
 import java.util.function.BiConsumer;
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.world.level.ScheduledTickAccess;
 //?}
 import net.minecraft.world.level.block.Block;
@@ -107,7 +107,7 @@ public class CompatBlock extends Block {
     /** Forwards an explosion to another block's own vanilla hook without exposing its era-specific name. */
     public final void forwardExplosionHit(BlockState state, ServerLevel level, BlockPos pos, Explosion explosion,
                                           BiConsumer<ItemStack, BlockPos> onHit) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         onExplosionHit(state, level, pos, explosion, onHit);
         //?} else {
         /*// Vanilla's 26.1 default in this era's spelling: a hook that answers false loses the block with
@@ -134,7 +134,7 @@ public class CompatBlock extends Block {
         return onPickBlock(level, pos, state);
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     protected ItemStack getCloneItemStack(LevelReader level, BlockPos pos, BlockState state, boolean includeData) {
         return onPickBlock(level, pos, state);
@@ -153,7 +153,7 @@ public class CompatBlock extends Block {
 
     /** Whether vanilla will suppress the normal block drop for this player. */
     protected static boolean playerPreventsBlockDrops(Player player) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return player.preventsBlockDrops();
         //?} else {
         /*return player.getAbilities().instabuild;
@@ -177,7 +177,7 @@ public class CompatBlock extends Block {
 
     //?}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     protected void onExplosionHit(BlockState state, ServerLevel level, BlockPos pos, Explosion explosion,
                                   BiConsumer<ItemStack, BlockPos> onHit) {
@@ -235,7 +235,7 @@ public class CompatBlock extends Block {
     *///?}
 
     @Override
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     protected void affectNeighborsAfterRemoval(BlockState state, ServerLevel level, BlockPos pos, boolean movedByPiston) {
         Compat.preRemoveSideEffects(level, pos, state);
         onBlockRemoved(state, level, pos, movedByPiston);
@@ -253,7 +253,7 @@ public class CompatBlock extends Block {
     }
     *///?}
 
-    //? if >=1.21 && <26.1 {
+    //? if >=1.21 && <1.21.11 {
     /*/^*
      * 1.21's vanilla hook, called before the block is removed, with the same contract as 26.1's: a hook
      * that answers true owns the block's removal, and a trigger-only blast skips it. Both loaders route
@@ -293,7 +293,7 @@ public class CompatBlock extends Block {
     }
     *///?}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     protected void entityInside(BlockState state, Level level, BlockPos pos, net.minecraft.world.entity.Entity entity,
                                 net.minecraft.world.entity.InsideBlockEffectApplier effects, boolean precise) {
@@ -359,14 +359,14 @@ public class CompatBlock extends Block {
     /** Vanilla's {@code fallOn}: the entity takes its fall damage. */
     protected final void defaultFallOn(Level level, BlockState state, BlockPos pos,
                                        net.minecraft.world.entity.Entity entity, double fallDistance) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         super.fallOn(level, state, pos, entity, fallDistance);
         //?} else {
         /*super.fallOn(level, state, pos, entity, (float) fallDistance);
         *///?}
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     public void fallOn(Level level, BlockState state, BlockPos pos, net.minecraft.world.entity.Entity entity,
                        double fallDistance) {
@@ -401,7 +401,7 @@ public class CompatBlock extends Block {
         return onSustainPlant(level, soilPos, soil, plant);
     }
 
-    //? if neoforge && >=26.1 {
+    //? if neoforge && >=1.21.11 {
     @Override
     public net.minecraft.util.TriState canSustainPlant(BlockState state,
             net.minecraft.world.level.BlockGetter level, BlockPos soilPosition, net.minecraft.core.Direction facing,
@@ -455,7 +455,17 @@ public class CompatBlock extends Block {
     protected int getLightDampening(BlockState state) {
         return isLightTransparent(state) && state.getFluidState().isEmpty() ? 0 : super.getLightDampening(state);
     }
-    //?} elif >=1.21.1 {
+    //?} elif >=1.21.2 {
+    /*@Override
+    protected boolean propagatesSkylightDown(BlockState state) {
+        return isLightTransparent(state) && state.getFluidState().isEmpty() || super.propagatesSkylightDown(state);
+    }
+
+    @Override
+    protected int getLightBlock(BlockState state) {
+        return isLightTransparent(state) && state.getFluidState().isEmpty() ? 0 : super.getLightBlock(state);
+    }
+    *///?} elif >=1.21.1 {
     /*@Override
     protected boolean propagatesSkylightDown(BlockState state, net.minecraft.world.level.BlockGetter level, BlockPos pos) {
         return isLightTransparent(state) && state.getFluidState().isEmpty() || super.propagatesSkylightDown(state, level, pos);

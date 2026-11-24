@@ -17,7 +17,7 @@ import org.spongepowered.asm.mixin.injection.Slice;
 @Mixin(LivingEntity.class)
 public abstract class MixinLivingTravel {
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @ModifyExpressionValue(method = "getEffectiveGravity", at = @At(value = "INVOKE",
             target = "Lnet/minecraft/world/entity/LivingEntity;getGravity()D"))
     private double golem$effectiveGravity(double gravity) {

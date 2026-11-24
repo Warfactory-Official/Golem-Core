@@ -6,7 +6,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.protocol.game.ClientboundSoundEntityPacket;
 import net.minecraft.network.protocol.game.ClientboundSoundPacket;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.resources.Identifier;
 //?} else {
 /*import net.minecraft.resources.ResourceLocation;
@@ -25,13 +25,13 @@ public final class Sounds {
     private Sounds() {}
 
     public static SoundEvent get(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier
             //?} else {
             /*ResourceLocation
             *///?}
             id) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return net.minecraft.core.registries.BuiltInRegistries.SOUND_EVENT.getValue(id);
         //?} else {
         /*return net.minecraft.core.registries.BuiltInRegistries.SOUND_EVENT.get(id);

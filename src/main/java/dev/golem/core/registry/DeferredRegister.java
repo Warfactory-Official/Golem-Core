@@ -55,7 +55,7 @@ public class DeferredRegister<T> {
             // takes its fluid at construction (dev.golem.core.fluid.WorldFluids).
             Registries.FLUID,
             Registries.BLOCK,
-            //? if >=1.20.5 && <26.1 {
+            //? if >=1.20.5 && <1.21.11 {
             /*// Pre-26.1 armour items take a Holder<ArmorMaterial> at construction, so the materials
             // must already be registered by the time item factories run.
             Registries.ARMOR_MATERIAL,
@@ -233,7 +233,7 @@ public class DeferredRegister<T> {
     @SuppressWarnings({"unchecked", "rawtypes"})
     public static void flushAllToVanilla() {
         flushAll((registryKey, entryKey, value) -> {
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Registry<Object> registry = (Registry<Object>) (Registry<?>)
                     BuiltInRegistries.REGISTRY.getValueOrThrow((ResourceKey) registryKey);
             //?} else {
@@ -271,7 +271,7 @@ public class DeferredRegister<T> {
         public <I extends Item> RegistryObject<I> registerItem(String name, Function<Item.Properties, ? extends I> factory, UnaryOperator<Item.Properties> properties) {
             // The factory is resolved as the entry is built, so a substitution declared before then is honoured.
             String id = namespace + ":" + name;
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             return register(name, key -> Substitutions.resolve(Substitutions.ITEM, id, factory)
                     .apply(properties.apply(new Item.Properties()).setId(key)));
             //?} else {
@@ -297,7 +297,7 @@ public class DeferredRegister<T> {
             // item description ids explicit and needs useBlockDescriptionPrefix(); before 26.1 BlockItem defers
             // to its block, which is the same key only while the item is named like its block, so
             // Compat.blockDescription marks the properties for CompatBlockItem to answer 26.1's key.
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             return registerItem(name, props -> new dev.golem.core.world.CompatBlockItem(block.get(), props),
                     p -> properties.apply(p).useBlockDescriptionPrefix());
             //?} else {
@@ -336,7 +336,7 @@ public class DeferredRegister<T> {
 
         public <B extends Block> RegistryObject<B> registerBlock(String name, Function<BlockBehaviour.Properties, ? extends B> factory, UnaryOperator<BlockBehaviour.Properties> properties) {
             String id = namespace + ":" + name;
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             return register(name, key -> Substitutions.resolve(Substitutions.BLOCK, id, factory)
                     .apply(properties.apply(initial(name)).setId(key)));
             //?} else {

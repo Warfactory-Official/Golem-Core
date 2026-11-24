@@ -128,9 +128,9 @@ public final class Gem {
 
     private static void rotate(PoseStack stack, Axes axis, float degrees) {
         switch (axis) {
-            case X -> stack.mulPose(Axis.XP.rotationDegrees(degrees));
-            case Y -> stack.mulPose(Axis.YP.rotationDegrees(degrees));
-            case Z -> stack.mulPose(Axis.ZP.rotationDegrees(degrees));
+            case X -> Poses.rotate(stack, Axis.XP.rotationDegrees(degrees));
+            case Y -> Poses.rotate(stack, Axis.YP.rotationDegrees(degrees));
+            case Z -> Poses.rotate(stack, Axis.ZP.rotationDegrees(degrees));
         }
     }
 

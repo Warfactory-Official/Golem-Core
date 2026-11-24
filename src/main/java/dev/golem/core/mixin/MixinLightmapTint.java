@@ -25,10 +25,77 @@ public abstract class MixinLightmapTint {
 
     @Inject(method = "render", at = @At("TAIL"))
     private void golem$additions(LightmapRenderState renderState, CallbackInfo ci) {
-        if (renderState.needsUpdate) Lightmaps.apply(((Lightmap) (Object) this).getTextureView(), renderState);
+        if (!renderState.needsUpdate) return;
+        Lightmaps.apply(((Lightmap) (Object) this).getTextureView(), new Lightmaps.Frame(renderState.skyFactor,
+                renderState.blockFactor, renderState.brightness, renderState.darknessEffectScale,
+                renderState.nightVisionEffectIntensity, renderState.bossOverlayWorldDarkening));
     }
 }
-//?} else {
+//?} elif >=1.21.11 {
+/*import dev.golem.core.client.Lightmaps;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.LivingEntity;
+import org.spongepowered.asm.mixin.Final;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+/^*
+ * {@link Lightmaps} on 1.21.11, whose light map is one GPU pass like 26.1's but has no render state: the factors are
+ * read again from the sources {@code updateLightTexture} reads, after its pass, on the frames it drew.
+ ^/
+@Mixin(LightTexture.class)
+public abstract class MixinLightmapTint {
+
+    @Shadow @Final private Minecraft minecraft;
+    @Shadow @Final private GameRenderer renderer;
+    @Shadow @Final private com.mojang.blaze3d.textures.GpuTextureView textureView;
+    @Shadow private boolean updateLightTexture;
+    @Shadow private float blockLightRedFlicker;
+    @Unique private boolean golem$updating;
+
+    @Inject(method = "updateLightTexture", at = @At("HEAD"))
+    private void golem$updating(float partialTick, CallbackInfo ci) {
+        golem$updating = updateLightTexture;
+    }
+
+    @Inject(method = "updateLightTexture", at = @At("TAIL"))
+    private void golem$additions(float partialTick, CallbackInfo ci) {
+        var level = minecraft.level;
+        var player = minecraft.player;
+        if (!golem$updating || level == null || player == null) return;
+        var probe = renderer.getMainCamera().attributeProbe();
+        float sky = probe.getValue(net.minecraft.world.attribute.EnvironmentAttributes.SKY_LIGHT_FACTOR, partialTick);
+        var endFlash = level.endFlashState();
+        if (endFlash != null && !minecraft.options.hideLightningFlash().get()) {
+            float intensity = endFlash.getIntensity(partialTick);
+            sky += minecraft.gui.getBossOverlay().shouldCreateWorldFog() ? intensity / 3.0F : intensity;
+        }
+        float darknessOption = minecraft.options.darknessEffectScale().get().floatValue();
+        float darkness = player.getEffectBlendFactor(MobEffects.DARKNESS, partialTick) * darknessOption;
+        float waterVision = player.getWaterVision();
+        float nightVision = player.hasEffect(MobEffects.NIGHT_VISION) ? GameRenderer.getNightVisionScale(player, partialTick)
+                : waterVision > 0.0F && player.hasEffect(MobEffects.CONDUIT_POWER) ? waterVision : 0.0F;
+        Lightmaps.apply(textureView, new Lightmaps.Frame(sky, blockLightRedFlicker + 1.4F,
+                Math.max(0.0F, minecraft.options.gamma().get().floatValue() - darkness),
+                golem$darknessScale(player, darkness, partialTick) * darknessOption, nightVision,
+                renderer.getDarkenWorldAmount(partialTick)));
+    }
+
+    /^* LightTexture.calculateDarknessScale, which is private. ^/
+    @Unique
+    private static float golem$darknessScale(LivingEntity entity, float darkness, float partialTick) {
+        return Math.max(0.0F, net.minecraft.util.Mth.cos((entity.tickCount - partialTick) * (float) Math.PI * 0.025F)
+                * 0.45F * darkness);
+    }
+}
+*///?} else {
 /*import com.mojang.blaze3d.platform.NativeImage;
 import dev.golem.core.client.Lightmaps;
 import net.minecraft.client.renderer.LightTexture;

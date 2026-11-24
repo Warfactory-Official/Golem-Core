@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.function.Predicate;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.resources.Identifier;
 //?} else {
 /*import net.minecraft.resources.ResourceLocation;
@@ -36,7 +36,7 @@ public final class DataGroups {
             }), value -> new Dynamic<>(JsonOps.INSTANCE, new JsonPrimitive(value)));
 
     public static Group group(List<Group> groups,
-                              //? if >=26.1 {
+                              //? if >=1.21.11 {
                               Identifier
                               //?} else {
                               /*ResourceLocation
@@ -58,7 +58,7 @@ public final class DataGroups {
         var id = Ids.keyId(registry);
         var folder = id.getNamespace() + "/" + id.getPath();
         DataFiles.folder(folder, files -> {
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             var entries = new LinkedHashMap<Identifier, DataGroup>();
             //?} else {
             /*var entries = new LinkedHashMap<ResourceLocation, DataGroup>();
@@ -76,7 +76,7 @@ public final class DataGroups {
         //?} else {
         /*registry = registries.registryOrThrow(key);
         *///?}
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         var entries = new LinkedHashMap<Identifier, DataGroup>();
         //?} else {
         /*var entries = new LinkedHashMap<ResourceLocation, DataGroup>();
@@ -85,7 +85,7 @@ public final class DataGroups {
         publish(entries, groups);
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private static void publish(Map<Identifier, DataGroup> entries, List<Group> groups) {
     //?} else {
     /*private static void publish(Map<ResourceLocation, DataGroup> entries, List<Group> groups) {
@@ -116,7 +116,7 @@ public final class DataGroups {
 
     public static final class Group {
         private final List<Param<?>> params = new ArrayList<>();
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         private final Identifier id;
         private Group(Identifier id) { this.id = id; }
         public Identifier id() { return id; }

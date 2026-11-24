@@ -1,8 +1,9 @@
 package dev.golem.core.render;
 
+import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
-//? if fabric && <26.1 {
+//? if fabric && <1.21.11 {
 /*import net.fabricmc.fabric.api.client.rendering.v1.DimensionRenderingRegistry;
 *///?}
 import net.minecraft.client.CloudStatus;
@@ -33,7 +34,7 @@ public final class CloudRendering {
     /** Installs the node's hook (once) and, where the hook is per dimension, for {@code dimension}. */
     public static synchronized void install(ResourceKey<Level> dimension, boolean replacement) {
         if (!INSTALLED.add(dimension)) return;
-        //? if fabric && <26.1 {
+        //? if fabric && <1.21.11 {
         /*if (replacement) DimensionRenderingRegistry.registerCloudRenderer(dimension, context -> {
             var camera = context.camera().getPosition();
             //? if >=1.21 {
@@ -49,11 +50,14 @@ public final class CloudRendering {
         if (hooked) return;
         hooked = true;
         dev.golem.core.client.ClientResourceReloads.register(Clouds.NAMESPACE, Clouds.PATH, CloudRendering::reload);
-        //? if neoforge && >=26.1 {
+        //? if neoforge && >=1.21.11 {
         dev.golem.core.platform.NeoForgeEntrypoint.modBus().addListener(
                 (net.neoforged.neoforge.client.event.RegisterCustomEnvironmentEffectRendererEvent event) ->
                         event.registerCloudRenderer(dev.golem.core.Ids.of(Clouds.NAMESPACE, Clouds.PATH),
                                 new net.neoforged.neoforge.client.CustomCloudsRenderer() {
+                                    // On 26.3 the native renderer's own steps run Golem's layers (MixinCloudRender).
+                                    //? if >=26.3 {
+                                    //?} elif >=26.1 {
                                     @Override
                                     public boolean renderClouds(net.minecraft.client.renderer.state.level.LevelRenderState state,
                                                                 net.minecraft.world.phys.Vec3 camera,
@@ -61,13 +65,23 @@ public final class CloudRendering {
                                                                 float height, int range, org.joml.Matrix4fc modelView) {
                                         return render(status, range, camera);
                                     }
+                                    //?} else {
+                                    /*@Override
+                                    public boolean renderClouds(net.minecraft.client.renderer.state.level.LevelRenderState state,
+                                                                net.minecraft.world.phys.Vec3 camera,
+                                                                net.minecraft.client.CloudStatus status, int color,
+                                                                float height, org.joml.Matrix4f modelView) {
+                                        return render(status,
+                                                net.minecraft.client.Minecraft.getInstance().options.cloudRange().get() * 16, camera);
+                                    }
+                                    *///?}
                                 }));
         //?}
     }
 
     /** Whether {@code renderer} is one of Golem's own layer renderers (26.1; the vanilla hook must not take them over). */
     public static boolean isLayerRenderer(Object renderer) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return renderer instanceof LayerRenderer;
         //?} else {
         /*return false;
@@ -113,7 +127,7 @@ public final class CloudRendering {
         reloadPending = true;
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
 
     /** A vanilla cloud renderer that loads its own copy of the cloud texture (26.1). */
     private static final class LayerRenderer extends net.minecraft.client.renderer.CloudRenderer {
@@ -165,11 +179,64 @@ public final class CloudRendering {
             net.minecraft.world.phys.Vec3 shifted = new net.minecraft.world.phys.Vec3(camera.x + layer.shiftX(), camera.y,
                     camera.z + layer.shiftZ());
             // Replacement clocks are zero; additions retain the native clock and apply only their relative drift.
+            //? if >=26.3 {
+            /*renderer.prepare(argb, status, layer.height() + 0.33F, range, shifted, gameTime, partialTick);
+            *///?} elif >=26.1 {
             renderer.render(argb, status, layer.height() + 0.33F, range, shifted, gameTime, partialTick);
             renderer.endFrame();
+            //?} else {
+            /*renderer.render(argb, status, layer.height() + 0.33F, shifted, gameTime, partialTick);
+            renderer.endFrame();
+            *///?}
             layersDrawn++;
         }
+        //? if >=26.3 {
+        /*prepared = layers.size();
+        *///?}
     }
+
+    //? if >=26.3 {
+    /*private static int prepared;
+    private static boolean replacing;
+
+    /^*
+     * 26.3 splits a cloud frame into prepare and draw. Prepares Golem's layers with the native renderer's arguments;
+     * true when the native clouds are hidden or replaced this frame (the native renderer then skips both steps).
+     ^/
+    public static boolean prepareFrame(int color, CloudStatus status, float bottomY, int range, Vec3 camera, long gameTime,
+                                       float partialTick) {
+        var level = Minecraft.getInstance().level;
+        prepared = 0;
+        replacing = !Clouds.nativeVisible(level) || Clouds.replaces(level);
+        if (Clouds.replaces(level)) {
+            renderLayers(Clouds.layers(level, dev.golem.core.client.FrameTime.partialTick()), status, range, camera, 0L, 0F);
+        } else if (!replacing) {
+            renderAdditions(color, status, bottomY, range, camera, gameTime, partialTick);
+        }
+        return replacing;
+    }
+
+    public static boolean replacing() {
+        return replacing;
+    }
+
+    /^* Draws the prepared layers into vanilla's cloud pass. ^/
+    public static void drawFrame(CloudStatus status, com.mojang.blaze3d.systems.RenderPass pass) {
+        for (int i = 0; i < prepared; i++) RENDERERS.get(i).render(status, pass);
+    }
+
+    public static void drawFrameOit(CloudStatus status, net.minecraft.client.renderer.oit.OitStage stage,
+                                    com.mojang.blaze3d.textures.GpuTextureView depth,
+                                    net.minecraft.client.renderer.oit.OitRenderPassProvider.Parameters params) {
+        for (int i = 0; i < prepared; i++) RENDERERS.get(i).renderOit(status, stage, depth, params);
+    }
+
+    /^* With the native renderer's frame end: the prepared layers' buffers rotate with it. ^/
+    public static void endFrame() {
+        for (int i = 0; i < prepared; i++) RENDERERS.get(i).endFrame();
+        prepared = 0;
+    }
+    *///?}
     //?} else {
     /*private static final List<LegacyLayer> LEGACY = new ArrayList<>();
 
@@ -291,8 +358,8 @@ public final class CloudRendering {
             if (cache.buffer != null) cache.buffer.close();
             cache.buffer = new com.mojang.blaze3d.vertex.VertexBuffer(com.mojang.blaze3d.vertex.VertexBuffer.Usage.STATIC);
             //? if >=1.21 {
-            com.mojang.blaze3d.vertex.BufferBuilder builder = com.mojang.blaze3d.vertex.Tesselator.getInstance().begin(
-                    com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS,
+            com.mojang.blaze3d.vertex.BufferBuilder builder = CompatTesselator.begin(
+                    VertexFormat.Mode.QUADS,
                     com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_TEX_COLOR_NORMAL);
             build((x, y, z, u, v, r, g, b, a, nx, ny, nz) -> builder.addVertex(x, y, z).setUv(u, v).setColor(r, g, b, a)
                     .setNormal(nx, ny, nz), status, d2, d3, d4, layer);
@@ -301,7 +368,7 @@ public final class CloudRendering {
             //?} else {
             /^com.mojang.blaze3d.vertex.BufferBuilder builder = com.mojang.blaze3d.vertex.Tesselator.getInstance().getBuilder();
             com.mojang.blaze3d.systems.RenderSystem.setShader(net.minecraft.client.renderer.GameRenderer::getPositionTexColorNormalShader);
-            builder.begin(com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS,
+            builder.begin(VertexFormat.Mode.QUADS,
                     com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_TEX_COLOR_NORMAL);
             build((x, y, z, u, v, r, g, b, a, nx, ny, nz) -> builder.vertex(x, y, z).uv(u, v).color(r, g, b, a)
                     .normal(nx, ny, nz).endVertex(), status, d2, d3, d4, layer);

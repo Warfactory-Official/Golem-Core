@@ -51,6 +51,16 @@ public final class AttackInput {
         return false;
     }
 
+    /** A bare main-hand swing, seen by the server; 26.3 sends it as a punch. */
+    private static void swingMainHand(LocalPlayer player) {
+        //? if >=26.3 {
+        /*player.swing(InteractionHand.MAIN_HAND, player.getMainHandItem().getAttackAnimation(), false);
+        player.connection.send(net.minecraft.network.protocol.game.ServerboundPunchPacket.INSTANCE);
+        *///?} else {
+        player.swing(InteractionHand.MAIN_HAND);
+        //?}
+    }
+
     /** Before the tick: each buffered click becomes a bare swing. */
     private static void beforeTick() {
         if (!guarded()) return;
@@ -58,7 +68,7 @@ public final class AttackInput {
         LocalPlayer player = minecraft.player;
         while (minecraft.options.keyAttack.consumeClick()) {
             consumed++;
-            player.swing(InteractionHand.MAIN_HAND);
+            swingMainHand(player);
         }
     }
 
@@ -74,7 +84,7 @@ public final class AttackInput {
                     if (!guarded()) return false;
                     for (int i = 0; i < clickCount; i++) {
                         consumed++;
-                        player.swing(InteractionHand.MAIN_HAND);
+                        swingMainHand(player);
                     }
                     return true;
                 });

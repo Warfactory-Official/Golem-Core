@@ -20,12 +20,12 @@ public final class ContainerClicks {
 
     public static void send(MultiPlayerGameMode gameMode, int containerId, int slotId, int button,
                             Action action, Player player) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         gameMode.handleContainerInput(containerId, slotId, button,
                 net.minecraft.world.inventory.ContainerInput.valueOf(action.name()), player);
         //?} else {
-        /*gameMode.handleInventoryMouseClick(containerId, slotId, button,
-                net.minecraft.world.inventory.ClickType.valueOf(action.name()), player);
+        /*gameMode.handleContainerInput(containerId, slotId, button,
+                net.minecraft.world.inventory.ContainerInput.valueOf(action.name()), player);
         *///?}
     }
 }

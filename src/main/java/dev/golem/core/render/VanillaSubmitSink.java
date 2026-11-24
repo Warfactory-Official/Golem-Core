@@ -1,6 +1,6 @@
 package dev.golem.core.render;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.OrderedSubmitNodeCollector;
@@ -51,6 +51,13 @@ public final class VanillaSubmitSink implements SubmitSink {
 
     @Override
     public void submitCustomGeometry(PoseStack poseStack, RenderType renderType, CustomGeometry geometry) {
+        //? if >=26.3 {
+        /*ScreenEffects.Layer layer = ScreenEffects.layerOf(renderType);
+        if (layer != null) {
+            layer.defer(poseStack, renderType, geometry);
+            return;
+        }
+        *///?}
         target.submitCustomGeometry(poseStack, renderType, (pose, buffer) -> {
             VertexConsumer drawBuffer = buffer;
             if (!passState.sceneCaptured && HeatDistortionRenderType.isSceneSampling(renderType)) {
@@ -71,7 +78,11 @@ public final class VanillaSubmitSink implements SubmitSink {
     @Override
     public void submitBlock(PoseStack poseStack, CompatBlockRenderState block, int light, int overlay) {
         if (block.isEmpty()) return;
+        //? if >=26.1 {
         block.delegate.submit(poseStack, root, light, overlay, 0);
+        //?} else {
+        /*if (block.state != null) root.submitBlock(poseStack, block.state, light, overlay, 0);
+        *///?}
     }
 
     @Override

@@ -12,7 +12,7 @@ import org.jspecify.annotations.Nullable;
 import net.minecraft.network.syncher.SynchedEntityData;
 //?}
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 //?} else {
@@ -56,7 +56,7 @@ public abstract class CompatMob extends net.minecraft.world.entity.Mob {
     }
     *///?}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     protected final void readAdditionalSaveData(ValueInput input) {
         super.readAdditionalSaveData(input);
@@ -82,7 +82,7 @@ public abstract class CompatMob extends net.minecraft.world.entity.Mob {
     }
     *///?}
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*// 26.1 spelling of the server damage path. Below 26.1 vanilla only has {@code hurt}, which runs on
     // both sides; the client half is kept vanilla so only the server call reaches the 26.1-shaped hook.
     public boolean hurtServer(ServerLevel level, DamageSource source, float amount) {
@@ -96,7 +96,7 @@ public abstract class CompatMob extends net.minecraft.world.entity.Mob {
     }
     *///?}
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*public boolean isInvulnerableTo(ServerLevel level, DamageSource source) {
         return super.isInvulnerableTo(source);
     }
@@ -113,7 +113,7 @@ public abstract class CompatMob extends net.minecraft.world.entity.Mob {
     }
     *///?}
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*public boolean causeFallDamage(double fallDistance, float damageModifier, DamageSource damageSource) {
         return super.causeFallDamage((float) fallDistance, damageModifier, damageSource);
     }
@@ -124,7 +124,7 @@ public abstract class CompatMob extends net.minecraft.world.entity.Mob {
     }
     *///?}
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*public void lerpMotion(net.minecraft.world.phys.Vec3 movement) {
         super.lerpMotion(movement.x, movement.y, movement.z);
     }
@@ -135,7 +135,7 @@ public abstract class CompatMob extends net.minecraft.world.entity.Mob {
     }
     *///?}
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*public net.minecraft.world.entity.item.ItemEntity spawnAtLocation(ServerLevel level, net.minecraft.world.item.ItemStack stack) {
         return super.spawnAtLocation(stack);
     }
@@ -160,7 +160,7 @@ public abstract class CompatMob extends net.minecraft.world.entity.Mob {
     }
     *///?}
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*protected void customServerAiStep(ServerLevel level) {
         super.customServerAiStep();
     }
@@ -189,7 +189,7 @@ public abstract class CompatMob extends net.minecraft.world.entity.Mob {
     }
     *///?}
 
-    //? if >=1.21.1 && <26.1 {
+    //? if >=1.21.1 && <1.21.11 {
     /*protected void triggerOnDeathMobEffects(ServerLevel level, RemovalReason reason) {
         super.triggerOnDeathMobEffects(reason);
     }
@@ -233,7 +233,7 @@ public abstract class CompatMob extends net.minecraft.world.entity.Mob {
     }
     *///?}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     //?} else {
     /*protected void dropFromLootTable(ServerLevel level, DamageSource source, boolean killedByPlayer) {
         super.dropFromLootTable(source, killedByPlayer);
@@ -247,7 +247,7 @@ public abstract class CompatMob extends net.minecraft.world.entity.Mob {
 
     /** The player credited by vanilla's recent-damage tracking, independent of the final damage source. */
     protected final @Nullable Player compatLastHurtByPlayer() {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return getLastHurtByPlayer();
         //?} else {
         /*return lastHurtByPlayer;

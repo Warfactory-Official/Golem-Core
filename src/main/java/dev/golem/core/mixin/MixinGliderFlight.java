@@ -26,9 +26,14 @@ import org.spongepowered.asm.mixin.injection.At;
  */
 @Mixin(LivingEntity.class)
 public abstract class MixinGliderFlight {
+    //? if neoforge && >=26.2 {
+    /*private static final String CAN_GLIDE = "canGlide(Z)Z";
+    *///?} else {
+    private static final String CAN_GLIDE = "canGlide";
+    //?}
 
-    //? if >=26.1 {
-    @org.spongepowered.asm.mixin.injection.Inject(method = "canGlide", cancellable = true, at = @At(value = "FIELD",
+    //? if >=1.21.11 {
+    @org.spongepowered.asm.mixin.injection.Inject(method = CAN_GLIDE, cancellable = true, at = @At(value = "FIELD",
             target = "Lnet/minecraft/world/entity/EquipmentSlot;VALUES:Ljava/util/List;",
             opcode = org.objectweb.asm.Opcodes.GETSTATIC))
     private void golem$canGlide(org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable<Boolean> cir) {

@@ -81,11 +81,20 @@ public final class BiomeFeatures {
             net.fabricmc.fabric.api.biome.v1.BiomeModifications.create(dev.golem.core.Ids.of(spawn.namespace(), spawn.name()))
                     .add(net.fabricmc.fabric.api.biome.v1.ModificationPhase.ADDITIONS, selector, context -> {
                         net.minecraft.world.entity.EntityType<?> type = dev.golem.core.registry.Entities.byId(spawn.entity());
-                        //? if >=26.1 {
+                        //? if >=26.3 {
+                        /^context.getMobSpawnSettings().addSpawn(type.getCategory(),
+                                new net.minecraft.world.level.biome.MobSpawnSettings.SpawnerData(type,
+                                        net.minecraft.util.valueproviders.UniformInt.of(spawn.minCount(), spawn.maxCount())),
+                                spawn.weight());
+                        ^///?} elif >=26.1 {
                         context.getMobSpawnSettings().addSpawn(type.getCategory(),
                                 new net.minecraft.world.level.biome.MobSpawnSettings.SpawnerData(type, spawn.minCount(), spawn.maxCount()),
                                 spawn.weight());
-                        //?} else {
+                        //?} elif >=1.21.11 {
+                        /^context.getSpawnSettings().addSpawn(type.getCategory(),
+                                new net.minecraft.world.level.biome.MobSpawnSettings.SpawnerData(type, spawn.minCount(), spawn.maxCount()),
+                                spawn.weight());
+                        ^///?} else {
                         /^context.getSpawnSettings().addSpawn(type.getCategory(),
                                 new net.minecraft.world.level.biome.MobSpawnSettings.SpawnerData(type, spawn.weight(), spawn.minCount(), spawn.maxCount()));
                         ^///?}

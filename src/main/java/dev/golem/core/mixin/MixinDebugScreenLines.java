@@ -1,6 +1,6 @@
 package dev.golem.core.mixin;
 
-//? if fabric && >=26.1 {
+//? if fabric && >=1.21.11 {
 
 /*import dev.golem.core.client.DebugLines;
 import java.util.List;
@@ -24,9 +24,18 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(DebugScreenOverlay.class)
 public class MixinDebugScreenLines {
 
+    //? if >=26.1 {
     @Inject(method = "extractLines", at = @At("TAIL"))
+    //?} else {
+    /^@Inject(method = "renderLines", at = @At("TAIL"))
+    ^///?}
+    //? if >=26.3 {
+    /^private void golemcore$appendLines(GuiGraphicsExtractor graphics, List<String> lines, boolean left, int screenWidth,
+                                       CallbackInfo info) {
+    ^///?} else {
     private void golemcore$appendLines(GuiGraphicsExtractor graphics, List<String> lines, boolean left,
                                        CallbackInfo info) {
+    //?}
         if (!left) return;
         DebugLines.collectInto(lines::add);
     }

@@ -3,10 +3,8 @@ package dev.golem.core.render;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import java.util.function.Function;
-//? if >=26.1 {
+//? if >=1.21.11 {
 import com.mojang.blaze3d.pipeline.BlendFunction;
-import com.mojang.blaze3d.pipeline.ColorTargetState;
-import com.mojang.blaze3d.pipeline.DepthStencilState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.rendertype.RenderSetup;
@@ -25,17 +23,16 @@ final class TorexFlareRenderType {
 
     private TorexFlareRenderType() {}
 
-    //? if >=26.1 {
-    private static final RenderPipeline PIPELINE = WorldPipelines.add(RenderPipeline.builder(
+    //? if >=1.21.11 {
+    private static final RenderPipeline PIPELINE = WorldPipelines.add(PipelineStates.depth(PipelineStates.blend(PipelineStates.vertices(RenderPipeline.builder(
                     RenderPipelines.MATRICES_PROJECTION_SNIPPET, RenderPipelines.GLOBALS_SNIPPET)
             .withLocation(dev.golem.core.Ids.parse("golemcore:pipeline/golem_torex_flare"))
             .withVertexShader(dev.golem.core.Ids.parse("golemcore:core/golem_torex_flare"))
             .withFragmentShader(dev.golem.core.Ids.parse("golemcore:core/golem_torex_flare"))
             .withSampler("Sampler0")
             .withSampler("Sampler2")
-            .withVertexFormat(DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS)
-            .withDepthStencilState(new DepthStencilState(DepthStencilState.DEFAULT.depthTest(), false))
-            .withColorTargetState(new ColorTargetState(BlendFunction.LIGHTNING))
+            , DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS), BlendFunction.LIGHTNING),
+            PipelineStates.Depth.LESS_OR_EQUAL, false)
             .withCull(false)
             .build());
 
@@ -78,7 +75,7 @@ final class TorexFlareRenderType {
         if (shader == null) {
             try {
                 shader = ShaderLoader.load(net.minecraft.client.Minecraft.getInstance().getResourceManager(),
-                        "golemcore:flare_legacy", DefaultVertexFormat.NEW_ENTITY, () -> {
+                        "golemcore:flare_legacy", DefaultVertexFormat.ENTITY, () -> {
                             com.mojang.blaze3d.systems.RenderSystem.enableBlend();
                             com.mojang.blaze3d.systems.RenderSystem.blendFunc(
                                     com.mojang.blaze3d.platform.GlStateManager.SourceFactor.SRC_ALPHA,
@@ -98,7 +95,7 @@ final class TorexFlareRenderType {
         private static final ShaderStateShard SHADER = new ShaderStateShard(TorexFlareRenderType::shader);
 
         static RenderType fogless(ResourceLocation texture) {
-            return RenderType.create("golem_flare", DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS, 256,
+            return RenderType.create("golem_flare", DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS, 256,
                     false, true, CompositeState.builder()
                             .setShaderState(SHADER)
                             .setTextureState(new TextureStateShard(texture, false, false))

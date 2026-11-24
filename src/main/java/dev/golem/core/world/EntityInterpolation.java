@@ -4,7 +4,8 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
-//? if >=26.1 {
+//? if >=1.21.11 {
+import java.util.function.Supplier;
 import net.minecraft.world.entity.InterpolationHandler;
 import net.minecraft.world.phys.Vec2;
 import org.jspecify.annotations.Nullable;
@@ -23,7 +24,108 @@ public final class EntityInterpolation {
 
     public static final int DEFAULT_STEPS = 3;
 
-    //? if >=26.1 {
+    //? if >=26.3 {
+    /*private final Entity entity;
+    private final InterpolationHandler handler;
+
+    public EntityInterpolation(Entity entity) {
+        this(entity, DEFAULT_STEPS);
+    }
+
+    public EntityInterpolation(Entity entity, int steps) {
+        this.entity = entity;
+        this.handler = net.minecraft.world.entity.LinearInterpolationHandler.create(entity, steps);
+    }
+
+    /^* The vanilla handler behind this one. ^/
+    public InterpolationHandler handler() {
+        return handler;
+    }
+
+    public Vec3 position() {
+        var target = handler.target();
+        return target != null ? target.position() : entity.position();
+    }
+
+    public float yRot() {
+        var target = handler.target();
+        return target != null ? target.yRot() : entity.getYRot();
+    }
+
+    public float xRot() {
+        var target = handler.target();
+        return target != null ? target.xRot() : entity.getXRot();
+    }
+
+    public void interpolateTo(Vec3 position, float yRot, float xRot) {
+        handler.interpolateTo(net.minecraft.world.entity.PositionPath.of(position), yRot, xRot, true);
+    }
+
+    public boolean hasActiveInterpolation() { return handler.hasActiveInterpolation(); }
+
+    public void setInterpolationLength(int steps) {
+        if (handler instanceof net.minecraft.world.entity.LinearInterpolationHandler linear) linear.setInterpolationLength(steps);
+    }
+
+    public void interpolate() { handler.interpolate(); }
+    public void cancel() { handler.cancel(); }
+
+    /^*
+     * The handler an entity's {@code createInterpolationHandler} returns. 26.3 asks for it in the entity constructor,
+     * before the entity's own fields are set, so it reads {@code source} on each call. Vanilla's per-tick step is
+     * ignored: the entity steps its interpolation from its own client tick, as before 26.3.
+     ^/
+    public static InterpolationHandler forward(Supplier<@Nullable EntityInterpolation> source) {
+        return new Forward(source);
+    }
+
+    private record Forward(Supplier<@Nullable EntityInterpolation> source) implements InterpolationHandler {
+        private @Nullable InterpolationHandler forwarded() {
+            EntityInterpolation interpolation = source.get();
+            return interpolation == null ? null : interpolation.handler;
+        }
+
+        @Override
+        public net.minecraft.world.entity.InterpolationTracker interpolationTracker() {
+            InterpolationHandler handler = forwarded();
+            return handler == null ? net.minecraft.world.entity.InterpolationTracker.NO_OP : handler.interpolationTracker();
+        }
+
+        @Override
+        public net.minecraft.core.@Nullable PositionAndRotation target() {
+            InterpolationHandler handler = forwarded();
+            return handler == null ? null : handler.target();
+        }
+
+        @Override
+        public boolean interpolateTo(net.minecraft.world.entity.@Nullable PositionPath position, float yRot, float xRot,
+                                     boolean hasRotation) {
+            InterpolationHandler handler = forwarded();
+            return handler != null && handler.interpolateTo(position, yRot, xRot, hasRotation);
+        }
+
+        @Override
+        public void interpolate() {}
+
+        @Override
+        public void applyPredictedMovement(Vec3 delta) {
+            InterpolationHandler handler = forwarded();
+            if (handler != null) handler.applyPredictedMovement(delta);
+        }
+
+        @Override
+        public boolean hasActiveInterpolation() {
+            InterpolationHandler handler = forwarded();
+            return handler != null && handler.hasActiveInterpolation();
+        }
+
+        @Override
+        public void cancel() {
+            InterpolationHandler handler = forwarded();
+            if (handler != null) handler.cancel();
+        }
+    }
+    *///?} elif >=1.21.11 {
     /** Raw target data and fields, including values retained after interpolation stops. */
     public static Object data(InterpolationHandler handler) {
         return handler.interpolationData;
@@ -138,7 +240,13 @@ public final class EntityInterpolation {
      * entity keeps no lerp state on its version.
      */
     public static void pullYaw(Entity entity, double targetYaw) {
-        //? if >=26.1 {
+        //? if >=26.3 {
+        /*if (entity.getInterpolation() instanceof net.minecraft.world.entity.AbstractInterpolationHandler handler
+                && handler.hasActiveInterpolation()) {
+            var data = handler.interpolationData();
+            data.addRotation((float) (Mth.wrapDegrees(targetYaw - data.yRot()) * 0.1D), 0F);
+        }
+        *///?} elif >=1.21.11 {
         var handler = entity.getInterpolation();
         if (!handler.hasActiveInterpolation()) return;
         var data = handler.interpolationData;

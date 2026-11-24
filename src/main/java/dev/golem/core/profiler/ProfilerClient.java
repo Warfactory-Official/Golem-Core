@@ -78,8 +78,12 @@ final class ProfilerClient {
             feedback.error(source, Component.literal("[Golem] Cannot create " + dir));
             return 0;
         }
-        //? if >=26.1 {
+        //? if >=1.21.11 {
+        //? if >=26.3 {
+        /*com.mojang.blaze3d.Blaze3D.openPath(dir);
+        *///?} else {
         net.minecraft.util.Util.getPlatform().openPath(dir);
+        //?}
         //?} elif >=1.21 {
         /*net.minecraft.Util.getPlatform().openPath(dir);
         *///?} else {

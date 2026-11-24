@@ -85,7 +85,7 @@ final class GemModels {
     }
 
     private static Material perFace(SimpleMaterial.Builder builder) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         if (GemRender.FORK) return builder.build();
         return builder.shaders(PER_FACE).cardinalLightingMode(CardinalLightingMode.OFF).build();
         //?} else {
@@ -94,7 +94,7 @@ final class GemModels {
     }
 
     private static LightShader vanillaLight() {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return new SimpleLightShader(Ids.of("golemcore", "light/centered_smooth_when_embedded.glsl"));
         //?} else {
         /*return LightShaders.SMOOTH_WHEN_EMBEDDED;
@@ -108,7 +108,7 @@ final class GemModels {
                 .useOverlay(false)
                 .writeMask(WriteMask.COLOR)
                 .backfaceCulling(false);
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return builder.cutout(CutoutShaders.OFF).cardinalLightingMode(CardinalLightingMode.OFF).build();
         //?} else {
         /*return builder.cutout(CutoutShaders.ONE_TENTH).cardinalLightingMode(CardinalLightingMode.ENTITY).build();

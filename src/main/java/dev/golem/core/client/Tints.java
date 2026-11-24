@@ -3,7 +3,7 @@ package dev.golem.core.client;
 //? if neoforge {
 import dev.golem.core.platform.NeoForgeEntrypoint;
 //?}
-//? if neoforge && >=26.1 {
+//? if neoforge && >=1.21.11 {
 import net.neoforged.neoforge.client.event.RegisterColorHandlersEvent;
 //?}
 
@@ -16,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import com.google.gson.JsonParseException;
 import java.io.IOException;
 import net.minecraft.world.item.ItemStack;
-//? if >=26.1 {
+//? if >=1.21.11 {
 import com.mojang.serialization.MapCodec;
 import net.minecraft.client.color.item.ItemTintSource;
 import net.minecraft.client.color.item.ItemTintSources;
@@ -24,7 +24,7 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.world.entity.LivingEntity;
 //?}
 
-//? if <26.1 {
+//? if <1.21.11 {
 /*import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -55,7 +55,7 @@ public final class Tints {
     /** 26.1's declared tint default: plain white RGB, which leaves the texture alone. */
     public static final int UNTINTED = 0xFFFFFF;
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*/^* Full alpha. Pre-26.1 item tints are ARGB and a zero alpha erases the item entirely. ^/
     private static final int OPAQUE = 0xFF000000;
 
@@ -90,7 +90,7 @@ public final class Tints {
      * listener for the tint declarations, and on 26.1 it returns immediately.
      */
     public static void install(String namespace) {
-        //? if <26.1 {
+        //? if <1.21.11 {
         /*ItemColor color = (stack, tintIndex) -> {
             var selector = tints.get(BuiltInRegistries.ITEM.getKey(stack.getItem()));
             var declared = selector == null ? List.<Tint>of() : selector.apply(stack);
@@ -166,7 +166,7 @@ public final class Tints {
         if (SOURCES.putIfAbsent(namespace + ":" + name, color) != null) {
             throw new IllegalArgumentException("Item tint source already registered: " + namespace + ":" + name);
         }
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         var source = new CallbackTint(color);
         //? if fabric {
         /*ItemTintSources.ID_MAPPER.put(Ids.of(namespace, name), source.type());
@@ -178,7 +178,7 @@ public final class Tints {
         //?}
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private static final class CallbackTint implements ItemTintSource {
         private final ToIntFunction<ItemStack> color;
         private final MapCodec<CallbackTint> codec;
@@ -309,7 +309,7 @@ public final class Tints {
         *///?}
     }
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*/^* Reparses every item definition's tint declarations. ^/
     private static void reload(ResourceManager resources) {
         var built = new HashMap<ResourceLocation, Function<ItemStack, List<Tint>>>();

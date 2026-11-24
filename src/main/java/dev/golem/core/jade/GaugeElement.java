@@ -6,18 +6,18 @@ import dev.golem.core.info.Gauge;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import snownee.jade.api.ui.IDisplayHelper;
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import snownee.jade.api.ui.ResizeableElement;
 //?} else {
-/*import net.minecraft.client.gui.GuiGraphics;
+/*import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.world.phys.Vec2;
 import snownee.jade.api.ui.Element;
 *///?}
 
 /** A {@link Gauge} as a Jade bar: a dark box filled from the left with the gauge's colour ramp, its text on top. */
 final class GaugeElement extends
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         ResizeableElement {
         //?} else {
         /*Element {
@@ -33,7 +33,7 @@ final class GaugeElement extends
         this.gauge = gauge;
         this.text = text;
         minWidth = Math.max(100, Minecraft.getInstance().font.width(text) + 8);
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         width = minWidth;
         height = HEIGHT;
         setFlexGrow(1);
@@ -48,7 +48,7 @@ final class GaugeElement extends
                 : Component.translatable(gauge.label()).append(": " + amount);
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     public Component getNarration() {
         return text;
@@ -60,7 +60,11 @@ final class GaugeElement extends
     }
 
     @Override
+    //? if >=26.1 {
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
+    //?} else {
+    /*public void render(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTicks) {
+    *///?}
         draw(graphics, getX(), getY(), width);
     }
 
@@ -72,11 +76,11 @@ final class GaugeElement extends
     }
 
     @Override
-    public void render(GuiGraphics graphics, float x, float y, float maxX, float maxY) {
+    public void render(GuiGraphicsExtractor graphics, float x, float y, float maxX, float maxY) {
         draw(graphics, (int) x, (int) y, (int) (maxX - x));
     }
 
-    private void draw(GuiGraphics graphics, int x, int y, int w) {
+    private void draw(GuiGraphicsExtractor graphics, int x, int y, int w) {
     *///?}
         GuiDraw.fill(graphics, x, y, x + w, y + HEIGHT, 0xFF505050);
         GuiDraw.fill(graphics, x + 1, y + 1, x + w - 1, y + HEIGHT - 1, 0xFF161616);

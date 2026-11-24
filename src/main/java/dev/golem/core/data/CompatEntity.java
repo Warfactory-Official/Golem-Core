@@ -10,7 +10,7 @@ import org.jspecify.annotations.Nullable;
 import net.minecraft.network.syncher.SynchedEntityData;
 //?}
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 //?} else {
@@ -45,7 +45,7 @@ public abstract class CompatEntity extends Entity {
         return false;
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     public boolean canBeCollidedWith(@Nullable Entity other) {
         return isSolidTo(other);
@@ -72,7 +72,7 @@ public abstract class CompatEntity extends Entity {
     }
     *///?}
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*// 26.1 Entity.isInvulnerableToBase: the vanilla invulnerability answer, backported so a subclass can
     // spell it the 26.1 way on every node.
     protected final boolean isInvulnerableToBase(net.minecraft.world.damagesource.DamageSource source) {
@@ -98,8 +98,8 @@ public abstract class CompatEntity extends Entity {
         //? if >=26.1 {
         updateFluidInteraction();
         //?} else {
-        /*
-        updateInWaterStateAndDoFluidPushing();
+        
+        /*updateInWaterStateAndDoFluidPushing();
         *///?}
     }
 
@@ -118,7 +118,7 @@ public abstract class CompatEntity extends Entity {
     }
     *///?}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     protected void readAdditionalSaveData(ValueInput input) {
         loadData(new ValueDataIn(input));
@@ -154,7 +154,7 @@ public abstract class CompatEntity extends Entity {
         return false;
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     public final boolean hurtServer(net.minecraft.server.level.ServerLevel level,
                                     net.minecraft.world.damagesource.DamageSource source, float amount) {
@@ -201,12 +201,19 @@ public abstract class CompatEntity extends Entity {
         return null;
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
+    //? if >=26.3 {
+    /*@Override
+    protected final net.minecraft.world.entity.InterpolationHandler createInterpolationHandler() {
+        return dev.golem.core.world.EntityInterpolation.forward(this::interpolation);
+    }
+    *///?} else {
     @Override
     public final net.minecraft.world.entity.@org.jspecify.annotations.Nullable InterpolationHandler getInterpolation() {
         dev.golem.core.world.EntityInterpolation interpolation = interpolation();
         return interpolation == null ? null : interpolation.handler();
     }
+    //?}
     //?} elif >=1.21.1 {
     /*@Override
     public void lerpTo(double x, double y, double z, float yRot, float xRot, int steps) {
@@ -225,14 +232,14 @@ public abstract class CompatEntity extends Entity {
 
     /** 26.1 {@code applyEffectsFromBlocks}; {@code checkInsideBlocks} before 1.21.2 (protected there, hence the facade). */
     protected final void compatApplyEffectsFromBlocks() {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         applyEffectsFromBlocks();
         //?} else {
         /*checkInsideBlocks();
         *///?}
     }
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*public net.minecraft.world.entity.item.ItemEntity spawnAtLocation(ServerLevel level, net.minecraft.world.item.ItemStack stack) {
         return super.spawnAtLocation(stack);
     }

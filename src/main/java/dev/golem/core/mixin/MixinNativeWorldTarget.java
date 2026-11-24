@@ -1,6 +1,6 @@
 package dev.golem.core.mixin;
 
-//? if >=26.1 {
+//? if >=1.21.11 && <26.3 {
 import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.opengl.GlRenderPass;
 import com.mojang.blaze3d.pipeline.RenderPipeline;

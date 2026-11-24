@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.Mixin;
 @Mixin(LocalPlayer.class)
 public abstract class MixinGliderClientStart {
 
-    //? if <26.1 && !fabric {
+    //? if <1.21.11 && !fabric {
     /*@com.llamalad7.mixinextras.injector.ModifyExpressionValue(method = "aiStep",
             at = @org.spongepowered.asm.mixin.injection.At(value = "INVOKE",
                     target = "Lnet/minecraft/world/item/ItemStack;canElytraFly(Lnet/minecraft/world/entity/LivingEntity;)Z"))

@@ -3,7 +3,6 @@ package dev.golem.core.harness;
 import dev.golem.core.GolemCore;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.PauseScreen;
-import org.lwjgl.glfw.GLFW;
 
 /**
  * Window policy for a harness client: never take focus, never grab the cursor, never pause because
@@ -24,8 +23,12 @@ final class HarnessWindow {
     /** Called from the Window mixin between the default hints and window creation. */
     static void applyCreationHints() {
         if (Harness.port() <= 0) return;
-        GLFW.glfwWindowHint(GLFW.GLFW_FOCUSED, GLFW.GLFW_FALSE);
-        GLFW.glfwWindowHint(GLFW.GLFW_FOCUS_ON_SHOW, GLFW.GLFW_FALSE);
+        //? if >=26.3 {
+        /*org.lwjgl.sdl.SDLHints.SDL_SetHint(org.lwjgl.sdl.SDLHints.SDL_HINT_WINDOW_ACTIVATE_WHEN_SHOWN, "0");
+        *///?} else {
+        org.lwjgl.glfw.GLFW.glfwWindowHint(org.lwjgl.glfw.GLFW.GLFW_FOCUSED, org.lwjgl.glfw.GLFW.GLFW_FALSE);
+        org.lwjgl.glfw.GLFW.glfwWindowHint(org.lwjgl.glfw.GLFW.GLFW_FOCUS_ON_SHOW, org.lwjgl.glfw.GLFW.GLFW_FALSE);
+        //?}
     }
 
     /** True while the harness is active: MouseHandler.grabMouse is turned into a no-op. */
@@ -34,7 +37,7 @@ final class HarnessWindow {
     }
 
     static long handle(Minecraft minecraft) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return minecraft.getWindow().handle();
         //?} else {
         /*return minecraft.getWindow().getWindow();
@@ -45,7 +48,7 @@ final class HarnessWindow {
         if (!applied && minecraft.options != null && minecraft.getWindow() != null) {
             applied = true;
             minecraft.options.pauseOnLostFocus = false;
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             // "minimized" would drop the loop to 10 fps for a client that is always minimized.
             minecraft.options.inactivityFpsLimit().set(net.minecraft.client.InactivityFpsLimit.AFK);
             //?}
@@ -59,7 +62,12 @@ final class HarnessWindow {
 
     static void setMinimized(Minecraft minecraft, boolean minimized) {
         long handle = handle(minecraft);
-        if (minimized) GLFW.glfwIconifyWindow(handle);
-        else GLFW.glfwRestoreWindow(handle);
+        //? if >=26.3 {
+        /*if (minimized) org.lwjgl.sdl.SDLVideo.SDL_MinimizeWindow(handle);
+        else org.lwjgl.sdl.SDLVideo.SDL_RestoreWindow(handle);
+        *///?} else {
+        if (minimized) org.lwjgl.glfw.GLFW.glfwIconifyWindow(handle);
+        else org.lwjgl.glfw.GLFW.glfwRestoreWindow(handle);
+        //?}
     }
 }

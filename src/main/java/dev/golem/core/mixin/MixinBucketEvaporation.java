@@ -32,7 +32,7 @@ import org.spongepowered.asm.mixin.injection.At;
 @Mixin(BucketItem.class)
 public abstract class MixinBucketEvaporation {
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @WrapOperation(method = "emptyContents*", at = @At(value = "INVOKE", target =
             "Lnet/minecraft/world/attribute/EnvironmentAttributeSystem;getValue(Lnet/minecraft/world/attribute/EnvironmentAttribute;Lnet/minecraft/core/BlockPos;)Ljava/lang/Object;"))
     private Object golem$evaporates(net.minecraft.world.attribute.EnvironmentAttributeSystem system,

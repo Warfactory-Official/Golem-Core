@@ -24,7 +24,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(Mob.class)
 public abstract class MixinMobFinalizeSpawnCheck {
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Inject(method = "finalizeSpawn", at = @At("HEAD"))
     private void golem$worldSpawnerCheck(ServerLevelAccessor level, net.minecraft.world.DifficultyInstance difficulty,
                                          net.minecraft.world.entity.EntitySpawnReason reason,

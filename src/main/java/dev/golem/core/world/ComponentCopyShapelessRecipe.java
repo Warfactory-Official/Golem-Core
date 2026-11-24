@@ -50,7 +50,7 @@ public class ComponentCopyShapelessRecipe extends CompatCustomRecipe {
         return result.create();
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     /** The native recipe result representation on the template-based recipe API. */
     public final net.minecraft.world.item.ItemStackTemplate resultTemplate() {
         return result.template();
@@ -143,7 +143,7 @@ public class ComponentCopyShapelessRecipe extends CompatCustomRecipe {
         return present;
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     public net.minecraft.world.item.crafting.PlacementInfo placementInfo() {
         return net.minecraft.world.item.crafting.PlacementInfo.create(ingredients);
@@ -153,13 +153,12 @@ public class ComponentCopyShapelessRecipe extends CompatCustomRecipe {
     public List<net.minecraft.world.item.crafting.display.RecipeDisplay> display() {
         return List.of(new net.minecraft.world.item.crafting.display.ShapelessCraftingRecipeDisplay(
                 ingredients.stream().map(Ingredient::display).toList(),
-                new net.minecraft.world.item.crafting.display.SlotDisplay.ItemStackSlotDisplay(
-                        resultTemplate()),
+                ItemStackSpec.slot(resultTemplate()),
                 new net.minecraft.world.item.crafting.display.SlotDisplay.ItemSlotDisplay(Items.CRAFTING_TABLE)));
     }
     //?}
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*@Override
     public net.minecraft.core.NonNullList<Ingredient> getIngredients() {
         net.minecraft.core.NonNullList<Ingredient> copy = net.minecraft.core.NonNullList.create();
@@ -168,7 +167,7 @@ public class ComponentCopyShapelessRecipe extends CompatCustomRecipe {
     }
     *///?}
 
-    //? if >=1.21.1 && <26.1 {
+    //? if >=1.21.1 && <1.21.11 {
     /*@Override
     public ItemStack getResultItem(net.minecraft.core.HolderLookup.Provider registries) {
         return result.create();

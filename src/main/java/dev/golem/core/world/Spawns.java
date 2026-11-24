@@ -21,7 +21,7 @@ public final class Spawns {
 
     /** Equips and initialises {@code mob} as a triggered spawn at its current position (1.7 {@code onSpawnWithEgg}). */
     public static void finalizeTriggered(Mob mob, ServerLevel level) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         mob.finalizeSpawn(level, level.getCurrentDifficultyAt(mob.blockPosition()),
                 net.minecraft.world.entity.EntitySpawnReason.TRIGGERED, null);
         //?} else if >=1.21.1 {
@@ -161,7 +161,7 @@ public final class Spawns {
         return entity instanceof Mob && !CANCELLED.isEmpty() && CANCELLED.remove(entity);
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     /**
      * Which finalized spawns come from the modern world spawners: {@code PatrolSpawner} (the only PATROL source),
      * {@code PhantomSpawner} (NATURAL phantoms) and {@code WanderingTraderSpawner} (EVENT traders and trader llamas).
@@ -187,7 +187,7 @@ public final class Spawns {
     }
     *///?}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     public static Reason reason(net.minecraft.world.entity.EntitySpawnReason type) {
         return type == net.minecraft.world.entity.EntitySpawnReason.NATURAL ? Reason.NATURAL
                 : type == net.minecraft.world.entity.EntitySpawnReason.CHUNK_GENERATION ? Reason.CHUNK_GENERATION
@@ -208,11 +208,26 @@ public final class Spawns {
     public static java.util.List<SpawnEntry> entries(net.minecraft.world.level.biome.Biome biome,
                                                      net.minecraft.world.entity.MobCategory category) {
         java.util.List<SpawnEntry> out = new java.util.ArrayList<>();
-        //? if >=26.1 {
+        //? if >=1.21.11 {
+        //? if >=26.3 {
+        /*//? if neoforge {
+        var attributes = biome.getModifiedEnvironmentAttributes();
+        //?} else {
+        /^var attributes = biome.getAttributes();
+        ^///?}
+        var settings = attributes.applyModifier(
+                net.minecraft.world.attribute.EnvironmentAttributes.NATURAL_MOB_SPAWNS,
+                net.minecraft.world.level.biome.MobSpawnSettings.EMPTY);
+        for (var weighted : settings.getMobsToSpawn(category).unwrap()) {
+            out.add(new SpawnEntry(weighted.value().type(), weighted.weight(), weighted.value().count().minInclusive(),
+                    weighted.value().count().maxInclusive()));
+        }
+        *///?} else {
         for (var weighted : biome.getMobSettings().getMobs(category).unwrap()) {
             out.add(new SpawnEntry(weighted.value().type(), weighted.weight(), weighted.value().minCount(),
                     weighted.value().maxCount()));
         }
+        //?}
         //?} else {
         /*for (var data : biome.getMobSettings().getMobs(category).unwrap()) {
             out.add(new SpawnEntry(data.type, data.getWeight().asInt(), data.minCount, data.maxCount));

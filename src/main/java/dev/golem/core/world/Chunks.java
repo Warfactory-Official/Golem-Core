@@ -61,7 +61,7 @@ public final class Chunks {
      * {@code 33 - radius}. Neither form is persisted (no {@code FLAG_PERSIST}, no {@code forceLoad} flag), so a
      * claim that outlives a crash disappears, which is the right failure mode for one.
      */
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     public static final TicketType LOAD_ONLY =
             new net.minecraft.server.level.TicketType(
                     net.minecraft.server.level.TicketType.NO_TIMEOUT,
@@ -85,7 +85,7 @@ public final class Chunks {
         if (previous != null) return;
 
         ChunkPos pos = new ChunkPos(chunkX, chunkZ);
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         level.getChunkSource().addTicketWithRadius(LOAD_ONLY, pos, 0);
         //?} else {
         /*level.getChunkSource().addRegionTicket(LOAD_ONLY, pos, 0, pos);
@@ -96,7 +96,7 @@ public final class Chunks {
      * Loads and simulates a chunk under a ticket of its own. Vanilla's shared {@code FORCED} ticket is one entry per
      * chunk, so a holder that removes it takes another holder's forced chunk out of entity ticking.
      */
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private static final TicketType TICKING = new TicketType(TicketType.NO_TIMEOUT,
             TicketType.FLAG_LOADING | TicketType.FLAG_SIMULATION | TicketType.FLAG_KEEP_DIMENSION_ACTIVE);
     //?} else {
@@ -113,7 +113,7 @@ public final class Chunks {
      */
     public static void claimTicking(ServerLevel level, int chunkX, int chunkZ) {
         ChunkPos pos = new ChunkPos(chunkX, chunkZ);
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         level.getChunkSource().addTicketWithRadius(TICKING, pos, TICKING_RADIUS);
         //?} else {
         /*level.getChunkSource().addRegionTicket(TICKING, pos, TICKING_RADIUS, pos);
@@ -123,7 +123,7 @@ public final class Chunks {
     /** Drops the claim taken by {@link #claimTicking}. */
     public static void releaseTicking(ServerLevel level, int chunkX, int chunkZ) {
         ChunkPos pos = new ChunkPos(chunkX, chunkZ);
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         level.getChunkSource().removeTicketWithRadius(TICKING, pos, TICKING_RADIUS);
         //?} else {
         /*level.getChunkSource().removeRegionTicket(TICKING, pos, TICKING_RADIUS, pos);
@@ -150,7 +150,7 @@ public final class Chunks {
         /*result.left().orElseThrow(() -> new IllegalStateException(
                 "Entity-ticking chunk " + pos + ": " + result.right().orElseThrow()));
         *///?}
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         level.waitForEntities(pos, 0);
         //?} else {
         /*level.getServer().managedBlock(() -> {
@@ -215,7 +215,7 @@ public final class Chunks {
         if (refs.isEmpty()) LOAD_REFS.remove(level);
 
         ChunkPos pos = new ChunkPos(chunkX, chunkZ);
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         level.getChunkSource().removeTicketWithRadius(LOAD_ONLY, pos, 0);
         //?} else {
         /*level.getChunkSource().removeRegionTicket(LOAD_ONLY, pos, 0, pos);
@@ -288,7 +288,7 @@ public final class Chunks {
 
     private static int @org.jspecify.annotations.Nullable [] savedHeights(net.minecraft.nbt.CompoundTag chunk, String key,
                                                                           int minY, int height) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         String status = chunk.getStringOr("Status", "");
         net.minecraft.nbt.CompoundTag maps = chunk.getCompoundOrEmpty("Heightmaps");
         long[] data = maps.getLongArray(key).orElse(null);

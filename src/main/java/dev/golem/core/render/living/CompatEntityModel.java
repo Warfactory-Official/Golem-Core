@@ -3,7 +3,7 @@ package dev.golem.core.render.living;
 import java.util.function.Function;
 import net.minecraft.client.model.geom.ModelPart;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
@@ -34,14 +34,14 @@ import org.jspecify.annotations.Nullable;
  * @param <S> the render state the model reads
  */
 public abstract class CompatEntityModel<S extends CompatLivingRenderState>
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         extends EntityModel<S>
         //?} else {
         /*extends EntityModel<LivingEntity>
         *///?}
 {
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*private final ModelPart root;
     private final List<ModelPart> parts;
     @Nullable S bound;
@@ -49,7 +49,7 @@ public abstract class CompatEntityModel<S extends CompatLivingRenderState>
 
     /** A model drawn with the cutout, unculled entity type (vanilla's default for cube models). */
     protected CompatEntityModel(ModelPart root) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         super(root);
         //?} else {
         /*this(root, RenderType::entityCutoutNoCull);
@@ -58,13 +58,13 @@ public abstract class CompatEntityModel<S extends CompatLivingRenderState>
 
     /** A model drawn with a specific render type per texture, e.g. translucent or culled. */
     protected CompatEntityModel(ModelPart root, Function<
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier
             //?} else {
             /*ResourceLocation
             *///?}
             , RenderType> renderType) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         super(root, renderType);
         //?} else {
         /*super(renderType);
@@ -76,7 +76,7 @@ public abstract class CompatEntityModel<S extends CompatLivingRenderState>
     /** Writes this frame's rotations into the parts. Every part starts at its baked pose. */
     protected abstract void pose(S state);
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     public final void setupAnim(S state) {
         super.setupAnim(state);

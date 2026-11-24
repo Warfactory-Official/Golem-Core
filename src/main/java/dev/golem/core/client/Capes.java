@@ -8,7 +8,7 @@ import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import org.jspecify.annotations.Nullable;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import java.util.function.Supplier;
 import net.minecraft.core.ClientAsset;
 import net.minecraft.resources.Identifier;
@@ -58,7 +58,7 @@ public final class Capes {
     /** Names the cape a player wears, or {@code null} for none. Called once per listed player per client tick. */
     @FunctionalInterface
     public interface Provider {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         @Nullable Identifier cape(UUID id, String name);
         //?} else {
         /*@Nullable ResourceLocation cape(UUID id, String name);
@@ -75,7 +75,7 @@ public final class Capes {
      * Declares that a cape texture carries elytra art in the vanilla cape layout (x 22..46, y 0..22 of a 64x32 sheet), so
      * a worn elytra is drawn with the cape as vanilla does for a Mojang cape. Undeclared capes get the default elytra.
      */
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     public static void declareElytraArt(Identifier cape) {
         ELYTRA_ART.add(cape);
     }
@@ -95,7 +95,7 @@ public final class Capes {
     }
 
     /** The first cape any provider names for this player. */
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     public static @Nullable Identifier capeFor(UUID id, String name) {
         for (Provider provider : PROVIDERS) {
             Identifier cape = provider.cape(id, name);
@@ -117,7 +117,7 @@ public final class Capes {
         ClientPacketListener connection = Minecraft.getInstance().getConnection();
         if (connection == null) return;
         for (PlayerInfo info : connection.getOnlinePlayers()) {
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             install(info, capeFor(info.getProfile().id(), info.getProfile().name()));
             //?} else {
             /*install(info, capeFor(info.getProfile().getId(), info.getProfile().getName()));
@@ -125,7 +125,7 @@ public final class Capes {
         }
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private static void install(PlayerInfo info, @Nullable Identifier cape) {
         Supplier<PlayerSkin> current = info.skinLookup;
         if (cape == null) {

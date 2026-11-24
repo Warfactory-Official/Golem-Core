@@ -24,7 +24,7 @@ import snownee.jade.api.view.FluidView;
 import snownee.jade.api.view.IClientExtensionProvider;
 import snownee.jade.api.view.IServerExtensionProvider;
 import snownee.jade.api.view.ViewGroup;
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.resources.Identifier;
 //?} else {
 /*import net.minecraft.resources.ResourceLocation;
@@ -45,7 +45,7 @@ public final class JadePlugin implements IWailaPlugin {
 
     static final String KEY = "golemcore:gauges";
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     static final HideEnergy<EnergyView.Data> ENERGY = new HideEnergy<>();
     static final Tanks<FluidView.Data> TANKS = new Tanks<>();
     //?} else {
@@ -65,7 +65,7 @@ public final class JadePlugin implements IWailaPlugin {
         JadeClient.register(registration);
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     static Identifier uid(String path) {
     //?} else {
     /*static ResourceLocation uid(String path) {
@@ -90,7 +90,7 @@ public final class JadePlugin implements IWailaPlugin {
         //?}
 
         @Override
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         public Identifier getUid() {
         //?} else {
         /*public ResourceLocation getUid() {
@@ -133,7 +133,7 @@ public final class JadePlugin implements IWailaPlugin {
         }
 
         @Override
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         public Identifier getUid() {
         //?} else {
         /*public ResourceLocation getUid() {
@@ -178,7 +178,7 @@ public final class JadePlugin implements IWailaPlugin {
             for (Tank tank : tanks) {
                 JadeFluidObject content = tank.fluid() == null ? JadeFluidObject.empty()
                         : JadeFluidObject.of(tank.fluid(), toPlatform(tank.millibuckets()));
-                //? if >=26.1 {
+                //? if >=1.21.11 {
                 views.add((D) new FluidView.Data(content, toPlatform(tank.capacity())));
                 //?} else {
                 /*views.add((D) FluidView.writeDefault(content, toPlatform(tank.capacity())));
@@ -193,7 +193,7 @@ public final class JadePlugin implements IWailaPlugin {
 
         @Override
         public List<ClientViewGroup<FluidView>> getClientGroups(Accessor<?> accessor, List<ViewGroup<D>> groups) {
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             return ClientViewGroup.map(groups, data -> FluidView.readDefault((FluidView.Data) data), null);
             //?} else {
             /*return ClientViewGroup.map(groups, data -> FluidView.readDefault((CompoundTag) data), null);
@@ -201,7 +201,7 @@ public final class JadePlugin implements IWailaPlugin {
         }
 
         @Override
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         public Identifier getUid() {
         //?} else {
         /*public ResourceLocation getUid() {

@@ -6,6 +6,8 @@ accessible field net/minecraft/server/network/ServerGamePacketListenerImpl await
 # Particles.forEach: the engine exposes no view of its pending or active particles.
 accessible field net/minecraft/client/particle/ParticleEngine particles Ljava/util/Map;
 accessible field net/minecraft/client/particle/ParticleEngine particlesToAdd Ljava/util/Queue;
+accessible field net/minecraft/client/particle/ParticleGroup particles Ljava/util/Queue;
+# 26.2 only: the ArrayVoxelShape constructor OrderedShape calls is package-private there.
 accessible field net/minecraft/client/renderer/item/properties/select/SelectItemModelProperties ID_MAPPER Lnet/minecraft/util/ExtraCodecs$LateBoundIdMapper;
 # Fabric GameTest API exposes this field through its own class tweaker, but that widener is not
 # inherited by Core's compile classpath. The modern Fabric bridge reads the current dynamic registry.
@@ -86,3 +88,4 @@ accessible field net/minecraft/world/entity/InterpolationHandler$InterpolationDa
 # RenderOps.chatMessages / bossEvents: chat history and boss bars have no public view.
 accessible field net/minecraft/client/gui/components/ChatComponent allMessages Ljava/util/List;
 accessible field net/minecraft/client/gui/components/BossHealthOverlay events Ljava/util/Map;
+# 26.3 only: recipe views, the RecipeMap constructor and interpolation targets (a 26.3 rule expands this line).

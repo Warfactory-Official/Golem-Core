@@ -24,7 +24,7 @@ public final class SpawnEggs {
     /** Creates the egg item; call from an item registration factory, never earlier. */
     public static Item create(Supplier<? extends EntityType<? extends Mob>> type, int primary, int secondary,
                               Item.Properties properties) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return new net.minecraft.world.item.SpawnEggItem(properties.spawnEgg(type.get()));
         //?} elif neoforge {
         /*return new net.neoforged.neoforge.common.DeferredSpawnEggItem(type, primary, secondary, properties);

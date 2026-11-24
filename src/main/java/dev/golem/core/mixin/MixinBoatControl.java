@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * steering class moved from {@code Boat} to {@code AbstractBoat} at 1.21.2; the flags and the method
  * are the same on both.
  */
-//? if >=26.1 {
+//? if >=1.21.11 {
 @Mixin(net.minecraft.world.entity.vehicle.boat.AbstractBoat.class)
 //?} else {
 /*@Mixin(net.minecraft.world.entity.vehicle.boat.Boat.class)

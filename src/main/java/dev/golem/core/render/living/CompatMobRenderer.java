@@ -7,7 +7,7 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.world.entity.Mob;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import dev.golem.core.render.VanillaSubmitSink;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.renderer.SubmitNodeCollector;
@@ -40,20 +40,20 @@ import org.jspecify.annotations.Nullable;
  */
 @SuppressWarnings({"rawtypes", "unchecked"})
 public abstract class CompatMobRenderer<T extends Mob, S extends CompatLivingRenderState>
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         extends MobRenderer<T, S, EntityModel<? super S>>
         //?} else {
         /*extends MobRenderer<T, EntityModel<T>>
         *///?}
 {
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*private @Nullable CompatEntityModel<S> compat;
     private @Nullable S current;
     *///?}
 
     protected CompatMobRenderer(EntityRendererProvider.Context context, LivingModel<S> model, float shadow) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         super(context, model.model, shadow);
         //?} else {
         /*super(context, (EntityModel<T>) model.model, shadow);
@@ -62,7 +62,7 @@ public abstract class CompatMobRenderer<T extends Mob, S extends CompatLivingRen
     }
 
     /** Creates the per-frame state object. Called by the engine on 26.1, and by this class below it. */
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     //?}
     public abstract S createRenderState();
@@ -72,7 +72,7 @@ public abstract class CompatMobRenderer<T extends Mob, S extends CompatLivingRen
 
     /** The skin drawn this frame. */
     protected abstract
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     Identifier
     //?} else {
     /*ResourceLocation
@@ -94,7 +94,7 @@ public abstract class CompatMobRenderer<T extends Mob, S extends CompatLivingRen
 
     /** Switches the body drawn from now on — a variant chosen per frame. */
     protected final void useModel(LivingModel<S> model) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         this.model = model.model;
         //?} else {
         /*this.model = (EntityModel<T>) model.model;
@@ -102,7 +102,7 @@ public abstract class CompatMobRenderer<T extends Mob, S extends CompatLivingRen
         *///?}
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     /** A scale applied before the body draws. Vanilla's own hook, restated so it is documented here. */
     @Override
     protected void scale(S state, PoseStack poseStack) {}
@@ -110,15 +110,20 @@ public abstract class CompatMobRenderer<T extends Mob, S extends CompatLivingRen
     @Override
     public void extractRenderState(T entity, S state, float partialTicks) {
         super.extractRenderState(entity, state, partialTicks);
+        //? if >=26.3 {
+        /*state.attackTime = entity.getSwingAnimation(partialTicks);
+        extract(entity, state, partialTicks);
+        *///?} else {
         state.attackTime = entity.getAttackAnim(partialTicks);
         extract(entity, state, partialTicks);
+        //?}
     }
 
     @Override
     public void submit(S state, PoseStack poseStack, SubmitNodeCollector collector, CameraRenderState camera) {
         super.submit(state, poseStack, collector, camera);
         submitExtra(state, poseStack, new VanillaSubmitSink(collector, camera),
-                new CameraInfo(camera.pos, camera.yRot, camera.orientation));
+                CameraInfo.of(camera));
     }
 
     @Override

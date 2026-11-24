@@ -42,7 +42,7 @@ public final class ItemStacks {
 
     /** Stored block-entity data belongs only to its registered type. */
     public static @Nullable CompoundTag blockEntityData(ItemStack stack, BlockEntityType<?> type) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         var data = stack.get(DataComponents.BLOCK_ENTITY_DATA);
         return data == null || data.type() != type ? null : data.getUnsafe();
         //?} elif >=1.20.5 {
@@ -220,13 +220,34 @@ public final class ItemStacks {
      * Returns whether a stack carries nothing but damage and the given components (a mod's typed stand-ins for its old
      * item metadata) - the modern spelling of "no NBT".
      */
+    //? if >=26.3 {
+    /*/^* Every component type the stack's patch adds or removes. ^/
+    private static java.util.Set<net.minecraft.core.component.DataComponentType<?>> patchTypes(ItemStack stack) {
+        //? if neoforge {
+        return stack.getComponentsPatch().keySet();
+        //?} else {
+        /^var split = stack.getComponentsPatch().split();
+        java.util.Set<net.minecraft.core.component.DataComponentType<?>> types = new java.util.HashSet<>(split.added().keySet());
+        types.addAll(split.removed());
+        return types;
+        ^///?}
+    }
+    *///?}
+
     public static boolean hasOnlyVariantAndDamage(ItemStack stack, GolemComponent<?>... allowed) {
         //? if >=1.20.5 {
         outer:
+        //? if >=26.3 {
+        /*for (var type : patchTypes(stack)) {
+            if (type == net.minecraft.core.component.DataComponents.DAMAGE) continue;
+            for (GolemComponent<?> variant : allowed) {
+                if (type == variant.type()) continue outer;
+        *///?} else {
         for (var component : stack.getComponentsPatch().entrySet()) {
             if (component.getKey() == net.minecraft.core.component.DataComponents.DAMAGE) continue;
             for (GolemComponent<?> variant : allowed) {
                 if (component.getKey() == variant.type()) continue outer;
+        //?}
             }
             return false;
         }
@@ -612,7 +633,7 @@ public final class ItemStacks {
 
     /** Runs the vanilla crafted-item callback despite its level parameter changing across versions. */
     public static void onCraftedBy(ItemStack stack, Player player, int count) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         stack.onCraftedBy(player, count);
         //?} else {
         /*stack.onCraftedBy(player.level(), player, count);
@@ -957,7 +978,7 @@ public final class ItemStacks {
     /** A player head showing {@code player}'s skin (legacy {@code SkullOwner}, modern profile component). */
     public static ItemStack playerHead(Player player) {
         ItemStack head = new ItemStack(net.minecraft.world.item.Items.PLAYER_HEAD);
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         head.set(net.minecraft.core.component.DataComponents.PROFILE,
                 net.minecraft.world.item.component.ResolvableProfile.createResolved(player.getGameProfile()));
         //?} else if >=1.21.1 {

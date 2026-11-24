@@ -9,7 +9,7 @@ package dev.golem.core.render.living;
  * no render states and the renderer reads the entity directly, so only the variant survives here.
  */
 public class CompatHumanoidRenderState
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         extends net.minecraft.client.renderer.entity.state.ZombieRenderState
         //?}
 {

@@ -37,7 +37,7 @@ public final class BlockStates {
     public static List<Block> blocksIn(String namespace) {
         List<Block> blocks = new ArrayList<>();
         for (Block block : BuiltInRegistries.BLOCK) {
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             net.minecraft.resources.Identifier id = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(block);
             //?} else {
             /*net.minecraft.resources.ResourceLocation id = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(block);
@@ -50,7 +50,7 @@ public final class BlockStates {
     }
 
     public static Block block(String id) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         Block block = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getValue(dev.golem.core.Ids.parse(id));
         //?} else {
         /*Block block = net.minecraft.core.registries.BuiltInRegistries.BLOCK.get(dev.golem.core.Ids.parse(id));

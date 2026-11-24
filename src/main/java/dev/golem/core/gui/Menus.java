@@ -295,10 +295,10 @@ public final class Menus {
     /** Dispatches a menu click without exposing the era-specific click enum to common callers. */
     public static void click(AbstractContainerMenu menu, int slotId, int button,
                              CompatContainerMenu.ClickAction action, Player player) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         menu.clicked(slotId, button, net.minecraft.world.inventory.ContainerInput.valueOf(action.name()), player);
         //?} else {
-        /*menu.clicked(slotId, button, net.minecraft.world.inventory.ClickType.valueOf(action.name()), player);
+        /*menu.clicked(slotId, button, net.minecraft.world.inventory.ContainerInput.valueOf(action.name()), player);
         *///?}
     }
 }

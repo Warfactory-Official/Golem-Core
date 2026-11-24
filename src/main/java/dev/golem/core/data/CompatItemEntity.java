@@ -10,7 +10,7 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.network.syncher.SynchedEntityData;
 //?}
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 //?} else {
@@ -54,7 +54,7 @@ public abstract class CompatItemEntity extends net.minecraft.world.entity.item.I
     }
     *///?}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     protected final void readAdditionalSaveData(ValueInput input) {
         super.readAdditionalSaveData(input);
@@ -80,7 +80,7 @@ public abstract class CompatItemEntity extends net.minecraft.world.entity.item.I
     }
     *///?}
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*public boolean causeFallDamage(double fallDistance, float damageModifier, DamageSource damageSource) {
         return super.causeFallDamage((float) fallDistance, damageModifier, damageSource);
     }
@@ -91,7 +91,7 @@ public abstract class CompatItemEntity extends net.minecraft.world.entity.item.I
     }
     *///?}
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*public void lerpMotion(net.minecraft.world.phys.Vec3 movement) {
         super.lerpMotion(movement.x, movement.y, movement.z);
     }
@@ -102,7 +102,7 @@ public abstract class CompatItemEntity extends net.minecraft.world.entity.item.I
     }
     *///?}
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*public net.minecraft.world.entity.item.ItemEntity spawnAtLocation(ServerLevel level, net.minecraft.world.item.ItemStack stack) {
         return super.spawnAtLocation(stack);
     }
@@ -127,7 +127,7 @@ public abstract class CompatItemEntity extends net.minecraft.world.entity.item.I
     }
     *///?}
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*public net.minecraft.world.InteractionResult interact(net.minecraft.world.entity.player.Player player,
             net.minecraft.world.InteractionHand hand, net.minecraft.world.phys.Vec3 location) {
         return super.interact(player, hand);

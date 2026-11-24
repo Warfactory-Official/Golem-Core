@@ -66,7 +66,7 @@ public final class HumanoidLayers {
                     helper.register(layer);
                     attached++;
                 });
-        *///?} elif neoforge && >=26.1 {
+        *///?} elif neoforge && >=1.21.11 {
         dev.golem.core.platform.NeoForgeEntrypoint.modBus().addListener(
                 (net.neoforged.neoforge.client.event.EntityRenderersEvent.AddLayers event) -> {
                     for (net.minecraft.world.entity.player.PlayerModelType skin : event.getSkins()) {

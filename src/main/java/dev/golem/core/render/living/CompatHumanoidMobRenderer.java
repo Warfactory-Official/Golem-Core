@@ -7,7 +7,7 @@ import net.minecraft.client.renderer.entity.HumanoidMobRenderer;
 import net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer;
 import net.minecraft.world.entity.Mob;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.ArmorModelSet;
@@ -33,7 +33,7 @@ import net.minecraft.resources.ResourceLocation;
  */
 @SuppressWarnings({"rawtypes", "unchecked"})
 public abstract class CompatHumanoidMobRenderer<T extends Mob>
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         extends HumanoidMobRenderer<T, CompatHumanoidRenderState, HumanoidModel<CompatHumanoidRenderState>>
         //?} else {
         /*extends HumanoidMobRenderer<T, HumanoidModel<T>>
@@ -42,7 +42,7 @@ public abstract class CompatHumanoidMobRenderer<T extends Mob>
 
     private final HumanoidBody<T>[] bodies;
     private final
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier[]
             //?} else {
             /*ResourceLocation[]
@@ -55,7 +55,7 @@ public abstract class CompatHumanoidMobRenderer<T extends Mob>
      */
     @SafeVarargs
     protected CompatHumanoidMobRenderer(EntityRendererProvider.Context context, float shadow,
-                                        //? if >=26.1 {
+                                        //? if >=1.21.11 {
                                         Identifier[]
                                         //?} else {
                                         /*ResourceLocation[]
@@ -76,7 +76,7 @@ public abstract class CompatHumanoidMobRenderer<T extends Mob>
 
     /** Adds vanilla's armour layer over the zombie armour layers, so worn equipment draws. */
     protected final void addZombieArmorLayer(EntityRendererProvider.Context context) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         ArmorModelSet<HumanoidModel<CompatHumanoidRenderState>> armor =
                 ArmorModelSet.bake(ModelLayers.ZOMBIE_ARMOR, context.getModelSet(), HumanoidModel::new);
         addLayer(new HumanoidArmorLayer<>(this, armor, context.getEquipmentRenderer()));
@@ -88,7 +88,7 @@ public abstract class CompatHumanoidMobRenderer<T extends Mob>
         *///?}
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     public CompatHumanoidRenderState createRenderState() {
         return new CompatHumanoidRenderState();

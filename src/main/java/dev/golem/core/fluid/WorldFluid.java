@@ -62,7 +62,7 @@ public abstract class WorldFluid extends FlowingFluid {
     }
 
     /** 1.7 {@code BlockFluidClassic} never makes sources. */
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     protected boolean canConvertToSource(net.minecraft.server.level.ServerLevel level) {
         return false;
@@ -120,7 +120,7 @@ public abstract class WorldFluid extends FlowingFluid {
         return Optional.of(handle.spec.physics() == WorldFluids.Physics.LAVA ? SoundEvents.BUCKET_FILL_LAVA : SoundEvents.BUCKET_FILL);
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     protected void entityInside(Level level, BlockPos pos, Entity entity,
                                 net.minecraft.world.entity.InsideBlockEffectApplier effects) {

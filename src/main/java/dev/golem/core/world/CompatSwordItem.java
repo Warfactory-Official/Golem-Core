@@ -25,7 +25,7 @@ import net.minecraft.world.level.Level;
  * legacy {@code getItemAttributeModifiers} overrides wrote it, optionally with a movement modifier.
  */
 public class CompatSwordItem extends
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         net.minecraft.world.item.Item
         //?} else {
         /*net.minecraft.world.item.SwordItem
@@ -64,7 +64,7 @@ public class CompatSwordItem extends
     public CompatSwordItem(net.minecraft.world.item.Item.Properties properties,
                            int durability, float attackDamage, float attackSpeed,
                            net.minecraft.tags.TagKey<net.minecraft.world.item.Item> repairTag) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         super(properties.sword(steelMaterial(durability, repairTag), attackDamage, attackSpeed)
                 .durability(durability)
                 .repairable(repairTag));
@@ -96,7 +96,7 @@ public class CompatSwordItem extends
      */
     public CompatSwordItem(net.minecraft.world.item.Item.Properties properties, ToolTier tier,
                            float attackDamage, float attackSpeed, double movement, boolean wearsOnHit) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         super(modernSword(properties, tier, attackDamage, attackSpeed, movement, wearsOnHit));
         //?} else if >=1.21.1 {
         /*super(Tools.vanillaTier(tier), Tools.unbreakableIfWorn(properties, tier)
@@ -111,7 +111,7 @@ public class CompatSwordItem extends
         this.wearsOnHit = wearsOnHit;
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private static Item.Properties modernSword(Item.Properties properties, ToolTier tier, float attackDamage,
                                                float attackSpeed, double movement, boolean wearsOnHit) {
         net.minecraft.core.HolderGetter<net.minecraft.world.level.block.Block> blocks =
@@ -185,7 +185,7 @@ public class CompatSwordItem extends
                                        Entity owner, EquipmentSlot slot, boolean held) {
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     public void hurtEnemy(ItemStack stack, LivingEntity target, LivingEntity attacker) {
         compatHurtEnemy(stack, target, attacker);

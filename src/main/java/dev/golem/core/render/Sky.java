@@ -9,16 +9,13 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
-//? if >=26.1 {
+//? if >=1.21.11 {
 import com.mojang.blaze3d.pipeline.BlendFunction;
-import com.mojang.blaze3d.pipeline.ColorTargetState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.platform.DestFactor;
-import com.mojang.blaze3d.platform.SourceFactor;
+import dev.golem.core.render.PipelineStates.Factor;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.MeshData;
-import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.rendertype.RenderSetup;
@@ -158,8 +155,18 @@ public final class Sky {
      * before it {@code ClientLevel.getSkyColor} at the camera.
      */
     public net.minecraft.world.phys.Vec3 skyColor() {
+        //? if >=1.21.11 {
         //? if >=26.1 {
+        //? if >=26.3 {
+        /*org.joml.Vector3fc sky = Minecraft.getInstance().gameRenderer.getGameRenderState().levelRenderState.skyRenderState.skyColor;
+        int argb = net.minecraft.util.ARGB.colorFromFloat(1F, sky.x(), sky.y(), sky.z());
+        *///?} else {
         int argb = Minecraft.getInstance().gameRenderer.getGameRenderState().levelRenderState.skyRenderState.skyColor;
+        //?}
+        //?} else {
+        /*int argb = Minecraft.getInstance().gameRenderer.getMainCamera().attributeProbe()
+                .getValue(net.minecraft.world.attribute.EnvironmentAttributes.SKY_COLOR, partialTick);
+        *///?}
         return new net.minecraft.world.phys.Vec3(((argb >> 16) & 0xFF) / 255.0, ((argb >> 8) & 0xFF) / 255.0, (argb & 0xFF) / 255.0);
         //?} else {
         /*Vec3 camera = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
@@ -169,11 +176,17 @@ public final class Sky {
 
     /** The current camera's sampled fog colour. */
     public Vec3 fogColor() {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
+        //? if >=26.3 {
+        /*org.joml.Vector3fc color = Minecraft.getInstance().gameRenderer.getMainCamera().attributeProbe()
+                .getValue(net.minecraft.world.attribute.EnvironmentAttributes.FOG_COLOR, partialTick);
+        return new Vec3(color.x(), color.y(), color.z());
+        *///?} else {
         int color = Minecraft.getInstance().gameRenderer.getMainCamera().attributeProbe()
                 .getValue(net.minecraft.world.attribute.EnvironmentAttributes.FOG_COLOR, partialTick);
         return new Vec3(net.minecraft.util.ARGB.redFloat(color),
                 net.minecraft.util.ARGB.greenFloat(color), net.minecraft.util.ARGB.blueFloat(color));
+        //?}
         //?} else {
         /*var color = RenderSystem.getShaderFogColor();
         return new Vec3(color[0], color[1], color[2]);
@@ -229,7 +242,7 @@ public final class Sky {
     public void points(Texture texture, Blend blend, float r, float g, float b, float a, float... xyz) {
         int n = xyz.length / 3;
         if (n < 1) return;
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         drawPoints(texture, blend, r, g, b, a, xyz);
         //?} else {
         /*
@@ -308,7 +321,7 @@ public final class Sky {
             return premultipliedAlpha;
         }
 
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         /** The native pipeline used by this shader's sky draws, including its actual uniforms and blend state. */
         public RenderPipeline nativePipeline(Blend blend, boolean cull) {
             return SkyShaders.pipeline(namespace, name, samplers, blend, cull, false, premultipliedAlpha);
@@ -365,9 +378,8 @@ public final class Sky {
 
     // ======================================================================== per-version drawing
 
-    //? if >=26.1 {
-    private static final BlendFunction BLEND_ALPHA = new BlendFunction(SourceFactor.SRC_ALPHA, DestFactor.ONE_MINUS_SRC_ALPHA,
-            SourceFactor.SRC_ALPHA, DestFactor.ONE_MINUS_SRC_ALPHA);
+    //? if >=1.21.11 {
+    private static final BlendFunction BLEND_ALPHA = PipelineStates.blendFunction(Factor.SRC_ALPHA, Factor.ONE_MINUS_SRC_ALPHA, Factor.SRC_ALPHA, Factor.ONE_MINUS_SRC_ALPHA);
     private static final BlendFunction BLEND_ADDITIVE = BlendFunction.OVERLAY; // SRC_ALPHA, ONE, ONE, ZERO
 
     private static RenderPipeline pipeline(String name, boolean textured, BlendFunction blend) {
@@ -375,13 +387,12 @@ public final class Sky {
     }
 
     private static RenderPipeline pipeline(String name, boolean textured, BlendFunction blend, VertexFormat.Mode mode) {
-        RenderPipeline.Builder builder = RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET)
+        RenderPipeline.Builder builder = PipelineStates.vertices(PipelineStates.blend(RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET)
                 .withLocation("pipeline/golem_sky_" + name)
                 .withVertexShader(Ids.parse(mode == VertexFormat.Mode.POINTS ? "golemcore:core/sky_points"
                         : textured ? "core/position_tex_color" : "core/position_color"))
-                .withFragmentShader(textured ? "core/position_tex_color" : "core/position_color")
-                .withColorTargetState(new ColorTargetState(blend))
-                .withVertexFormat(textured ? DefaultVertexFormat.POSITION_TEX_COLOR : DefaultVertexFormat.POSITION_COLOR, mode);
+                .withFragmentShader(textured ? "core/position_tex_color" : "core/position_color"), blend)
+                , textured ? DefaultVertexFormat.POSITION_TEX_COLOR : DefaultVertexFormat.POSITION_COLOR, mode);
         if (textured) builder.withSampler("Sampler0");
         if (textured && mode == VertexFormat.Mode.POINTS) builder.withShaderDefine("TEXTURED");
         // No depth state: neither tested nor written, as vanilla's CELESTIAL and STARS pipelines.
@@ -487,7 +498,7 @@ public final class Sky {
     private void drawVertices(RenderType type, VertexFormat.Mode mode, Texture texture, float r, float g, float b, float a,
                               float[] vertices, int stride, int count, float u0, float v0, float u1, float v1) {
         var matrix = pose.last().pose();
-        var builder = Tesselator.getInstance().begin(mode,
+        var builder = CompatTesselator.begin(mode,
                 texture == null ? DefaultVertexFormat.POSITION_COLOR : DefaultVertexFormat.POSITION_TEX_COLOR);
         for (var i = 0; i < count; i++) {
             var offset = i * stride;
@@ -498,7 +509,7 @@ public final class Sky {
             else vertex.setColor(r, g, b, a);
         }
         var mesh = builder.build();
-        if (mesh != null) type.draw(mesh);
+        if (mesh != null) Passes.draw(type, mesh);
     }
 
     void end() {
@@ -580,7 +591,7 @@ public final class Sky {
         Matrix4f m = pose.last().pose();
         int quads = v.length / (stride * 4);
         //? if >=1.21 {
-        BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, format);
+        BufferBuilder builder = CompatTesselator.begin(VertexFormat.Mode.QUADS, format);
         for (int i = 0; i < quads * 4; i++) {
             int o = i * stride;
             var vertex = builder.addVertex(m, v[o], v[o + 1], v[o + 2]);
@@ -642,7 +653,7 @@ public final class Sky {
         Matrix4f m = pose.last().pose();
         int count = (v.length / (stride * 2)) * 2;
         //? if >=1.21 {
-        BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.DEBUG_LINES, format);
+        BufferBuilder builder = CompatTesselator.begin(VertexFormat.Mode.DEBUG_LINES, format);
         for (int i = 0; i < count; i++) {
             int o = i * stride;
             var vertex = builder.addVertex(m, v[o], v[o + 1], v[o + 2]);

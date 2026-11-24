@@ -329,7 +329,7 @@ public final class WorldRules {
 
         @Override
         public
-                //? if >=26.1 {
+                //? if >=1.21.11 {
                 net.minecraft.resources.Identifier
                 //?} else {
                 /*net.minecraft.resources.ResourceLocation

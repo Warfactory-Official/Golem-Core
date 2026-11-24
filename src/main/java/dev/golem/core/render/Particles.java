@@ -13,7 +13,7 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import org.jspecify.annotations.Nullable;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.resources.Identifier;
 //?} else {
 /*import net.minecraft.resources.ResourceLocation;
@@ -34,7 +34,7 @@ public final class Particles {
         protected abstract Particle create(T options, ClientLevel level, double x, double y, double z,
                                            double motionX, double motionY, double motionZ, RandomSource random);
 
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         @Override
         public final Particle createParticle(T options, ClientLevel level, double x, double y, double z,
                                              double motionX, double motionY, double motionZ, RandomSource random) {
@@ -62,8 +62,8 @@ public final class Particles {
         var engine = client.particleEngine;
         engine.particlesToAdd.forEach(action);
         for (var group : engine.particles.values()) {
-            //? if >=26.1 {
-            group.getAll().forEach(action);
+            //? if >=1.21.11 {
+            group.particles.forEach(action);
             //?} else {
             /*group.forEach(action);
             *///?}
@@ -85,7 +85,7 @@ public final class Particles {
 
     /** Applies a particle tint across the particle-class hierarchy used by each era. */
     public static void color(Particle particle, float red, float green, float blue) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         if (particle instanceof net.minecraft.client.particle.SingleQuadParticle quad) {
             quad.setColor(red, green, blue);
         }
@@ -96,7 +96,7 @@ public final class Particles {
 
     /** The user's particle-density setting, whose vanilla enum moved packages in 26.1. */
     public static Quality quality() {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         net.minecraft.server.level.ParticleStatus status = Minecraft.getInstance().options.particles().get();
         //?} else {
         /*net.minecraft.client.ParticleStatus status = Minecraft.getInstance().options.particles().get();
@@ -123,21 +123,26 @@ public final class Particles {
      * particle draws as a checkerboard. Only a wrong <i>atlas</i> id throws.
      */
     public static TextureAtlasSprite sprite(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier
             //?} else {
             /*ResourceLocation
             *///?}
             texture) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         // The SpriteId's first field is the atlas TEXTURE location
         // (minecraft:textures/atlas/particles.png), not the atlas definition id (minecraft:particles).
         // AtlasManager keeps two maps and get() consults the by-texture one; handing it the definition
         // id throws "Invalid atlas texture id". getAtlasOrThrow is the method that takes the other one.
         return Minecraft.getInstance()
                 .getAtlasManager()
+                //? if >=26.1 {
                 .get(new net.minecraft.client.resources.model.sprite.SpriteId(
                         net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_PARTICLES, texture));
+                //?} else {
+                /*.get(new net.minecraft.client.resources.model.sprite.Material(
+                        net.minecraft.client.renderer.texture.TextureAtlas.LOCATION_PARTICLES, texture));
+                *///?}
         //?} else {
         /*return ((net.minecraft.client.renderer.texture.TextureAtlas) Minecraft.getInstance()
                 .getTextureManager()
@@ -158,7 +163,7 @@ public final class Particles {
         int color = ((int) (Math.max(0F, Math.min(1F, red)) * 255F) << 16)
                 | ((int) (Math.max(0F, Math.min(1F, green)) * 255F) << 8)
                 | (int) (Math.max(0F, Math.min(1F, blue)) * 255F);
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         var particle = spawn(new DustParticleOptions(color, size), x, y, z, motionX, motionY, motionZ);
         //?} else {
         /*var particle = spawn(new DustParticleOptions(

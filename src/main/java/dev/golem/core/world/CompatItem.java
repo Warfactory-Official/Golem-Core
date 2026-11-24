@@ -64,7 +64,7 @@ public class CompatItem extends Item implements HeldItemState {
 
     /** Calls the vanilla item implementation without exposing its return-type split to callers. */
     protected final InteractionResult compatVanillaUse(Level level, Player player, InteractionHand hand) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return super.use(level, player, hand);
         //?} else {
         /*net.minecraft.world.InteractionResultHolder<ItemStack> result = super.use(level, player, hand);
@@ -126,7 +126,7 @@ public class CompatItem extends Item implements HeldItemState {
         return true;
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     public void hurtEnemy(ItemStack stack, LivingEntity target, LivingEntity attacker) {
         compatHurtEnemy(stack, target, attacker);
@@ -151,7 +151,7 @@ public class CompatItem extends Item implements HeldItemState {
     }
     *///?}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     public net.minecraft.world.item.ItemUseAnimation getUseAnimation(ItemStack stack) {
         return switch (compatUseAnimation(stack)) {
@@ -183,7 +183,7 @@ public class CompatItem extends Item implements HeldItemState {
     }
     *///?}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     public void appendHoverText(ItemStack stack, Item.TooltipContext context,
                                 net.minecraft.world.item.component.TooltipDisplay display,
@@ -211,7 +211,7 @@ public class CompatItem extends Item implements HeldItemState {
     }
     *///?}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     public InteractionResult use(Level level, Player player, InteractionHand hand) {
         return compatUse(level, player, hand);

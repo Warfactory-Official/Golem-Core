@@ -4,7 +4,7 @@ import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import org.jspecify.annotations.Nullable;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.monster.blaze.BlazeModel;
 import net.minecraft.client.model.monster.silverfish.SilverfishModel;
@@ -27,7 +27,7 @@ import net.minecraft.client.model.SilverfishModel;
 @SuppressWarnings({"rawtypes", "unchecked"})
 public final class LivingModel<S extends CompatLivingRenderState> {
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     final EntityModel<? super S> model;
     //?} else {
     /*final EntityModel model;
@@ -35,7 +35,7 @@ public final class LivingModel<S extends CompatLivingRenderState> {
     final @Nullable CompatEntityModel<S> compat;
 
     private LivingModel(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             EntityModel<? super S>
             //?} else {
             /*EntityModel

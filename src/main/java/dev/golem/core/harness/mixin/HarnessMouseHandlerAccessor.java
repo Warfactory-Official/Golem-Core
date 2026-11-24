@@ -8,7 +8,7 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 @Mixin(MouseHandler.class)
 public interface HarnessMouseHandlerAccessor {
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Invoker("onButton")
     void golem$onButton(long window, net.minecraft.client.input.MouseButtonInfo button, int action);
     //?} else {
@@ -16,8 +16,13 @@ public interface HarnessMouseHandlerAccessor {
     void golem$onPress(long window, int button, int action, int modifiers);
     *///?}
 
+    //? if >=26.3 {
+    /*@Invoker("onMove")
+    void golem$onMove(long window, double x, double y, double dx, double dy);
+    *///?} else {
     @Invoker("onMove")
     void golem$onMove(long window, double x, double y);
+    //?}
 
     @Invoker("onScroll")
     void golem$onScroll(long window, double xOffset, double yOffset);

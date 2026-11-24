@@ -1,6 +1,6 @@
 package dev.golem.core.mixin;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import dev.golem.core.player.SlotSync;
 import net.minecraft.client.gui.screens.inventory.CreativeInventoryListener;
 import net.minecraft.world.inventory.AbstractContainerMenu;

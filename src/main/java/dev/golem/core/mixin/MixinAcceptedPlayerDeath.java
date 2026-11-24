@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 // Widening cannot insert the notification into the player's separate death path.
 @Mixin(ServerPlayer.class)
 public abstract class MixinAcceptedPlayerDeath {
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Inject(method = "die", at = @At(value = "FIELD", target =
             "Lnet/minecraft/world/level/gamerules/GameRules;SHOW_DEATH_MESSAGES:Lnet/minecraft/world/level/gamerules/GameRule;",
             opcode = Opcodes.GETSTATIC))

@@ -111,7 +111,7 @@ public final class Gliders {
         installed = true;
         // 26.1 Fabric asks with tickElytra=true only at vanilla's damage point (every 20 flight ticks); legacy Fabric
         // ticks a custom elytra every flight tick, as ElytraItem.elytraFlightTick did.
-        //? if fabric && >=26.1 {
+        //? if fabric && >=1.21.11 {
         /*net.fabricmc.fabric.api.entity.event.v1.EntityElytraEvents.CUSTOM.register((entity, tick) ->
                 tick ? wearNow(entity) : canGlide(entity));
         *///?} elif fabric {

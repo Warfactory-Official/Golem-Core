@@ -41,7 +41,7 @@ public abstract class MixinLivingHurtAccess implements LivingHurtAccess {
         return getHurtSound(source);
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Shadow
     public abstract @Nullable Player getLastHurtByPlayer();
 

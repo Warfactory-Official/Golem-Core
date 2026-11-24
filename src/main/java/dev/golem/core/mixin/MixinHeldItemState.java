@@ -53,8 +53,12 @@ public abstract class MixinHeldItemState {
     private boolean golem$sameItemAtHead;
 
     @Inject(method = "tick", at = @At("HEAD"))
+    //? if >=26.3 {
+    /*private void golem$keepStatefulItemRaised(LocalPlayer player, CallbackInfo callback) {
+    *///?} else {
     private void golem$keepStatefulItemRaised(CallbackInfo callback) {
         LocalPlayer player = Minecraft.getInstance().player;
+    //?}
         if (player == null) return;
         this.mainHandItem = golem$shown(this.mainHandItem, player.getMainHandItem());
         this.offHandItem = golem$shown(this.offHandItem, player.getOffhandItem());
@@ -66,8 +70,12 @@ public abstract class MixinHeldItemState {
      * climbs by at most 0.4 a tick to 1 and no cooldown lowers it. Main hand only; 1.7 had one.
      */
     @Inject(method = "tick", at = @At("TAIL"))
+    //? if >=26.3 {
+    /*private void golem$holdLegacyRaise(LocalPlayer player, CallbackInfo callback) {
+    *///?} else {
     private void golem$holdLegacyRaise(CallbackInfo callback) {
         LocalPlayer player = Minecraft.getInstance().player;
+    //?}
         if (player == null || !this.golem$sameItemAtHead || player.isHandsBusy()) return;
         ItemStack held = player.getMainHandItem();
         if (this.mainHandItem == held && held.getItem() instanceof HeldItemState state && state.compatHoldsRaised(held)) {

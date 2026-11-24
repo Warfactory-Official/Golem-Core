@@ -16,7 +16,7 @@ import dev.golem.core.viewer.FluidIcons;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -61,7 +61,7 @@ final class IconFluidStack extends FluidEmiStack {
     }
 
     @Override
-    public void render(GuiGraphics graphics, int x, int y, float delta, int flags) {
+    public void render(GuiGraphicsExtractor graphics, int x, int y, float delta, int flags) {
         if ((flags & RENDER_ICON) != 0) graphics.renderItem(icon, x, y);
         if ((flags & RENDER_REMAINDER) != 0) EmiRender.renderRemainderIcon(this, graphics, x, y);
     }

@@ -1,6 +1,6 @@
 package dev.golem.core;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.resources.Identifier;
 //?} else {
 /*import net.minecraft.resources.ResourceLocation;
@@ -74,13 +74,13 @@ public final class Ids {
 
     /** The id type for the target version: {@code Identifier} on 26.1+, {@code ResourceLocation} below. */
     public static
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier
             //?} else {
             /*ResourceLocation
             *///?}
             of(String namespace, String path) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return Identifier.fromNamespaceAndPath(namespace, path);
         //?} elif >=1.21 {
         /*return ResourceLocation.fromNamespaceAndPath(namespace, path);
@@ -91,13 +91,13 @@ public final class Ids {
 
     /** Parses a complete namespaced id using the native parser for the target version. */
     public static
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier
             //?} else {
             /*ResourceLocation
             *///?}
             parse(String id) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return Identifier.parse(id);
         //?} elif >=1.21 {
         /*return ResourceLocation.parse(id);
@@ -108,7 +108,7 @@ public final class Ids {
 
     /** Creates an id in Minecraft's namespace. */
     public static
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier
             //?} else {
             /*ResourceLocation
@@ -119,13 +119,13 @@ public final class Ids {
 
     /** The id a {@link ResourceKey} points at. Spelled {@code identifier()} on 26.1, {@code location()} below. */
     public static
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier
             //?} else {
             /*ResourceLocation
             *///?}
             keyId(ResourceKey<?> key) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return key.identifier();
         //?} else {
         /*return key.location();

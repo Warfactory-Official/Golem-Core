@@ -4,7 +4,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import org.jspecify.annotations.Nullable;
 
 import net.minecraft.client.Minecraft;
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
 //?}
 
@@ -18,7 +18,7 @@ import net.minecraft.client.renderer.blockentity.state.BlockEntityRenderState;
  */
 public final class CompatBlockEntityRenderState {
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Nullable BlockEntityRenderState delegate;
     //?} else {
     /*@Nullable BlockEntity blockEntity;
@@ -26,7 +26,7 @@ public final class CompatBlockEntityRenderState {
     *///?}
 
     public boolean isEmpty() {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return delegate == null;
         //?} else {
         /*return blockEntity == null;
@@ -34,7 +34,7 @@ public final class CompatBlockEntityRenderState {
     }
 
     public void clear() {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         delegate = null;
         //?} else {
         /*blockEntity = null;
@@ -47,9 +47,17 @@ public final class CompatBlockEntityRenderState {
             clear();
             return;
         }
-        //? if >=26.1 {
+        //? if >=1.21.11 {
+        //? if >=26.2 {
+        /*var dispatcher = Minecraft.getInstance().getBlockEntityRenderDispatcher();
+        var renderer = dispatcher.getRenderer(blockEntity);
+        // 26.2 extracts only when the flag matches the renderer's own off-screen rule; previews take either kind.
+        delegate = renderer == null ? null
+                : dispatcher.tryExtractRenderState(blockEntity, partialTicks, null, renderer.shouldRenderOffScreen());
+        *///?} else {
         delegate = Minecraft.getInstance().getBlockEntityRenderDispatcher()
                 .tryExtractRenderState(blockEntity, partialTicks, null);
+        //?}
         //?} else {
         /*this.blockEntity = Minecraft.getInstance().getBlockEntityRenderDispatcher().getRenderer(blockEntity) == null
                 ? null : blockEntity;

@@ -3,7 +3,9 @@ package dev.golem.core.render;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+//? if <26.2 {
 import com.mojang.blaze3d.vertex.Tesselator;
+//?}
 import com.mojang.blaze3d.vertex.VertexFormat;
 import dev.golem.core.GolemCore;
 import dev.golem.core.client.ClientResourceReloads;
@@ -37,7 +39,7 @@ public final class ScreenEffects {
         initialized = true;
         HarnessQueryRegistry.register("golem_screen_effects", (mc, params) -> query());
         ClientResourceReloads.register("golemcore", "screen_effects", () -> {
-            //? if <26.1 {
+            //? if <1.21.11 {
             /*Programs.reset();
             Bloom.resetShaders();
             ScreenDistortion.resetShaders();
@@ -50,6 +52,10 @@ public final class ScreenEffects {
      * Called once the first-person hand has been drawn; see {@code MixinScreenEffects}.
      */
     public static void afterHand() {
+        //? if >=26.3 {
+        /*Bloom.LAYER.flush();
+        ScreenDistortion.LAYER.flush();
+        *///?}
         Bloom.apply();
         ScreenDistortion.apply();
     }
@@ -99,11 +105,21 @@ public final class ScreenEffects {
         return (System.currentTimeMillis() % 10_000_000L) / 1000F;
     }
 
+    //? if >=26.3 {
+    /*private static final java.util.Map<net.minecraft.client.renderer.rendertype.RenderType, Layer> LAYER_TYPES =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    /^* The layer {@code type} draws into, or null for a type vanilla draws itself. ^/
+    static @org.jspecify.annotations.Nullable Layer layerOf(net.minecraft.client.renderer.rendertype.RenderType type) {
+        return LAYER_TYPES.get(type);
+    }
+    *///?}
+
     /** A full-size colour layer that depth-tests against the main target's depth, as 1.12's shared attachment did. */
     static final class Layer {
         private final String label;
         private boolean used;
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         private SharedDepthTarget target;
         //?} else {
         /*private com.mojang.blaze3d.pipeline.TextureTarget target;
@@ -112,6 +128,51 @@ public final class ScreenEffects {
         Layer(String label) {
             this.label = label;
         }
+
+        //? if >=26.3 {
+        /*private final java.util.List<Runnable> deferred = new java.util.ArrayList<>();
+
+        /^* {@code type} draws into this layer; vanilla's own submissions of it are drawn at {@link #flush}. ^/
+        net.minecraft.client.renderer.rendertype.RenderType register(net.minecraft.client.renderer.rendertype.RenderType type) {
+            Passes.layer(type, this::drawTarget);
+            LAYER_TYPES.put(type, this);
+            return type;
+        }
+
+        /^*
+         * 26.3 draws every render type into the pass vanilla opened, so geometry for this layer is kept with its pose,
+         * view and projection and drawn into the layer after the hand, where 26.1 had drawn it during the hand pass.
+         ^/
+        void defer(com.mojang.blaze3d.vertex.PoseStack pose, net.minecraft.client.renderer.rendertype.RenderType type,
+                   SubmitSink.CustomGeometry geometry) {
+            com.mojang.blaze3d.vertex.PoseStack copy = Poses.copyOf(pose.last());
+            org.joml.Matrix4f modelView = RenderSystem.getModelViewMatrix();
+            var projection = RenderSystem.getProjectionMatrixBuffer();
+            var projectionType = RenderSystem.getProjectionType();
+            deferred.add(() -> {
+                RenderSystem.setProjectionMatrix(projection, projectionType);
+                RenderSystem.getModelViewStack().pushMatrix().set(modelView);
+                try {
+                    ImmediateBuffers buffers = new ImmediateBuffers();
+                    geometry.render(copy.last(), buffers.getBuffer(type));
+                    buffers.endBatch();
+                } finally {
+                    RenderSystem.getModelViewStack().popMatrix();
+                }
+            });
+        }
+
+        void flush() {
+            if (deferred.isEmpty()) return;
+            RenderSystem.backupProjectionMatrix();
+            try {
+                for (Runnable draw : deferred) draw.run();
+            } finally {
+                deferred.clear();
+                RenderSystem.restoreProjectionMatrix();
+            }
+        }
+        *///?}
 
         /** Whether geometry was drawn into this layer since the last call; resets the flag. */
         boolean consumeUsed() {
@@ -124,7 +185,7 @@ public final class ScreenEffects {
             return target;
         }
 
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         /** The target a render type draws into this frame; marks the layer used. */
         RenderTarget drawTarget() {
             used = true;
@@ -172,7 +233,7 @@ public final class ScreenEffects {
         *///?}
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     /**
      * A layer target whose depth attachment is the main target's. {@code RenderType.draw} attaches
      * {@code getDepthTextureView()} of its output target, so this is all it takes for the layer to be tested
@@ -180,7 +241,13 @@ public final class ScreenEffects {
      */
     private static final class SharedDepthTarget extends com.mojang.blaze3d.pipeline.TextureTarget {
         SharedDepthTarget(String label, int width, int height) {
+            //? if >=26.3 {
+            /*super(label, width, height, com.mojang.blaze3d.GpuFormat.RGBA8_UNORM, com.mojang.blaze3d.GpuFormat.D32_FLOAT);
+            *///?} elif >=26.2 {
+            /*super(label, width, height, true, com.mojang.blaze3d.GpuFormat.RGBA8_UNORM);
+            *///?} else {
             super(label, width, height, true);
+            //?}
         }
 
         @Override
@@ -192,7 +259,7 @@ public final class ScreenEffects {
     /** A plain colour target for a chain pass. */
     static com.mojang.blaze3d.pipeline.TextureTarget newTarget(String label, int width, int height) {
         com.mojang.blaze3d.pipeline.TextureTarget target =
-                new com.mojang.blaze3d.pipeline.TextureTarget(label, Math.max(1, width), Math.max(1, height), false);
+                Passes.target(label, Math.max(1, width), Math.max(1, height), false);
         RenderSystem.getDevice().createCommandEncoder().clearColorTexture(target.getColorTexture(), 0);
         return target;
     }
@@ -201,18 +268,18 @@ public final class ScreenEffects {
     static void fullscreen(String label, com.mojang.blaze3d.pipeline.RenderPipeline pipeline,
                            com.mojang.blaze3d.textures.GpuTextureView output, float time,
                            java.util.function.Consumer<com.mojang.blaze3d.systems.RenderPass> samplers) {
-        var builder = Tesselator.getInstance().begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION);
+        var builder = CompatTesselator.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION);
         builder.addVertex(-1F, -1F, time);
         builder.addVertex(3F, -1F, time);
         builder.addVertex(-1F, 3F, time);
         try (var mesh = builder.buildOrThrow()) {
-            var vertices = DefaultVertexFormat.POSITION.uploadImmediateVertexBuffer(mesh.vertexBuffer());
-            try (var pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
-                    () -> label, output, java.util.OptionalInt.empty(), null, java.util.OptionalDouble.empty())) {
-                pass.setPipeline(pipeline);
+            var vertices = Passes.upload(DefaultVertexFormat.POSITION, mesh.vertexBuffer());
+            try (var pass = Passes.open(
+                    () -> label, output, null)) {
+                Passes.pipeline(pass, pipeline);
                 samplers.accept(pass);
-                pass.setVertexBuffer(0, vertices);
-                pass.draw(0, 3);
+                Passes.vertices(pass, vertices);
+                Passes.draw(pass, 3);
             }
         }
     }
@@ -225,11 +292,9 @@ public final class ScreenEffects {
                 .withVertexShader(dev.golem.core.Ids.of("golemcore", "core/screen_fullscreen"))
                 .withFragmentShader(dev.golem.core.Ids.of("golemcore", "core/" + fragment));
         for (int i = 0; i < samplers; i++) builder.withSampler("Sampler" + i);
-        return builder
-                .withVertexFormat(DefaultVertexFormat.POSITION, VertexFormat.Mode.TRIANGLES)
-                .withDepthStencilState(java.util.Optional.empty())
-                .withColorTargetState(new com.mojang.blaze3d.pipeline.ColorTargetState(blend,
-                        com.mojang.blaze3d.pipeline.ColorTargetState.WRITE_COLOR))
+        PipelineStates.vertices(builder, DefaultVertexFormat.POSITION, VertexFormat.Mode.TRIANGLES);
+        PipelineStates.noDepth(builder);
+        return PipelineStates.color(builder, blend.orElse(null), true, false)
                 .withCull(false)
                 .build();
     }
@@ -410,7 +475,7 @@ public final class ScreenEffects {
         }
         RenderSystem.activeTexture(org.lwjgl.opengl.GL13.GL_TEXTURE0);
         //? if >=1.21 {
-        var builder = Tesselator.getInstance().begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION);
+        var builder = CompatTesselator.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION);
         builder.addVertex(-1F, -1F, time);
         builder.addVertex(3F, -1F, time);
         builder.addVertex(-1F, 3F, time);

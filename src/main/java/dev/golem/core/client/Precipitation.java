@@ -81,7 +81,7 @@ public final class Precipitation {
          * instead ({@code options.weatherRadius()}, 10 by default).
          */
         public int radius() {
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             return net.minecraft.client.Minecraft.getInstance().options.weatherRadius().get();
             //?} else {
             /*return net.minecraft.client.Minecraft.useFancyGraphics() ? 10 : 5;

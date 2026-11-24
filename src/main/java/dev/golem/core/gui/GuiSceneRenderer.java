@@ -1,6 +1,6 @@
 package dev.golem.core.gui;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.golem.core.render.VanillaSubmitSink;
@@ -8,8 +8,12 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.gui.render.pip.PictureInPictureRenderer;
+//? if >=26.2 {
+/*import net.minecraft.client.renderer.SubmitNodeCollector;
+*///?} else {
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
+//?}
 import net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import org.jspecify.annotations.Nullable;
@@ -74,10 +78,16 @@ final class GuiSceneRenderer extends PictureInPictureRenderer<GuiSceneRenderer.S
 
     private final Class<? extends State> stateClass;
 
+    //? if >=26.2 {
+    /*GuiSceneRenderer(Class<? extends State> stateClass) {
+        this.stateClass = stateClass;
+    }
+    *///?} else {
     GuiSceneRenderer(MultiBufferSource.BufferSource bufferSource, Class<? extends State> stateClass) {
         super(bufferSource);
         this.stateClass = stateClass;
     }
+    //?}
 
     /** Adds the loader registration, one renderer per slot; the renderer list is built once, with the game renderer. */
     @SuppressWarnings({"unchecked", "rawtypes"})
@@ -86,13 +96,25 @@ final class GuiSceneRenderer extends PictureInPictureRenderer<GuiSceneRenderer.S
         dev.golem.core.platform.NeoForgeEntrypoint.modBus().addListener(
                 (net.neoforged.neoforge.client.event.RegisterPictureInPictureRenderersEvent event) -> {
                     for (Class<? extends State> slot : SLOT_CLASSES) {
+                        //? if >=26.2 {
+                        /*event.register((Class) slot, () -> new GuiSceneRenderer(slot));
+                        *///?} else {
                         event.register((Class) slot, bufferSource -> new GuiSceneRenderer(bufferSource, slot));
+                        //?}
                     }
                 });
         //?} elif fabric {
         /*for (Class<? extends State> slot : SLOT_CLASSES) {
+            //? if >=26.2 {
+            /^net.fabricmc.fabric.api.client.rendering.v1.PictureInPictureRendererRegistry.register(
+                    context -> new GuiSceneRenderer(slot));
+            ^///?} elif >=26.1 {
             net.fabricmc.fabric.api.client.rendering.v1.PictureInPictureRendererRegistry.register(
                     context -> new GuiSceneRenderer(context.bufferSource(), slot));
+            //?} else {
+            /^net.fabricmc.fabric.api.client.rendering.v1.SpecialGuiElementRegistry.register(
+                    context -> new GuiSceneRenderer(context.vertexConsumers(), slot));
+            ^///?}
         }
         *///?}
     }
@@ -115,7 +137,11 @@ final class GuiSceneRenderer extends PictureInPictureRenderer<GuiSceneRenderer.S
         //? if neoforge {
         graphics.submitPictureInPictureRenderState(state);
         //?} else {
-        /*graphics.guiRenderState.addPicturesInPictureState(state);
+        /*//? if >=26.1 {
+        graphics.guiRenderState.addPicturesInPictureState(state);
+        //?} else {
+        /^graphics.guiRenderState.submitPicturesInPictureState(state);
+        ^///?}
         *///?}
     }
 
@@ -125,6 +151,14 @@ final class GuiSceneRenderer extends PictureInPictureRenderer<GuiSceneRenderer.S
         return (Class<State>) (Class<?>) stateClass;
     }
 
+    //? if >=26.2 {
+    /*@Override
+    protected void renderToTexture(State state, PoseStack poseStack, SubmitNodeCollector collector) {
+        Minecraft.getInstance().gameRenderer.getLighting().setupFor(Lighting.Entry.ENTITY_IN_UI);
+        poseStack.scale(1.0F, 1.0F, -1.0F);
+        state.scene().draw(poseStack, new VanillaSubmitSink(collector, new CameraRenderState()), GuiScenes.CAMERA);
+    }
+    *///?} else {
     @Override
     protected void renderToTexture(State state, PoseStack poseStack) {
         Minecraft minecraft = Minecraft.getInstance();
@@ -135,6 +169,7 @@ final class GuiSceneRenderer extends PictureInPictureRenderer<GuiSceneRenderer.S
                 GuiScenes.CAMERA);
         features.renderAllFeatures();
     }
+    //?}
 
     /** Centred vertically as well as horizontally, like the entity preview. */
     @Override

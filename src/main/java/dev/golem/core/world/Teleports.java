@@ -4,10 +4,10 @@ import java.util.function.Consumer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.TicketType;
 import net.minecraft.world.level.ChunkPos;
-//? if >=1.21 && <26.1 {
+//? if >=1.21 && <1.21.11 {
 /*import net.minecraft.world.level.portal.DimensionTransition;
 *///?}
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.world.level.portal.TeleportTransition;
 //?}
 import net.minecraft.world.phys.Vec3;
@@ -38,7 +38,7 @@ public final class Teleports {
      * level by vanilla, exactly as {@code /tp} does. Returns whether vanilla accepted the move.
      */
     public static boolean toLevel(Entity entity, ServerLevel level, double x, double y, double z) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return entity.teleportTo(level, x, y, z, java.util.Set.of(), entity.getYRot(), entity.getXRot(), true);
         //?} else {
         /*return entity.teleportTo(level, x, y, z, java.util.Set.of(), entity.getYRot(), entity.getXRot());
@@ -52,7 +52,7 @@ public final class Teleports {
      * event and triggers" flag (kept on). Returns whether the passenger now rides the vehicle.
      */
     public static boolean remount(Entity passenger, Entity vehicle) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return passenger.startRiding(vehicle, true, true);
         //?} else {
         /*return passenger.startRiding(vehicle, true);
@@ -74,7 +74,7 @@ public final class Teleports {
      */
     public static boolean transferRoot(Entity root, ServerLevel target, Vec3 pos,
                                        Consumer<Entity> afterPassengers) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         root.teleport(new TeleportTransition(target, pos, root.getDeltaMovement(),
                 root.getYRot(), root.getXRot(), afterPassengers::accept));
         return true;
@@ -89,7 +89,7 @@ public final class Teleports {
 
     /** Cross-level move that keeps velocity and leaves a portal ticket at the arrival. */
     public static void transferWithTicket(Entity entity, ServerLevel destination, Vec3 pos) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         entity.teleport(new TeleportTransition(destination, pos, entity.getDeltaMovement(),
                 entity.getYRot(), entity.getXRot(),
                 TeleportTransition.PLACE_PORTAL_TICKET));
@@ -112,7 +112,7 @@ public final class Teleports {
      * respawns. 26.1 keeps it as the server's respawn data, before 26.1 the overworld's shared spawn position.
      */
     public static net.minecraft.core.BlockPos worldSpawn(net.minecraft.server.MinecraftServer server) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return server.overworld().getRespawnData().globalPos().pos();
         //?} else {
         /*return server.overworld().getSharedSpawnPos();

@@ -4,7 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
@@ -32,13 +32,13 @@ import org.jspecify.annotations.Nullable;
  * five-argument extract overload. Implementations override the four-argument {@link #extract} instead.
  */
 public interface CompatBER<T extends BlockEntity, S extends CompatRenderState>
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         extends BlockEntityRenderer<T, S>
         //?}
 {
 
     /** Creates a fresh, empty render state. Called once per renderer instance by the engine. */
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     //?}
     S createRenderState();
@@ -61,7 +61,7 @@ public interface CompatBER<T extends BlockEntity, S extends CompatRenderState>
         return 64;
     }
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*// On 26.1 these come from the vanilla interface this extends. Below it there is no such
     // interface, so they are declared here, otherwise every renderer that overrides one fails with
     // "does not override or implement a method from a supertype". LegacyBERAdapter forwards vanilla's
@@ -79,7 +79,7 @@ public interface CompatBER<T extends BlockEntity, S extends CompatRenderState>
     }
     *///?}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     /** Bridges vanilla's extract signature to {@link #extract}, after running the base extraction. */
     @Override
     default void extractRenderState(
@@ -93,7 +93,7 @@ public interface CompatBER<T extends BlockEntity, S extends CompatRenderState>
     @Override
     default void submit(S state, PoseStack poseStack, SubmitNodeCollector collector, CameraRenderState camera) {
         submit(state, poseStack, new VanillaSubmitSink(collector),
-                new CameraInfo(camera.pos, camera.yRot, camera.orientation));
+                CameraInfo.of(camera));
     }
 
     /** Forwards vanilla's view-distance hook to {@link #viewDistance}. */

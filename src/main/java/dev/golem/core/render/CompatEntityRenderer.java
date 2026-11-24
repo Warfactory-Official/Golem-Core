@@ -5,7 +5,7 @@ import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.world.entity.Entity;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 //?} else {
@@ -32,7 +32,7 @@ import net.minecraft.world.phys.Vec3;
  * @param <S> its render state
  */
 public abstract class CompatEntityRenderer<T extends Entity, S extends CompatEntityRenderState>
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         extends EntityRenderer<T, S>
         //?} else {
         /*extends EntityRenderer<T>
@@ -44,7 +44,7 @@ public abstract class CompatEntityRenderer<T extends Entity, S extends CompatEnt
     }
 
     /** Creates the per-frame state object. Called by the engine on 26.1, and by this class below it. */
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     //?}
     public abstract S createRenderState();
@@ -63,7 +63,7 @@ public abstract class CompatEntityRenderer<T extends Entity, S extends CompatEnt
         return true;
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     /** Bridges vanilla's extract signature to {@link #extract}. */
     @Override
     public void extractRenderState(T entity, S state, float partialTicks) {
@@ -76,7 +76,7 @@ public abstract class CompatEntityRenderer<T extends Entity, S extends CompatEnt
     public void submit(S state, PoseStack poseStack, SubmitNodeCollector collector, CameraRenderState camera) {
         super.submit(state, poseStack, collector, camera);
         submit(state, poseStack, new VanillaSubmitSink(collector, camera),
-                new CameraInfo(camera.pos, camera.yRot, camera.orientation));
+                CameraInfo.of(camera));
     }
 
     /** Forwards vanilla's culling opt-out to {@link #culled}. */

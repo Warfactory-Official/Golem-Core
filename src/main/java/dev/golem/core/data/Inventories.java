@@ -32,7 +32,7 @@ public final class Inventories {
             access.data().saveItems(stacks, alsoWhenEmpty);
             return;
         }
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         ContainerHelper.saveAllItems(unwrap(out), stacks, alsoWhenEmpty);
         //?} elif >=1.20.5 {
         /*TagDataOut tagOut = (TagDataOut) out;
@@ -48,7 +48,7 @@ public final class Inventories {
             access.data().loadItems(stacks);
             return;
         }
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         ContainerHelper.loadAllItems(unwrap(in), stacks);
         //?} elif >=1.20.5 {
         /*TagDataIn tagIn = (TagDataIn) in;
@@ -60,7 +60,7 @@ public final class Inventories {
 
     /** Returns the live 36-slot main inventory, excluding equipment and offhand slots. */
     public static NonNullList<ItemStack> main(Inventory inventory) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return inventory.getNonEquipmentItems();
         //?} else {
         /*return inventory.items;
@@ -94,7 +94,7 @@ public final class Inventories {
 
     public record PlayerSnapshot(List<ItemStack> slots, int selectedSlot) {}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private static net.minecraft.world.level.storage.ValueOutput unwrap(DataOut out) {
         return ((ValueDataOut) out).delegate();
     }

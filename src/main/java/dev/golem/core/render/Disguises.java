@@ -249,7 +249,18 @@ public final class Disguises {
             net.minecraft.client.renderer.chunk.ChunkSectionLayer layer =
                     net.minecraft.client.renderer.chunk.ChunkSectionLayer.CUTOUT;
             net.minecraft.client.renderer.rendertype.RenderType item = net.minecraft.client.renderer.Sheets.cutoutBlockItemSheet();
-            //? if neoforge {
+            // 26.3 names shading by an override direction: none is the face's own shade, as shade true was.
+            //? if neoforge && >=26.3 {
+            /*net.minecraft.client.resources.model.geometry.BakedQuad.MaterialInfo material =
+                    new net.minecraft.client.resources.model.geometry.BakedQuad.MaterialInfo(quad.sprite(), layer, item,
+                            net.minecraft.client.renderer.Sheets.cutoutBlockItemGlintSheet(),
+                            net.minecraft.client.renderer.Sheets.cutoutBlockItemGlintSpecialSheet(), quad.tintIndex(), null, 0, ao);
+            *///?} elif >=26.3 {
+            /*net.minecraft.client.resources.model.geometry.BakedQuad.MaterialInfo material =
+                    new net.minecraft.client.resources.model.geometry.BakedQuad.MaterialInfo(quad.sprite(), layer, item,
+                            net.minecraft.client.renderer.Sheets.cutoutBlockItemGlintSheet(),
+                            net.minecraft.client.renderer.Sheets.cutoutBlockItemGlintSpecialSheet(), quad.tintIndex(), null, 0);
+            *///?} elif neoforge {
             net.minecraft.client.resources.model.geometry.BakedQuad.MaterialInfo material =
                     new net.minecraft.client.resources.model.geometry.BakedQuad.MaterialInfo(quad.sprite(), layer, item,
                             quad.tintIndex(), true, 0, ao);
@@ -406,14 +417,188 @@ public final class Disguises {
     }
     *///?}
 
-    //? if <26.1 {
+    //? if >=1.21.11 && <26.1 {
+    /*private static net.minecraft.client.renderer.block.dispatch.BlockStateModel model26(BlockState state) {
+        return net.minecraft.client.Minecraft.getInstance().getBlockRenderer().getBlockModel(state);
+    }
+
+    /^* The overlays and mesh of one position as one part; null for none. ^/
+    static net.minecraft.client.renderer.block.model.@Nullable BlockModelPart extraPart26(
+            net.minecraft.client.renderer.block.dispatch.BlockStateModel own, Look look, BlockGetter level, BlockPos pos,
+            BlockState state) {
+        List<Quad> extras = extras(look, level, pos, state);
+        if (extras.isEmpty()) return null;
+        @SuppressWarnings("unchecked")
+        List<net.minecraft.client.resources.model.geometry.BakedQuad>[] byCull = new List[7];
+        for (int i = 0; i < 7; i++) byCull[i] = new ArrayList<>();
+        for (Quad quad : extras) {
+            byCull[quad.cull() == null ? 6 : quad.cull().get3DDataValue()].add(quad26(quad, look.ambientOcclusion()));
+        }
+        return new ExtraPart26(own.particleIcon(), byCull, look.ambientOcclusion());
+    }
+
+    private static net.minecraft.client.resources.model.geometry.BakedQuad quad26(Quad quad, boolean ao) {
+        return (net.minecraft.client.resources.model.geometry.BakedQuad) BUILT.computeIfAbsent(new BuiltKey(quad, ao), k -> {
+            float[][] p = quad.positions();
+            float[][] uv = quad.uvs();
+            return new net.minecraft.client.resources.model.geometry.BakedQuad(
+                    new Vector3f(p[0][0], p[0][1], p[0][2]), new Vector3f(p[1][0], p[1][1], p[1][2]),
+                    new Vector3f(p[2][0], p[2][1], p[2][2]), new Vector3f(p[3][0], p[3][1], p[3][2]),
+                    net.minecraft.client.model.geom.builders.UVPair.pack(uv[0][0], uv[0][1]),
+                    net.minecraft.client.model.geom.builders.UVPair.pack(uv[1][0], uv[1][1]),
+                    net.minecraft.client.model.geom.builders.UVPair.pack(uv[2][0], uv[2][1]),
+                    net.minecraft.client.model.geom.builders.UVPair.pack(uv[3][0], uv[3][1]),
+                    //? if neoforge {
+                    quad.tintIndex(), quad.direction(), quad.sprite(), true, 0,
+                    net.neoforged.neoforge.client.model.quad.BakedNormals.UNSPECIFIED,
+                    net.neoforged.neoforge.client.model.quad.BakedColors.DEFAULT, ao);
+                    //?} else {
+                    /^quad.tintIndex(), quad.direction(), quad.sprite(), true, 0);
+                    ^///?}
+        });
+    }
+
+    /^* 26.1's material puts overlays on the cutout layer; 1.21.11 asks the part (NeoForge) or the block (Fabric). ^/
+    static final class ExtraPart26 implements net.minecraft.client.renderer.block.model.BlockModelPart {
+        private final TextureAtlasSprite particle;
+        private final List<net.minecraft.client.resources.model.geometry.BakedQuad>[] byCull;
+        private final boolean ao;
+
+        ExtraPart26(TextureAtlasSprite particle, List<net.minecraft.client.resources.model.geometry.BakedQuad>[] byCull,
+                    boolean ao) {
+            this.particle = particle;
+            this.byCull = byCull;
+            this.ao = ao;
+        }
+
+        @Override
+        public List<net.minecraft.client.resources.model.geometry.BakedQuad> getQuads(@Nullable Direction direction) {
+            return byCull[direction == null ? 6 : direction.get3DDataValue()];
+        }
+
+        @Override
+        @SuppressWarnings("deprecation")
+        public boolean useAmbientOcclusion() {
+            return ao;
+        }
+
+        @Override
+        public TextureAtlasSprite particleIcon() {
+            return particle;
+        }
+
+        //? if neoforge {
+        @Override
+        public net.minecraft.client.renderer.chunk.ChunkSectionLayer getRenderType(BlockState state) {
+            return net.minecraft.client.renderer.chunk.ChunkSectionLayer.CUTOUT;
+        }
+        //?}
+    }
+    *///?}
+
+    //? if >=1.21.11 && <26.1 && neoforge {
+    /*static final class Model26 extends net.neoforged.neoforge.client.model.DelegateBlockStateModel
+            implements net.neoforged.neoforge.client.model.DynamicBlockStateModel {
+
+        Model26(net.minecraft.client.renderer.block.dispatch.BlockStateModel delegate) {
+            super(delegate);
+        }
+
+        @Override
+        public void collectParts(net.minecraft.client.renderer.block.BlockAndTintGetter level, BlockPos pos, BlockState state,
+                                 net.minecraft.util.RandomSource random,
+                                 List<net.minecraft.client.renderer.block.model.BlockModelPart> parts) {
+            Look look = look(state);
+            BlockState disguise = look == null ? null : look.disguise(level, pos, state);
+            if (disguise != null) model26(disguise).collectParts(level, pos, disguise, random, parts);
+            else delegate.collectParts(level, pos, state, random, parts);
+            if (look == null) return;
+            net.minecraft.client.renderer.block.model.BlockModelPart extras = extraPart26(delegate, look, level, pos, state);
+            if (extras != null) parts.add(extras);
+        }
+
+        @Override
+        @SuppressWarnings("deprecation")
+        public void collectParts(net.minecraft.util.RandomSource random,
+                                 List<net.minecraft.client.renderer.block.model.BlockModelPart> parts) {
+            delegate.collectParts(random, parts);
+        }
+    }
+
+    private static void install() {
+        if (installed) return;
+        installed = true;
+        dev.golem.core.platform.NeoForgeEntrypoint.modBus().addListener(
+                (net.neoforged.neoforge.client.event.ModelEvent.ModifyBakingResult event) -> {
+                    resolve();
+                    int count = 0;
+                    for (Map.Entry<BlockState, net.minecraft.client.renderer.block.dispatch.BlockStateModel> entry
+                            : event.getBakingResult().blockStateModels().entrySet()) {
+                        if (LOOKS.containsKey(entry.getKey().getBlock())) {
+                            entry.setValue(new Model26(entry.getValue()));
+                            count++;
+                        }
+                    }
+                    wrapped = count;
+                });
+    }
+    *///?}
+
+    //? if >=1.21.11 && <26.1 && fabric {
+    /*static final class Model26 implements net.minecraft.client.renderer.block.dispatch.BlockStateModel {
+        private final net.minecraft.client.renderer.block.dispatch.BlockStateModel delegate;
+
+        Model26(net.minecraft.client.renderer.block.dispatch.BlockStateModel delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public void collectParts(net.minecraft.util.RandomSource random,
+                                 List<net.minecraft.client.renderer.block.model.BlockModelPart> parts) {
+            delegate.collectParts(random, parts);
+        }
+
+        @Override
+        public TextureAtlasSprite particleIcon() {
+            return delegate.particleIcon();
+        }
+
+        @Override
+        public void emitQuads(net.fabricmc.fabric.api.renderer.v1.mesh.QuadEmitter emitter,
+                              net.minecraft.client.renderer.block.BlockAndTintGetter level, BlockPos pos, BlockState state,
+                              net.minecraft.util.RandomSource random,
+                              java.util.function.Predicate<@Nullable Direction> cullTest) {
+            Look look = look(state);
+            BlockState disguise = look == null ? null : look.disguise(level, pos, state);
+            if (disguise != null) model26(disguise).emitQuads(emitter, level, pos, disguise, random, cullTest);
+            else delegate.emitQuads(emitter, level, pos, state, random, cullTest);
+            if (look == null) return;
+            net.minecraft.client.renderer.block.model.BlockModelPart extras = extraPart26(delegate, look, level, pos, state);
+            if (extras != null) extras.emitQuads(emitter, cullTest);
+        }
+    }
+
+    private static void install() {
+        if (installed) return;
+        installed = true;
+        net.fabricmc.fabric.api.client.model.loading.v1.ModelLoadingPlugin.register(context ->
+                context.modifyBlockModelAfterBake().register((model, ctx) -> {
+                    resolve();
+                    if (!LOOKS.containsKey(ctx.state().getBlock())) return model;
+                    wrapped++;
+                    return new Model26(model);
+                }));
+    }
+    *///?}
+
+    //? if <1.21.11 {
     /*private static net.minecraft.client.resources.model.BakedModel legacyModel(BlockState state) {
         return net.minecraft.client.Minecraft.getInstance().getBlockRenderer().getBlockModel(state);
     }
 
-    private static net.minecraft.client.renderer.block.model.BakedQuad legacyQuad(Quad quad) {
-        return (net.minecraft.client.renderer.block.model.BakedQuad) BUILT.computeIfAbsent(new BuiltKey(quad, true),
-                k -> new net.minecraft.client.renderer.block.model.BakedQuad(ConnectedTextures.legacyVertices(
+    private static net.minecraft.client.resources.model.geometry.BakedQuad legacyQuad(Quad quad) {
+        return (net.minecraft.client.resources.model.geometry.BakedQuad) BUILT.computeIfAbsent(new BuiltKey(quad, true),
+                k -> new net.minecraft.client.resources.model.geometry.BakedQuad(ConnectedTextures.legacyVertices(
                         new ConnectedTextures.Quarter(quad.direction(), quad.positions(), quad.uvs())),
                         quad.tintIndex(), quad.direction(), quad.sprite(), true));
     }
@@ -423,7 +608,7 @@ public final class Disguises {
     }
     *///?}
 
-    //? if neoforge && <26.1 {
+    //? if neoforge && <1.21.11 {
     /*private record Appearance(@Nullable BlockState disguise, net.neoforged.neoforge.client.model.data.ModelData disguiseData,
                               List<Quad> extras) {}
 
@@ -436,7 +621,7 @@ public final class Disguises {
         }
 
         @Override
-        public net.neoforged.neoforge.client.model.data.ModelData getModelData(net.minecraft.world.level.BlockAndTintGetter level,
+        public net.neoforged.neoforge.client.model.data.ModelData getModelData(net.minecraft.client.renderer.block.BlockAndTintGetter level,
                 BlockPos pos, BlockState state, net.neoforged.neoforge.client.model.data.ModelData data) {
             Look look = look(state);
             if (look == null) return super.getModelData(level, pos, state, data);
@@ -462,13 +647,13 @@ public final class Disguises {
         }
 
         @Override
-        public List<net.minecraft.client.renderer.block.model.BakedQuad> getQuads(@Nullable BlockState state,
+        public List<net.minecraft.client.resources.model.geometry.BakedQuad> getQuads(@Nullable BlockState state,
                 @Nullable Direction side, net.minecraft.util.RandomSource rand,
                 net.neoforged.neoforge.client.model.data.ModelData data,
                 net.minecraft.client.renderer.@Nullable RenderType renderType) {
             Appearance appearance = data.get(APPEARANCE);
             if (appearance == null || state == null) return super.getQuads(state, side, rand, data, renderType);
-            List<net.minecraft.client.renderer.block.model.BakedQuad> quads = new ArrayList<>(appearance.disguise() == null
+            List<net.minecraft.client.resources.model.geometry.BakedQuad> quads = new ArrayList<>(appearance.disguise() == null
                     ? super.getQuads(state, side, rand, data, null)
                     : legacyModel(appearance.disguise()).getQuads(appearance.disguise(), side, rand,
                             appearance.disguiseData(), null));
@@ -509,7 +694,7 @@ public final class Disguises {
         }
 
         @Override
-        public net.minecraftforge.client.model.data.ModelData getModelData(net.minecraft.world.level.BlockAndTintGetter level,
+        public net.minecraftforge.client.model.data.ModelData getModelData(net.minecraft.client.renderer.block.BlockAndTintGetter level,
                 BlockPos pos, BlockState state, net.minecraftforge.client.model.data.ModelData data) {
             Look look = look(state);
             if (look == null) return super.getModelData(level, pos, state, data);
@@ -533,13 +718,13 @@ public final class Disguises {
         }
 
         @Override
-        public List<net.minecraft.client.renderer.block.model.BakedQuad> getQuads(@Nullable BlockState state,
+        public List<net.minecraft.client.resources.model.geometry.BakedQuad> getQuads(@Nullable BlockState state,
                 @Nullable Direction side, net.minecraft.util.RandomSource rand,
                 net.minecraftforge.client.model.data.ModelData data,
                 net.minecraft.client.renderer.@Nullable RenderType renderType) {
             Appearance appearance = data.get(APPEARANCE);
             if (appearance == null || state == null) return super.getQuads(state, side, rand, data, renderType);
-            List<net.minecraft.client.renderer.block.model.BakedQuad> quads = new ArrayList<>(appearance.disguise() == null
+            List<net.minecraft.client.resources.model.geometry.BakedQuad> quads = new ArrayList<>(appearance.disguise() == null
                     ? super.getQuads(state, side, rand, data, null)
                     : legacyModel(appearance.disguise()).getQuads(appearance.disguise(), side, rand,
                             appearance.disguiseData(), null));
@@ -567,7 +752,7 @@ public final class Disguises {
     }
     *///?}
 
-    //? if fabric && <26.1 {
+    //? if fabric && <1.21.11 {
     /*static final class LegacyModel extends net.fabricmc.fabric.api.renderer.v1.model.ForwardingBakedModel {
         LegacyModel(net.minecraft.client.resources.model.BakedModel original) {
             this.wrapped = original;
@@ -579,7 +764,7 @@ public final class Disguises {
         }
 
         @Override
-        public void emitBlockQuads(net.minecraft.world.level.BlockAndTintGetter level, BlockState state, BlockPos pos,
+        public void emitBlockQuads(net.minecraft.client.renderer.block.BlockAndTintGetter level, BlockState state, BlockPos pos,
                                    Supplier<net.minecraft.util.RandomSource> random,
                                    net.fabricmc.fabric.api.renderer.v1.render.RenderContext context) {
             Look look = look(state);

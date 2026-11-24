@@ -12,7 +12,9 @@ import dev.golem.core.platform.NeoForgeEntrypoint;
 //? if forge {
 /*import net.minecraftforge.registries.DataPackRegistryEvent;
 *///?}
-//? if neoforge {
+//? if neoforge && >=26.3 {
+/*import net.neoforged.neoforge.registries.NewDatapackRegistryEvent;
+*///?} elif neoforge {
 import net.neoforged.neoforge.registries.DataPackRegistryEvent;
 //?}
 
@@ -31,6 +33,9 @@ public final class DatapackRegistries {
         if (!DECLARED.add(key)) throw new IllegalStateException("Datapack registry declared twice: " + key);
         //? if fabric {
         /*DynamicRegistries.registerSynced(key, codec);
+        *///?} elif neoforge && >=26.3 {
+        /*NeoForgeEntrypoint.modBus().addListener(
+                (NewDatapackRegistryEvent event) -> event.worldRegistry(key, codec, codec));
         *///?} elif neoforge {
         NeoForgeEntrypoint.modBus().addListener(
                 (DataPackRegistryEvent.NewRegistry event) ->

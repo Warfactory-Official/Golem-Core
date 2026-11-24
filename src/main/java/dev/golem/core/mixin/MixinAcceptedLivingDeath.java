@@ -13,8 +13,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 // Widening cannot insert the notification required before loot.
 @Mixin(LivingEntity.class)
 public abstract class MixinAcceptedLivingDeath {
+    //? if >=26.2 {
+    /*@Inject(method = "die", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/world/entity/LivingEntity;handleKillingBlow()V", shift = At.Shift.AFTER))
+    *///?} else {
     @Inject(method = "die", at = @At(value = "FIELD", target = "Lnet/minecraft/world/entity/LivingEntity;dead:Z",
             opcode = Opcodes.PUTFIELD, shift = At.Shift.AFTER))
+    //?}
     private void golem$acceptedDeath(DamageSource source, CallbackInfo ci) {
         Deaths.accepted((LivingEntity) (Object) this, source);
     }

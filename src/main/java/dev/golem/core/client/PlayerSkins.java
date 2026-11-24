@@ -2,7 +2,7 @@ package dev.golem.core.client;
 
 import net.minecraft.client.player.AbstractClientPlayer;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.resources.Identifier;
 //?} else {
 /*import net.minecraft.resources.ResourceLocation;
@@ -16,7 +16,7 @@ public final class PlayerSkins {
 
     private PlayerSkins() {}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     public static Identifier texture(AbstractClientPlayer player) {
         return player.getSkin().body().texturePath();
     }
@@ -31,7 +31,7 @@ public final class PlayerSkins {
     *///?}
 
     /** The cape texture the cape layer draws for this player, or null for none - legacy {@code getLocationCape()}. */
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     public static @org.jspecify.annotations.Nullable Identifier cape(AbstractClientPlayer player) {
         var cape = player.getSkin().cape();
         return cape == null ? null : cape.texturePath();

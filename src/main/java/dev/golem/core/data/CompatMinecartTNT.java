@@ -10,7 +10,7 @@ import net.minecraft.world.entity.vehicle.minecart.MinecartTNT;
 import net.minecraft.network.syncher.SynchedEntityData;
 //?}
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 //?} else {
@@ -54,7 +54,7 @@ public abstract class CompatMinecartTNT extends net.minecraft.world.entity.vehic
     }
     *///?}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     protected final void readAdditionalSaveData(ValueInput input) {
         super.readAdditionalSaveData(input);
@@ -80,7 +80,7 @@ public abstract class CompatMinecartTNT extends net.minecraft.world.entity.vehic
     }
     *///?}
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*// 26.1 spelling of the server damage path. Below 26.1 vanilla only has {@code hurt}, which runs on
     // both sides; the client half is kept vanilla so only the server call reaches the 26.1-shaped hook.
     public boolean hurtServer(ServerLevel level, DamageSource source, float amount) {
@@ -94,7 +94,7 @@ public abstract class CompatMinecartTNT extends net.minecraft.world.entity.vehic
     }
     *///?}
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*public boolean causeFallDamage(double fallDistance, float damageModifier, DamageSource damageSource) {
         return super.causeFallDamage((float) fallDistance, damageModifier, damageSource);
     }
@@ -105,7 +105,7 @@ public abstract class CompatMinecartTNT extends net.minecraft.world.entity.vehic
     }
     *///?}
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*public void lerpMotion(net.minecraft.world.phys.Vec3 movement) {
         super.lerpMotion(movement.x, movement.y, movement.z);
     }
@@ -116,7 +116,7 @@ public abstract class CompatMinecartTNT extends net.minecraft.world.entity.vehic
     }
     *///?}
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*public net.minecraft.world.entity.item.ItemEntity spawnAtLocation(ServerLevel level, net.minecraft.world.item.ItemStack stack) {
         return super.spawnAtLocation(stack);
     }
@@ -141,7 +141,7 @@ public abstract class CompatMinecartTNT extends net.minecraft.world.entity.vehic
     }
     *///?}
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*public net.minecraft.world.InteractionResult interact(net.minecraft.world.entity.player.Player player,
             net.minecraft.world.InteractionHand hand, net.minecraft.world.phys.Vec3 location) {
         return super.interact(player, hand);
@@ -154,7 +154,7 @@ public abstract class CompatMinecartTNT extends net.minecraft.world.entity.vehic
     }
     *///?}
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*public void activateMinecart(ServerLevel level, int x, int y, int z, boolean powered) {
         super.activateMinecart(x, y, z, powered);
     }

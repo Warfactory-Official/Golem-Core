@@ -1,7 +1,7 @@
 package dev.golem.core.render;
 
-//? if >=26.1 {
-import com.mojang.blaze3d.pipeline.DepthStencilState;
+//? if >=1.21.11 {
+import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
@@ -13,7 +13,8 @@ import net.minecraft.util.Util;
 
 import java.util.function.Function;
 //?} else {
-/*import net.minecraft.client.renderer.RenderType;
+/*import com.mojang.blaze3d.vertex.VertexFormat;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 *///?}
 
@@ -38,8 +39,8 @@ public final class FlatCutoutRenderType {
 
     private FlatCutoutRenderType() {}
 
-    //? if >=26.1 {
-    private static final RenderPipeline PIPELINE = WorldPipelines.add(RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
+    //? if >=1.21.11 {
+    private static final RenderPipeline PIPELINE = WorldPipelines.add(PipelineStates.depth(PipelineStates.vertices(RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
             .withLocation("pipeline/golem_flat_cutout")
             .withVertexShader("core/entity")
             .withFragmentShader("core/entity")
@@ -48,10 +49,10 @@ public final class FlatCutoutRenderType {
             .withShaderDefine("NO_CARDINAL_LIGHTING")
             .withSampler("Sampler0")
             .withSampler("Sampler2")
-            .withVertexFormat(DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS)
-            .withDepthStencilState(DepthStencilState.DEFAULT)
+            , DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS),
+            PipelineStates.Depth.LESS_OR_EQUAL, true)
             .withCull(false)
-            .build(), RenderPipelines.ENTITY_CUTOUT);
+            .build(), VanillaPipelines.ENTITY_CUTOUT_NO_CULL);
 
     private static final Function<Identifier, RenderType> BY_TEXTURE = Util.memoize(texture ->
             RenderType.create("golem_flat_cutout", RenderSetup.builder(PIPELINE)
@@ -67,7 +68,7 @@ public final class FlatCutoutRenderType {
 
     // decal: the same, drawn with a depth bias toward the camera (vanilla's polygon-offset text), for a sheet laid
     // a hair in front of a surface - 1.7 put the RBMK numitron digits a thousandth of a block over the tube glass.
-    private static final RenderPipeline DECAL_PIPELINE = WorldPipelines.add(RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
+    private static final RenderPipeline DECAL_PIPELINE = WorldPipelines.add(PipelineStates.depth(PipelineStates.vertices(RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
             .withLocation("pipeline/golem_flat_cutout_decal")
             .withVertexShader("core/entity")
             .withFragmentShader("core/entity")
@@ -76,10 +77,10 @@ public final class FlatCutoutRenderType {
             .withShaderDefine("NO_CARDINAL_LIGHTING")
             .withSampler("Sampler0")
             .withSampler("Sampler2")
-            .withVertexFormat(DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS)
-            .withDepthStencilState(new DepthStencilState(com.mojang.blaze3d.platform.CompareOp.LESS_THAN_OR_EQUAL, true, -1.0F, -10.0F))
+            , DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS),
+            PipelineStates.Depth.LESS_OR_EQUAL, true, -1.0F, -10.0F)
             .withCull(false)
-            .build(), RenderPipelines.ENTITY_CUTOUT_Z_OFFSET);
+            .build(), VanillaPipelines.ENTITY_CUTOUT_NO_CULL_Z_OFFSET);
 
     private static final Function<Identifier, RenderType> DECAL_BY_TEXTURE = Util.memoize(texture ->
             RenderType.create("golem_flat_cutout_decal", RenderSetup.builder(DECAL_PIPELINE)
@@ -96,7 +97,7 @@ public final class FlatCutoutRenderType {
     // translucent: the same unlit, lightmapped sheet blended SRC_ALPHA / ONE_MINUS_SRC_ALPHA, back faces culled and
     // depth written - 1.12's first-person crucible blade (glColor alpha 0.7 through the vertex colour). The stock
     // translucent entity pipelines all define PER_FACE_LIGHTING or leave culling off.
-    private static final RenderPipeline TRANSLUCENT_CULL_PIPELINE = WorldPipelines.add(RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
+    private static final RenderPipeline TRANSLUCENT_CULL_PIPELINE = WorldPipelines.add(PipelineStates.depth(PipelineStates.blend(PipelineStates.vertices(RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
             .withLocation("pipeline/golem_flat_translucent_cull")
             .withVertexShader("core/entity")
             .withFragmentShader("core/entity")
@@ -105,12 +106,10 @@ public final class FlatCutoutRenderType {
             .withShaderDefine("NO_CARDINAL_LIGHTING")
             .withSampler("Sampler0")
             .withSampler("Sampler2")
-            .withVertexFormat(DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS)
-            .withColorTargetState(new com.mojang.blaze3d.pipeline.ColorTargetState(
-                    com.mojang.blaze3d.pipeline.BlendFunction.TRANSLUCENT))
-            .withDepthStencilState(DepthStencilState.DEFAULT)
+            , DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS), BlendFunction.TRANSLUCENT),
+            PipelineStates.Depth.LESS_OR_EQUAL, true)
             .withCull(true)
-            .build(), RenderPipelines.ENTITY_TRANSLUCENT_CULL);
+            .build(), VanillaPipelines.ENTITY_TRANSLUCENT_CULL);
 
     private static final Function<Identifier, RenderType> TRANSLUCENT_CULL_BY_TEXTURE = Util.memoize(texture ->
             RenderType.create("golem_flat_translucent_cull", RenderSetup.builder(TRANSLUCENT_CULL_PIPELINE)
@@ -126,7 +125,7 @@ public final class FlatCutoutRenderType {
 
     // translucent: unlit, lightmapped, blended SRC_ALPHA / ONE_MINUS_SRC_ALPHA, unculled, depth tested but not written -
     // a 1.12 particle or decal drawn with lighting off and depthMask(false) (1.12.2 ParticleBlood, ParticleDecal).
-    private static final RenderPipeline TRANSLUCENT_PIPELINE = WorldPipelines.add(RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
+    private static final RenderPipeline TRANSLUCENT_PIPELINE = WorldPipelines.add(PipelineStates.depth(PipelineStates.blend(PipelineStates.vertices(RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
             .withLocation("pipeline/golem_flat_translucent")
             .withVertexShader("core/entity")
             .withFragmentShader("core/entity")
@@ -134,10 +133,8 @@ public final class FlatCutoutRenderType {
             .withShaderDefine("NO_CARDINAL_LIGHTING")
             .withSampler("Sampler0")
             .withSampler("Sampler2")
-            .withVertexFormat(DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS)
-            .withColorTargetState(new com.mojang.blaze3d.pipeline.ColorTargetState(
-                    com.mojang.blaze3d.pipeline.BlendFunction.TRANSLUCENT))
-            .withDepthStencilState(new DepthStencilState(DepthStencilState.DEFAULT.depthTest(), false))
+            , DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS), BlendFunction.TRANSLUCENT),
+            PipelineStates.Depth.LESS_OR_EQUAL, false)
             .withCull(false)
             .build(), RenderPipelines.ENTITY_TRANSLUCENT);
 
@@ -231,7 +228,7 @@ public final class FlatCutoutRenderType {
             ^///?}
             try {
                 faintShader = ShaderLoader.load(net.minecraft.client.Minecraft.getInstance().getResourceManager(), id,
-                        com.mojang.blaze3d.vertex.DefaultVertexFormat.NEW_ENTITY, () -> {
+                        com.mojang.blaze3d.vertex.DefaultVertexFormat.ENTITY, () -> {
                             com.mojang.blaze3d.systems.RenderSystem.enableBlend();
                             com.mojang.blaze3d.systems.RenderSystem.blendFuncSeparate(
                                     com.mojang.blaze3d.platform.GlStateManager.SourceFactor.SRC_ALPHA,
@@ -259,8 +256,8 @@ public final class FlatCutoutRenderType {
         private Factory() { super(null, null, null, 0, false, false, null, null); }
 
         static RenderType decal(ResourceLocation texture) {
-            return RenderType.create("golem_flat_cutout_decal", com.mojang.blaze3d.vertex.DefaultVertexFormat.NEW_ENTITY,
-                    com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, 256, true, false,
+            return RenderType.create("golem_flat_cutout_decal", com.mojang.blaze3d.vertex.DefaultVertexFormat.ENTITY,
+                    VertexFormat.Mode.QUADS, 256, true, false,
                     CompositeState.builder()
                             .setShaderState(RENDERTYPE_ENTITY_CUTOUT_NO_CULL_SHADER)
                             .setTextureState(new TextureStateShard(texture, false, false))
@@ -273,8 +270,8 @@ public final class FlatCutoutRenderType {
         }
 
         static RenderType translucentCull(ResourceLocation texture) {
-            return RenderType.create("golem_flat_translucent_cull", com.mojang.blaze3d.vertex.DefaultVertexFormat.NEW_ENTITY,
-                    com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, 256, true, false,
+            return RenderType.create("golem_flat_translucent_cull", com.mojang.blaze3d.vertex.DefaultVertexFormat.ENTITY,
+                    VertexFormat.Mode.QUADS, 256, true, false,
                     CompositeState.builder()
                             .setShaderState(RENDERTYPE_ENTITY_TRANSLUCENT_CULL_SHADER)
                             .setTextureState(new TextureStateShard(texture, false, false))
@@ -289,8 +286,8 @@ public final class FlatCutoutRenderType {
         private static final ShaderStateShard FAINT_TRANSLUCENT_SHADER = new ShaderStateShard(FlatCutoutRenderType::faintShader);
 
         static RenderType translucent(ResourceLocation texture) {
-            return RenderType.create("golem_flat_translucent", com.mojang.blaze3d.vertex.DefaultVertexFormat.NEW_ENTITY,
-                    com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, 256, true, true,
+            return RenderType.create("golem_flat_translucent", com.mojang.blaze3d.vertex.DefaultVertexFormat.ENTITY,
+                    VertexFormat.Mode.QUADS, 256, true, true,
                     CompositeState.builder()
                             .setShaderState(FAINT_TRANSLUCENT_SHADER)
                             .setTextureState(new TextureStateShard(texture, false, false))
@@ -303,8 +300,8 @@ public final class FlatCutoutRenderType {
         }
 
         static RenderType flat(ResourceLocation texture) {
-            return RenderType.create("golem_flat_cutout", com.mojang.blaze3d.vertex.DefaultVertexFormat.NEW_ENTITY,
-                    com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, 256, true, false,
+            return RenderType.create("golem_flat_cutout", com.mojang.blaze3d.vertex.DefaultVertexFormat.ENTITY,
+                    VertexFormat.Mode.QUADS, 256, true, false,
                     CompositeState.builder()
                             .setShaderState(RENDERTYPE_ENTITY_CUTOUT_NO_CULL_SHADER)
                             .setTextureState(new TextureStateShard(texture, false, false))

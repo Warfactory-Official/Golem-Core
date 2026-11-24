@@ -1,0 +1,28 @@
+{
+    "schemaVersion": 1,
+    "id": "golemprobe",
+    "version": "${mod_version}",
+    "name": "Golem Probe (dev only)",
+    "description": "Dev-only content that exercises Golem Core without a content mod. Never shipped.",
+    "environment": "*",
+    "entrypoints": {
+        "golemcore:entry": [
+            "dev.golem.probe.ProbeEntry"
+        ],
+        "client": [
+            "dev.golem.probe.platform.fabric.ProbeFabricClient"
+        ],
+        "fabric-gametest": [
+            "dev.golem.probe.ProbeFabricGameTests"
+        ],
+        "jei_mod_plugin": [
+            "dev.golem.probe.ProbeJeiPlugin"
+        ],
+        "rei_client": [
+            "dev.golem.probe.ProbeReiPlugin"
+        ]
+    },
+    "depends": {
+        "golemcore": "*"
+    }
+}

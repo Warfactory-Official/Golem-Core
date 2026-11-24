@@ -14,11 +14,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(MouseHandler.class)
 public class MixinMouseInput {
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Inject(method = "onButton", at = @At("TAIL"))
     private void golem$afterMouseButton(long window, net.minecraft.client.input.MouseButtonInfo button,
             int action, CallbackInfo callback) {
-        MouseInput.fireButton(button.button(), action == org.lwjgl.glfw.GLFW.GLFW_PRESS);
+        MouseInput.fireButton(button.button(), action == com.mojang.blaze3d.platform.InputConstants.PRESS);
     }
     //?} else {
     /^

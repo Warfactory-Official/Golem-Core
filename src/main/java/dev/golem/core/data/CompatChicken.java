@@ -10,7 +10,7 @@ import net.minecraft.world.entity.animal.chicken.Chicken;
 import net.minecraft.network.syncher.SynchedEntityData;
 //?}
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 //?} else {
@@ -54,7 +54,7 @@ public abstract class CompatChicken extends net.minecraft.world.entity.animal.ch
     }
     *///?}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     protected final void readAdditionalSaveData(ValueInput input) {
         super.readAdditionalSaveData(input);
@@ -80,7 +80,7 @@ public abstract class CompatChicken extends net.minecraft.world.entity.animal.ch
     }
     *///?}
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*// 26.1 spelling of the server damage path. Below 26.1 vanilla only has {@code hurt}, which runs on
     // both sides; the client half is kept vanilla so only the server call reaches the 26.1-shaped hook.
     public boolean hurtServer(ServerLevel level, DamageSource source, float amount) {
@@ -94,7 +94,7 @@ public abstract class CompatChicken extends net.minecraft.world.entity.animal.ch
     }
     *///?}
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*public boolean isInvulnerableTo(ServerLevel level, DamageSource source) {
         return super.isInvulnerableTo(source);
     }
@@ -111,7 +111,7 @@ public abstract class CompatChicken extends net.minecraft.world.entity.animal.ch
     }
     *///?}
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*public boolean causeFallDamage(double fallDistance, float damageModifier, DamageSource damageSource) {
         return super.causeFallDamage((float) fallDistance, damageModifier, damageSource);
     }
@@ -122,7 +122,7 @@ public abstract class CompatChicken extends net.minecraft.world.entity.animal.ch
     }
     *///?}
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*public void lerpMotion(net.minecraft.world.phys.Vec3 movement) {
         super.lerpMotion(movement.x, movement.y, movement.z);
     }
@@ -133,7 +133,7 @@ public abstract class CompatChicken extends net.minecraft.world.entity.animal.ch
     }
     *///?}
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*public net.minecraft.world.entity.item.ItemEntity spawnAtLocation(ServerLevel level, net.minecraft.world.item.ItemStack stack) {
         return super.spawnAtLocation(stack);
     }
@@ -158,7 +158,7 @@ public abstract class CompatChicken extends net.minecraft.world.entity.animal.ch
     }
     *///?}
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*protected void customServerAiStep(ServerLevel level) {
         super.customServerAiStep();
     }
@@ -187,7 +187,7 @@ public abstract class CompatChicken extends net.minecraft.world.entity.animal.ch
     }
     *///?}
 
-    //? if >=1.21.1 && <26.1 {
+    //? if >=1.21.1 && <1.21.11 {
     /*protected void triggerOnDeathMobEffects(ServerLevel level, RemovalReason reason) {
         super.triggerOnDeathMobEffects(reason);
     }
@@ -243,14 +243,14 @@ public abstract class CompatChicken extends net.minecraft.world.entity.animal.ch
 
     /** Whether this chicken lays the plain egg: always below 26.1, the temperate variant on 26.1. */
     public boolean compatLaysPlainEgg() {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return getVariant().is(net.minecraft.world.entity.animal.chicken.ChickenVariants.TEMPERATE);
         //?} else {
         /*return true;
         *///?}
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     public net.minecraft.world.entity.SpawnGroupData finalizeSpawn(net.minecraft.world.level.ServerLevelAccessor level,
             net.minecraft.world.DifficultyInstance difficulty, net.minecraft.world.entity.EntitySpawnReason reason,

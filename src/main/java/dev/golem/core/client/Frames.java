@@ -17,7 +17,7 @@ public final class Frames {
 
     /** The partial tick for interpolating game state this frame. */
     public static float partialTick() {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
         //?} elif >=1.21 {
         /*// 1.21 introduced DeltaTracker but still reached it through getTimer(); only the accessor

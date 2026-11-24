@@ -29,7 +29,7 @@ public final class ItemExposure {
 
     /** Call once, while the mod bus is still accepting listeners. */
     public static void exposeContents(Predicate<Block> carriers, ContentsAt contents) {
-        //? if neoforge && >=26.1 {
+        //? if neoforge && >=1.21.11 {
         dev.golem.core.platform.NeoForgeEntrypoint.modBus().addListener(
                 (net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent event) -> {
                     Block[] blocks = net.minecraft.core.registries.BuiltInRegistries.BLOCK.stream().filter(carriers)
@@ -65,7 +65,7 @@ public final class ItemExposure {
      * blocks with a block entity.
      */
     public static void exposeAutomation(Predicate<Block> carriers, ContentsAt automation) {
-        //? if neoforge && >=26.1 {
+        //? if neoforge && >=1.21.11 {
         dev.golem.core.platform.NeoForgeEntrypoint.modBus().addListener(
                 (net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent event) -> {
                     Block[] blocks = net.minecraft.core.registries.BuiltInRegistries.BLOCK.stream().filter(carriers)
@@ -114,7 +114,7 @@ public final class ItemExposure {
      */
     public static @Nullable List<ItemStack> extract(Level level, BlockPos pos, Direction side, int max) {
         List<ItemStack> out = new ArrayList<>();
-        //? if neoforge && >=26.1 {
+        //? if neoforge && >=1.21.11 {
         var handler = level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.Item.BLOCK, pos, side);
         if (handler == null) return null;
         try (var tx = net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
@@ -169,7 +169,7 @@ public final class ItemExposure {
 
     /** Puts {@code stack} in through the item capability on {@code side}; how many went in, -1 where nothing answers. For tests. */
     public static int insert(Level level, BlockPos pos, Direction side, ItemStack stack) {
-        //? if neoforge && >=26.1 {
+        //? if neoforge && >=1.21.11 {
         var handler = level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.Item.BLOCK, pos, side);
         if (handler == null) return -1;
         int moved = 0;
@@ -226,7 +226,7 @@ public final class ItemExposure {
     /** The non-empty stacks the NeoForge item capability at {@code pos} lists, in slot order. Null elsewhere or where nothing answers. */
     public static @Nullable List<ItemStack> read(Level level, BlockPos pos, @Nullable Direction side) {
         List<ItemStack> stacks = new ArrayList<>();
-        //? if neoforge && >=26.1 {
+        //? if neoforge && >=1.21.11 {
         var handler = level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.Item.BLOCK, pos, side);
         if (handler == null) return null;
         for (int i = 0; i < handler.size(); i++) {
@@ -258,7 +258,7 @@ public final class ItemExposure {
     public static @Nullable Probe probe(Level level, BlockPos pos, @Nullable Direction side) {
         List<ItemStack> stacks = new ArrayList<>();
         int moved = 0;
-        //? if neoforge && >=26.1 {
+        //? if neoforge && >=1.21.11 {
         var handler = level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.Item.BLOCK, pos, side);
         if (handler == null) return null;
         try (var tx = net.neoforged.neoforge.transfer.transaction.Transaction.openRoot()) {
@@ -290,7 +290,7 @@ public final class ItemExposure {
         *///?}
     }
 
-    //? if neoforge && >=26.1 {
+    //? if neoforge && >=1.21.11 {
     private record View(Container container)
             implements net.neoforged.neoforge.transfer.ResourceHandler<net.neoforged.neoforge.transfer.item.ItemResource> {
 
@@ -373,7 +373,7 @@ public final class ItemExposure {
     }
     //?}
 
-    //? if neoforge && <26.1 {
+    //? if neoforge && <1.21.11 {
     /*private record View(Container container) implements net.neoforged.neoforge.items.IItemHandler {
 
         @Override public int getSlots() { return container.getContainerSize(); }

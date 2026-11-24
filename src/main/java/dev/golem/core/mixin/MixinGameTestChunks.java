@@ -1,6 +1,6 @@
 package dev.golem.core.mixin;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import dev.golem.core.gametest.TestChunks;
 import net.minecraft.gametest.framework.GameTestInfo;
 import net.minecraft.gametest.framework.GameTestRunner;

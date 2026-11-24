@@ -1,6 +1,6 @@
 package dev.golem.core.render.gem;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import dev.golem.core.GolemCore;
 import dev.golem.core.client.ClientTicks;
 import dev.golem.core.platform.Platform;

@@ -1,6 +1,6 @@
 package dev.golem.core.render;
 
-//? if fabric && <26.1 {
+//? if fabric && <1.21.11 {
 /*import com.mojang.blaze3d.vertex.VertexFormat;
 import net.fabricmc.fabric.impl.client.rendering.FabricShaderProgram;
 import net.minecraft.client.renderer.ShaderInstance;
@@ -39,7 +39,7 @@ final class ShaderLoader {
         };
     }
 }
-*///?} elif neoforge && <26.1 {
+*///?} elif neoforge && <1.21.11 {
 /*import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.renderer.ShaderInstance;
 import net.minecraft.server.packs.resources.ResourceProvider;

@@ -17,7 +17,7 @@ public final class Portals {
         //?} elif forge {
         /*portal = net.minecraftforge.event.ForgeEventFactory.onTrySpawnPortal(level, pos, portal);
          *///?}
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         portal.ifPresent(shape -> shape.createPortalBlocks(level));
         //?} else {
         /*portal.ifPresent(PortalShape::createPortalBlocks);

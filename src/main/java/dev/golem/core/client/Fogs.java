@@ -1,7 +1,7 @@
 package dev.golem.core.client;
 
 import net.minecraft.client.Minecraft;
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.client.renderer.fog.FogData;
 //?} else {
 /*import net.minecraft.client.renderer.FogRenderer;
@@ -70,7 +70,7 @@ public final class Fogs {
                 });
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(net.neoforged.bus.api.EventPriority.LOW,
                 (net.neoforged.neoforge.client.event.ViewportEvent.RenderFog event) -> {
-                    //? if >=26.1 {
+                    //? if >=1.21.11 {
                     float blocks = event.getFogData().renderDistanceEnd;
                     //?} else {
                     /*float blocks = legacyFogDistance(event.getMode() == FogRenderer.FogMode.FOG_TERRAIN);
@@ -78,7 +78,7 @@ public final class Fogs {
                     Entity camera = net.minecraft.client.Minecraft.getInstance().getCameraEntity();
                     float far = far(camera, blocks);
                     if (Float.isNaN(far)) return;
-                    //? if >=26.1 {
+                    //? if >=1.21.11 {
                     applyDistances(event.getFogData(), camera, blocks);
                     //?} else {
                     /*event.setNearPlaneDistance(0.0F);
@@ -121,7 +121,7 @@ public final class Fogs {
         return terrain ? Math.max(renderDistanceBlocks(), 32.0F) : renderDistanceBlocks();
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     /** Writes the active modifiers' distances using this invocation's caller distance, in blocks. */
     public static void applyDistances(FogData data, Entity camera,
                                       float renderDistanceBlocks) {
@@ -136,7 +136,7 @@ public final class Fogs {
 
     /** Whether the client's camera sits in water (26.1 fluid-in-camera; earlier the camera entity's eye). */
     public static boolean cameraInWater() {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return Minecraft.getInstance().gameRenderer.getMainCamera().getFluidInCamera()
                 == FogType.WATER;
         //?} else {

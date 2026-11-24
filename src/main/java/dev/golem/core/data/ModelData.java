@@ -9,7 +9,7 @@ import net.minecraft.world.item.component.CustomModelData;
 import java.util.List;
 //?}
 
-//? if >=1.20.5 && <26.1 {
+//? if >=1.20.5 && <1.21.11 {
 /*import net.minecraft.world.item.component.DyedItemColor;
 *///?}
 
@@ -35,7 +35,7 @@ public final class ModelData {
 
     /** Tags a stack with a tint colour used by its model. */
     public static void setColor(ItemStack stack, int color) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         stack.set(DataComponents.CUSTOM_MODEL_DATA,
                 new CustomModelData(List.of(), List.of(), List.of(), List.of(color)));
         //?} elif >=1.20.5 {
@@ -54,7 +54,7 @@ public final class ModelData {
      * slot, so index 0 goes there as {@link #setColor} would put it and the whole list rides custom data.
      */
     public static void setColors(ItemStack stack, int... colors) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         List<Integer> list = new java.util.ArrayList<>(colors.length);
         for (int color : colors) list.add(color);
         stack.set(DataComponents.CUSTOM_MODEL_DATA,
@@ -71,7 +71,7 @@ public final class ModelData {
 
     /** The colour at {@code index} set by {@link #setColors} (or {@link #setColor} for index 0), or the default. */
     public static int color(ItemStack stack, int index, int defaultColor) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         CustomModelData data = stack.get(DataComponents.CUSTOM_MODEL_DATA);
         return data == null || data.colors().size() <= index ? defaultColor : data.colors().get(index);
         //?} elif >=1.20.5 {
@@ -90,7 +90,7 @@ public final class ModelData {
 
     /** Removes the tint and model data created by {@link #setColor}. */
     public static void removeColor(ItemStack stack) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         stack.remove(DataComponents.CUSTOM_MODEL_DATA);
         //?} elif >=1.20.5 {
         /*stack.remove(DataComponents.DYED_COLOR);
@@ -101,7 +101,7 @@ public final class ModelData {
 
     /** Tags a stack with a tint colour plus a boolean flag (used for the molten-scrap model). */
     public static void setColorAndFlag(ItemStack stack, int color, boolean flag) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         stack.set(DataComponents.CUSTOM_MODEL_DATA,
                 new CustomModelData(List.of(), List.of(flag), List.of(), List.of(color)));
         //?} elif >=1.20.5 {
@@ -117,7 +117,7 @@ public final class ModelData {
 
     /** Reads back the boolean flag set by {@link #setColorAndFlag}. */
     public static boolean flag(ItemStack stack) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         CustomModelData data = stack.get(DataComponents.CUSTOM_MODEL_DATA);
         if (data == null) return false;
         return !data.flags().isEmpty() && Boolean.TRUE.equals(data.flags().get(0));
@@ -134,7 +134,7 @@ public final class ModelData {
      * Both eras answer from wherever that era stored it.
      */
     public static int color(ItemStack stack, int defaultColor) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         CustomModelData data = stack.get(DataComponents.CUSTOM_MODEL_DATA);
         return data == null || data.colors().isEmpty() ? defaultColor : data.colors().get(0);
         //?} elif >=1.20.5 {

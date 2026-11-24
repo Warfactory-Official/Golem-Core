@@ -59,7 +59,7 @@ final class MenuSlotAccessor implements SlotAccessor {
                 new SlotAccessorRegistry.Serializer() {
                     @Override
                     public SlotAccessor read(net.minecraft.world.inventory.AbstractContainerMenu menu, Player player, CompoundTag tag) {
-                        //? if >=26.1 {
+                        //? if >=1.21.11 {
                         int index = tag.getIntOr("Slot", -1);
                         //?} else {
                         /*int index = tag.getInt("Slot");

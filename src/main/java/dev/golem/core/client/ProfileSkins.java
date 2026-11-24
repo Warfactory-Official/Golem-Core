@@ -14,8 +14,12 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
+//? if >=26.3 {
+/*import com.mojang.authlib.services.ProfileResult;
+*///?} else {
 import com.mojang.authlib.yggdrasil.ProfileResult;
+//?}
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.resources.Identifier;
 //?} elif >=1.21 {
@@ -49,7 +53,7 @@ public final class ProfileSkins {
     /** A loaded skin: 64x64 {@code 0xAARRGGBB} pixels and the registered texture. */
     public record Skin(
             int[] argb,
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier texture
             //?} else {
             /*ResourceLocation texture
@@ -58,7 +62,7 @@ public final class ProfileSkins {
 
     /** Vanilla has finished this skin's texture. */
     private record Registered(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier vanilla
             //?} else {
             /*ResourceLocation vanilla
@@ -106,7 +110,7 @@ public final class ProfileSkins {
     }
 
     private static @Nullable GameProfile profile(Minecraft minecraft, UUID id) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         ProfileResult result = minecraft.services().sessionService().fetchProfile(id, false);
         return result == null ? null : result.profile();
         //?} elif >=1.21 {
@@ -118,7 +122,7 @@ public final class ProfileSkins {
     }
 
     private static boolean hasSkin(Minecraft minecraft, GameProfile profile) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return minecraft.services().sessionService().getPackedTextures(profile) != null;
         //?} elif >=1.21 {
         /*return minecraft.getMinecraftSessionService().getPackedTextures(profile) != null;
@@ -128,7 +132,7 @@ public final class ProfileSkins {
     }
 
     private static void requestSkin(Minecraft minecraft, UUID id, GameProfile profile) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         minecraft.getSkinManager().get(profile).thenAcceptAsync(skin -> {
             if (skin.isEmpty()) fail(id, "the skin did not load");
             else STATE.put(id, new Registered(skin.get().body().texturePath()));
@@ -142,7 +146,7 @@ public final class ProfileSkins {
         *///?}
     }
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*// Vanilla reports a skin downloaded and only then queues its upload on the same executor, so a readback queued from
     // the report would see the placeholder; queued from a task that runs after it, it sees the skin.
     private static void afterUpload(Minecraft minecraft, UUID id, ResourceLocation vanilla) {
@@ -175,14 +179,14 @@ public final class ProfileSkins {
     }
 
     private static int @Nullable [] pixels(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier vanilla
             //?} else {
             /*ResourceLocation vanilla
             *///?}
     ) {
         int[] argb = new int[SIZE * SIZE];
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         if (!(Minecraft.getInstance().getTextureManager().getTexture(vanilla) instanceof DynamicTexture texture)) return null;
         NativeImage image = texture.getPixels();
         if (image == null || image.getWidth() != SIZE || image.getHeight() != SIZE) return null;

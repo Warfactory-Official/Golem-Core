@@ -75,7 +75,7 @@ public final class GolemArmorMaterial {
         return durability;
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private TagKey<Item> repairTag() {
         return TagKey.create(Registries.ITEM,
                 Ids.of(namespace, repairIngredient));
@@ -92,7 +92,7 @@ public final class GolemArmorMaterial {
     }
     *///?}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private net.minecraft.world.item.equipment.ArmorMaterial createNative() {
         Map<net.minecraft.world.item.equipment.ArmorType, Integer> defense =
                 new EnumMap<>(net.minecraft.world.item.equipment.ArmorType.class);

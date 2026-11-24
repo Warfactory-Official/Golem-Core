@@ -1,5 +1,6 @@
 package dev.golem.core.render;
 
+import com.mojang.blaze3d.vertex.VertexFormat;
 import com.google.gson.JsonObject;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -289,13 +290,16 @@ public final class StaticMeshes {
             return (a & 0xFF) << 24 | (r & 0xFF) << 16 | (g & 0xFF) << 8 | (b & 0xFF);
         }
 
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         @Override public VertexConsumer addVertex(float x, float y, float z) { start(x, y, z); return this; }
         @Override public VertexConsumer setColor(int r, int g, int b, int a) { putColour(argb(r, g, b, a)); return this; }
         @Override public VertexConsumer setColor(int argb) { putColour(argb); return this; }
         @Override public VertexConsumer setUv(float u, float v) { putUv(u, v); return this; }
         @Override public VertexConsumer setUv1(int u, int v) { putOverlay(u, v); return this; }
         @Override public VertexConsumer setUv2(int u, int v) { putLight(u, v); return this; }
+        //? if >=26.3 {
+        /*@Override public VertexConsumer setUv3(float u, float v) { return this; }
+        *///?}
         @Override public VertexConsumer setNormal(float x, float y, float z) { putNormal(x, y, z); return this; }
         @Override public VertexConsumer setLineWidth(float width) { bad = true; return this; }
         @Override public VertexConsumer addVertex(PoseStack.Pose pose, float x, float y, float z) { start(x, y, z); return this; }
@@ -307,6 +311,9 @@ public final class StaticMeshes {
         @Override public VertexConsumer setUv(float u, float v) { putUv(u, v); return this; }
         @Override public VertexConsumer setUv1(int u, int v) { putOverlay(u, v); return this; }
         @Override public VertexConsumer setUv2(int u, int v) { putLight(u, v); return this; }
+        //? if >=26.3 {
+        @Override public VertexConsumer setUv3(float u, float v) { return this; }
+        //?}
         @Override public VertexConsumer setNormal(float x, float y, float z) { putNormal(x, y, z); return this; }
         @Override public VertexConsumer addVertex(PoseStack.Pose pose, float x, float y, float z) { start(x, y, z); return this; }
         @Override public VertexConsumer addVertex(org.joml.Matrix4f pose, float x, float y, float z) { start(x, y, z); return this; }
@@ -366,7 +373,7 @@ public final class StaticMeshes {
     static final class Mesh {
         final int vertices;
         long lastUsed;
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         final com.mojang.blaze3d.buffers.GpuBuffer buffer;
 
         Mesh(com.mojang.blaze3d.buffers.GpuBuffer buffer, int vertices) {
@@ -422,7 +429,7 @@ public final class StaticMeshes {
             *///?}
         }
 
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         static final String NAME = "gpu-buffer";
         private static final int BLOCK_BYTES = 176;
         private static final int RING_SLOTS = 256;
@@ -442,18 +449,30 @@ public final class StaticMeshes {
             if (format == null) {
                 // Model-space normals stay floats: vanilla's NORMAL element is the byte the immediate path writes
                 // after transforming, and quantising before the transform would round a different value.
-                // the highest free id (findNextId is NeoForge-only), as far from vanilla's and other mods' as it gets
-                int id = com.mojang.blaze3d.vertex.VertexFormatElement.MAX_COUNT - 1;
+                //? if >=26.2 {
+                /*format = com.mojang.blaze3d.vertex.VertexFormat.builder(0)
+                        .addAttribute("Position", com.mojang.blaze3d.GpuFormat.RGB32_FLOAT)
+                        .addAttribute("UV0", com.mojang.blaze3d.GpuFormat.RG32_FLOAT)
+                        .addAttribute("Normal", com.mojang.blaze3d.GpuFormat.RGB32_FLOAT)
+                        .build();
+                *///?} else {
+                int id = com.mojang.blaze3d.vertex.VertexFormatElement.MAX_COUNT - 1; // highest free id, far from others
                 while (id >= 0 && com.mojang.blaze3d.vertex.VertexFormatElement.byId(id) != null) id--;
                 if (id < 0) throw new IllegalStateException("No free vertex format element id");
                 com.mojang.blaze3d.vertex.VertexFormatElement normal = com.mojang.blaze3d.vertex.VertexFormatElement.register(
                         id, 0,
+                        //? if >=26.1 {
                         com.mojang.blaze3d.vertex.VertexFormatElement.Type.FLOAT, false, 3);
+                        //?} else {
+                        /*com.mojang.blaze3d.vertex.VertexFormatElement.Type.FLOAT,
+                        com.mojang.blaze3d.vertex.VertexFormatElement.Usage.NORMAL, 3);
+                        *///?}
                 format = com.mojang.blaze3d.vertex.VertexFormat.builder()
                         .add("Position", com.mojang.blaze3d.vertex.VertexFormatElement.POSITION)
                         .add("UV0", com.mojang.blaze3d.vertex.VertexFormatElement.UV0)
                         .add("Normal", normal)
                         .build();
+                //?}
             }
             return format;
         }
@@ -464,17 +483,24 @@ public final class StaticMeshes {
          */
         private static com.mojang.blaze3d.pipeline.RenderPipeline pipeline() throws IOException {
             if (pipeline == null) {
-                com.mojang.blaze3d.pipeline.RenderPipeline vanilla = net.minecraft.client.renderer.RenderPipelines.ENTITY_CUTOUT_CULL;
+                com.mojang.blaze3d.pipeline.RenderPipeline vanilla = VanillaPipelines.ENTITY_CUTOUT_CULL;
                 com.mojang.blaze3d.pipeline.RenderPipeline built = builder("pipeline/static_mesh_entity_cutout_cull").build();
-                if (!built.getFragmentShader().equals(vanilla.getFragmentShader())
+                if (!PipelineStates.fragmentShader(built).equals(PipelineStates.fragmentShader(vanilla))
                         || !built.getShaderDefines().equals(vanilla.getShaderDefines())
                         || built.isCull() != vanilla.isCull()
-                        || !built.getColorTargetState().equals(vanilla.getColorTargetState())
+                        //? if >=26.1 {
+                        || !PipelineStates.colorTargets(built).equals(PipelineStates.colorTargets(vanilla))
                         || !java.util.Objects.equals(built.getDepthStencilState(), vanilla.getDepthStencilState())
+                        //?} else {
+                        /*|| !built.getBlendFunction().equals(vanilla.getBlendFunction())
+                        || built.isWriteColor() != vanilla.isWriteColor() || built.isWriteAlpha() != vanilla.isWriteAlpha()
+                        || built.getDepthTestFunction() != vanilla.getDepthTestFunction()
+                        || built.isWriteDepth() != vanilla.isWriteDepth()
+                        *///?}
                         || built.getPolygonMode() != vanilla.getPolygonMode()
-                        || !new java.util.HashSet<>(built.getSamplers()).equals(new java.util.HashSet<>(vanilla.getSamplers()))
-                        || vanilla.getVertexFormatMode() != com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS
-                        || !vanilla.getVertexShader().equals(net.minecraft.resources.Identifier.withDefaultNamespace("core/entity"))) {
+                        || !PipelineStates.samplers(built).equals(PipelineStates.samplers(vanilla))
+                        || vanilla.getVertexFormatMode() != VertexFormat.Mode.QUADS
+                        || !PipelineStates.vertexShader(vanilla).equals(net.minecraft.resources.Identifier.withDefaultNamespace("core/entity"))) {
                     throw new IllegalStateException("entity_cutout_cull is not the pipeline this mirror was written for: " + vanilla);
                 }
                 pipeline = WorldPipelines.add(built);
@@ -487,7 +513,7 @@ public final class StaticMeshes {
         }
 
         private static com.mojang.blaze3d.pipeline.RenderPipeline.Builder builder(String location) {
-            return com.mojang.blaze3d.pipeline.RenderPipeline
+            return PipelineStates.depth(PipelineStates.vertices(com.mojang.blaze3d.pipeline.RenderPipeline
                     .builder(net.minecraft.client.renderer.RenderPipelines.MATRICES_FOG_LIGHT_DIR_SNIPPET)
                     .withLocation(dev.golem.core.Ids.of("golemcore", location))
                     .withVertexShader(dev.golem.core.Ids.of("golemcore", "core/static_mesh"))
@@ -497,8 +523,8 @@ public final class StaticMeshes {
                     .withSampler("Sampler1")
                     .withShaderDefine("ALPHA_CUTOUT", 0.1F)
                     .withUniform("StaticMesh", com.mojang.blaze3d.shaders.UniformType.UNIFORM_BUFFER)
-                    .withVertexFormat(format(), com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS)
-                    .withDepthStencilState(com.mojang.blaze3d.pipeline.DepthStencilState.DEFAULT);
+                    , format(), VertexFormat.Mode.QUADS),
+                    PipelineStates.Depth.LESS_OR_EQUAL, true);
         }
 
         static Mesh upload(String name, float[] data, int vertices) {
@@ -550,36 +576,27 @@ public final class StaticMeshes {
                             net.minecraft.client.renderer.rendertype.TextureTransform.DEFAULT_TEXTURING.getMatrix());
             int indexCount = mesh.vertices / 4 * 6;
             com.mojang.blaze3d.systems.RenderSystem.AutoStorageIndexBuffer indices =
-                    com.mojang.blaze3d.systems.RenderSystem.getSequentialBuffer(com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS);
+                    com.mojang.blaze3d.systems.RenderSystem.getSequentialBuffer(VertexFormat.Mode.QUADS);
             com.mojang.blaze3d.buffers.GpuBuffer indexBuffer = indices.getBuffer(indexCount);
-            com.mojang.blaze3d.pipeline.RenderTarget target =
-                    net.minecraft.client.renderer.rendertype.OutputTarget.MAIN_TARGET.getRenderTarget();
-            com.mojang.blaze3d.textures.GpuTextureView colorTexture = com.mojang.blaze3d.systems.RenderSystem.outputColorTextureOverride != null
-                    ? com.mojang.blaze3d.systems.RenderSystem.outputColorTextureOverride : target.getColorTextureView();
-            com.mojang.blaze3d.textures.GpuTextureView depthTexture = target.useDepth
-                    ? (com.mojang.blaze3d.systems.RenderSystem.outputDepthTextureOverride != null
-                    ? com.mojang.blaze3d.systems.RenderSystem.outputDepthTextureOverride : target.getDepthTextureView())
-                    : null;
+            com.mojang.blaze3d.textures.GpuTextureView colorTexture = Passes.outputColor();
+            com.mojang.blaze3d.textures.GpuTextureView depthTexture = Passes.outputDepth();
             net.minecraft.client.renderer.texture.AbstractTexture texture =
                     minecraft.getTextureManager().getTexture(dev.golem.core.Ids.parse(surface.texture()));
             com.mojang.blaze3d.textures.GpuSampler linear = com.mojang.blaze3d.systems.RenderSystem.getSamplerCache()
                     .getClampToEdge(com.mojang.blaze3d.textures.FilterMode.LINEAR);
-            try (com.mojang.blaze3d.systems.RenderPass pass = com.mojang.blaze3d.systems.RenderSystem.getDevice()
-                    .createCommandEncoder()
-                    .createRenderPass(() -> "Golem static mesh", colorTexture, java.util.OptionalInt.empty(), depthTexture,
-                            java.util.OptionalDouble.empty())) {
-                pass.setPipeline(pipeline);
+            try (com.mojang.blaze3d.systems.RenderPass pass = Passes.open(() -> "Golem static mesh", colorTexture, depthTexture)) {
+                Passes.pipeline(pass, pipeline);
                 com.mojang.blaze3d.systems.ScissorState scissor = com.mojang.blaze3d.systems.RenderSystem.getScissorStateForRenderTypeDraws();
                 if (scissor.enabled()) pass.enableScissor(scissor.x(), scissor.y(), scissor.width(), scissor.height());
                 com.mojang.blaze3d.systems.RenderSystem.bindDefaultUniforms(pass);
                 pass.setUniform("DynamicTransforms", transforms);
                 pass.setUniform("StaticMesh", part);
-                pass.setVertexBuffer(0, mesh.buffer);
-                pass.bindTexture("Sampler1", minecraft.gameRenderer.overlayTexture().getTextureView(), linear);
-                pass.bindTexture("Sampler2", minecraft.gameRenderer.lightmap(), linear);
-                pass.bindTexture("Sampler0", texture.getTextureView(), texture.getSampler());
+                Passes.vertices(pass, mesh.buffer);
+                Passes.texture(pass, "Sampler1", minecraft.gameRenderer.overlayTexture().getTextureView(), linear);
+                Passes.texture(pass, "Sampler2", minecraft.gameRenderer.lightmap(), linear);
+                Passes.texture(pass, "Sampler0", texture.getTextureView(), texture.getSampler());
                 pass.setIndexBuffer(indexBuffer, indices.type());
-                pass.drawIndexed(0, 0, indexCount, 1);
+                Passes.drawIndexed(pass, 0, indexCount);
             }
         }
 
@@ -662,8 +679,8 @@ public final class StaticMeshes {
                 for (int i = 0; i < data.length; i++) org.lwjgl.system.MemoryUtil.memPutFloat(pointer + 4L * i, data[i]);
                 try (com.mojang.blaze3d.vertex.MeshData mesh = new com.mojang.blaze3d.vertex.MeshData(bytes.build(),
                         new com.mojang.blaze3d.vertex.MeshData.DrawState(format(), vertices, vertices / 4 * 6,
-                                com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS,
-                                com.mojang.blaze3d.vertex.VertexFormat.IndexType.least(vertices)))) {
+                                VertexFormat.Mode.QUADS,
+                                VertexFormat.IndexType.least(vertices)))) {
                     buffer.bind();
                     buffer.upload(mesh);
                     com.mojang.blaze3d.vertex.VertexBuffer.unbind();
@@ -672,7 +689,7 @@ public final class StaticMeshes {
             //?} else {
             /^com.mojang.blaze3d.vertex.BufferBuilder builder = com.mojang.blaze3d.vertex.Tesselator.getInstance().getBuilder();
             if (builder.building()) throw new IllegalStateException("the tesselator is in use");
-            builder.begin(com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, format());
+            builder.begin(VertexFormat.Mode.QUADS, format());
             for (int at = 0; at < data.length; at += Capture.FLOATS) {
                 builder.vertex(data[at], data[at + 1], data[at + 2]);
                 builder.uv(data[at + 3], data[at + 4]);

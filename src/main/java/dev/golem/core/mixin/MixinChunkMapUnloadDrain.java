@@ -1,6 +1,6 @@
 package dev.golem.core.mixin;
 
-//? if >=1.21.1 && <26.1 {
+//? if >=1.21.1 && <1.21.11 {
 /*import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import java.util.Queue;

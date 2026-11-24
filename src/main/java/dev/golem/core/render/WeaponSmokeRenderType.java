@@ -1,9 +1,7 @@
 package dev.golem.core.render;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import com.mojang.blaze3d.pipeline.BlendFunction;
-import com.mojang.blaze3d.pipeline.ColorTargetState;
-import com.mojang.blaze3d.pipeline.DepthStencilState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
@@ -20,14 +18,13 @@ import net.minecraft.client.renderer.RenderType;
 public final class WeaponSmokeRenderType {
     private WeaponSmokeRenderType() {}
 
-    //? if >=26.1 {
-    private static final RenderPipeline PIPELINE = WorldPipelines.add(RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
+    //? if >=1.21.11 {
+    private static final RenderPipeline PIPELINE = WorldPipelines.add(PipelineStates.depth(PipelineStates.blend(PipelineStates.vertices(RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
             .withLocation("pipeline/golem_weapon_smoke")
             .withVertexShader("core/rendertype_lightning")
             .withFragmentShader("core/rendertype_lightning")
-            .withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS)
-            .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
-            .withDepthStencilState(new DepthStencilState(DepthStencilState.DEFAULT.depthTest(), false))
+            , DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS), BlendFunction.TRANSLUCENT),
+            PipelineStates.Depth.LESS_OR_EQUAL, false)
             .withCull(false)
             .build());
 

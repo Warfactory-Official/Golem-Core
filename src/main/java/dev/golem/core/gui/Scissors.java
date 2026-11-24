@@ -16,14 +16,14 @@ public final class Scissors {
 
     private Scissors() {}
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*private static final java.util.ArrayDeque<int[]> SAVED = new java.util.ArrayDeque<>();
     private static final int[] NONE = new int[0];
     *///?}
 
     /** Clips to the framebuffer rectangle (origin bottom-left) within the current clip; false if nothing is set. */
     public static boolean push(int x, int y, int width, int height) {
-        //? if <26.1 {
+        //? if <1.21.11 {
         /*boolean enabled = org.lwjgl.opengl.GL11.glIsEnabled(org.lwjgl.opengl.GL11.GL_SCISSOR_TEST);
         int[] box = new int[4];
         if (enabled) org.lwjgl.opengl.GL11.glGetIntegerv(org.lwjgl.opengl.GL11.GL_SCISSOR_BOX, box);
@@ -44,7 +44,7 @@ public final class Scissors {
 
     /** Restores the clip {@link #push} found. */
     public static void pop() {
-        //? if <26.1 {
+        //? if <1.21.11 {
         /*if (SAVED.isEmpty()) {
             com.mojang.blaze3d.systems.RenderSystem.disableScissor();
             return;

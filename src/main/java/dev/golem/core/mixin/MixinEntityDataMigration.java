@@ -6,7 +6,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-//? if >=26.1 {
+//? if >=1.21.11 {
 import dev.golem.core.data.ValueDataIn;
 import net.minecraft.world.level.storage.ValueInput;
 //?} else {
@@ -30,7 +30,7 @@ import net.minecraft.nbt.CompoundTag;
 public abstract class MixinEntityDataMigration {
 
     @Inject(method = "load", at = @At("TAIL"))
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private void golem$migrateLegacyData(ValueInput input, CallbackInfo ci) {
         if (EntityData.migrating()) EntityData.migrateLegacy((Entity) (Object) this, new ValueDataIn(input));
     }

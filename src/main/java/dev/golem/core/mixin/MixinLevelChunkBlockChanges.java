@@ -19,7 +19,7 @@ public abstract class MixinLevelChunkBlockChanges {
 
     @Inject(method = "setBlockState", at = @At("RETURN"))
     private void golem$blockChanged(BlockPos pos, BlockState state,
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             int flags,
             //?} else {
             /*boolean movedByPiston,

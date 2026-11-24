@@ -240,7 +240,7 @@ public final class RecipeTables {
 
         @SuppressWarnings("unchecked")
         private void collect(RecipeManager manager, List<Entry<T>> rows) {
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             for (RecipeHolder<?> holder : manager.getRecipes()) {
                 if (holder.value() instanceof TableRecipe<?> recipe && recipe.table == this) {
                     rows.add(new Entry<>(Ids.keyId(holder.id()).toString(), (T) recipe.value));
@@ -365,6 +365,21 @@ public final class RecipeTables {
      * {@code /reload}, before the recipes are sent to any player, so clients, recipe books and recipe viewers never see
      * them. Each reload builds a new recipe manager; the one already handled is skipped.
      */
+    //? if fabric && >=26.3 {
+    /*/^* NeoForge's {@code RecipeMap.createClient}: a map over exactly these recipes (constructor widened). ^/
+    private static net.minecraft.world.item.crafting.RecipeMap recipeMap(List<RecipeHolder<?>> recipes) {
+        com.google.common.collect.ImmutableMultimap.Builder<net.minecraft.world.item.crafting.RecipeType<?>, RecipeHolder<?>> byType =
+                com.google.common.collect.ImmutableMultimap.builder();
+        com.google.common.collect.ImmutableMap.Builder<net.minecraft.resources.ResourceKey<net.minecraft.world.item.crafting.Recipe<?>>,
+                RecipeHolder<?>> byKey = com.google.common.collect.ImmutableMap.builder();
+        for (RecipeHolder<?> recipe : recipes) {
+            byType.put(recipe.value().getType(), recipe);
+            byKey.put(recipe.id(), recipe);
+        }
+        return new net.minecraft.world.item.crafting.RecipeMap(byType.build(), byKey.build());
+    }
+    *///?}
+
     private static synchronized void removeListedRecipes(MinecraftServer server) {
         RecipeManager manager = server.getRecipeManager();
         if (manager == filtered) return;
@@ -375,7 +390,7 @@ public final class RecipeTables {
         removed.addAll(unmet);
         if (removed.isEmpty()) return;
         int dropped = 0;
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         List<RecipeHolder<?>> kept = new ArrayList<>();
         for (RecipeHolder<?> holder : manager.getRecipes()) {
             if (removed.contains(Ids.keyId(holder.id()).toString())) dropped++;
@@ -385,7 +400,17 @@ public final class RecipeTables {
         // 26.1 has no public setter (the client holds no recipes); the field is widened by Core's AT/AW. The
         // derived views (recipe book displays, stonecutter list, property sets, NeoForge priorities) are rebuilt as
         // the server's own load does.
+        // 26.3 builds the map from the recipe registry; the list form is NeoForge's (also widened, with learnableRecipes).
+        //? if >=26.3 {
+        /*//? if neoforge {
+        manager.recipes = net.minecraft.world.item.crafting.RecipeMap.createClient(kept);
+        //?} else {
+        /^manager.recipes = recipeMap(kept);
+        ^///?}
+        manager.learnableRecipes = kept.stream().filter(r -> !r.value().isSpecial()).toList();
+        *///?} else {
         manager.recipes = net.minecraft.world.item.crafting.RecipeMap.create(kept);
+        //?}
         manager.finalizeRecipeLoading(server.getWorldData().enabledFeatures());
         //?} elif >=1.20.5 {
         /*List<RecipeHolder<?>> kept = new ArrayList<>();
@@ -462,14 +487,18 @@ public final class RecipeTables {
             return table.recipeType();
         }
 
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         @Override
         public boolean matches(RecipeInput input, Level level) {
             return false;
         }
 
         @Override
+        //? if >=26.1 {
         public ItemStack assemble(RecipeInput input) {
+        //?} else {
+        /*public ItemStack assemble(RecipeInput input, HolderLookup.Provider registries) {
+        *///?}
             return ItemStack.EMPTY;
         }
 
@@ -549,8 +578,8 @@ public final class RecipeTables {
                 buffer -> new TableRecipe<>(table,
                         table.fromJson(JsonParser.parseString(buffer.readUtf(262144)), buffer.registryAccess())));
         //?}
-        //? if >=26.1 {
-        return new RecipeSerializer<>(codec, stream);
+        //? if >=1.21.11 {
+        return CustomRecipes.serializerOf(codec, stream);
         //?} elif >=1.20.5 {
         /*MapCodec<TableRecipe<T>> mapCodec = codec;
         return new RecipeSerializer<TableRecipe<T>>() {
@@ -607,7 +636,7 @@ public final class RecipeTables {
 
         @Override
         public
-                //? if >=26.1 {
+                //? if >=1.21.11 {
                 net.minecraft.resources.Identifier
                 //?} else {
                 /*net.minecraft.resources.ResourceLocation

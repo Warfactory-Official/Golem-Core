@@ -39,7 +39,32 @@ public abstract class MixinFogRendererModifiers {
         Fogs.applyDistances(data, entity, renderDistanceInChunks * 16.0F);
     }
 }
-//?} else {
+//?} elif >=1.21.11 {
+/*@Mixin(net.minecraft.client.renderer.fog.FogRenderer.class)
+public abstract class MixinFogRendererModifiers {
+
+    // 1.21.11 uploads the fog buffer inside setupFog, so the colour and distances change before the upload.
+    @com.llamalad7.mixinextras.injector.ModifyReturnValue(method = "computeFogColor", at = @At("RETURN"))
+    private org.joml.Vector4f golem$fogColor(org.joml.Vector4f color) {
+        Entity entity = Minecraft.getInstance().getCameraEntity();
+        if (!Fogs.active(entity)) return color;
+        Vec3 modified = Fogs.color(entity, new Vec3(color.x(), color.y(), color.z()));
+        return color.set((float) modified.x, (float) modified.y, (float) modified.z, color.w());
+    }
+
+    @Inject(method = "setupFog", at = @At(value = "INVOKE",
+            target = "Lcom/mojang/blaze3d/systems/RenderSystem;getDevice()Lcom/mojang/blaze3d/systems/GpuDevice;"))
+    private void golem$fogDistance(net.minecraft.client.Camera camera, int renderDistanceInChunks,
+                                   net.minecraft.client.DeltaTracker deltaTracker, float darkenWorldAmount,
+                                   net.minecraft.client.multiplayer.ClientLevel level,
+                                   org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable<org.joml.Vector4f> cir,
+                                   @com.llamalad7.mixinextras.sugar.Local net.minecraft.client.renderer.fog.FogData data) {
+        Entity entity = Minecraft.getInstance().getCameraEntity();
+        if (!Fogs.active(entity)) return;
+        Fogs.applyDistances(data, entity, renderDistanceInChunks * 16.0F);
+    }
+}
+*///?} else {
 /*@Mixin(net.minecraft.client.renderer.FogRenderer.class)
 public abstract class MixinFogRendererModifiers {
 

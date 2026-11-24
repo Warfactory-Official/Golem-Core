@@ -16,7 +16,7 @@ public final class PlayerInputs {
     }
 
     public static State read(LocalPlayer player) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         net.minecraft.world.entity.player.Input input = player.input.keyPresses;
         float forward = (input.forward() ? 1F : 0F) - (input.backward() ? 1F : 0F);
         float strafe = (input.left() ? 1F : 0F) - (input.right() ? 1F : 0F);

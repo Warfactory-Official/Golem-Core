@@ -4,7 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.entity.ChickenRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.client.renderer.entity.state.ChickenRenderState;
 import net.minecraft.resources.Identifier;
 //?} else {
@@ -19,7 +19,7 @@ import net.minecraft.world.entity.animal.chicken.Chicken;
 public class CompatChickenRenderer extends ChickenRenderer {
 
     private final
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier
             //?} else {
             /*ResourceLocation
@@ -28,7 +28,7 @@ public class CompatChickenRenderer extends ChickenRenderer {
     private final float scale;
 
     public CompatChickenRenderer(EntityRendererProvider.Context context,
-                                 //? if >=26.1 {
+                                 //? if >=1.21.11 {
                                  Identifier
                                  //?} else {
                                  /*ResourceLocation
@@ -40,7 +40,7 @@ public class CompatChickenRenderer extends ChickenRenderer {
         this.shadowRadius = shadow;
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     protected void scale(ChickenRenderState state, PoseStack poseStack) {
         if (scale != 1F) poseStack.scale(scale, scale, scale);

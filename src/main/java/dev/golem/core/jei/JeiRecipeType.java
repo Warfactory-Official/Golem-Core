@@ -2,7 +2,7 @@ package dev.golem.core.jei;
 
 //? if jei {
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import mezz.jei.api.recipe.types.IRecipeType;
 //?} else {
 /*import mezz.jei.api.recipe.RecipeType;
@@ -25,13 +25,13 @@ import mezz.jei.api.recipe.types.IRecipeType;
  */
 public final class JeiRecipeType<T> {
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private final IRecipeType<T> delegate;
     //?} else {
     /*private final RecipeType<T> delegate;
     *///?}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private JeiRecipeType(IRecipeType<T> delegate) {
     //?} else {
     /*private JeiRecipeType(RecipeType<T> delegate) {
@@ -47,7 +47,7 @@ public final class JeiRecipeType<T> {
      * version-split (Identifier / ResourceLocation) and 19.x's factory wants the pieces.
      */
     public static <T> JeiRecipeType<T> create(String namespace, String path, Class<T> recipeClass) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return new JeiRecipeType<>(IRecipeType.create(dev.golem.core.Ids.of(namespace, path), recipeClass));
         //?} else {
         /*return new JeiRecipeType<>(RecipeType.create(namespace, path, recipeClass));
@@ -55,7 +55,7 @@ public final class JeiRecipeType<T> {
     }
 
     /** The underlying JEI type, for the API calls that take it directly. */
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     public IRecipeType<T> unwrap() {
     //?} else {
     /*public RecipeType<T> unwrap() {

@@ -15,7 +15,7 @@ public final class Redstone {
         BlockState state = level.getBlockState(pos);
         int value = level.getSignal(pos, direction);
         if (state.hasAnalogOutputSignal()) {
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             value = state.getAnalogOutputSignal(level, pos, direction);
             //?} else {
             /*value = state.getAnalogOutputSignal(level, pos);

@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.At;
 @Mixin(Level.class)
 public abstract class MixinLevelDaylight {
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @ModifyReturnValue(method = "isBrightOutside", at = @At("RETURN"))
     //?} else {
     /*@ModifyReturnValue(method = "isDay", at = @At("RETURN"))

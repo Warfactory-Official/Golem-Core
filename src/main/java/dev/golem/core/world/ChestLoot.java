@@ -16,13 +16,24 @@ import net.minecraft.world.level.storage.loot.LootPool;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.level.storage.loot.entries.EmptyLootItem;
 import net.minecraft.world.level.storage.loot.entries.LootItem;
+//? if >=26.3 {
+/*import net.minecraft.world.level.storage.loot.entries.UniformContainerBase;
+*///?} else {
 import net.minecraft.world.level.storage.loot.entries.LootPoolSingletonContainer;
+//?}
 import net.minecraft.world.level.storage.loot.functions.SetItemCountFunction;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
+//? if >=26.3 {
+/*import net.minecraft.core.Holder;
+import net.minecraft.world.level.storage.loot.providers.number.floats.ContextFloatProviders;
+import net.minecraft.world.level.storage.loot.providers.number.ints.ContextIntProvider;
+import net.minecraft.world.level.storage.loot.providers.number.ints.ContextIntProviders;
+*///?} else {
 import net.minecraft.world.level.storage.loot.providers.number.ConstantValue;
 import net.minecraft.world.level.storage.loot.providers.number.NumberProvider;
 import net.minecraft.world.level.storage.loot.providers.number.UniformGenerator;
+//?}
 import net.minecraft.world.phys.Vec3;
 
 /**
@@ -126,7 +137,11 @@ public final class ChestLoot {
     private static LootPool.Builder pool(Injection injection) {
         LootPool.Builder pool = LootPool.lootPool().setRolls(range(injection.rollsMin, injection.rollsMax));
         for (Entry entry : injection.entries) {
+            //? if >=26.3 {
+            /*UniformContainerBase.Builder<?> item = LootItem.lootTableItem(entry.item.get()).setWeight(entry.weight);
+            *///?} else {
             LootPoolSingletonContainer.Builder<?> item = LootItem.lootTableItem(entry.item.get()).setWeight(entry.weight);
+            //?}
             if (entry.min != 1 || entry.max != 1) item.apply(SetItemCountFunction.setCount(range(entry.min, entry.max)));
             pool.add(item);
         }
@@ -137,9 +152,17 @@ public final class ChestLoot {
         return pool;
     }
 
+    //? if >=26.3 {
+    /*/^* A uniform float rounded to an int, as a range rolled before 26.3 split numbers into ints and floats. ^/
+    private static Holder<ContextIntProvider> range(int min, int max) {
+        return min == max ? ContextIntProviders.exactly(min)
+                : ContextIntProviders.fromFloat(ContextFloatProviders.round(ContextFloatProviders.between(min, max)));
+    }
+    *///?} else {
     private static NumberProvider range(int min, int max) {
         return min == max ? ConstantValue.exactly(min) : UniformGenerator.between(min, max);
     }
+    //?}
 
     private static void hook() {
         //? if neoforge {

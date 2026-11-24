@@ -1,6 +1,6 @@
 package dev.golem.core.render;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.resources.Identifier;
@@ -22,13 +22,13 @@ public final class CompatRenderTypes {
 
 
     public static RenderType entitySolid(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier
             //?} else {
             /*ResourceLocation
             *///?}
             texture) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return RenderTypes.entitySolid(texture);
         //?} else {
         /*return RenderType.entitySolid(texture);
@@ -45,7 +45,7 @@ public final class CompatRenderTypes {
      * culling) names {@link #entityCutoutNoCull}.
      */
     public static RenderType entityCutout(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier
             //?} else {
             /*ResourceLocation
@@ -53,14 +53,16 @@ public final class CompatRenderTypes {
             texture) {
         //? if >=26.1 {
         return RenderTypes.entityCutoutCull(texture);
-        //?} else {
+        //?} elif >=1.21.11 {
+        /*return RenderTypes.entityCutout(texture);
+        *///?} else {
         /*return RenderType.entityCutout(texture);
         *///?}
     }
 
     /** Alpha-tested entity geometry with face culling enabled, matching the old GL default. */
     public static RenderType entityCutoutCull(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier
             //?} else {
             /*ResourceLocation
@@ -68,35 +70,39 @@ public final class CompatRenderTypes {
             texture) {
         //? if >=26.1 {
         return RenderTypes.entityCutoutCull(texture);
-        //?} else {
+        //?} elif >=1.21.11 {
+        /*return RenderTypes.entityCutout(texture);
+        *///?} else {
         /*return RenderType.entityCutout(texture);
         *///?}
     }
 
     /** An alpha-tested entity pass with face culling disabled, for legacy double-sided OBJ geometry. */
     public static RenderType entityCutoutNoCull(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier
             //?} else {
             /*ResourceLocation
             *///?}
         texture) {
-        //? if >=26.1 {
         // 26.1's entityCutout is the no-cull pipeline; entityCutoutCull is the opt-in culling variant.
+        //? if >=26.1 {
         return RenderTypes.entityCutout(texture);
-        //?} else {
+        //?} elif >=1.21.11 {
+        /*return RenderTypes.entityCutoutNoCull(texture);
+        *///?} else {
         /*return RenderType.entityCutoutNoCull(texture);
         *///?}
     }
 
     public static RenderType entityTranslucent(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier
             //?} else {
             /*ResourceLocation
             *///?}
             texture) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return RenderTypes.entityTranslucent(texture);
         //?} else {
         /*return RenderType.entityTranslucent(texture);
@@ -109,24 +115,24 @@ public final class CompatRenderTypes {
      * same {@code ENTITY_TRANSLUCENT_CULL} pipeline is set up here drawing into the main target.
      */
     public static RenderType entityTranslucentCull(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier
             //?} else {
             /*ResourceLocation
             *///?}
             texture) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return ENTITY_TRANSLUCENT_CULL.apply(texture);
         //?} else {
         /*return RenderType.entityTranslucentCull(texture);
         *///?}
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private static final java.util.function.Function<Identifier, RenderType> ENTITY_TRANSLUCENT_CULL =
             net.minecraft.util.Util.memoize(texture -> RenderType.create("golem_entity_translucent_cull",
                     net.minecraft.client.renderer.rendertype.RenderSetup
-                            .builder(net.minecraft.client.renderer.RenderPipelines.ENTITY_TRANSLUCENT_CULL)
+                            .builder(VanillaPipelines.ENTITY_TRANSLUCENT_CULL)
                             .withTexture("Sampler0", texture)
                             .useLightmap()
                             .useOverlay()
@@ -138,7 +144,7 @@ public final class CompatRenderTypes {
 
     /** The vanilla line pipeline, moved alongside the other render-type factories in 26.1. */
     public static RenderType lines() {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return RenderTypes.lines();
         //?} else {
         /*return RenderType.lines();
@@ -146,13 +152,13 @@ public final class CompatRenderTypes {
     }
 
     public static RenderType entityTranslucentEmissive(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier
             //?} else {
             /*ResourceLocation
             *///?}
             texture) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return RenderTypes.entityTranslucentEmissive(texture);
         //?} else {
         /*return RenderType.entityTranslucentEmissive(texture);
@@ -164,7 +170,7 @@ public final class CompatRenderTypes {
      * depth-writing, unculled. See {@link PlasmaGlowRenderType} for why no stock type fits.
      */
     public static RenderType plasmaGlow(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier
             //?} else {
             /*ResourceLocation
@@ -175,7 +181,7 @@ public final class CompatRenderTypes {
 
     /** {@link #plasmaGlow} with no depth test either: drawn over everything. */
     public static RenderType plasmaGlowSeeThrough(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier
             //?} else {
             /*ResourceLocation
@@ -186,7 +192,7 @@ public final class CompatRenderTypes {
 
     /** Torex's legacy fog-free, lightmapped {@code SRC_ALPHA/ONE} flare with no depth write. */
     public static RenderType torexFlare(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier
             //?} else {
             /*ResourceLocation
@@ -200,7 +206,7 @@ public final class CompatRenderTypes {
      * unculled, lightmapped, and no fog on any node.
      */
     public static RenderType flare(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier
             //?} else {
             /*ResourceLocation
@@ -214,7 +220,7 @@ public final class CompatRenderTypes {
     /** Adapts the old flare row to the render type available on this target. */
     public static FlareVertex torexFlareVertex(float red, float green, float blue,
                                                 float alpha, int packedLight) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return new FlareVertex(red, green, blue, alpha, packedLight);
         //?} else {
         /*return new FlareVertex(red * alpha, green * alpha, blue * alpha, 1F, 0x00F000F0);
@@ -223,13 +229,13 @@ public final class CompatRenderTypes {
 
     /** Translucent variant with explicit outline control; both eras expose the same two-arg form. */
     public static RenderType entityTranslucent(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier
             //?} else {
             /*ResourceLocation
             *///?}
             texture, boolean outline) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return RenderTypes.entityTranslucent(texture, outline);
         //?} else {
         /*return RenderType.entityTranslucent(texture, outline);
@@ -237,13 +243,13 @@ public final class CompatRenderTypes {
     }
 
     public static RenderType energySwirl(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier
             //?} else {
             /*ResourceLocation
             *///?}
             texture, float u, float v) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return RenderTypes.energySwirl(texture, u, v);
         //?} else {
         /*return RenderType.energySwirl(texture, u, v);
@@ -255,7 +261,7 @@ public final class CompatRenderTypes {
      * old {@code glDisable(GL_CULL_FACE)} additive pass use {@link #additive()} / {@link #additiveTriangles()}.
      */
     public static RenderType dragonRays() {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return RenderTypes.dragonRays();
         //?} else {
         /*return AdditiveRenderType.dragonRays();
@@ -304,7 +310,7 @@ public final class CompatRenderTypes {
      * for why the stock cutout darkens the back side of a double-sided sheet on 26.1.
      */
     public static RenderType flatCutout(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier
             //?} else {
             /*ResourceLocation
@@ -318,7 +324,7 @@ public final class CompatRenderTypes {
      * translucent sheet drawn with {@code GL_LIGHTING} off. Fade it with the vertex colour's alpha.
      */
     public static RenderType flatTranslucentCull(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier
             //?} else {
             /*ResourceLocation
@@ -333,7 +339,7 @@ public final class CompatRenderTypes {
      * Only alpha 0 is discarded, so a faint particle (1.12's {@code alphaFunc(GL_GREATER, 1/255)}) stays visible.
      */
     public static RenderType flatTranslucent(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier
             //?} else {
             /*ResourceLocation
@@ -344,7 +350,7 @@ public final class CompatRenderTypes {
 
     /** {@link #flatCutout}, depth-biased toward the camera: a decal a hair in front of a surface. */
     public static RenderType flatCutoutDecal(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier
             //?} else {
             /*ResourceLocation
@@ -359,7 +365,7 @@ public final class CompatRenderTypes {
      * after (a higher order than) the surface it coats, with {@link Vertexes#positionTex}.
      */
     public static RenderType glint(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier
             //?} else {
             /*ResourceLocation

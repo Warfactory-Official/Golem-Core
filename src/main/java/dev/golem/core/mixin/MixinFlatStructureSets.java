@@ -20,9 +20,15 @@ import java.util.stream.Stream;
 @Mixin(FlatLevelSource.class)
 public abstract class MixinFlatStructureSets {
 
+    //? if >=26.3 {
+    /*@ModifyArg(method = "createState", at = @At(value = "INVOKE", target =
+            "Lnet/minecraft/world/level/chunk/ChunkGeneratorStructureState;createForFlat(Lnet/minecraft/world/level/levelgen/RandomState;JLnet/minecraft/world/level/ChunkPos;Lnet/minecraft/world/level/biome/BiomeSource;Ljava/util/stream/Stream;)Lnet/minecraft/world/level/chunk/ChunkGeneratorStructureState;"),
+            index = 4)
+    *///?} else {
     @ModifyArg(method = "createState", at = @At(value = "INVOKE", target =
             "Lnet/minecraft/world/level/chunk/ChunkGeneratorStructureState;createForFlat(Lnet/minecraft/world/level/levelgen/RandomState;JLnet/minecraft/world/level/biome/BiomeSource;Ljava/util/stream/Stream;)Lnet/minecraft/world/level/chunk/ChunkGeneratorStructureState;"),
             index = 3)
+    //?}
     private Stream<Holder<StructureSet>> golem$modStructureSets(Stream<Holder<StructureSet>> preset,
                                                                  @Local(argsOnly = true) HolderLookup<StructureSet> lookup) {
         return FlatWorlds.withModSets(preset, lookup);

@@ -2,7 +2,7 @@ package dev.golem.core.mixin;
 
 import dev.golem.core.client.Clouds;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import dev.golem.core.world.Skies;
 import net.minecraft.world.attribute.EnvironmentAttributeSystem;
 import net.minecraft.world.attribute.EnvironmentAttributes;
@@ -35,8 +35,32 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(EnvironmentAttributeSystem.class)
 public abstract class MixinEnvironmentSkyLayers {
 
+    //? if >=26.3 {
+    /*/^* A colour channel rounded to 8 bits, as the packed colours before 26.3 held it. ^/
+    @org.spongepowered.asm.mixin.Unique
+    private static int golem$channel(float value) {
+        return net.minecraft.util.Mth.clamp(Math.round(value * 255F), 0, 255);
+    }
+
+    @org.spongepowered.asm.mixin.Unique
+    private static int golem$rgb(org.joml.Vector3fc color) {
+        return net.minecraft.util.ARGB.color(255, golem$channel(color.x()), golem$channel(color.y()), golem$channel(color.z()));
+    }
+
+    @org.spongepowered.asm.mixin.Unique
+    private static int golem$argb(org.joml.Vector4fc color) {
+        return net.minecraft.util.ARGB.color(golem$channel(color.w()), golem$channel(color.x()), golem$channel(color.y()),
+                golem$channel(color.z()));
+    }
+    *///?}
+
+    //? if >=26.3 {
+    /*@Inject(method = "addDynamicLayers(Lnet/minecraft/world/attribute/EnvironmentAttributeSystem$Builder;Lnet/minecraft/world/level/Level;)V",
+            at = @At("TAIL"))
+    *///?} else {
     @Inject(method = "addDefaultLayers(Lnet/minecraft/world/attribute/EnvironmentAttributeSystem$Builder;Lnet/minecraft/world/level/Level;)V",
             at = @At("TAIL"))
+    //?}
     private static void golem$skyModifiers(EnvironmentAttributeSystem.Builder builder, Level level, CallbackInfo ci) {
         builder.addTimeBasedLayer(EnvironmentAttributes.SUN_ANGLE, (value, tick) ->
                 Skies.active(level) ? Skies.sunAngle(level, value) : value);
@@ -45,25 +69,48 @@ public abstract class MixinEnvironmentSkyLayers {
             float daylight = (value - 4F) / 11F;
             return 4F + 11F * Skies.daylight(level, daylight);
         });
+        //? if >=26.3 {
+        /*builder.addPositionalLayer(EnvironmentAttributes.SKY_COLOR, (value, pos, biomes) -> Skies.active(level)
+                ? net.minecraft.util.ARGB.vector3fFromRGB24(Skies.argb(golem$rgb(value), c -> Skies.skyColor(level, c, pos, 0.0F)))
+                : value);
+        builder.addPositionalLayer(EnvironmentAttributes.FOG_COLOR, (value, pos, biomes) -> Skies.active(level)
+                ? net.minecraft.util.ARGB.vector3fFromRGB24(Skies.argb(golem$rgb(value), c -> Skies.fogColor(level, c, pos, 0.0F)))
+                : value);
+        builder.addTimeBasedLayer(EnvironmentAttributes.CLOUD_COLOR, (value, tick) -> Skies.active(level)
+                ? net.minecraft.util.ARGB.vector4fFromARGB32(Skies.cloudColorArgb(level, golem$argb(value))) : value);
+        *///?} else {
         builder.addPositionalLayer(EnvironmentAttributes.SKY_COLOR, (value, pos, biomes) ->
                 Skies.active(level) ? Skies.argb(value, c -> Skies.skyColor(level, c, pos, 0.0F)) : value);
         builder.addPositionalLayer(EnvironmentAttributes.FOG_COLOR, (value, pos, biomes) ->
                 Skies.active(level) ? Skies.argb(value, c -> Skies.fogColor(level, c, pos, 0.0F)) : value);
         builder.addTimeBasedLayer(EnvironmentAttributes.CLOUD_COLOR, (value, tick) ->
                 Skies.active(level) ? Skies.cloudColorArgb(level, value) : value);
+        //?}
         builder.addTimeBasedLayer(EnvironmentAttributes.STAR_BRIGHTNESS, (value, tick) ->
                 Skies.active(level) ? Skies.starBrightness(level, value) : value);
         // the factor is pre-26.1's sun-brightness * 0.95 + 0.05 and the colour follows the same brightness (Skies)
         builder.addTimeBasedLayer(EnvironmentAttributes.SKY_LIGHT_FACTOR, (value, tick) ->
                 Skies.active(level) ? Skies.skyLightFactor(level, value) : value);
+        //? if >=26.3 {
+        /*builder.addTimeBasedLayer(EnvironmentAttributes.SKY_LIGHT_COLOR, (value, tick) -> Skies.active(level)
+                ? net.minecraft.util.ARGB.vector3fFromRGB24(Skies.skyLightColor(level, golem$rgb(value))) : value);
+        builder.addTimeBasedLayer(EnvironmentAttributes.SUNRISE_SUNSET_COLOR, (value, tick) -> Skies.active(level)
+                ? net.minecraft.util.ARGB.vector4fFromARGB32(Skies.sunriseArgb(level, golem$argb(value))) : value);
+        *///?} else {
         builder.addTimeBasedLayer(EnvironmentAttributes.SKY_LIGHT_COLOR, (value, tick) ->
                 Skies.active(level) ? Skies.skyLightColor(level, value) : value);
         builder.addTimeBasedLayer(EnvironmentAttributes.SUNRISE_SUNSET_COLOR, (value, tick) ->
                 Skies.active(level) ? Skies.sunriseArgb(level, value) : value);
+        //?}
         // dev.golem.core.client.Clouds: vanilla adds its cloud pass only for an opaque cloud colour; a registered
         // level's own layers need the pass while it has any (and none while it has none).
+        //? if >=26.3 {
+        /*builder.addTimeBasedLayer(EnvironmentAttributes.CLOUD_COLOR, (value, tick) -> net.minecraft.util.ARGB.vector4fFromARGB32(
+                dev.golem.core.client.Clouds.cloudColorAttribute(level, golem$argb(value))));
+        *///?} else {
         builder.addTimeBasedLayer(EnvironmentAttributes.CLOUD_COLOR, (value, tick) ->
                 dev.golem.core.client.Clouds.cloudColorAttribute(level, value));
+        //?}
         //? if neoforge {
         builder.addTimeBasedLayer(net.neoforged.neoforge.common.world.NeoForgeEnvironmentAttributes.CUSTOM_CLOUDS,
                 (value, tick) -> Clouds.replaces(level)

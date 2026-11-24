@@ -1,6 +1,6 @@
 package dev.golem.core.mixin;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import dev.golem.core.render.WorldEffects;
 import net.minecraft.client.renderer.LevelRenderer;
 import org.spongepowered.asm.mixin.Mixin;
@@ -13,12 +13,27 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 // cannot add that timing point. Older versions use loader events instead of this mixin.
 @Mixin(LevelRenderer.class)
 public class MixinWorldEffects {
-    @Inject(method = "renderLevel", at = @At("HEAD"))
+    //? if >=26.2 {
+    /*private static final String RENDER_LEVEL = "render";
+    *///?} else {
+    private static final String RENDER_LEVEL = "renderLevel";
+    //?}
+
+    @Inject(method = RENDER_LEVEL, at = @At("HEAD"))
     private void golem$beginWorldEffects(CallbackInfo ci) {
         WorldEffects.begin();
     }
 
-    @Inject(method = "renderLevel", at = @At(value = "INVOKE",
+    //? if <26.1 {
+    /*// 1.21.11 keeps the culling frustum in a renderLevel local; 26.1's camera holds it.
+    @Inject(method = "prepareCullFrustum", at = @At("RETURN"))
+    private void golem$cullFrustum(org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable<
+            net.minecraft.client.renderer.culling.Frustum> cir) {
+        dev.golem.core.render.Frustums.capture(cir.getReturnValue());
+    }
+    *///?}
+
+    @Inject(method = RENDER_LEVEL, at = @At(value = "INVOKE",
             target = "Lnet/minecraft/client/renderer/LevelTargetBundle;clear()V"))
     private void golem$finishWorldEffects(CallbackInfo ci) {
         if (!dev.golem.core.client.ShaderPacks.inUse()) WorldEffects.end();
@@ -29,7 +44,7 @@ public class MixinWorldEffects {
     // effects end just after that call: over the finished image, with the world's depth still in the main depth
     // texture (Iris renders into it as depthtex0, without reverse-Z). The same point needs no other mixin: it is
     // the existing post-composition hook, moved later only while a pack is active. No-op once ended.
-    @Inject(method = "renderLevel", at = @At(value = "INVOKE",
+    @Inject(method = RENDER_LEVEL, at = @At(value = "INVOKE",
             target = "Lorg/joml/Matrix4fStack;popMatrix()Lorg/joml/Matrix4fStack;", shift = At.Shift.AFTER))
     private void golem$finishWorldEffectsAfterShaderPack(CallbackInfo ci) {
         WorldEffects.end();

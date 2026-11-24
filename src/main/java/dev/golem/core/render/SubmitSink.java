@@ -5,7 +5,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.gui.Font;
 import net.minecraft.util.FormattedCharSequence;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.client.renderer.rendertype.RenderType;
 //?} else {
 /*import net.minecraft.client.renderer.RenderType;

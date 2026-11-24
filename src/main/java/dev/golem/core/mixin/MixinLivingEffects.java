@@ -16,7 +16,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(LivingEntity.class)
 public abstract class MixinLivingEffects {
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Inject(method = "onEffectsRemoved", at = @At("TAIL"))
     private void golem$effectsRemoved(Collection<MobEffectInstance> effects, CallbackInfo ci) {
         for (var effect : effects) Effects.removed((LivingEntity) (Object) this, effect);

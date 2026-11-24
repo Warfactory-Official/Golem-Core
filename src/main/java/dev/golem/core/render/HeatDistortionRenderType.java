@@ -1,12 +1,12 @@
 package dev.golem.core.render;
 
+import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
-//? if >=26.1 {
-import com.mojang.blaze3d.pipeline.ColorTargetState;
-import com.mojang.blaze3d.pipeline.DepthStencilState;
+//? if >=1.21.11 {
+import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.rendertype.RenderSetup;
@@ -60,7 +60,7 @@ public final class HeatDistortionRenderType {
         }
         HeatDistortionRenderType.pipelineId = pipelineId;
         HeatDistortionRenderType.shaderId = shaderId;
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         RenderTypes.clear();
         //?} else {
         /*clear();
@@ -95,7 +95,16 @@ public final class HeatDistortionRenderType {
     // components as the low/high halves of a normalized 32-bit phase instead of abusing vertex color.
     private static final double MODERN_TIME_RANGE = 16_384.0D;
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
+    //? if >=26.2 {
+    /*private static final com.mojang.blaze3d.vertex.VertexFormat HEAT_FORMAT =
+            com.mojang.blaze3d.vertex.VertexFormat.builder(0)
+                    .addAttribute("Position", com.mojang.blaze3d.GpuFormat.RGB32_FLOAT)
+                    .addAttribute("UV0", com.mojang.blaze3d.GpuFormat.RG32_FLOAT)
+                    .addAttribute("Color", com.mojang.blaze3d.GpuFormat.RGBA8_UNORM)
+                    .addAttribute("UV1", com.mojang.blaze3d.GpuFormat.RG16_SINT)
+                    .build();
+    *///?} else {
     private static final com.mojang.blaze3d.vertex.VertexFormat HEAT_FORMAT =
             com.mojang.blaze3d.vertex.VertexFormat.builder()
                     .add("Position", com.mojang.blaze3d.vertex.VertexFormatElement.POSITION)
@@ -103,6 +112,7 @@ public final class HeatDistortionRenderType {
                     .add("Color", com.mojang.blaze3d.vertex.VertexFormatElement.COLOR)
                     .add("UV1", com.mojang.blaze3d.vertex.VertexFormatElement.UV1)
                     .build();
+    //?}
 
     private static int[] encodeModernTime(float timeOffset) {
         double phase = (double) timeOffset * 20.0D + wallClockSeconds();
@@ -115,7 +125,7 @@ public final class HeatDistortionRenderType {
     /** Emits the position/UV/amount vertex used by the shared custom shader. */
     public static void vertex(VertexConsumer buffer, PoseStack.Pose pose, float x, float y, float z,
             float u, float v, float amount, float timeOffset) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         int[] encodedTime = encodeModernTime(timeOffset);
         buffer.addVertex(pose, x, y, z).setUv(u, v)
                 .setColor(amount, 0F, 0F, 1F)
@@ -130,7 +140,7 @@ public final class HeatDistortionRenderType {
 
     private static void resetScene() {
         captureReported = false;
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         SceneTexture.reset();
         //?} else {
         /*SceneCopy.reset();
@@ -141,7 +151,7 @@ public final class HeatDistortionRenderType {
         *///?}
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     /** The render type is cached by the two mask/noise resources, like vanilla texture render types. */
     public static RenderType of(Identifier mask, Identifier noise) {
         require(shaderId, "shader");
@@ -180,7 +190,7 @@ public final class HeatDistortionRenderType {
         }
 
         private static RenderType create(Identifier mask, Identifier noise) {
-            RenderPipeline pipeline = RenderPipeline.builder(
+            RenderPipeline pipeline = PipelineStates.blend(PipelineStates.depth(PipelineStates.vertices(RenderPipeline.builder(
                             RenderPipelines.MATRICES_PROJECTION_SNIPPET, RenderPipelines.GLOBALS_SNIPPET)
                     .withLocation(dev.golem.core.Ids.parse(require(pipelineId, "pipeline")))
                     .withVertexShader(dev.golem.core.Ids.parse(modernShaderId()))
@@ -188,13 +198,10 @@ public final class HeatDistortionRenderType {
                     .withSampler("Sampler0")
                     .withSampler("Sampler1")
                     .withSampler("Sampler2")
-                    .withVertexFormat(HEAT_FORMAT,
-                            com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS)
-                    .withDepthStencilState(new DepthStencilState(
-                            com.mojang.blaze3d.platform.CompareOp.LESS_THAN_OR_EQUAL, false))
+                    , HEAT_FORMAT,
+                            VertexFormat.Mode.QUADS),
+                    PipelineStates.Depth.LESS_OR_EQUAL, false), BlendFunction.TRANSLUCENT)
                     .withCull(false)
-                    .withColorTargetState(new ColorTargetState(
-                            com.mojang.blaze3d.pipeline.BlendFunction.TRANSLUCENT))
                     .build();
 
             installSceneTexture();
@@ -251,7 +258,7 @@ public final class HeatDistortionRenderType {
             if (main == null || main.width <= 0 || main.height <= 0) return;
             if (copy == null || copy.width != main.width || copy.height != main.height) {
                 if (copy != null) copy.destroyBuffers();
-                copy = new TextureTarget("golem_heat_scene", main.width, main.height, false);
+                copy = Passes.target("golem_heat_scene", main.width, main.height, false);
             }
         }
 
@@ -418,7 +425,7 @@ public final class HeatDistortionRenderType {
 
         private static RenderType create(ResourceLocation mask, ResourceLocation noise) {
             return RenderType.create("golem_heat_distortion", DefaultVertexFormat.POSITION_TEX_COLOR,
-                    com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, 256, false, true,
+                    VertexFormat.Mode.QUADS, 256, false, true,
                     CompositeState.builder()
                             .setShaderState(new ShaderStateShard(HeatDistortionRenderType::shader))
                             .setTextureState(new SceneTextures(mask, noise))

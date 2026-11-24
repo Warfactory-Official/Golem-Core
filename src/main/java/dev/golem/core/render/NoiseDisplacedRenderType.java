@@ -1,17 +1,18 @@
 package dev.golem.core.render;
 
+import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import org.joml.Matrix4f;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import com.mojang.blaze3d.pipeline.BlendFunction;
-import com.mojang.blaze3d.pipeline.ColorTargetState;
-import com.mojang.blaze3d.pipeline.DepthStencilState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import net.minecraft.client.renderer.RenderPipelines;
+//? if <26.3 {
 import net.minecraft.client.renderer.rendertype.OutputTarget;
+//?}
 import net.minecraft.client.renderer.rendertype.RenderSetup;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.TextureTransform;
@@ -100,7 +101,7 @@ public final class NoiseDisplacedRenderType {
 
     private static final Map<String, RenderType> TYPES = new HashMap<>();
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private static final TextureTransform[] LOCAL_TRANSFORMS = new TextureTransform[SLOTS];
 
     static {
@@ -118,7 +119,9 @@ public final class NoiseDisplacedRenderType {
             PARAM_TRANSFORMS[i] = new TextureTransform("golem_noise_params_" + i, () -> new Matrix4f(params));
         }
     }
+    //? if <26.3 {
     private static final OutputTarget BLOOM_OUTPUT = new OutputTarget("golem_bloom_layer", Bloom.LAYER::drawTarget);
+    //?}
 
     /**
      * The render type for {@code shaderId} ({@code namespace:name}) sampling {@code noise} as HBM 1.12 sampled its noise
@@ -148,15 +151,14 @@ public final class NoiseDisplacedRenderType {
 
     private static RenderType createTextured(String shaderId, Identifier noise, Identifier texture, int slot) {
         Identifier base = dev.golem.core.Ids.parse(shaderId);
-        RenderPipeline pipeline = WorldPipelines.add(RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET)
+        RenderPipeline pipeline = WorldPipelines.add(PipelineStates.blend(PipelineStates.depth(PipelineStates.vertices(RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET)
                 .withLocation(dev.golem.core.Ids.of(base.getNamespace(), "pipeline/" + base.getPath()))
                 .withVertexShader(dev.golem.core.Ids.of(base.getNamespace(), "core/" + base.getPath()))
                 .withFragmentShader(dev.golem.core.Ids.of(base.getNamespace(), "core/" + base.getPath()))
                 .withSampler("Sampler0")
                 .withSampler("Sampler1")
-                .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS)
-                .withDepthStencilState(new DepthStencilState(DepthStencilState.DEFAULT.depthTest(), false))
-                .withColorTargetState(new ColorTargetState(BlendFunction.LIGHTNING))
+                , DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS),
+                PipelineStates.Depth.LESS_OR_EQUAL, false), BlendFunction.LIGHTNING)
                 .withCull(false)
                 .build());
         RenderSetup setup = RenderSetup.builder(pipeline)
@@ -169,22 +171,27 @@ public final class NoiseDisplacedRenderType {
 
     private static RenderType create(String shaderId, Identifier noise, boolean bloom, int slot) {
         Identifier base = dev.golem.core.Ids.parse(shaderId);
-        RenderPipeline pipeline = RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET)
+        RenderPipeline pipeline = PipelineStates.blend(PipelineStates.depth(PipelineStates.vertices(RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET)
                 .withLocation(dev.golem.core.Ids.of(base.getNamespace(), "pipeline/" + base.getPath() + (bloom ? "_bloom" : "")))
                 .withVertexShader(dev.golem.core.Ids.of(base.getNamespace(), "core/" + base.getPath()))
                 .withFragmentShader(dev.golem.core.Ids.of(base.getNamespace(), "core/" + base.getPath()))
                 .withSampler("Sampler0")
-                .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS)
-                .withDepthStencilState(new DepthStencilState(DepthStencilState.DEFAULT.depthTest(), false))
-                .withColorTargetState(new ColorTargetState(BlendFunction.LIGHTNING))
+                , DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.QUADS),
+                PipelineStates.Depth.LESS_OR_EQUAL, false), BlendFunction.LIGHTNING)
                 .withCull(false)
                 .build();
         RenderSetup.RenderSetupBuilder setup = RenderSetup.builder(pipeline)
                 .withTexture("Sampler0", noise, NoiseTextures::sampler)
                 .setTextureTransform(LOCAL_TRANSFORMS[slot]);
+        //? if >=26.3 {
+        /*if (!bloom) WorldPipelines.add(pipeline);
+        RenderType type = RenderType.create("golem_noise_displaced", setup.createRenderSetup());
+        return bloom ? Bloom.LAYER.register(type) : type;
+        *///?} else {
         if (bloom) setup.setOutputTarget(BLOOM_OUTPUT);
         else WorldPipelines.add(pipeline);
         return RenderType.create("golem_noise_displaced", setup.createRenderSetup());
+        //?}
     }
     //?} else {
     /*private static final Map<String, ShaderInstance> SHADERS = new HashMap<>();
@@ -295,7 +302,7 @@ public final class NoiseDisplacedRenderType {
                     .setWriteMaskState(COLOR_WRITE)
                     .createCompositeState(false);
             return RenderType.create("golem_noise_displaced_textured", DefaultVertexFormat.POSITION_TEX_COLOR,
-                    com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, 256, false, true, state);
+                    VertexFormat.Mode.QUADS, 256, false, true, state);
         }
 
         static RenderType create(String shaderId, ResourceLocation noise, boolean bloom, int slot) {
@@ -308,7 +315,7 @@ public final class NoiseDisplacedRenderType {
                     .setWriteMaskState(COLOR_WRITE);
             if (bloom) state.setOutputState(BLOOM_OUTPUT);
             RenderType type = RenderType.create("golem_noise_displaced", DefaultVertexFormat.POSITION_TEX_COLOR,
-                    com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, 256, false, true, state.createCompositeState(false));
+                    VertexFormat.Mode.QUADS, 256, false, true, state.createCompositeState(false));
             // the bloom variant binds the bloom layer: an empty batch must not mark it used (ScreenEffects.skipEmpty)
             return bloom ? ScreenEffects.skipEmpty(type, true) : type;
         }

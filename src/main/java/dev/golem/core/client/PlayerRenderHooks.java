@@ -1,5 +1,6 @@
 package dev.golem.core.client;
 
+import dev.golem.core.render.Poses;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import dev.golem.core.render.HumanoidPose;
@@ -15,10 +16,10 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 //?}
-//? if neoforge && >=26.1 {
+//? if neoforge && >=1.21.11 {
 import net.neoforged.neoforge.client.event.RenderPlayerEvent;
 import net.neoforged.neoforge.common.NeoForge;
 //?}
@@ -40,12 +41,12 @@ public final class PlayerRenderHooks {
         FLIGHT_POSES.register(condition);
         if (flightEventsInstalled) return;
         flightEventsInstalled = true;
-        //? if neoforge && >=26.1 {
+        //? if neoforge && >=1.21.11 {
         NeoForge.EVENT_BUS.addListener((RenderPlayerEvent.Pre<?> event) -> applyFlightState(event.getRenderState()));
         //?}
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     public static void applyFlightState(AvatarRenderState state) {
         var player = playerForState(state);
         if (player != null && FLIGHT_POSES.invoker().test(player)) {
@@ -58,7 +59,7 @@ public final class PlayerRenderHooks {
 
     public static void applyFlightRotation(Player player, PoseStack pose) {
         if (FLIGHT_POSES.invoker().test(player))
-            pose.mulPose(Axis.XP.rotationDegrees(-90F - player.getXRot()));
+            Poses.rotate(pose, Axis.XP.rotationDegrees(-90F - player.getXRot()));
     }
 
     @FunctionalInterface
@@ -77,7 +78,7 @@ public final class PlayerRenderHooks {
     public static void applyModel(Player player, HumanoidModel<?> model) {
         if (player == null) return;
         // 26.1's setupAnim locks the head at -45 degrees for a fall-flying state; older nodes only get the root rotation
-        //? if <26.1 {
+        //? if <1.21.11 {
         /*if (FLIGHT_POSES.invoker().test(player)) model.head.xRot = -(float) Math.PI / 4F;
         *///?}
         if (!MODEL.isEmpty()) {
@@ -87,7 +88,7 @@ public final class PlayerRenderHooks {
         }
         // Below 26.1 the hat is a sibling, not a child of the head. PlayerModel copies the other
         // skin layers after HumanoidModel.setupAnim returns.
-        //? if <26.1 {
+        //? if <1.21.11 {
         /*model.hat.copyFrom(model.head);
         *///?}
     }

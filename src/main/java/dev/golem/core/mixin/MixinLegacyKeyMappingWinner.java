@@ -4,7 +4,7 @@ package dev.golem.core.mixin;
 // mouse bind could take right-click from Use depending on which other mods are installed. Neither vanilla nor
 // fabric-api lets a mapping yield a key, and an access widener alone has no hook to re-apply after every reset.
 // Forge and NeoForge dispatch to every mapping; Golem mappings poll the device here, so losing the key costs them nothing.
-//? if fabric && <26.1 {
+//? if fabric && <1.21.11 {
 
 /*import com.mojang.blaze3d.platform.InputConstants;
 import dev.golem.core.client.KeyMappings;

@@ -3,7 +3,7 @@ package dev.golem.core.net;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import net.minecraft.network.FriendlyByteBuf;
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.resources.Identifier;
 //?} else {
 /*import net.minecraft.resources.ResourceLocation;
@@ -22,7 +22,7 @@ public final class GolemCodec<P extends GolemPayload> {
 
     private final Class<P> payloadType;
     private final
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier
             //?} else {
             /*ResourceLocation
@@ -32,7 +32,7 @@ public final class GolemCodec<P extends GolemPayload> {
     private final Function<FriendlyByteBuf, P> decoder;
 
     private GolemCodec(Class<P> payloadType,
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier
             //?} else {
             /*ResourceLocation
@@ -46,7 +46,7 @@ public final class GolemCodec<P extends GolemPayload> {
     }
 
     public static <P extends GolemPayload> GolemCodec<P> of(Class<P> payloadType,
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier
             //?} else {
             /*ResourceLocation
@@ -63,7 +63,7 @@ public final class GolemCodec<P extends GolemPayload> {
      * same bytes (see {@link GolemBuffers#registry}).
      */
     public static <P extends GolemPayload> GolemCodec<P> ofRegistry(Class<P> payloadType,
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier
             //?} else {
             /*ResourceLocation
@@ -85,7 +85,7 @@ public final class GolemCodec<P extends GolemPayload> {
     }
 
     public
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier
             //?} else {
             /*ResourceLocation

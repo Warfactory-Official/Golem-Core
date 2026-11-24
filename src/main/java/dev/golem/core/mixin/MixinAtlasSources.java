@@ -41,7 +41,7 @@ public abstract class MixinAtlasSources implements AtlasSources {
 
     @Inject(method = "load", at = @At("RETURN"))
     private static void golem$addDeclaredSources(ResourceManager resources,
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             net.minecraft.resources.Identifier atlas,
             //?} else {
             /*net.minecraft.resources.ResourceLocation atlas,

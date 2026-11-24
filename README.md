@@ -6,7 +6,10 @@ target:
 
 | Minecraft | Loaders |
 |---|---|
+| 26.3 | NeoForge, Fabric |
+| 26.2 | NeoForge, Fabric |
 | 26.1 | NeoForge, Fabric |
+| 1.21.11 | NeoForge, Fabric |
 | 1.21.1 | NeoForge, Fabric |
 | 1.20.1 | Forge, Fabric |
 
@@ -29,7 +32,11 @@ those exceptions beside its registration.
 Development launches retain native OpenGL validation by default. On 26.1 Fabric, opt into production
 validation behavior with `-Dgolemcore.disableGlValidation=true`; NeoForge provides
 `-Dneoforge.disableGlValidation=true`. These switches apply at startup, and
-`RenderOps.validationEnabled()` reports the actual native flag.
+`RenderOps.validationEnabled()` reports the actual native flag (always false on 26.3, whose OpenGL backend has none).
+
+26.2 and 26.3 draw with reversed depth (cleared to 0, nearer is greater); `PipelineStates.Depth` keeps meaning
+"nearer" on every node. 26.3 compiles every shader to SPIR-V, so its copies of Core's shaders live in
+`src/shaders-26.3` (explicit locations, `#include`); a mod's own shaders paired with Core's need the same there.
 
 ## In-game test harness
 
@@ -44,7 +51,10 @@ report with a result per node and every screenshot.
 
 - **Two clients** run at the same time by default, each with a 2 GB heap.
 - Client windows stay minimized, are never focused and never grab the mouse, so you can keep working.
-- All six nodes are supported.
+- All twelve nodes are supported. Golem Core's own `harness.json` runs the modern nodes against the dev-only probe
+  mod (`src/probe`, never in a jar) with its scenario `harness/scenarios/ProbeLooks.java`.
+- On NeoForge the harness presses "Proceed to main menu" when another mod only warns at loading; an error still stops
+  the client.
 - Each mod supplies its own `harness.json` and scenarios; nothing in the harness knows about a specific mod.
 
 | Location | What |
@@ -57,6 +67,18 @@ The listener only runs on a development client started with `-Dgolem.harness.por
 never open it.
 
 Setup, usage and first-time setup for new developers: [`harness/README.md`](harness/README.md).
+
+## Dev runs of Core itself
+
+On the modern nodes (1.21.11 and newer) the dev runs carry the probe mod `golemprobe` (`src/probe`): a `Fuels` fuel,
+GameTests (`runGameTestServer` on NeoForge, `runGametest` on Fabric), recipe-viewer and Jade content, and a skybox and
+weather that draw while the player holds a debug stick. `-Ppeers.run=true` adds the optional peers the node declares
+(JEI with its config libraries, REI with Cloth Config and Architectury, Jade, CC: Tweaked, and AE2 with GuideME on
+NeoForge 26.x); `-Ppeers.skip=cc` (any of jei, rei, jade, cc, ae2) leaves one out. CC: Tweaked 1.120.0 for 26.1.2
+Fabric names an REI plugin class its jar lacks, so on that node CC and REI cannot run together.
+
+26.2 and 26.3 also run on Vulkan (`preferredGraphicsBackend:"vulkan"` in `options.txt`). On NeoForge 26.2 the early
+loading window creates an OpenGL window that Vulkan cannot use: set `earlyWindowControl = false` in `fml.toml` there.
 
 ## License
 

@@ -7,13 +7,13 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 //?} else {
-/*import net.minecraft.client.gui.GuiGraphics;
+/*import net.minecraft.client.gui.GuiGraphicsExtractor;
 *///?}
 
 /**
@@ -69,10 +69,10 @@ public abstract class CompatContainerScreen<T extends AbstractContainerMenu> ext
 
     /** The 26.1 background hook, backported for subclasses. */
     public void extractBackground(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             GuiGraphicsExtractor graphics,
             //?} else {
-            /*GuiGraphics graphics,
+            /*GuiGraphicsExtractor graphics,
             *///?}
             int mouseX, int mouseY, float partialTick) {}
 
@@ -83,10 +83,10 @@ public abstract class CompatContainerScreen<T extends AbstractContainerMenu> ext
      * wrong on 26.1, where it overrides vanilla's labels away.
      */
     protected void extractLabels(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             GuiGraphicsExtractor graphics,
             //?} else {
-            /*GuiGraphics graphics,
+            /*GuiGraphicsExtractor graphics,
             *///?}
             int mouseX, int mouseY) {
         //? if >=26.1 {
@@ -109,10 +109,10 @@ public abstract class CompatContainerScreen<T extends AbstractContainerMenu> ext
      * overlaps a slot, while a region that does not overlap leaves the item's alone.
      */
     protected void extractOwnTooltip(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             GuiGraphicsExtractor graphics,
             //?} else {
-            /*GuiGraphics graphics,
+            /*GuiGraphicsExtractor graphics,
             *///?}
             int mouseX, int mouseY) {}
 
@@ -154,7 +154,7 @@ public abstract class CompatContainerScreen<T extends AbstractContainerMenu> ext
     /** Version-neutral wheel hook. */
     protected boolean mouseScrolledCompat(double mouseX, double mouseY, double scrollX, double scrollY) { return false; }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         boolean handled = this.mouseClicked(new MouseInput(event), doubleClick)
@@ -203,26 +203,6 @@ public abstract class CompatContainerScreen<T extends AbstractContainerMenu> ext
     }
     //?} else {
     /*@Override
-    protected void renderBg(GuiGraphics graphics, float partialTick, int mouseX, int mouseY) {
-        this.extractBackground(graphics, mouseX, mouseY, partialTick);
-    }
-
-    @Override
-    protected void renderLabels(GuiGraphics graphics, int mouseX, int mouseY) {
-        this.extractLabels(graphics, mouseX, mouseY);
-    }
-
-    @Override
-    protected void renderTooltip(GuiGraphics graphics, int mouseX, int mouseY) {
-        // This era draws immediately rather than deferring, so the later call wins the z-order: the
-        // item tooltip first, this screen's own over it. The net effect matches 26.1's first-writer
-        // rule for the only case that arises in practice, a region tooltip over a slot.
-        super.renderTooltip(graphics, mouseX, mouseY);
-        GuiDraw.beginOwnTooltips();
-        this.extractOwnTooltip(graphics, mouseX, mouseY);
-    }
-
-    @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         boolean handled = this.mouseClicked(new MouseInput(mouseX, mouseY, button), false)
                 || super.mouseClicked(mouseX, mouseY, button);
@@ -269,7 +249,7 @@ public abstract class CompatContainerScreen<T extends AbstractContainerMenu> ext
     }
     *///?}
 
-    //? if >=1.21 && <26.1 {
+    //? if >=1.21 && <1.21.11 {
     /*@Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         return this.mouseScrolledCompat(mouseX, mouseY, scrollX, scrollY)
@@ -285,7 +265,27 @@ public abstract class CompatContainerScreen<T extends AbstractContainerMenu> ext
 
     //? if <26.1 {
     /*@Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    protected void renderBg(GuiGraphicsExtractor graphics, float partialTick, int mouseX, int mouseY) {
+        this.extractBackground(graphics, mouseX, mouseY, partialTick);
+    }
+
+    @Override
+    protected void renderLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        this.extractLabels(graphics, mouseX, mouseY);
+    }
+
+    @Override
+    protected void renderTooltip(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        // This era draws immediately rather than deferring, so the later call wins the z-order: the
+        // item tooltip first, this screen's own over it. The net effect matches 26.1's first-writer
+        // rule for the only case that arises in practice, a region tooltip over a slot.
+        super.renderTooltip(graphics, mouseX, mouseY);
+        GuiDraw.beginOwnTooltips();
+        this.extractOwnTooltip(graphics, mouseX, mouseY);
+    }
+
+    @Override
+    public void render(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         super.render(graphics, mouseX, mouseY, partialTick);
         // 26.1 calls this from extractRenderState; here it is on us. After super.render so it draws over
         // the slots, matching the order the tooltip hooks run in.

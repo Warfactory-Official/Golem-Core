@@ -44,7 +44,7 @@ public abstract class GemBER<T extends BlockEntity, S extends CompatRenderState>
     private @Nullable Model<S> model;
 
     protected GemBER() {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         StaleSections.install();
         //?}
     }
@@ -74,7 +74,7 @@ public abstract class GemBER<T extends BlockEntity, S extends CompatRenderState>
             Gem.replayUninstanced(gem(), state, poseStack, sink, state.lightCoords);
         }
         if (tracing) trace(state.blockPos, owned);
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         if (state.blockPos != null && gem().isOffScreen()) StaleSections.asked(state.blockPos);
         //?}
         if (undeclared == null) {
@@ -168,7 +168,7 @@ public abstract class GemBER<T extends BlockEntity, S extends CompatRenderState>
         boolean visible = visible(blockEntity, cameraPosition);
         if (!quiet) {
             if (tracing) traceAsked(blockEntity.getBlockPos(), visible);
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             if (gem().isOffScreen()) StaleSections.asked(blockEntity.getBlockPos());
             //?}
         }

@@ -4,7 +4,7 @@ import dev.golem.core.Ids;
 import dev.golem.core.render.CompatRenderTypes;
 import java.util.Objects;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.client.renderer.rendertype.RenderType;
 //?} else {
 /*import net.minecraft.client.renderer.RenderType;

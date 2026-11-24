@@ -9,7 +9,7 @@ import java.util.function.Supplier;
 import java.util.ArrayList;
 import java.util.List;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import dev.golem.core.registry.DeferredRegister;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
@@ -21,11 +21,14 @@ import net.minecraft.gametest.framework.TestEnvironmentDefinition;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-//? if fabric && >=26.1 {
+//? if fabric {
 /*import net.minecraft.core.Registry;
 import net.minecraft.gametest.framework.GameTestInstance;
-import net.minecraft.resources.RegistryLoadTask;
-import net.minecraft.resources.Identifier;
+*///?}
+//? if fabric && >=26.1 {
+/*import net.minecraft.resources.RegistryLoadTask;
+*///?} elif fabric {
+/*import net.minecraft.resources.RegistryDataLoader;
 *///?}
 //?} else {
 /*import net.minecraft.gametest.framework.TestFunction;
@@ -137,7 +140,7 @@ public final class GameTests {
         }
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     /**
      * One test-function register per namespace. 26.1 needs the bodies in a real registry so a test can
      * reference one by {@link ResourceKey}; this era-only detail is why {@link #function} exists rather
@@ -187,7 +190,7 @@ public final class GameTests {
 
     public static Function function(String namespace, String name, int timeoutTicks, int padding,
                                     Supplier<Consumer<GameTestHelper>> body) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         var structure = "minecraft:" + EMPTY_STRUCTURE;
         var skyAccess = false;
         //?} else {
@@ -209,7 +212,7 @@ public final class GameTests {
                                     String structure, boolean skyAccess, String environment,
                                     Supplier<Consumer<GameTestHelper>> body) {
         var function = new Function(namespace, name, timeoutTicks, padding, structure, skyAccess, environment, body);
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         REGISTERS.computeIfAbsent(namespace, ns -> DeferredRegister.create(Registries.TEST_FUNCTION, ns))
                 .register(name, body);
         FUNCTIONS.add(function);
@@ -219,7 +222,7 @@ public final class GameTests {
         return function;
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     /** Whether {@code id} ({@code namespace:name}) is a test declared here. */
     static boolean declares(String id) {
         return DECLARED.contains(id);
@@ -237,7 +240,7 @@ public final class GameTests {
      * the other puts the test in a neighbour's plot.
      */
     public static net.minecraft.core.BlockPos paddedCentre(int padding, int y) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return new net.minecraft.core.BlockPos(0, y, 0);
         //?} else {
         /*int width = padding > 64 ? 184 : padding > 28 ? 152 : padding > 8 ? 80 : 24;
@@ -253,7 +256,7 @@ public final class GameTests {
      * times), so it holds for every rotation.
      */
     public static net.minecraft.core.BlockPos relativePos(GameTestHelper helper, net.minecraft.core.BlockPos absolute) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return helper.relativePos(absolute);
         //?} else {
         /*net.minecraft.core.BlockPos origin = helper.absolutePos(net.minecraft.core.BlockPos.ZERO);
@@ -300,7 +303,7 @@ public final class GameTests {
     public static void register(net.neoforged.neoforge.event.RegisterGameTestsEvent event,
                                  Suite suite) {
         for (Function function : suite.functions) {
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             if (!selected(function)) continue;
             // Per event: one environment per namespace within THIS registry load. See ENVIRONMENTS.
             Holder<TestEnvironmentDefinition<?>> environment = ENVIRONMENTS
@@ -309,9 +312,18 @@ public final class GameTests {
                             id -> event.registerEnvironment(Ids.parse(id),
                                     new TestEnvironmentDefinition.Functions(Optional.empty(), Optional.empty())));
 
+            //? if >=26.3 {
+            /*TestData<Holder<TestEnvironmentDefinition<?>>> data = new TestData<>(
+                    environment, net.minecraft.world.level.Level.OVERWORLD, Ids.parse(function.structure),
+            *///?} else {
             TestData<Holder<TestEnvironmentDefinition<?>>> data = new TestData<>(
                     environment, Ids.parse(function.structure),
+            //?}
+                    //? if >=26.1 {
                     function.timeoutTicks, 0, true, Rotation.NONE, false, 1, 1, function.skyAccess, function.padding);
+                    //?} else {
+                    /*function.timeoutTicks, 0, true, Rotation.NONE, false, 1, 1, function.skyAccess);
+                    *///?}
 
             ResourceKey<Consumer<GameTestHelper>> key =
                     ResourceKey.create(Registries.TEST_FUNCTION, dev.golem.core.Ids.of(function.namespace, function.name));
@@ -344,7 +356,7 @@ public final class GameTests {
     }
         *///?}
 
-    //? if fabric && <26.1 {
+    //? if fabric && <1.21.11 {
     /*/^*
      * Fabric has no registration event: the mod's {@code fabric-gametest} entrypoint calls this for every
      * suite from its {@code @GameTestGenerator}, then returns {@link #pending()}.
@@ -365,7 +377,7 @@ public final class GameTests {
     }
     *///?}
 
-    //? if fabric && >=26.1 {
+    //? if fabric && >=1.21.11 {
     /*/^*
      * Fabric's modern GameTest API has no public registration event for data-driven test instances.
      * Its own initializer registers annotated tests, then its registry-data hook supplies the fresh
@@ -373,11 +385,19 @@ public final class GameTests {
      * list when that hook hands us the current registry set.
      ^/
     @SuppressWarnings("unchecked")
+    //? if >=26.1 {
     public static void registerFabricDynamicEntries(List<RegistryLoadTask<?>> loadTasks) {
         Map<ResourceKey<? extends Registry<?>>, Registry<?>> registries = new java.util.IdentityHashMap<>(loadTasks.size());
         for (RegistryLoadTask<?> entry : loadTasks) {
             registries.put(entry.registry.key(), entry.registry);
         }
+    //?} else {
+    /^public static void registerFabricDynamicEntries(List<RegistryDataLoader.Loader<?>> loadTasks) {
+        Map<ResourceKey<? extends Registry<?>>, Registry<?>> registries = new java.util.IdentityHashMap<>(loadTasks.size());
+        for (RegistryDataLoader.Loader<?> entry : loadTasks) {
+            registries.put(entry.registry().key(), entry.registry());
+        }
+    ^///?}
 
         Registry<GameTestInstance> testInstances = (Registry<GameTestInstance>) registries.get(Registries.TEST_INSTANCE);
         if (testInstances == null) return;
@@ -393,9 +413,18 @@ public final class GameTests {
                             Ids.parse(id),
                             new TestEnvironmentDefinition.Functions(Optional.empty(), Optional.empty())));
 
+            //? if >=26.3 {
+            /^TestData<Holder<TestEnvironmentDefinition<?>>> data = new TestData<>(
+                    environment, net.minecraft.world.level.Level.OVERWORLD, Ids.parse(function.structure),
+            ^///?} else {
             TestData<Holder<TestEnvironmentDefinition<?>>> data = new TestData<>(
                     environment, Ids.parse(function.structure),
+            //?}
+                    //? if >=26.1 {
                     function.timeoutTicks, 0, true, Rotation.NONE, false, 1, 1, function.skyAccess, function.padding);
+                    //?} else {
+                    /^function.timeoutTicks, 0, true, Rotation.NONE, false, 1, 1, function.skyAccess);
+                    ^///?}
             ResourceKey<Consumer<GameTestHelper>> key = ResourceKey.create(
                     Registries.TEST_FUNCTION, dev.golem.core.Ids.of(function.namespace, function.name));
             Registry.register(testInstances, dev.golem.core.Ids.of(function.namespace, function.name),
@@ -404,7 +433,7 @@ public final class GameTests {
     }
     *///?}
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*/^*
      * Padding below 26.1. This framework spaces plots by the structure's own size + 5 and the origin is
      * always the template's corner, so a padded test gets a wider empty template (24 + 2 * padding, see

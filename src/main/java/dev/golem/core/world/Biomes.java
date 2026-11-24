@@ -28,8 +28,12 @@ public final class Biomes {
 
     /** The vanilla noise used by the legacy biome grass-colour overrides. */
     public static boolean legacyGrassColorNoise(double x, double z) {
+        //? if >=26.3 {
+        /*return Biome.BIOME_INFO_NOISE.get(x * 0.225D, z * 0.225D) < -0.1D;
+        *///?} else {
         return Biome.BIOME_INFO_NOISE.getValue(
                 x * 0.225D, z * 0.225D, false) < -0.1D;
+        //?}
     }
 
     /** One requested replacement of the biome column containing a block position. */
@@ -43,7 +47,7 @@ public final class Biomes {
 
     /** Resolves a registered biome key from the live world's dynamic registry access. */
     public static Holder<Biome> holder(RegistryAccess registries, ResourceKey<Biome> key) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return registries.lookupOrThrow(Registries.BIOME).getOrThrow(key);
         //?} else if >=1.21.1 {
         /*return registries.lookupOrThrow(Registries.BIOME).getOrThrow(key);
@@ -92,13 +96,21 @@ public final class Biomes {
         }
         if (replacements.isEmpty()) return false;
 
+        //? if >=26.3 {
+        /*chunk.fillBiomesFromNoise((x, y, z) -> {
+        *///?} else {
         chunk.fillBiomesFromNoise((x, y, z, sampler) -> {
+        //?}
             Holder<Biome> current = original.get(new Cell(x, y, z));
             if (current == null) {
                 throw new IllegalStateException("Biome resolver escaped chunk " + chunk.getPos());
             }
             return replacements.getOrDefault(new Column(x, z), current);
+        //? if >=26.3 {
+        /*});
+        *///?} else {
         }, null);
+        //?}
         return true;
     }
 
@@ -112,7 +124,7 @@ public final class Biomes {
     }
 
     private static int minSectionY(ChunkAccess chunk) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return chunk.getMinY() >> 4;
         //?} else {
         /*return chunk.getMinBuildHeight() >> 4;

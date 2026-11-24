@@ -1,6 +1,6 @@
 package dev.golem.core.gui;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.client.input.KeyEvent;
 //?} else {
 /*import net.minecraft.client.gui.screens.Screen;
@@ -14,14 +14,18 @@ public final class KeyInput {
     private final int modifiers;
     private final boolean shiftDown;
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private final KeyEvent event;
     //?}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     public KeyInput(KeyEvent event) {
         this.key = event.key();
+        //? if >=26.3 {
+        /*this.scanCode = event.keycode();
+        *///?} else {
         this.scanCode = event.scancode();
+        //?}
         this.modifiers = event.modifiers();
         this.shiftDown = event.hasShiftDown();
         this.event = event;
@@ -42,7 +46,7 @@ public final class KeyInput {
 
     /** Matches a configurable vanilla key binding without exposing version-specific events. */
     public boolean matches(net.minecraft.client.KeyMapping mapping) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return mapping.matches(this.event);
         //?} else {
         /*return mapping.matches(this.key, this.scanCode);
@@ -51,7 +55,7 @@ public final class KeyInput {
 
     /** Delivers this input to a text widget without exposing its version-specific event type. */
     public boolean keyPressed(net.minecraft.client.gui.components.EditBox editBox) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return editBox.keyPressed(this.event);
         //?} else {
         /*return editBox.keyPressed(this.key, this.scanCode, this.modifiers);
@@ -60,7 +64,7 @@ public final class KeyInput {
 
     /** Delivers a key release to a text widget without exposing its version-specific event type. */
     public boolean keyReleased(net.minecraft.client.gui.components.EditBox editBox) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return editBox.keyReleased(this.event);
         //?} else {
         /*return editBox.keyReleased(this.key, this.scanCode, this.modifiers);

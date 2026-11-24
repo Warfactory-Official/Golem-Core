@@ -6,7 +6,7 @@ import com.mojang.math.Axis;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.resources.Identifier;
@@ -46,7 +46,7 @@ public final class SpikeRenderer implements CompatBER<BlockEntity, SpikeRenderer
     public void submit(State state, PoseStack poseStack, SubmitSink sink, CameraInfo camera) {
         // Base geometry at the default order.
         poseStack.pushPose();
-        poseStack.mulPose(Axis.YP.rotationDegrees(-state.yaw));
+        Poses.rotate(poseStack, Axis.YP.rotationDegrees(-state.yaw));
         sink.submitCustomGeometry(poseStack, layer, (pose, buffer) ->
                 //? if >=1.21 {
                 buffer.addVertex(pose, 0F, 0F, 0F).setColor(-1).setUv(0F, 0F).setLight(state.lightCoords).setNormal(pose, 0F, 1F, 0F));
@@ -70,27 +70,27 @@ public final class SpikeRenderer implements CompatBER<BlockEntity, SpikeRenderer
     // The two spellings each era uses, kept behind helpers so the body above stays version-agnostic.
     // The real module will expose these as CompatRenderTypes / Ids.
     private static RenderType entityCutout(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier
             //?} else {
             /*ResourceLocation
             *///?}
             texture) {
-        //? if >=26.1 {
-        return RenderTypes.entityCutout(texture);
+        //? if >=1.21.11 {
+        return CompatRenderTypes.entityCutoutNoCull(texture);
         //?} else {
         /*return RenderType.entityCutout(texture);
         *///?}
     }
 
     private static
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier
             //?} else {
             /*ResourceLocation
             *///?}
             id(String namespace, String path) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return Ids.of(namespace, path);
         //?} elif >=1.21 {
         /*return Ids.of(namespace, path);

@@ -337,14 +337,18 @@ public final class ComponentIngredient {
         return !components.isEmpty() || !stringComponents.isEmpty();
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     /** The viewer slot: the stacks carrying the required components where there are any, else {@link #displayIngredient}. */
     public net.minecraft.world.item.crafting.display.SlotDisplay slotDisplay() {
         if (!hasDisplayComponents()) return displayIngredient().display();
         List<net.minecraft.world.item.crafting.display.SlotDisplay> slots = displayStacks().stream()
                 .map(stack -> (net.minecraft.world.item.crafting.display.SlotDisplay)
                         new net.minecraft.world.item.crafting.display.SlotDisplay.ItemStackSlotDisplay(
+                                //? if >=26.1 {
                                 net.minecraft.world.item.ItemStackTemplate.fromNonEmptyStack(stack)))
+                                //?} else {
+                                /*stack))
+                                *///?}
                 .toList();
         if (slots.isEmpty()) return displayIngredient().display();
         return slots.size() == 1 ? slots.get(0) : new net.minecraft.world.item.crafting.display.SlotDisplay.Composite(slots);
@@ -358,7 +362,7 @@ public final class ComponentIngredient {
             // A lone tag stays a lazily bound tag, so it displays correctly even before tags are loaded.
             TagKey<Item> tag = TagKey.create(
                     Registries.ITEM, Ids.parse(items.get(0).substring(1)));
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             java.util.Optional<net.minecraft.core.HolderSet.Named<Item>> set =
                     net.minecraft.core.registries.BuiltInRegistries.ITEM.get(tag);
             if (set.isPresent()) return Ingredient.of(set.get());
@@ -366,7 +370,7 @@ public final class ComponentIngredient {
             /*return Ingredient.of(tag);
             *///?}
         }
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         // 26.1 decodes recipes before item components are bound: no ItemStack may be built here for a plain
         // item or tag (ComponentSmeltingRecipe calls this from its constructor). Only a fluid ingredient needs
         // the dictionary's example stacks, and that is asked for after load (placement info, displays).

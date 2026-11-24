@@ -47,7 +47,7 @@ public final class Respawns {
     }
 
     public static @Nullable Point stored(ServerPlayer player) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         var config = player.getRespawnConfig();
         return config == null ? null : new Point(config.respawnData().dimension(), config.respawnData().pos());
         //?} else {

@@ -1,16 +1,15 @@
 package dev.golem.core.render;
 
+import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-//? if <26.1 {
+//? if <1.21.11 {
 /*import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 *///?}
-//? if >=26.1 {
+//? if >=1.21.11 {
 import com.mojang.blaze3d.pipeline.BlendFunction;
-import com.mojang.blaze3d.pipeline.ColorTargetState;
-import com.mojang.blaze3d.pipeline.DepthStencilState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.texture.TextureAtlas;
@@ -36,7 +35,7 @@ import net.minecraft.client.renderer.texture.TextureAtlas;
  * <p>Client-only.
  */
 public abstract class CompatParticle extends
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         net.minecraft.client.particle.SingleQuadParticle
         //?} else {
         /*net.minecraft.client.particle.TextureSheetParticle
@@ -54,17 +53,16 @@ public abstract class CompatParticle extends
     private float planeYaw;
     private float planePitch;
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     // PARTICLE_SNIPPET keeps the vanilla particle atlas bindings while this replaces only blend/depth.
     // The loader hooks register this pipeline alongside their normal particle pipeline registration.
-    public static final RenderPipeline ADDITIVE_PIPELINE = WorldPipelines.add(RenderPipeline.builder(RenderPipelines.PARTICLE_SNIPPET)
-            .withLocation("pipeline/golem_particle_additive")
-            .withColorTargetState(new ColorTargetState(BlendFunction.ADDITIVE))
-            .withDepthStencilState(new DepthStencilState(DepthStencilState.DEFAULT.depthTest(), false)).build(), RenderPipelines.TRANSLUCENT_PARTICLE);
+    public static final RenderPipeline ADDITIVE_PIPELINE = WorldPipelines.add(PipelineStates.depth(PipelineStates.blend(RenderPipeline.builder(RenderPipelines.PARTICLE_SNIPPET)
+            .withLocation("pipeline/golem_particle_additive"), BlendFunction.ADDITIVE),
+            PipelineStates.Depth.LESS_OR_EQUAL, false).build(), RenderPipelines.TRANSLUCENT_PARTICLE);
     private static final net.minecraft.client.particle.SingleQuadParticle.Layer ADDITIVE_LAYER =
             new net.minecraft.client.particle.SingleQuadParticle.Layer(true, TextureAtlas.LOCATION_PARTICLES, ADDITIVE_PIPELINE);
     //?}
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*private static final net.minecraft.client.particle.ParticleRenderType ADDITIVE_LAYER =
             new net.minecraft.client.particle.ParticleRenderType() {
                 //? if >=1.21 {
@@ -76,7 +74,7 @@ public abstract class CompatParticle extends
                     RenderSystem.setShaderTexture(0, TextureAtlas.LOCATION_PARTICLES);
                     RenderSystem.enableBlend();
                     RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE);
-                    return tesselator.begin(com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS,
+                    return tesselator.begin(VertexFormat.Mode.QUADS,
                             com.mojang.blaze3d.vertex.DefaultVertexFormat.PARTICLE);
                 }
                 //?} else {
@@ -87,7 +85,7 @@ public abstract class CompatParticle extends
                     RenderSystem.setShaderTexture(0, TextureAtlas.LOCATION_PARTICLES);
                     RenderSystem.enableBlend();
                     RenderSystem.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE);
-                    buffer.begin(com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS,
+                    buffer.begin(VertexFormat.Mode.QUADS,
                             com.mojang.blaze3d.vertex.DefaultVertexFormat.PARTICLE);
                 }
                 ^///?}
@@ -109,7 +107,7 @@ public abstract class CompatParticle extends
             };
     *///?}
 
-    //? if fabric && <26.1 {
+    //? if fabric && <1.21.11 {
     /*static {
         // Vanilla's ParticleEngine draws only the render types listed in its RENDER_ORDER (NeoForge and Forge patch it
         // to draw every type that holds particles), so on Fabric a particle in one of Core's own layers would be ticked and
@@ -125,7 +123,7 @@ public abstract class CompatParticle extends
     *///?}
 
     protected CompatParticle(ClientLevel level, double x, double y, double z, TextureAtlasSprite sprite) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         super(level, x, y, z, sprite);
         //?} else {
         /*super(level, x, y, z);
@@ -135,7 +133,7 @@ public abstract class CompatParticle extends
 
     protected CompatParticle(ClientLevel level, double x, double y, double z,
             double xa, double ya, double za, TextureAtlasSprite sprite) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         super(level, x, y, z, xa, ya, za, sprite);
         //?} else {
         /*super(level, x, y, z, xa, ya, za);
@@ -256,7 +254,7 @@ public abstract class CompatParticle extends
     // The per-frame entry point: 26.1 extracts into a render state, older versions write vertices
     // directly. Both are called once per particle per frame, which is all updateForFrame needs, and
     // both then route the quads through emitQuads so a cluster particle works on either era.
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     public void extract(net.minecraft.client.renderer.state.level.QuadParticleRenderState renderState,
             net.minecraft.client.Camera camera, float partialTick) {
@@ -272,7 +270,11 @@ public abstract class CompatParticle extends
         float baseX = (float) (net.minecraft.util.Mth.lerp(partialTick, this.xo, this.x) - cameraPos.x());
         float baseY = (float) (net.minecraft.util.Mth.lerp(partialTick, this.yo, this.y) - cameraPos.y());
         float baseZ = (float) (net.minecraft.util.Mth.lerp(partialTick, this.zo, this.z) - cameraPos.z());
+        //? if >=26.1 {
         int light = this.getLightCoords(partialTick);
+        //?} else {
+        /*int light = this.getLightColor(partialTick);
+        *///?}
 
         this.emitQuads((dx, dy, dz, size) -> renderState.add(this.getLayer(),
                 baseX + dx, baseY + dy, baseZ + dz,
@@ -362,7 +364,7 @@ public abstract class CompatParticle extends
     }
     *///?}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private int golemColor() {
         return net.minecraft.util.ARGB.colorFromFloat(golemChannel(this.alpha), golemChannel(this.rCol),
                 golemChannel(this.gCol), golemChannel(this.bCol));
@@ -392,7 +394,7 @@ public abstract class CompatParticle extends
     }
     *///?}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     protected net.minecraft.client.particle.SingleQuadParticle.Layer getLayer() {
         if (this.golemFogless) return FaintParticleLayers.FOGLESS_ADDITIVE;

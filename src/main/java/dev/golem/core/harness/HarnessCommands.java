@@ -342,7 +342,7 @@ final class HarnessCommands {
             case "gui_scale":
                 previous = String.valueOf(mc.options.guiScale().get());
                 mc.options.guiScale().set(Integer.parseInt(value));
-                //? if <26.1 {
+                //? if <1.21.11 {
                 /*mc.resizeDisplay();
                 *///?}
                 break;
@@ -369,8 +369,13 @@ final class HarnessCommands {
                 else mc.setScreen(null);
                 break;
             case "hide_gui":
+                //? if >=26.2 {
+                /*previous = String.valueOf(mc.gui.hud.isHidden());
+                if (mc.gui.hud.isHidden() != Boolean.parseBoolean(value)) mc.gui.hud.toggle();
+                *///?} else {
                 previous = String.valueOf(mc.options.hideGui);
                 mc.options.hideGui = Boolean.parseBoolean(value);
+                //?}
                 break;
             case "sound_capture":
                 // HarnessSounds: un-mute the sound categories (master stays 0) so every started sound is logged
@@ -387,7 +392,7 @@ final class HarnessCommands {
                 break;
             case "inactivity_fps":
                 // harness input never counts as activity, so "afk" caps a measured client at 30 fps after a minute
-                //? if >=26.1 {
+                //? if >=1.21.11 {
                 previous = mc.options.inactivityFpsLimit().get().name().toLowerCase(java.util.Locale.ROOT);
                 mc.options.inactivityFpsLimit().set(net.minecraft.client.InactivityFpsLimit.valueOf(
                         value.toUpperCase(java.util.Locale.ROOT)));
@@ -397,7 +402,7 @@ final class HarnessCommands {
                 break;
             case "fabulous":
                 // the split translucency targets ("Improved Transparency" on 26.1, Fabulous graphics before); off = Fancy
-                //? if >=26.1 {
+                //? if >=1.21.11 {
                 previous = String.valueOf(mc.options.improvedTransparency().get());
                 mc.options.improvedTransparency().set(Boolean.parseBoolean(value));
                 //?} else {

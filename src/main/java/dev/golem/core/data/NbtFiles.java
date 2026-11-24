@@ -41,7 +41,7 @@ public final class NbtFiles {
         if (index < 0 || index >= list.size()) return 0;
         Tag element = list.get(index);
         if (!(element instanceof NumericTag number)) return 0;
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return number.intValue();
         //?} else {
         /*return number.getAsInt();
@@ -53,7 +53,7 @@ public final class NbtFiles {
         if (index < 0 || index >= list.size()) return "";
         Tag element = list.get(index);
         if (!(element instanceof net.minecraft.nbt.StringTag string)) return "";
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return string.value();
         //?} else {
         /*return string.getAsString();

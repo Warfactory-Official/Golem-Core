@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.gen.Accessor;
  * <p>On 26.1 the types are a late-bound id mapper of codecs instead of a {@code BiMap}, so the accessor's shape
  * differs.
  */
-//? if >=26.1 {
+//? if >=1.21.11 {
 @Mixin(net.minecraft.client.renderer.texture.atlas.SpriteSources.class)
 public interface SpriteSourceTypesAccess {
 

@@ -3,7 +3,7 @@ package dev.golem.core.client;
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.golem.core.harness.HarnessHooks;
 import net.minecraft.client.KeyMapping;
-//? if >=26.1 {
+//? if >=1.21.11 {
 import java.util.HashMap;
 import java.util.Map;
 //?}
@@ -29,7 +29,7 @@ public final class KeyMappings {
 
     private KeyMappings() {}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     /**
      * Categories already built, by id. 26.1's registrar throws outright on a second registration of the
      * same id, so several mappings sharing one category, the normal case, must share one instance.
@@ -58,7 +58,7 @@ public final class KeyMappings {
      */
     public static Mapping register(String namespace, String translationKey,
             com.mojang.blaze3d.platform.InputConstants.Type type, int value, String categoryPath) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         String categoryId = namespace + ":" + categoryPath;
         boolean firstOfCategory = !CATEGORIES.containsKey(categoryId);
         KeyMapping.Category category = category(namespace, categoryPath);
@@ -72,7 +72,7 @@ public final class KeyMappings {
         /*net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper.registerKeyMapping(mapping);
         *///?} elif fabric {
         /*net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper.registerKeyBinding(mapping);
-        *///?} elif neoforge && >=26.1 {
+        *///?} elif neoforge && >=1.21.11 {
         // Deferred: this loader only accepts mappings inside its own mod-bus event. The category goes over
         // the same event, or the controls screen has nowhere to file the mapping.
         // Only the first mapping of a category registers it: registerCategory throws on a repeat, which
@@ -95,7 +95,7 @@ public final class KeyMappings {
 
     /** Whether a mapping's current binding is the given mouse button. */
     public static boolean matchesMouse(KeyMapping mapping, int button) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return mapping.matchesMouse(new net.minecraft.client.input.MouseButtonEvent(0, 0,
                 new net.minecraft.client.input.MouseButtonInfo(button, 0)));
         //?} else {
@@ -108,7 +108,9 @@ public final class KeyMappings {
      * mapping (1.7's {@code Keyboard.isKeyDown}). Only the window handle's spelling differs by version.
      */
     public static boolean isKeyDown(int glfwKey) {
-        //? if >=26.1 {
+        //? if >=26.3 {
+        /*return com.mojang.blaze3d.platform.InputConstants.isKeyDown(glfwKey) || HarnessHooks.keyHeld(glfwKey);
+        *///?} elif >=1.21.11 {
         return com.mojang.blaze3d.platform.InputConstants.isKeyDown(
                 net.minecraft.client.Minecraft.getInstance().getWindow(), glfwKey)
                 || HarnessHooks.keyHeld(glfwKey);
@@ -130,7 +132,9 @@ public final class KeyMappings {
         }
         if (key.getType() == com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM) {
             if (HarnessHooks.keyHeld(key.getValue())) return true;
-            //? if >=26.1 {
+            //? if >=26.3 {
+            /*return com.mojang.blaze3d.platform.InputConstants.isKeyDown(key.getValue());
+            *///?} elif >=1.21.11 {
             return com.mojang.blaze3d.platform.InputConstants.isKeyDown(
                     net.minecraft.client.Minecraft.getInstance().getWindow(), key.getValue());
             //?} else {
@@ -154,7 +158,7 @@ public final class KeyMappings {
      */
     public static final class Mapping extends KeyMapping {
 
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         Mapping(String name, com.mojang.blaze3d.platform.InputConstants.Type type, int value,
                 KeyMapping.Category category) {
             super(name, type, value, category);
@@ -180,16 +184,16 @@ public final class KeyMappings {
             for (KeyMapping other : net.minecraft.client.Minecraft.getInstance().options.keyMappings) {
                 if (other != this && !other.isUnbound() && other.same(this) && other.isDown()) return true;
             }
-            //? if <26.1 {
+            //? if <1.21.11 {
             /*return KeyMappings.isHeld(this);
             *///?}
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             return false;
             //?}
         }
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private static KeyMapping.Category category(String namespace, String path) {
         return CATEGORIES.computeIfAbsent(namespace + ":" + path,
                 key -> KeyMapping.Category.register(dev.golem.core.Ids.of(namespace, path)));

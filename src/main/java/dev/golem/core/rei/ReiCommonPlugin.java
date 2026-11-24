@@ -17,7 +17,7 @@ import dev.golem.core.viewer.Subtypes;
  * plugin classes and entrypoints are the same on every node.
  */
 public abstract class ReiCommonPlugin implements
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         me.shedaniel.rei.api.common.plugins.REICommonPlugin {
         //?} else {
         /*me.shedaniel.rei.api.common.plugins.REIServerPlugin {
@@ -35,7 +35,7 @@ public abstract class ReiCommonPlugin implements
         MenuSlotAccessor.register(registry);
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     public void registerItemComparators(me.shedaniel.rei.api.common.entry.comparison.ItemComparatorRegistry registry) {
         Rei.comparators(registry, subtypes);

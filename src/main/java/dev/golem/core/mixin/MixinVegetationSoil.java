@@ -19,7 +19,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 @Mixin(net.minecraft.world.level.block.VegetationBlock.class)
 //?} else {
 /^@Mixin(net.minecraft.world.level.block.BushBlock.class)

@@ -16,7 +16,7 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
  */
 public abstract class CompatFallingBlock extends FallingBlock {
 
-    //? if >=1.21.1 {
+    //? if >=1.21.1 && <26.3 {
     private final com.mojang.serialization.MapCodec<? extends FallingBlock> blockCodec;
     //?}
 
@@ -24,12 +24,13 @@ public abstract class CompatFallingBlock extends FallingBlock {
     protected <B extends CompatFallingBlock> CompatFallingBlock(BlockBehaviour.Properties properties,
                                                                 Function<BlockBehaviour.Properties, B> factory) {
         super(properties);
-        //? if >=1.21.1 {
+        //? if >=1.21.1 && <26.3 {
         this.blockCodec = simpleCodec(factory);
         //?}
     }
 
-    //? if >=1.21.1 {
+    // 26.3 dropped block codecs; the factory parameter stays so subclasses read the same on every node.
+    //? if >=1.21.1 && <26.3 {
     @Override
     public com.mojang.serialization.MapCodec<? extends FallingBlock> codec() {
         return blockCodec;

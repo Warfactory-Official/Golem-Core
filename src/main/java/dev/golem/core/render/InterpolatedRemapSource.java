@@ -133,7 +133,7 @@ public final class InterpolatedRemapSource implements SpriteSource {
         }
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     public MapCodec<? extends SpriteSource> codec() {
         return CODEC;
@@ -150,13 +150,13 @@ public final class InterpolatedRemapSource implements SpriteSource {
      * reference counted: every permutation releases it once, and the last release frees it.
      */
     private record Remapped(LazyLoadedImage image, ColorRamp ramp, String id)
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             implements SpriteSource.DiscardableLoader {
             //?} else {
             /*implements SpriteSource.SpriteSupplier {
             *///?}
 
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         @Override
         public SpriteContents get(SpriteResourceLoader loader) {
             return contents();
@@ -179,12 +179,12 @@ public final class InterpolatedRemapSource implements SpriteSource {
                 // converts each pixel with ARGB.fromABGR before the call and ARGB.toABGR after it;
                 // every version below hands over the raw int, which is ABGR in memory. Feeding one
                 // version's operator to the other swaps red and blue, so gold comes out blue.
-                //? if >=26.1 {
+                //? if >=1.21.11 {
                 var mapped = image.get().mappedCopy(ramp::applyArgb);
                 //?} else {
                 /*var mapped = image.get().mappedCopy(ramp.abgrOperator());
                 *///?}
-                //? if >=26.1 {
+                //? if >=1.21.11 {
                 return new SpriteContents(Ids.parse(id), new FrameSize(mapped.getWidth(), mapped.getHeight()), mapped);
                 //?} elif >=1.21 {
                 /*return new SpriteContents(Ids.parse(id), new FrameSize(mapped.getWidth(), mapped.getHeight()), mapped,

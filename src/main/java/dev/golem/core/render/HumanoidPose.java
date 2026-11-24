@@ -5,7 +5,7 @@ import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.world.entity.player.Player;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.client.model.player.PlayerModel;
 //?} else {
 /*import net.minecraft.client.model.PlayerModel;

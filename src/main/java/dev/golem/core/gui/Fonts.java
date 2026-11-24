@@ -14,7 +14,7 @@ public final class Fonts {
 
     /** {@code text} in the standard galactic alphabet (1.7 {@code Minecraft.standardGalacticFontRenderer}). */
     public static MutableComponent galactic(String text) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         Style style = Style.EMPTY.withFont(new net.minecraft.network.chat.FontDescription.Resource(
                 dev.golem.core.Ids.of("minecraft", "alt")));
         //?} else {

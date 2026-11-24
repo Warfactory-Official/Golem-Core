@@ -34,7 +34,7 @@ public final class Compat {
      * the level explicitly; older versions have only {@code hurt}.
      */
     public static boolean hurt(Entity entity, ServerLevel level, DamageSource source, float amount) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return entity.hurtServer(level, source, amount);
         //?} else {
         /*return entity.hurt(source, amount);
@@ -83,7 +83,7 @@ public final class Compat {
      */
     public static boolean causeFallDamage(Entity entity, float fallDistance, float damageMultiplier,
             DamageSource source) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return entity.causeFallDamage((double) fallDistance, damageMultiplier, source);
         //?} else {
         /*return entity.causeFallDamage(fallDistance, damageMultiplier, source);
@@ -97,7 +97,7 @@ public final class Compat {
      * field is public and there is no accessor.
      */
     public static int selectedSlot(net.minecraft.world.entity.player.Player player) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return player.getInventory().getSelectedSlot();
         //?} else {
         /*return player.getInventory().selected;
@@ -106,7 +106,7 @@ public final class Compat {
 
     /** Sets the selected hotbar slot across the private-access change at 26.1. */
     public static void setSelectedSlot(net.minecraft.world.entity.player.Player player, int slot) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         player.getInventory().setSelectedSlot(slot);
         //?} else {
         /*player.getInventory().selected = slot;
@@ -115,7 +115,7 @@ public final class Compat {
 
     /** Tells the client about a server-side selected-slot change across the packet rename. */
     public static void syncSelectedSlot(net.minecraft.server.level.ServerPlayer player) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         player.connection.send(new net.minecraft.network.protocol.game.ClientboundSetHeldSlotPacket(
                 selectedSlot(player)));
         //?} else {
@@ -150,7 +150,25 @@ public final class Compat {
      * static map on {@code AbstractFurnaceBlockEntity}.
      */
     public static int burnDuration(Level level, ItemStack stack) {
-        //? if >=26.1 {
+        //? if >=26.3 {
+        /*if (!(level instanceof net.minecraft.server.level.ServerLevel server) || stack.isEmpty()) return 0; // client: none
+        // 26.3 fuel is an item component, read through a furnace's loot context.
+        var furnace = new net.minecraft.world.level.block.entity.FurnaceBlockEntity(net.minecraft.core.BlockPos.ZERO,
+                net.minecraft.world.level.block.Blocks.FURNACE.defaultBlockState());
+        var context = new net.minecraft.world.level.storage.loot.LootContext.Builder(
+                new net.minecraft.world.level.storage.loot.LootParams.Builder(server)
+                        .withParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.BLOCK_STATE,
+                                furnace.getBlockState())
+                        .withParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.BLOCK_ENTITY, furnace)
+                        .withParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.ORIGIN,
+                                net.minecraft.world.phys.Vec3.ZERO)
+                        .withParameter(net.minecraft.world.level.storage.loot.parameters.LootContextParams.CONTAINER, furnace)
+                        .create(net.minecraft.world.level.storage.loot.parameters.LootContextParamSets.CONTAINER_PROCESS))
+                .create(java.util.Optional.empty());
+        return net.minecraft.world.level.storage.loot.providers.number.ints.ResolvableInt.getFromItem(stack,
+                net.minecraft.core.component.DataComponents.COOKING_FUEL,
+                net.minecraft.world.item.component.CookingFuel::burnTime, context, 0);
+        *///?} elif >=1.21.11 {
         return level == null ? 0 : level.fuelValues().burnDuration(stack);
         //?} elif forge {
         /*// ForgeHooks asks the item and then FurnaceFuelBurnTimeEvent, as the vanilla furnace does;
@@ -178,7 +196,7 @@ public final class Compat {
      * block's.
      */
     public static Item.Properties blockDescription(Item.Properties properties) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return properties.useBlockDescriptionPrefix();
         //?} else {
         /*BLOCK_DESCRIPTION.add(properties);
@@ -186,7 +204,7 @@ public final class Compat {
         *///?}
     }
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*private static final java.util.Set<Item.Properties> BLOCK_DESCRIPTION =
             java.util.Collections.synchronizedSet(java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>()));
 
@@ -227,7 +245,7 @@ public final class Compat {
      * occlusion depends on neighbours.
      */
     public static boolean isSolidRender(net.minecraft.world.level.block.state.BlockState state) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return state.isSolidRender();
         //?} else {
         /*return state.canOcclude();
@@ -245,7 +263,7 @@ public final class Compat {
     public static boolean isSolidRender(net.minecraft.world.level.block.state.BlockState state,
                                         net.minecraft.world.level.BlockGetter level,
                                         net.minecraft.core.BlockPos pos) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return state.isSolidRender();
         //?} else {
         /*return state.isSolidRender(level, pos);
@@ -260,7 +278,7 @@ public final class Compat {
     public static java.util.List<net.minecraft.world.item.ItemStack> itemsInTag(
             net.minecraft.tags.TagKey<Item> tag) {
         java.util.List<net.minecraft.world.item.ItemStack> stacks = new java.util.ArrayList<>();
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         net.minecraft.core.registries.BuiltInRegistries.ITEM.get(tag)
                 .ifPresent(named -> named.forEach(h -> stacks.add(new net.minecraft.world.item.ItemStack(h))));
         //?} else {
@@ -279,7 +297,7 @@ public final class Compat {
      */
     public static java.util.List<net.minecraft.tags.TagKey<Item>> itemTagKeys() {
         java.util.List<net.minecraft.tags.TagKey<Item>> keys = new java.util.ArrayList<>();
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         net.minecraft.core.registries.BuiltInRegistries.ITEM.getTags().forEach(named -> keys.add(named.key()));
         //?} else {
         /*net.minecraft.core.registries.BuiltInRegistries.ITEM.getTags().forEach(pair -> keys.add(pair.getFirst()));
@@ -324,7 +342,12 @@ public final class Compat {
         if (component != null) return component.convertInto().create();
         var remainder = stack.getItem().getCraftingRemainder();
         return remainder != null ? remainder.create() : ItemStack.EMPTY;
-        //?} else {
+        //?} elif >=1.21.2 {
+        /*net.minecraft.world.item.component.UseRemainder component =
+                stack.get(net.minecraft.core.component.DataComponents.USE_REMAINDER);
+        if (component != null) return component.convertInto().copy();
+        return stack.getItem().getCraftingRemainder().copy();
+        *///?} else {
         /*var remainder = stack.getItem().getCraftingRemainingItem();
         return remainder != null ? new ItemStack(remainder) : ItemStack.EMPTY;
         *///?}
@@ -370,7 +393,7 @@ public final class Compat {
                                             net.minecraft.world.level.block.state.BlockState state) {
         // Nothing to do on 26.1: vanilla has already invoked it, and running it again would drop the
         // inventory twice.
-        //? if <26.1 {
+        //? if <1.21.11 {
         /*if (level == null || level.isClientSide()) return;
         // A sub-level system carrying the block elsewhere: its block entity, contents and all, already lives on
         // at the new position, so nothing may drop (or be rebuilt) at the old one.
@@ -408,7 +431,7 @@ public final class Compat {
      */
     public static boolean setBlockWithRemoval(ServerLevel level, net.minecraft.core.BlockPos pos,
                                               net.minecraft.world.level.block.state.BlockState state, int flags) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         net.minecraft.world.level.block.state.BlockState old = level.getBlockState(pos);
         boolean changed = level.setBlock(pos, state, flags);
         if (changed && (flags & (net.minecraft.world.level.block.Block.UPDATE_NEIGHBORS
@@ -430,7 +453,7 @@ public final class Compat {
      * will.
      */
     public static void markUnsaved(net.minecraft.world.level.chunk.ChunkAccess chunk) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         chunk.markUnsaved();
         //?} else {
         /*chunk.setUnsaved(true);
@@ -446,7 +469,7 @@ public final class Compat {
      */
     public static void onSectionEmptinessChanged(net.minecraft.server.level.ServerLevel level,
                                                  int chunkX, int sectionY, int chunkZ, boolean empty) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         level.getChunkSource().onSectionEmptinessChanged(chunkX, sectionY, chunkZ, empty);
         //?}
     }
@@ -459,7 +482,7 @@ public final class Compat {
      */
     public static void updateNeighborsAt(Level level, net.minecraft.core.BlockPos pos,
                                          net.minecraft.world.level.block.Block block) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         level.updateNeighborsAt(pos, block, null);
         //?} else {
         /*level.updateNeighborsAt(pos, block);
@@ -475,7 +498,9 @@ public final class Compat {
     public static boolean isChunkForced(ServerLevel level, int chunkX, int chunkZ) {
         //? if >=26.1 {
         return level.getForceLoadedChunks().contains(net.minecraft.world.level.ChunkPos.pack(chunkX, chunkZ));
-        //?} else {
+        //?} elif >=1.21.11 {
+        /*return level.getForceLoadedChunks().contains(net.minecraft.world.level.ChunkPos.asLong(chunkX, chunkZ));
+        *///?} else {
         /*return level.getForcedChunks().contains(net.minecraft.world.level.ChunkPos.asLong(chunkX, chunkZ));
         *///?}
     }
@@ -492,7 +517,7 @@ public final class Compat {
      */
     public static void affectNeighborsAfterRemoval(ServerLevel level, net.minecraft.core.BlockPos pos,
                                                    net.minecraft.world.level.block.state.BlockState oldState) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         oldState.affectNeighborsAfterRemoval(level, pos, false);
         //?} else {
         /*oldState.onRemove(level, pos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), false);
@@ -511,7 +536,7 @@ public final class Compat {
 
     /** The {@code mobGriefing} game rule across the 26.1 typed game-rule API change. */
     public static boolean mobGriefing(ServerLevel level) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return level.getGameRules().get(net.minecraft.world.level.gamerules.GameRules.MOB_GRIEFING);
         //?} else {
         /*return level.getGameRules().getBoolean(net.minecraft.world.level.GameRules.RULE_MOBGRIEFING);
@@ -520,7 +545,7 @@ public final class Compat {
 
     /** The {@code doMobLoot} game rule across the 26.1 typed game-rule API change. */
     public static boolean mobLoot(ServerLevel level) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return level.getGameRules().get(net.minecraft.world.level.gamerules.GameRules.MOB_DROPS);
         //?} else {
         /*return level.getGameRules().getBoolean(net.minecraft.world.level.GameRules.RULE_DOMOBLOOT);
@@ -529,7 +554,7 @@ public final class Compat {
 
     /** The {@code doEntityDrops} game rule across the 26.1 typed game-rule API change. */
     public static boolean entityDrops(ServerLevel level) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return level.getGameRules().get(net.minecraft.world.level.gamerules.GameRules.ENTITY_DROPS);
         //?} else {
         /*return level.getGameRules().getBoolean(net.minecraft.world.level.GameRules.RULE_DOENTITYDROPS);
@@ -538,7 +563,7 @@ public final class Compat {
 
     /** The {@code doTileDrops} game rule across the 26.1 typed game-rule API change. */
     public static boolean blockDrops(ServerLevel level) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return level.getGameRules().get(net.minecraft.world.level.gamerules.GameRules.BLOCK_DROPS);
         //?} else {
         /*return level.getGameRules().getBoolean(net.minecraft.world.level.GameRules.RULE_DOBLOCKDROPS);
@@ -561,7 +586,7 @@ public final class Compat {
      */
     public static net.minecraft.world.entity.item.ItemEntity spawnAtLocation(Entity entity, ServerLevel level,
                                                                              ItemStack stack) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return entity.spawnAtLocation(level, stack);
         //?} else {
         /*return entity.spawnAtLocation(stack);
@@ -571,7 +596,7 @@ public final class Compat {
     /** {@link #spawnAtLocation(Entity, ServerLevel, ItemStack)} with the vertical offset overload. */
     public static net.minecraft.world.entity.item.ItemEntity spawnAtLocation(Entity entity, ServerLevel level,
                                                                              ItemStack stack, float offset) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return entity.spawnAtLocation(level, stack, offset);
         //?} else {
         /*return entity.spawnAtLocation(stack, offset);
@@ -580,7 +605,7 @@ public final class Compat {
 
     /** {@code Mob.doHurtTarget} across the 26.1 explicit-level change. */
     public static boolean doHurtTarget(net.minecraft.world.entity.Mob mob, ServerLevel level, Entity target) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return mob.doHurtTarget(level, target);
         //?} else {
         /*return mob.doHurtTarget(target);
@@ -590,7 +615,7 @@ public final class Compat {
     /** {@code LivingEntity.isInvulnerableTo} across the 26.1 explicit-level change. */
     public static boolean isInvulnerableTo(net.minecraft.world.entity.LivingEntity entity, ServerLevel level,
                                            DamageSource source) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return entity.isInvulnerableTo(level, source);
         //?} else {
         /*return entity.isInvulnerableTo(source);
@@ -599,7 +624,7 @@ public final class Compat {
 
     /** {@code Entity.lerpMotion} across the 26.1 vector-argument change. */
     public static void lerpMotion(Entity entity, net.minecraft.world.phys.Vec3 movement) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         entity.lerpMotion(movement);
         //?} else {
         /*entity.lerpMotion(movement.x, movement.y, movement.z);
@@ -620,7 +645,7 @@ public final class Compat {
      */
     public static void syncPosition(Entity entity) {
         if (!(entity.level() instanceof ServerLevel server)) return;
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         server.getChunkSource().chunkMap.sendToTrackingPlayers(entity,
                 net.minecraft.network.protocol.game.ClientboundEntityPositionSyncPacket.of(entity));
         //?} else {
@@ -641,7 +666,7 @@ public final class Compat {
 
     /** {@code Entity.kill}, which took the level from 26.1 on. */
     public static void kill(Entity entity, ServerLevel level) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         entity.kill(level);
         //?} else {
         /*entity.kill();
@@ -652,7 +677,7 @@ public final class Compat {
     public static void sendToTrackingPlayers(Entity entity,
             net.minecraft.network.protocol.Packet<? super net.minecraft.network.protocol.game.ClientGamePacketListener> packet) {
         if (!(entity.level() instanceof ServerLevel server)) return;
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         server.getChunkSource().chunkMap.sendToTrackingPlayers(entity, packet);
         //?} else {
         /*server.getChunkSource().chunkMap.broadcast(entity, packet);
@@ -661,7 +686,7 @@ public final class Compat {
 
     /** 26.1 {@code Block.UPDATE_SKIP_BLOCK_ENTITY_SIDEEFFECTS}; no such flag exists before it (0 = no-op bit). */
     public static final int UPDATE_SKIP_BLOCK_ENTITY_SIDEEFFECTS =
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             net.minecraft.world.level.block.Block.UPDATE_SKIP_BLOCK_ENTITY_SIDEEFFECTS;
             //?} else {
             /*0;
@@ -669,7 +694,7 @@ public final class Compat {
 
     /** A dust particle of one packed RGB colour, across the colour-argument type change. */
     public static net.minecraft.core.particles.DustParticleOptions dust(int rgb, float scale) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return new net.minecraft.core.particles.DustParticleOptions(rgb, scale);
         //?} else {
         /*return new net.minecraft.core.particles.DustParticleOptions(
@@ -695,7 +720,7 @@ public final class Compat {
 
     /** The rider's forward/back input as -1/0/1 (26.1 {@code getLastClientInput}; earlier the {@code zza} axis). */
     public static int clientForwardInput(net.minecraft.server.level.ServerPlayer player) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         boolean f = player.getLastClientInput().forward();
         boolean b = player.getLastClientInput().backward();
         return f == b ? 0 : f ? 1 : -1;
@@ -716,7 +741,7 @@ public final class Compat {
     /** A random item of a tag, or empty when the tag is empty/absent (26.1 {@code Registry.getRandomElementOf}). */
     public static java.util.Optional<net.minecraft.world.item.Item> randomItemOf(
             net.minecraft.tags.TagKey<net.minecraft.world.item.Item> tag, net.minecraft.util.RandomSource random) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return net.minecraft.core.registries.BuiltInRegistries.ITEM.getRandomElementOf(tag, random)
                 .map(net.minecraft.core.Holder::value);
         //?} else {
@@ -728,10 +753,18 @@ public final class Compat {
     /** One large-ball firework burst of a single colour with trail and flicker, in each era's explosion format. */
     public static void fireworkBurst(net.minecraft.world.level.Level level, double x, double y, double z, int color) {
         //? if >=1.20.5 {
+        //? if >=26.3 {
+        /*level.createFireworks(x, y, z, 0.0D, 0.0D, 0.0D, java.util.List.of(
+                new net.minecraft.world.item.component.FireworkExplosion(
+                        net.minecraft.world.item.component.FireworkExplosion.Shape.LARGE_BALL,
+                        it.unimi.dsi.fastutil.ints.IntList.of(color), it.unimi.dsi.fastutil.ints.IntList.of(), true, true)),
+                true);
+        *///?} else {
         level.createFireworks(x, y, z, 0.0D, 0.0D, 0.0D, java.util.List.of(
                 new net.minecraft.world.item.component.FireworkExplosion(
                         net.minecraft.world.item.component.FireworkExplosion.Shape.LARGE_BALL,
                         it.unimi.dsi.fastutil.ints.IntList.of(color), it.unimi.dsi.fastutil.ints.IntList.of(), true, true)));
+        //?}
         //?} else {
         /*net.minecraft.nbt.CompoundTag explosion = new net.minecraft.nbt.CompoundTag();
         explosion.putByte("Type", (byte) 1); // LARGE_BALL

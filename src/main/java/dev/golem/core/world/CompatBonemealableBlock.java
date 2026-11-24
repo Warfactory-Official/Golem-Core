@@ -17,7 +17,32 @@ public interface CompatBonemealableBlock extends BonemealableBlock {
     /** The old {@code IGrowable.func_149851_a}: whether the plant has room / conditions to grow. */
     boolean canBonemeal(LevelReader level, BlockPos pos, BlockState state);
 
-    //? if >=1.21.1 {
+    //? if >=26.3 {
+    /*/^* Vanilla's 26.2 shape, kept so implementers need not name 26.3's {@code BonemealSource}. ^/
+    boolean isBonemealSuccess(net.minecraft.world.level.Level level, net.minecraft.util.RandomSource random, BlockPos pos,
+                              BlockState state);
+
+    void performBonemeal(net.minecraft.server.level.ServerLevel level, net.minecraft.util.RandomSource random, BlockPos pos,
+                         BlockState state);
+
+    @Override
+    default boolean isValidBonemealTarget(LevelReader level, BlockPos pos, BlockState state,
+                                          net.minecraft.world.level.block.BonemealSource source) {
+        return canBonemeal(level, pos, state);
+    }
+
+    @Override
+    default boolean isBonemealSuccess(net.minecraft.world.level.Level level, net.minecraft.util.RandomSource random,
+                                      BlockPos pos, BlockState state, net.minecraft.world.level.block.BonemealSource source) {
+        return isBonemealSuccess(level, random, pos, state);
+    }
+
+    @Override
+    default void performBonemeal(net.minecraft.server.level.ServerLevel level, net.minecraft.util.RandomSource random,
+                                 BlockPos pos, BlockState state, net.minecraft.world.level.block.BonemealSource source) {
+        performBonemeal(level, random, pos, state);
+    }
+    *///?} elif >=1.21.1 {
     @Override
     default boolean isValidBonemealTarget(LevelReader level, BlockPos pos, BlockState state) {
         return canBonemeal(level, pos, state);

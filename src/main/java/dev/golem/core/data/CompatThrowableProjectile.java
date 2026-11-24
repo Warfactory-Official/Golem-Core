@@ -10,7 +10,7 @@ import net.minecraft.world.entity.projectile.ThrowableProjectile;
 import net.minecraft.network.syncher.SynchedEntityData;
 //?}
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 //?} else {
@@ -52,7 +52,7 @@ public abstract class CompatThrowableProjectile extends net.minecraft.world.enti
     }
     *///?}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     protected final void readAdditionalSaveData(ValueInput input) {
         super.readAdditionalSaveData(input);
@@ -78,7 +78,7 @@ public abstract class CompatThrowableProjectile extends net.minecraft.world.enti
     }
     *///?}
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*// 26.1 spelling of the server damage path. Below 26.1 vanilla only has {@code hurt}, which runs on
     // both sides; the client half is kept vanilla so only the server call reaches the 26.1-shaped hook.
     public boolean hurtServer(ServerLevel level, DamageSource source, float amount) {
@@ -92,7 +92,7 @@ public abstract class CompatThrowableProjectile extends net.minecraft.world.enti
     }
     *///?}
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*public boolean causeFallDamage(double fallDistance, float damageModifier, DamageSource damageSource) {
         return super.causeFallDamage((float) fallDistance, damageModifier, damageSource);
     }
@@ -103,7 +103,7 @@ public abstract class CompatThrowableProjectile extends net.minecraft.world.enti
     }
     *///?}
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*public void lerpMotion(net.minecraft.world.phys.Vec3 movement) {
         super.lerpMotion(movement.x, movement.y, movement.z);
     }
@@ -114,7 +114,7 @@ public abstract class CompatThrowableProjectile extends net.minecraft.world.enti
     }
     *///?}
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*public net.minecraft.world.entity.item.ItemEntity spawnAtLocation(ServerLevel level, net.minecraft.world.item.ItemStack stack) {
         return super.spawnAtLocation(stack);
     }
@@ -139,7 +139,7 @@ public abstract class CompatThrowableProjectile extends net.minecraft.world.enti
     }
     *///?}
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*public net.minecraft.world.InteractionResult interact(net.minecraft.world.entity.player.Player player,
             net.minecraft.world.InteractionHand hand, net.minecraft.world.phys.Vec3 location) {
         return super.interact(player, hand);
@@ -172,12 +172,19 @@ public abstract class CompatThrowableProjectile extends net.minecraft.world.enti
         return null;
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
+    //? if >=26.3 {
+    /*@Override
+    protected final net.minecraft.world.entity.InterpolationHandler createInterpolationHandler() {
+        return dev.golem.core.world.EntityInterpolation.forward(this::interpolation);
+    }
+    *///?} else {
     @Override
     public final net.minecraft.world.entity.@org.jspecify.annotations.Nullable InterpolationHandler getInterpolation() {
         dev.golem.core.world.EntityInterpolation interpolation = interpolation();
         return interpolation == null ? null : interpolation.handler();
     }
+    //?}
     //?} elif >=1.21.1 {
     /*@Override
     public void lerpTo(double x, double y, double z, float yRot, float xRot, int steps) {

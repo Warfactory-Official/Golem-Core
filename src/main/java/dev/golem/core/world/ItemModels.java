@@ -11,7 +11,7 @@ import java.util.function.Supplier;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.ItemLike;
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.resources.Identifier;
 //?} else {
 /*import net.minecraft.resources.ResourceLocation;
@@ -27,7 +27,7 @@ public final class ItemModels {
     }
 
     private static final List<Alias> ALIASES = new CopyOnWriteArrayList<>();
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private static volatile Map<Item, Identifier> resolved;
     //?} else {
     /*private static volatile Map<Item, ResourceLocation> resolved;
@@ -45,7 +45,7 @@ public final class ItemModels {
     }
 
     public static
-        //? if >=26.1 {
+        //? if >=1.21.11 {
     Identifier
     //?} else {
     /*ResourceLocation
@@ -53,7 +53,7 @@ public final class ItemModels {
     id(Item item) {
         var models = resolved;
         if (models == null) {
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             var built = new IdentityHashMap<Item, Identifier>();
             //?} else {
             /*var built = new IdentityHashMap<Item, ResourceLocation>();

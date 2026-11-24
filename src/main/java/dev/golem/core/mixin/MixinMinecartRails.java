@@ -38,7 +38,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(AbstractMinecart.class)
 public abstract class MixinMinecartRails {
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Unique
     private BlockPos golem$railPos;
     @Unique
@@ -105,7 +105,7 @@ public abstract class MixinMinecartRails {
     }
     *///?}
 
-    //? if >=26.1 || fabric {
+    //? if >=1.21.11 || fabric {
     @Unique
     private double golem$applyRailSpeed(double speed) {
         AbstractMinecart self = (AbstractMinecart) (Object) this;

@@ -48,7 +48,7 @@ public final class SlotSync {
     /** {@link #forget} for the slot of the player's open menu that shows the selected hotbar slot. */
     public static void forgetSelected(ServerPlayer player) {
         Inventory inventory = player.getInventory();
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         int selected = inventory.getSelectedSlot();
         //?} else {
         /*int selected = inventory.selected;

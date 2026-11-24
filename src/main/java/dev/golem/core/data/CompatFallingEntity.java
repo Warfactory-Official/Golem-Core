@@ -9,7 +9,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.network.syncher.SynchedEntityData;
 //?}
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 //?} else {
@@ -54,7 +54,7 @@ public abstract class CompatFallingEntity extends FallingBlockEntity {
     }
     *///?}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     protected void readAdditionalSaveData(ValueInput input) {
         super.readAdditionalSaveData(input);
@@ -82,14 +82,14 @@ public abstract class CompatFallingEntity extends FallingBlockEntity {
 
     /** 26.1 {@code applyEffectsFromBlocks}; {@code checkInsideBlocks} before 1.21.2 (protected there, hence the facade). */
     protected final void compatApplyEffectsFromBlocks() {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         applyEffectsFromBlocks();
         //?} else {
         /*checkInsideBlocks();
         *///?}
     }
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*public net.minecraft.world.entity.item.ItemEntity spawnAtLocation(ServerLevel level, net.minecraft.world.item.ItemStack stack) {
         return super.spawnAtLocation(stack);
     }

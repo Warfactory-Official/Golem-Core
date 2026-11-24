@@ -18,7 +18,10 @@ public abstract class CompatSavedData<T extends CompatSavedData<T>> extends Save
                 net.minecraft.resources.Identifier.fromNamespaceAndPath(id.substring(0, id.indexOf(':')),
                         id.substring(id.indexOf(':') + 1)), factory, codec,
                 net.minecraft.util.datafix.DataFixTypes.SAVED_DATA_MAP_DATA));
-        //?} elif >=1.21 {
+        //?} elif >=1.21.11 {
+        /*return level.getDataStorage().computeIfAbsent(new net.minecraft.world.level.saveddata.SavedDataType<>(
+                legacyFileId(id), factory, codec, net.minecraft.util.datafix.DataFixTypes.SAVED_DATA_MAP_DATA));
+        *///?} elif >=1.21 {
         /*return level.getDataStorage().computeIfAbsent(
                 new SavedData.Factory<>(factory,
                         (tag, registries) -> codec.parse(
@@ -39,7 +42,10 @@ public abstract class CompatSavedData<T extends CompatSavedData<T>> extends Save
                 net.minecraft.resources.Identifier.fromNamespaceAndPath(id.substring(0, id.indexOf(':')),
                         id.substring(id.indexOf(':') + 1)), factory, codec,
                 net.minecraft.util.datafix.DataFixTypes.SAVED_DATA_MAP_DATA));
-        //?} elif >=1.21 {
+        //?} elif >=1.21.11 {
+        /*return level.getDataStorage().get(new net.minecraft.world.level.saveddata.SavedDataType<>(
+                legacyFileId(id), factory, codec, net.minecraft.util.datafix.DataFixTypes.SAVED_DATA_MAP_DATA));
+        *///?} elif >=1.21 {
         /*return level.getDataStorage().get(
                 new SavedData.Factory<>(factory,
                         (tag, registries) -> codec.parse(
@@ -60,7 +66,7 @@ public abstract class CompatSavedData<T extends CompatSavedData<T>> extends Save
         return id.replace(':', '_');
     }
 
-    //? if >=1.21 && <26.1 {
+    //? if >=1.21 && <1.21.11 {
     /*@Override
     public net.minecraft.nbt.CompoundTag save(net.minecraft.nbt.CompoundTag tag,
             net.minecraft.core.HolderLookup.Provider registries) {

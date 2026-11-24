@@ -17,13 +17,13 @@ public final class BlockLayers {
 
     /** Installs the legacy-Fabric bridge for {@code namespace}'s blocks; a no-op on every other node. */
     public static void install(String namespace) {
-        //? if fabric && <26.1 {
+        //? if fabric && <1.21.11 {
         /*ClientResourceReloads.register(namespace, "block_layers", () -> apply(namespace,
                 net.minecraft.client.Minecraft.getInstance().getResourceManager()));
         *///?}
     }
 
-    //? if fabric && <26.1 {
+    //? if fabric && <1.21.11 {
     /*private static final java.util.regex.Pattern MODEL = java.util.regex.Pattern.compile("\"model\"\\s*:\\s*\"([^\"]+)\"");
     private static final java.util.List<String> ORDER = java.util.List.of(
             "minecraft:solid", "minecraft:cutout_mipped", "minecraft:cutout", "minecraft:translucent");

@@ -67,6 +67,8 @@ public final class Harness {
     /** Called once from each loader's client initialisation. Safe to call twice. */
     public static void init() {
         if (initialised) return;
+        MixinAudit.installIfRequested();
+        PipelineAudit.installIfRequested();
         int port = port();
         if (port <= 0) return;
         if (!Platform.isClient()) return;
@@ -100,6 +102,7 @@ public final class Harness {
         tick++;
         Minecraft minecraft = Minecraft.getInstance();
         try {
+            HarnessLoadingWarnings.tick(minecraft);
             HarnessWindow.tick(minecraft);
             HarnessInput.tick(minecraft);
             HarnessCamera.tick(minecraft);

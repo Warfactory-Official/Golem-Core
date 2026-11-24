@@ -12,14 +12,18 @@ import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.state.BlockState;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import com.mojang.blaze3d.pipeline.BlendFunction;
-import com.mojang.blaze3d.pipeline.ColorTargetState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.vertex.QuadInstance;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
+//? if >=26.1 {
+import com.mojang.blaze3d.vertex.QuadInstance;
 import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
+//?} else {
+/*import net.minecraft.client.model.geom.builders.UVPair;
+import net.minecraft.client.renderer.block.model.BlockModelPart;
+*///?}
 import net.minecraft.client.renderer.rendertype.RenderSetup;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.resources.model.geometry.BakedQuad;
@@ -27,7 +31,7 @@ import net.minecraft.client.resources.model.geometry.BakedQuad;
 /*import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.block.model.BakedQuad;
+import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.client.resources.model.BakedModel;
 *///?}
 
@@ -65,13 +69,12 @@ public final class GhostBlocks {
 
     private GhostBlocks() {}
 
-    //? if >=26.1 {
-    private static final RenderPipeline PIPELINE = WorldPipelines.add(RenderPipeline.builder(RenderPipelines.ENTITY_EMISSIVE_SNIPPET)
+    //? if >=1.21.11 {
+    private static final RenderPipeline PIPELINE = WorldPipelines.add(PipelineStates.blend(RenderPipeline.builder(RenderPipelines.ENTITY_EMISSIVE_SNIPPET)
             .withLocation("pipeline/golem_ghost_block")
             .withShaderDefine("ALPHA_CUTOUT", 0.1F)
             .withShaderDefine("NO_CARDINAL_LIGHTING")
-            .withSampler("Sampler1")
-            .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+            .withSampler("Sampler1"), BlendFunction.TRANSLUCENT)
             .build(), RenderPipelines.ENTITY_TRANSLUCENT_EMISSIVE);
 
     private static final RenderType TYPE = RenderType.create("golem_ghost_block",
@@ -88,7 +91,7 @@ public final class GhostBlocks {
         private Factory() { super(null, null, null, 0, false, false, null, null); }
 
         static RenderType ghost() {
-            return create("golem_ghost_block", DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS,
+            return create("golem_ghost_block", DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS,
                     256, false, false, CompositeState.builder()
                             // Flat vertex colour, no lightmap, alpha test at 0.1 - the emissive entity shader.
                             .setShaderState(RENDERTYPE_ENTITY_TRANSLUCENT_EMISSIVE_SHADER)
@@ -138,7 +141,22 @@ public final class GhostBlocks {
                 for (BakedQuad quad : part.getQuads(null)) buffer.putBakedQuad(pose, quad, instance);
             }
         };
-        //?} else {
+        //?} elif >=1.21.11 {
+        /*BlockStateModel model = Minecraft.getInstance().getBlockRenderer().getBlockModel(state);
+        List<BlockModelPart> parts = new ArrayList<>(1);
+        model.collectParts(random, parts);
+        List<BakedQuad> quads = new ArrayList<>();
+        for (BlockModelPart part : parts) {
+            for (Direction direction : Direction.values()) quads.addAll(part.getQuads(direction));
+            quads.addAll(part.getQuads(null));
+        }
+        if (quads.isEmpty()) return EMPTY;
+
+        int light = 0xF000F0;
+        return (pose, buffer) -> {
+            for (BakedQuad quad : quads) emit(pose, buffer, quad, argb, light);
+        };
+        *///?} else {
         /*BakedModel model = Minecraft.getInstance().getBlockRenderer().getBlockModel(state);
         List<BakedQuad> quads = new ArrayList<>();
         for (Direction direction : Direction.values()) {
@@ -161,7 +179,21 @@ public final class GhostBlocks {
         bake(state, pos, argb).emit(pose, buffer);
     }
 
-    //? if <26.1 {
+    //? if >=1.21.11 && <26.1 {
+    /*/^* {@code putBulkData} with the colour's alpha honoured, as 26.1's {@code QuadInstance} does: no shade or baked light. ^/
+    private static void emit(PoseStack.Pose pose, VertexConsumer buffer, BakedQuad quad, int argb, int light) {
+        Direction direction = quad.direction();
+        for (int i = 0; i < 4; i++) {
+            org.joml.Vector3fc position = quad.position(i);
+            long uv = quad.packedUV(i);
+            Vertexes.vertex(buffer, pose, position.x(), position.y(), position.z(), argb, UVPair.unpackU(uv),
+                    UVPair.unpackV(uv), OverlayTexture.NO_OVERLAY, light, direction.getStepX(), direction.getStepY(),
+                    direction.getStepZ());
+        }
+    }
+    *///?}
+
+    //? if <1.21.11 {
     /*/^*
      * Vanilla's own unpack ({@code VertexConsumer.putBulkData}), minus the parts a ghost discards: no
      * per-vertex brightness, no baked colour, no baked light, and the colour's alpha honoured.

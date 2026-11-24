@@ -55,7 +55,7 @@ public final class Sprites {
 
         /** The atlas definition id, what {@code atlases/<path>.json} is read for. */
         public String id() {
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             return this == ITEMS ? "minecraft:items" : "minecraft:blocks";
             //?} else {
             /*return "minecraft:blocks";
@@ -90,7 +90,7 @@ public final class Sprites {
         return InterpolatedRemapSource.TYPE_NAMESPACE + ":" + InterpolatedRemapSource.TYPE_PATH;
     }
 
-    //? if neoforge && >=26.1 {
+    //? if neoforge && >=1.21.11 {
     private static void registerRemapType() {
         dev.golem.core.platform.NeoForgeEntrypoint.modBus().addListener(
                 (net.neoforged.neoforge.client.event.RegisterSpriteSourcesEvent event) ->
@@ -98,7 +98,7 @@ public final class Sprites {
     }
     //?}
 
-    //? if neoforge && <26.1 {
+    //? if neoforge && <1.21.11 {
     /*private static void registerRemapType() {
         dev.golem.core.platform.NeoForgeEntrypoint.modBus().addListener(
                 (net.neoforged.neoforge.client.event.RegisterSpriteSourceTypesEvent event) ->
@@ -106,14 +106,14 @@ public final class Sprites {
     }
     *///?}
 
-    //? if fabric && >=26.1 {
+    //? if fabric && >=1.21.11 {
     /*private static void registerRemapType() {
         dev.golem.core.mixin.SpriteSourceTypesAccess.golem$idMapper()
                 .put(Ids.parse(typeId()), InterpolatedRemapSource.CODEC);
     }
     *///?}
 
-    //? if fabric && >=1.21 && <26.1 {
+    //? if fabric && >=1.21 && <1.21.11 {
     /*private static void registerRemapType() {
         remapType = new net.minecraft.client.renderer.texture.atlas.SpriteSourceType(InterpolatedRemapSource.CODEC);
         dev.golem.core.mixin.SpriteSourceTypesAccess.golem$types().put(Ids.parse(typeId()), remapType);
@@ -129,7 +129,7 @@ public final class Sprites {
     }
     *///?}
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*private static volatile net.minecraft.client.renderer.texture.atlas.SpriteSourceType remapType;
 
     /^* The registered type, which a source instance has to name on the versions that ask it to. ^/
@@ -161,12 +161,12 @@ public final class Sprites {
      */
     public static net.minecraft.client.renderer.texture.TextureAtlasSprite sprite(
             Atlas atlas,
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             net.minecraft.resources.Identifier id) {
             //?} else {
             /*net.minecraft.resources.ResourceLocation id) {
             *///?}
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return net.minecraft.client.Minecraft.getInstance().getAtlasManager()
                 .getAtlasOrThrow(Ids.parse(atlas.id())).getSprite(id);
         //?} else {

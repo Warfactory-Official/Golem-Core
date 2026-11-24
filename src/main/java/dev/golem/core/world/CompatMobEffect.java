@@ -12,7 +12,7 @@ public abstract class CompatMobEffect extends MobEffect {
     }
 
     @Override
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     public final boolean applyEffectTick(net.minecraft.server.level.ServerLevel level, LivingEntity entity, int amplifier) {
     //?} elif >=1.21 {
     /*public final boolean applyEffectTick(LivingEntity entity, int amplifier) {

@@ -44,7 +44,13 @@ public abstract class MixinCamera {
     private float golem$thirdPersonDistance(float distance) {
         return CameraHooks.thirdPersonDistance(((net.minecraft.client.Camera) (Object) this).entity(), distance);
     }
-    //?} elif >=1.21.1 {
+    //?} elif >=1.21.11 {
+    /*@org.spongepowered.asm.mixin.injection.ModifyArg(method = "setup",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Camera;getMaxZoom(F)F"))
+    private float golem$thirdPersonDistance(float distance) {
+        return CameraHooks.thirdPersonDistance(((net.minecraft.client.Camera) (Object) this).entity(), distance);
+    }
+    *///?} elif >=1.21.1 {
     /*@org.spongepowered.asm.mixin.injection.ModifyArg(method = "setup",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Camera;getMaxZoom(F)F"))
     private float golem$thirdPersonDistance(float distance) {
@@ -69,7 +75,16 @@ public abstract class MixinCamera {
         float yaw = CameraHooks.yawOffset(camera.entity());
         if (pitch != 0F || yaw != 0F) setRotation(camera.yRot() + yaw, camera.xRot() + pitch);
     }
-    //?} else {
+    //?} elif >=1.21.11 {
+    /*@Inject(method = "setup", at = @At("TAIL"))
+    private void golem$pitchOffset(net.minecraft.world.level.Level level, Entity entity, boolean detached,
+            boolean mirror, float partialTick, CallbackInfo ci) {
+        net.minecraft.client.Camera camera = (net.minecraft.client.Camera) (Object) this;
+        float pitch = CameraHooks.pitchOffset(entity);
+        float yaw = CameraHooks.yawOffset(entity);
+        if (pitch != 0F || yaw != 0F) setRotation(camera.yRot() + yaw, camera.xRot() + pitch);
+    }
+    *///?} else {
     /*@Inject(method = "setup", at = @At("TAIL"))
     private void golem$pitchOffset(net.minecraft.world.level.BlockGetter level, Entity entity, boolean detached,
             boolean mirror, float partialTick, CallbackInfo ci) {
@@ -82,15 +97,29 @@ public abstract class MixinCamera {
 
     //? if >=26.1 {
     @Inject(method = "extractRenderState", at = @At("TAIL"))
+    //? if >=26.3 {
+    /*private void golem$adjustRenderState(net.minecraft.client.renderer.state.level.CameraRenderState state,
+            net.minecraft.client.DeltaTracker deltaTracker, CallbackInfo ci) {
+        float partialTick = state.cameraEntityPartialTicks;
+    *///?} else {
     private void golem$adjustRenderState(net.minecraft.client.renderer.state.level.CameraRenderState state,
             float partialTick, CallbackInfo ci) {
+    //?}
         net.minecraft.client.Camera camera = (net.minecraft.client.Camera) (Object) this;
         Entity entity = camera.entity();
         if (camera.isDetached() && entity instanceof Player player && CameraHooks.lowerThirdPersonCamera(player)) {
             state.pos = state.pos.add(0D, -1.22D, 0D);
         }
     }
-    //?} else {
+    //?} elif >=1.21.11 {
+    /*@Inject(method = "setup", at = @At("TAIL"))
+    private void golem$adjustThirdPerson(net.minecraft.world.level.Level level, Entity entity,
+            boolean detached, boolean mirror, float partialTick, CallbackInfo ci) {
+        if (detached && entity instanceof Player player && CameraHooks.lowerThirdPersonCamera(player)) {
+            golem$move(0F, -1.22F, 0F);
+        }
+    }
+    *///?} else {
     /*
     @Inject(method = "setup", at = @At("TAIL"))
     private void golem$adjustThirdPerson(net.minecraft.world.level.BlockGetter level, Entity entity,

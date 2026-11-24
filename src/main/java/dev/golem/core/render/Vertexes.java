@@ -54,9 +54,12 @@ public final class Vertexes {
         @Override public VertexConsumer setUv(float u, float v) { delegate.setUv(mapU(u, v), mapV(u, v)); return this; }
         @Override public VertexConsumer setUv1(int u, int v) { delegate.setUv1(u, v); return this; }
         @Override public VertexConsumer setUv2(int u, int v) { delegate.setUv2(u, v); return this; }
+        //? if >=26.3 {
+        /*@Override public VertexConsumer setUv3(float u, float v) { delegate.setUv3(u, v); return this; }
+        *///?}
         @Override public VertexConsumer setNormal(float x, float y, float z) { delegate.setNormal(x, y, z); return this; }
         //?}
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         @Override public VertexConsumer setLineWidth(float width) { delegate.setLineWidth(width); return this; }
         //?}
         //? if <1.21 {
@@ -112,7 +115,7 @@ public final class Vertexes {
     public static void line(VertexConsumer buffer, PoseStack.Pose pose,
                             float x, float y, float z, int color,
                             float normalX, float normalY, float normalZ) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         buffer.addVertex(pose, x, y, z)
                 .setColor(color)
                 .setNormal(pose, normalX, normalY, normalZ)
@@ -136,7 +139,7 @@ public final class Vertexes {
     public static void line(VertexConsumer buffer, PoseStack.Pose pose,
                             float x, float y, float z, int color,
                             float normalX, float normalY, float normalZ, float width) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         buffer.addVertex(pose, x, y, z)
                 .setColor(color)
                 .setNormal(pose, normalX, normalY, normalZ)
@@ -146,11 +149,15 @@ public final class Vertexes {
         *///?}
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     /** The width vanilla gives its own block outline, scaled for the window. */
     private static float lineWidth() {
-        return net.minecraft.client.Minecraft.getInstance().gameRenderer
-                .getGameRenderState().windowRenderState.appropriateLineWidth;
+        //? if >=26.1 {
+        return net.minecraft.client.Minecraft.getInstance().gameRenderer.getGameRenderState()
+                .windowRenderState.appropriateLineWidth;
+        //?} else {
+        /*return net.minecraft.client.Minecraft.getInstance().getWindow().getAppropriateLineWidth();
+        *///?}
     }
     //?}
 

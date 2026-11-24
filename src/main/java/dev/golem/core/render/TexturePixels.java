@@ -6,7 +6,7 @@ import net.minecraft.client.Minecraft;
 import java.io.IOException;
 import java.io.InputStream;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.resources.Identifier;
 //?} else {
 /*import net.minecraft.resources.ResourceLocation;
@@ -43,7 +43,7 @@ public final class TexturePixels {
 
     /** Reads {@code texture} (a full path such as {@code hbm:textures/misc/noise_2.png}) from the resource manager. */
     public static TexturePixels read(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier texture
             //?} else {
             /*ResourceLocation texture
@@ -56,7 +56,7 @@ public final class TexturePixels {
             int[] pixels = new int[w * h];
             for (int y = 0; y < h; y++) {
                 for (int x = 0; x < w; x++) {
-                    //? if >=26.1 {
+                    //? if >=1.21.11 {
                     pixels[y * w + x] = image.getPixel(x, y);
                     //?} else {
                     /*int abgr = image.getPixelRGBA(x, y);

@@ -145,7 +145,7 @@ final class HarnessQueries {
             slots.add(s);
         }
         json.add("slots", slots);
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         json.addProperty("selected", inventory.getSelectedSlot());
         //?} else {
         /*json.addProperty("selected", inventory.selected);
@@ -289,7 +289,7 @@ final class HarnessQueries {
                 // With Sodium the global set is not read: Sodium keeps its own per-section lists from its chunk builds.
                 entry.addProperty("removed", be.isRemoved());
                 entry.addProperty("valid_state", be.getType().isValid(be.getBlockState()));
-                //? if >=26.1 {
+                //? if >=1.21.11 {
                 entry.addProperty("in_global_set", minecraft.level.getGloballyRenderedBlockEntities().contains(be));
                 // NeoForge's view of the list the level renderer draws from (Sodium replaces it with its section lists).
                 //? if neoforge {

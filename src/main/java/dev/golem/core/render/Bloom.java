@@ -5,13 +5,13 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import com.mojang.blaze3d.pipeline.BlendFunction;
-import com.mojang.blaze3d.pipeline.ColorTargetState;
-import com.mojang.blaze3d.pipeline.DepthStencilState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import net.minecraft.client.renderer.RenderPipelines;
+//? if <26.3 {
 import net.minecraft.client.renderer.rendertype.OutputTarget;
+//?}
 import net.minecraft.client.renderer.rendertype.RenderSetup;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.resources.Identifier;
@@ -57,29 +57,33 @@ public final class Bloom {
      * alpha-tested ({@code > 0.1}), blended {@code SRC_ALPHA / ONE}, depth-tested against the main depth without
      * writing it, back faces culled. Submit it after the surface it glows over.
      */
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     public static RenderType of(Identifier texture) {
         return BY_TEXTURE.apply(texture);
     }
 
+    //? if <26.3 {
     private static final OutputTarget OUTPUT = new OutputTarget("golem_bloom_layer", LAYER::drawTarget);
+    //?}
 
-    private static final RenderPipeline PIPELINE = RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET)
+    private static final RenderPipeline PIPELINE = PipelineStates.blend(PipelineStates.depth(PipelineStates.vertices(RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET)
             .withLocation(dev.golem.core.Ids.of("golemcore", "pipeline/screen_bloom_layer"))
             .withVertexShader(dev.golem.core.Ids.of("golemcore", "core/screen_layer"))
             .withFragmentShader(dev.golem.core.Ids.of("golemcore", "core/screen_bloom_layer"))
             .withSampler("Sampler0")
-            .withVertexFormat(DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS)
-            .withDepthStencilState(new DepthStencilState(com.mojang.blaze3d.platform.CompareOp.LESS_THAN_OR_EQUAL, false))
-            .withColorTargetState(new ColorTargetState(BlendFunction.LIGHTNING))
+            , DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS),
+            PipelineStates.Depth.LESS_OR_EQUAL, false), BlendFunction.LIGHTNING)
             .withCull(true)
             .build();
 
-    private static final Function<Identifier, RenderType> BY_TEXTURE = Util.memoize(texture ->
-            RenderType.create("golem_bloom_layer", RenderSetup.builder(PIPELINE)
-                    .withTexture("Sampler0", texture)
-                    .setOutputTarget(OUTPUT)
-                    .createRenderSetup()));
+    private static final Function<Identifier, RenderType> BY_TEXTURE = Util.memoize(texture -> {
+        RenderSetup.RenderSetupBuilder setup = RenderSetup.builder(PIPELINE).withTexture("Sampler0", texture);
+        //? if >=26.3 {
+        /*return LAYER.register(RenderType.create("golem_bloom_layer", setup.createRenderSetup()));
+        *///?} else {
+        return RenderType.create("golem_bloom_layer", setup.setOutputTarget(OUTPUT).createRenderSetup());
+        //?}
+    });
 
     private static final RenderPipeline DOWNSAMPLE = ScreenEffects.fullscreenPipeline("screen_downsample", 1, Optional.empty());
     private static final RenderPipeline DOWNSAMPLE_FINE = ScreenEffects.fullscreenPipeline("screen_downsample_fine", 1, Optional.empty());
@@ -115,7 +119,7 @@ public final class Bloom {
     private static void pass(String label, RenderPipeline pipeline, RenderTarget output, RenderTarget source, float time) {
         var sampler = ScreenEffects.linearClamp();
         ScreenEffects.fullscreen(label, pipeline, output.getColorTextureView(), time,
-                renderPass -> renderPass.bindTexture("Sampler0", source.getColorTextureView(), sampler));
+                renderPass -> Passes.texture(renderPass, "Sampler0", source.getColorTextureView(), sampler));
     }
 
     static void apply() {
@@ -136,8 +140,8 @@ public final class Bloom {
             RenderTarget destination = DATA[level - 1];
             RenderTarget combined = SPARE[level - 1];
             ScreenEffects.fullscreen("Bloom blur", BLUR_V_MAX, combined.getColorTextureView(), time, renderPass -> {
-                renderPass.bindTexture("Sampler0", blurred.getColorTextureView(), sampler);
-                renderPass.bindTexture("Sampler1", destination.getColorTextureView(), sampler);
+                Passes.texture(renderPass, "Sampler0", blurred.getColorTextureView(), sampler);
+                Passes.texture(renderPass, "Sampler1", destination.getColorTextureView(), sampler);
             });
             swap(level - 1);
         }
@@ -166,7 +170,7 @@ public final class Bloom {
                 // 1.20.1's apply() re-applies the program JSON's blend (none: opaque) after the render type set its
                 // own; put SRC_ALPHA / ONE back at the draw, as PlasmaGlowRenderType does.
                 shader = ShaderLoader.load(Minecraft.getInstance().getResourceManager(), "golemcore:screen_bloom_layer",
-                        DefaultVertexFormat.NEW_ENTITY, () -> {
+                        DefaultVertexFormat.ENTITY, () -> {
                             com.mojang.blaze3d.systems.RenderSystem.enableBlend();
                             com.mojang.blaze3d.systems.RenderSystem.blendFunc(
                                     com.mojang.blaze3d.platform.GlStateManager.SourceFactor.SRC_ALPHA,
@@ -186,7 +190,7 @@ public final class Bloom {
                 LAYER::bindForDraw, () -> Minecraft.getInstance().getMainRenderTarget().bindWrite(false));
 
         static RenderType bloom(ResourceLocation texture) {
-            return ScreenEffects.skipEmpty(create("golem_bloom_layer", DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS, 256, false, false,
+            return ScreenEffects.skipEmpty(create("golem_bloom_layer", DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS, 256, false, false,
                     CompositeState.builder()
                             .setShaderState(new ShaderStateShard(Bloom::shader))
                             .setTextureState(new TextureStateShard(texture, false, false))

@@ -18,7 +18,11 @@ import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
+//? if >=26.3 {
+/*import net.minecraft.world.level.storage.loot.providers.number.ints.ContextIntProvider;
+*///?} else {
 import net.minecraft.world.level.storage.loot.providers.number.NumberProvider;
+//?}
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -32,7 +36,11 @@ public final class EntityLoot {
 
     private EntityLoot() {}
 
+    //? if >=26.3 {
+    /*public record Looting(int factor, int add, boolean playerOnly) implements ContextIntProvider {
+    *///?} else {
     public record Looting(int factor, int add, boolean playerOnly) implements NumberProvider {
+    //?}
 
         public static final MapCodec<Looting> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
                 Codec.INT.optionalFieldOf("factor", 1).forGetter(Looting::factor),
@@ -48,19 +56,38 @@ public final class EntityLoot {
                 new net.minecraft.world.level.storage.loot.providers.number.LootNumberProviderType(new LootJson<>(CODEC));
         *///?}
 
-        @Override
-        public float getFloat(LootContext context) {
+        private int value(LootContext context) {
             Entity killer = killer(context);
             boolean counts = killer instanceof LivingEntity && (!playerOnly || killer instanceof Player);
             return add + factor * (counts ? Compat.lootingLevel(context.getLevel(), (LivingEntity) killer) : 0);
         }
 
-        //? if >=26.1 {
+        //? if >=26.3 {
+        /*@Override
+        public int getIntUnsafe(LootContext context) {
+            return value(context);
+        }
+
+        @Override
+        public void validate(net.minecraft.world.level.storage.loot.ValidationContext context) {}
+
+        @Override
+        public MapCodec<? extends ContextIntProvider> codec() {
+            return CODEC;
+        }
+        *///?} else {
+        @Override
+        public float getFloat(LootContext context) {
+            return value(context);
+        }
+        //?}
+
+        //? if >=26.1 && <26.3 {
         @Override
         public MapCodec<? extends NumberProvider> codec() {
             return CODEC;
         }
-        //?} else {
+        //?} elif <26.1 {
         /*@Override
         public net.minecraft.world.level.storage.loot.providers.number.LootNumberProviderType getType() {
             return TYPE;
@@ -72,7 +99,9 @@ public final class EntityLoot {
     public static synchronized void register() {
         if (registered) return;
         registered = true;
-        //? if >=26.1 {
+        //? if >=26.3 {
+        /*DeferredRegister.create(() -> Registries.CONTEXT_INT_PROVIDER_TYPE, GolemCore.MOD_ID).register("looting", () -> Looting.CODEC);
+        *///?} elif >=26.1 {
         DeferredRegister.create(() -> Registries.LOOT_NUMBER_PROVIDER_TYPE, GolemCore.MOD_ID).register("looting", () -> Looting.CODEC);
         //?} else {
         /*DeferredRegister.create(() -> Registries.LOOT_NUMBER_PROVIDER_TYPE, GolemCore.MOD_ID).register("looting", () -> Looting.TYPE);
@@ -98,8 +127,12 @@ public final class EntityLoot {
     }
 
     private static @Nullable Entity killer(LootContext context) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
+        //? if >=26.3 {
+        /*return context.getOptional(LootContextParams.ATTACKING_ENTITY);
+        *///?} else {
         return context.getOptionalParameter(LootContextParams.ATTACKING_ENTITY);
+        //?}
         //?} elif >=1.20.5 {
         /*return context.getParamOrNull(LootContextParams.ATTACKING_ENTITY);
         *///?} else {

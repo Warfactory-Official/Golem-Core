@@ -19,7 +19,7 @@ public abstract class MixinTntOwner implements TntOwner {
         if (golem$explode()) ci.cancel();
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Shadow
     private net.minecraft.world.entity.@Nullable EntityReference<LivingEntity> owner;
 

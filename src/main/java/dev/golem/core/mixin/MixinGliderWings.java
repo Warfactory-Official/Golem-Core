@@ -17,14 +17,14 @@ import org.spongepowered.asm.mixin.injection.At;
  * visibility is not the problem. A second wings layer would have to copy vanilla's per-era model, animation and
  * texture choice; substituting the one stack the layer reads keeps all of it vanilla's. Listed on every loader (client).
  */
-//? if >=26.1 {
+//? if >=1.21.11 {
 @Mixin(net.minecraft.client.renderer.entity.layers.WingsLayer.class)
 //?} else {
 /*@Mixin(net.minecraft.client.renderer.entity.layers.ElytraLayer.class)
 *///?}
 public abstract class MixinGliderWings {
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @ModifyExpressionValue(method = "submit(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;ILnet/minecraft/client/renderer/entity/state/HumanoidRenderState;FF)V",
             at = @At(value = "FIELD", target = "chestEquipment:Lnet/minecraft/world/item/ItemStack;"))
     private ItemStack golem$wings(ItemStack chest) {

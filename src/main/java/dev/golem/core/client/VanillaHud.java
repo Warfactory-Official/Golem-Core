@@ -1,9 +1,9 @@
 package dev.golem.core.client;
 
-//? if fabric && >=26.1 {
+//? if fabric && >=1.21.11 {
 /*import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 *///?}
-//? if fabric && >=26.1 {
+//? if fabric && >=1.21.11 {
 /*import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 *///?}
 //? if forge {
@@ -128,13 +128,13 @@ public final class VanillaHud {
      * from 1.20.2 on ({@code hud/air}, {@code hud/air_bursting}) and an {@code icons.png} cell before.
      */
     public static void airBubble(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             net.minecraft.client.gui.GuiGraphicsExtractor graphics,
             //?} else {
-            /*net.minecraft.client.gui.GuiGraphics graphics,
+            /*net.minecraft.client.gui.GuiGraphicsExtractor graphics,
             *///?}
             int x, int y, boolean bursting) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         graphics.blitSprite(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED,
                 net.minecraft.resources.Identifier.withDefaultNamespace(bursting ? "hud/air_bursting" : "hud/air"), x, y, 9, 9);
         //?} elif >=1.21 {

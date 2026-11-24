@@ -4,7 +4,7 @@ import dev.golem.core.GolemCore;
 //? if neoforge {
 import dev.golem.core.platform.NeoForgeEntrypoint;
 //?}
-//? if neoforge && >=26.1 {
+//? if neoforge && >=1.21.11 {
 import net.neoforged.neoforge.client.event.RegisterSelectItemModelPropertyEvent;
 //?}
 import dev.golem.core.Ids;
@@ -19,7 +19,7 @@ import java.util.function.ToDoubleFunction;
 import java.util.HashMap;
 import com.google.gson.JsonObject;
 import net.minecraft.core.registries.BuiltInRegistries;
-//? if <26.1 {
+//? if <1.21.11 {
 /*import net.minecraft.resources.ResourceLocation;
 *///?}
 import com.mojang.serialization.Codec;
@@ -27,7 +27,7 @@ import com.mojang.serialization.MapCodec;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemDisplayContext;
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.client.renderer.item.properties.select.SelectItemModelProperties;
 import net.minecraft.client.renderer.item.properties.select.SelectItemModelProperty;
 //?}
@@ -49,7 +49,7 @@ public final class ItemModelProperties {
     private static final class Property {
         ToDoubleFunction<ItemStack> value;
         Function<ItemStack, String> select;
-        //? if <26.1 {
+        //? if <1.21.11 {
         /*Map<ResourceLocation, Selection> selections = Map.of();
         *///?}
         final Set<String> namespaces = new LinkedHashSet<>();
@@ -79,7 +79,7 @@ public final class ItemModelProperties {
         }
         property.value = value::get;
         property.select = stack -> Integer.toString(value.get(stack));
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         registerNative(namespace, name, property.select);
         //?} else {
         /*schedule(namespace, name);
@@ -92,7 +92,7 @@ public final class ItemModelProperties {
         if (property.select != null) throw new IllegalArgumentException("Item select property already registered: " + namespace + ":" + name);
         property.select = value;
         property.namespaces.add(namespace);
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         registerNative(namespace, name, value);
         //?} else {
         /*property.value = stack -> {
@@ -116,7 +116,7 @@ public final class ItemModelProperties {
         return registered == null || registered.select == null ? null : registered.select.apply(stack);
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private static void registerNative(String namespace, String name, Function<ItemStack, String> value) {
         var property = new SelectProperty(value);
         //? if fabric {
@@ -141,12 +141,12 @@ public final class ItemModelProperties {
 
     /** Installs the legacy predicate on the namespaces not yet installed, at the loader's client-setup time. */
     private static void schedule(String namespace, String name) {
-        //? if <26.1 {
+        //? if <1.21.11 {
         /*registerLegacy(namespace, name);
         *///?}
     }
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*private record Selection(Map<String, Float> cases, boolean numeric) {}
 
     static synchronized void definitions(Map<ResourceLocation, JsonObject> definitions) {
@@ -235,7 +235,7 @@ public final class ItemModelProperties {
     }
     *///?}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     static final class SelectProperty implements SelectItemModelProperty<String> {
         private final Function<ItemStack, String> value;
         private final Type<SelectProperty, String> type;

@@ -10,7 +10,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 //?} else {
@@ -135,12 +135,12 @@ public abstract class CompatBlockEntity extends BlockEntity {
      * Writes this block entity into an item stack across the save-to-item signature change.
      * Call this from drop handling instead of vanilla's version-specific method.
      */
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     public final void saveToItemCompat(ItemStack stack) {
         stack.applyComponents(collectComponents());
     }
     //?}
-    //? if >=1.21.1 && <26.1 {
+    //? if >=1.21.1 && <1.21.11 {
     /*public final void saveToItemCompat(ItemStack stack) {
         saveToItem(stack, level.registryAccess());
     }
@@ -151,7 +151,7 @@ public abstract class CompatBlockEntity extends BlockEntity {
     }
     *///?}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     protected void applyImplicitComponents(net.minecraft.core.component.DataComponentGetter components) {
         super.applyImplicitComponents(components);
@@ -270,7 +270,7 @@ public abstract class CompatBlockEntity extends BlockEntity {
     public static final String LEGACY_CARRIED_KEY = "CarriedData";
     *///?}
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     
     /*/^*
      * Side effects of this block entity being removed, dropping an inventory, most of the time.

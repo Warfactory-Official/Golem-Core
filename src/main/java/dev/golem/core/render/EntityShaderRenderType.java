@@ -3,8 +3,7 @@ package dev.golem.core.render;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 
-//? if >=26.1 {
-import com.mojang.blaze3d.pipeline.DepthStencilState;
+//? if >=1.21.11 {
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.rendertype.RenderSetup;
@@ -34,14 +33,14 @@ public final class EntityShaderRenderType {
 
     private static final Map<String, RenderType> TYPES = new HashMap<>();
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private static final Map<String, RenderPipeline> PIPELINES = new HashMap<>();
 
     public static RenderType cutoutCull(String shaderId, Identifier texture, Identifier extra) {
         return TYPES.computeIfAbsent(shaderId + "\n" + texture + "\n" + extra, key -> {
             RenderPipeline pipeline = PIPELINES.computeIfAbsent(shaderId, id -> {
                 Identifier base = dev.golem.core.Ids.parse(id);
-                return WorldPipelines.add(RenderPipeline.builder(RenderPipelines.MATRICES_FOG_LIGHT_DIR_SNIPPET)
+                return WorldPipelines.add(PipelineStates.depth(PipelineStates.vertices(RenderPipeline.builder(RenderPipelines.MATRICES_FOG_LIGHT_DIR_SNIPPET)
                         .withLocation(dev.golem.core.Ids.of(base.getNamespace(), "pipeline/" + base.getPath()))
                         .withVertexShader("core/entity")
                         .withFragmentShader(dev.golem.core.Ids.of(base.getNamespace(), "core/" + base.getPath()))
@@ -50,8 +49,8 @@ public final class EntityShaderRenderType {
                         .withSampler("Sampler0")
                         .withSampler("Sampler2")
                         .withSampler("Sampler3")
-                        .withVertexFormat(DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS)
-                        .withDepthStencilState(DepthStencilState.DEFAULT)
+                        , DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS),
+                        PipelineStates.Depth.LESS_OR_EQUAL, true)
                         .withCull(true)
                         .build());
             });
@@ -82,7 +81,7 @@ public final class EntityShaderRenderType {
     private static ShaderInstance shader(String shaderId) {
         return SHADERS.computeIfAbsent(shaderId, id -> {
             try {
-                return ShaderLoader.load(Minecraft.getInstance().getResourceManager(), id, DefaultVertexFormat.NEW_ENTITY);
+                return ShaderLoader.load(Minecraft.getInstance().getResourceManager(), id, DefaultVertexFormat.ENTITY);
             } catch (java.io.IOException e) {
                 throw new IllegalStateException("Could not load shader " + id, e);
             }
@@ -117,7 +116,7 @@ public final class EntityShaderRenderType {
                     .setLightmapState(LIGHTMAP)
                     .setOverlayState(OVERLAY)
                     .createCompositeState(true);
-            return RenderType.create("golem_entity_shader", DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS, 256,
+            return RenderType.create("golem_entity_shader", DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS, 256,
                     true, false, state);
         }
     }

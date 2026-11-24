@@ -38,7 +38,7 @@ public final class ComponentSmeltingRecipe extends SmeltingRecipe {
         return componentIngredient;
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     public net.minecraft.world.item.ItemStackTemplate resultTemplate() {
         return resultSpec.template();
     }

@@ -4,7 +4,9 @@ import com.mojang.serialization.MapCodec;
 import net.minecraft.world.level.levelgen.structure.Structure;
 import net.minecraft.world.level.levelgen.structure.StructureType;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureProcessor;
+//? if <26.2 {
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureProcessorType;
+//?}
 
 /**
  * Worldgen type registration keeps declared map codecs independent of the native codec shape.
@@ -22,6 +24,12 @@ public final class Structures {
         *///?}
     }
 
+    //? if >=26.2 {
+    /*/^* 26.2 registers the processor's map codec itself under {@code Registries.STRUCTURE_PROCESSOR}. ^/
+    public static <P extends StructureProcessor> MapCodec<P> processorType(MapCodec<P> codec) {
+        return codec;
+    }
+    *///?} else {
     /** The processor codec uses the same map/plain split as structure codecs. */
     public static <P extends StructureProcessor> StructureProcessorType<P> processorType(MapCodec<P> codec) {
         //? if >=1.21 {
@@ -30,11 +38,18 @@ public final class Structures {
         /*return codec::codec;
         *///?}
     }
+    //?}
 
     /**
      * A structure placement type for {@code codec}, to be registered under {@code Registries.STRUCTURE_PLACEMENT}. Same
      * codec-shape split as {@link #type}.
      */
+    //? if >=26.3 {
+    /*public static <P extends net.minecraft.world.level.levelgen.structure.placement.StructurePlacement> MapCodec<P> placementType(
+            MapCodec<P> codec) {
+        return codec;
+    }
+    *///?} else {
     public static <P extends net.minecraft.world.level.levelgen.structure.placement.StructurePlacement>
             net.minecraft.world.level.levelgen.structure.placement.StructurePlacementType<P> placementType(MapCodec<P> codec) {
         //? if >=1.21 {
@@ -43,6 +58,7 @@ public final class Structures {
         /*return codec::codec;
         *///?}
     }
+    //?}
 
     /**
      * The structure starts of the structures in {@code tag} that reach into chunk {@code pos}, read during feature
@@ -55,13 +71,17 @@ public final class Structures {
             net.minecraft.tags.TagKey<Structure> tag) {
         if (!(level instanceof net.minecraft.server.level.WorldGenRegion region)) return java.util.List.of();
         net.minecraft.world.level.StructureManager manager = level.getLevel().structureManager().forWorldGenRegion(region);
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         net.minecraft.core.Registry<Structure> registry = manager.registryAccess()
                 .lookupOrThrow(net.minecraft.core.registries.Registries.STRUCTURE);
         //?} else {
         /*net.minecraft.core.Registry<Structure> registry = manager.registryAccess()
                 .registryOrThrow(net.minecraft.core.registries.Registries.STRUCTURE);
         *///?}
+        //? if >=26.3 {
+        /*return manager.startsForStructure(pos.x(), pos.z(), structure -> registry.wrapAsHolder(structure).is(tag));
+        *///?} else {
         return manager.startsForStructure(pos, structure -> registry.wrapAsHolder(structure).is(tag));
+        //?}
     }
 }

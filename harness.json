@@ -1,0 +1,23 @@
+{
+  "name": "golemcore",
+  "mod": ".",
+  "golemCore": ".",
+  "scenarios": "harness/scenarios",
+  "fixtures": "harness/fixtures",
+  "out": "harness/out",
+  "world": "harness",
+  "defaultNodes": ["26.3-neoforge", "26.3-fabric"],
+  "maxClients": 2,
+  "retentionHours": 10,
+  "allNodesMaxClients": 6,
+  "nodes": [
+    {"name": "26.3-neoforge", "minecraft": "26.3", "loader": "neoforge", "port": 47621, "packFormat": 97, "java": 25},
+    {"name": "26.3-fabric", "minecraft": "26.3", "loader": "fabric", "port": 47622, "packFormat": 97, "java": 25},
+    {"name": "26.2-neoforge", "minecraft": "26.2", "loader": "neoforge", "port": 47623, "packFormat": 88, "java": 25},
+    {"name": "26.2-fabric", "minecraft": "26.2", "loader": "fabric", "port": 47624, "packFormat": 88, "java": 25},
+    {"name": "26.1-neoforge", "minecraft": "26.1", "loader": "neoforge", "port": 47625, "packFormat": 84, "java": 25},
+    {"name": "26.1-fabric", "minecraft": "26.1", "loader": "fabric", "port": 47626, "packFormat": 84, "java": 25},
+    {"name": "1.21.11-neoforge", "minecraft": "1.21.11", "loader": "neoforge", "port": 47627, "packFormat": 94, "java": 21},
+    {"name": "1.21.11-fabric", "minecraft": "1.21.11", "loader": "fabric", "port": 47628, "packFormat": 94, "java": 21}
+  ]
+}

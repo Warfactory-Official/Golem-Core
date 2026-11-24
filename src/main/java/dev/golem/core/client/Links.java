@@ -12,8 +12,12 @@ public final class Links {
 
     public static void open(String url) {
         try {
-            //? if >=26.1 {
+            //? if >=1.21.11 {
+            //? if >=26.3 {
+            /*com.mojang.blaze3d.Blaze3D.openUri(java.net.URI.create(url));
+            *///?} else {
             net.minecraft.util.Util.getPlatform().openUri(url);
+            //?}
             //?} else {
             /*net.minecraft.Util.getPlatform().openUri(url);
             *///?}

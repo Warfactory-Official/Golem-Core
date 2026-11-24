@@ -1,33 +1,33 @@
 package dev.golem.core.gui;
 
-//? if >=26.1 {
+import dev.golem.core.render.PipelineStates;
+//? if >=1.21.11 {
+import com.mojang.blaze3d.pipeline.BlendFunction;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
 //?} else {
-/*import net.minecraft.client.gui.GuiGraphics;
+/*import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.resources.ResourceLocation;
 *///?}
 
 /**
  * Screen drawing operations whose call shape changed across versions.
  *
- * <p>26.1 made the render pipeline an explicit first argument to {@code blit}
- * ({@code RenderPipelines.GUI_TEXTURED}), where older versions inferred it. It also renamed the
- * graphics object itself: {@code GuiGraphics} became {@code GuiGraphicsExtractor} once HUD drawing
- * split into an extract pass.
+ * <p>1.21.11 takes the render pipeline as an explicit first argument to {@code blit}
+ * ({@code RenderPipelines.GUI_TEXTURED}), where 1.21.1 and older inferred it. 26.1 renamed the graphics object
+ * to {@code GuiGraphicsExtractor} (a replacement rule spells the older name) and most of its draw methods.
  *
- * <p>Neither is a text replacement: the pipeline argument has to be added or removed, not renamed. Screens
+ * <p>The pipeline is not a text replacement: the argument has to be added or removed, not renamed. Screens
  * call these methods and are written once.
  */
 public final class GuiDraw {
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private static final com.mojang.blaze3d.pipeline.RenderPipeline GUI_ADDITIVE =
-            com.mojang.blaze3d.pipeline.RenderPipeline.builder(RenderPipelines.GUI_TEXTURED_SNIPPET)
-                    .withLocation(dev.golem.core.Ids.of("golemcore", "pipeline/gui_additive"))
-                    .withColorTargetState(new com.mojang.blaze3d.pipeline.ColorTargetState(
-                            com.mojang.blaze3d.pipeline.BlendFunction.LIGHTNING)).build();
+            PipelineStates.blend(com.mojang.blaze3d.pipeline.RenderPipeline.builder(RenderPipelines.GUI_TEXTURED_SNIPPET)
+                    .withLocation(dev.golem.core.Ids.of("golemcore", "pipeline/gui_additive")),
+                    BlendFunction.LIGHTNING).build();
     //?}
 
     private GuiDraw() {}
@@ -37,13 +37,13 @@ public final class GuiDraw {
      * pipeline: destination x/y, source u/v, width/height, then the texture's full dimensions.
      */
     public static void blit(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             GuiGraphicsExtractor graphics, Identifier texture,
             //?} else {
-            /*GuiGraphics graphics, ResourceLocation texture,
+            /*GuiGraphicsExtractor graphics, ResourceLocation texture,
             *///?}
             int x, int y, float u, float v, int width, int height, int textureWidth, int textureHeight) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         graphics.blit(RenderPipelines.GUI_TEXTURED, texture, x, y, u, v, width, height, textureWidth, textureHeight);
         //?} else {
         /*graphics.blit(texture, x, y, u, v, width, height, textureWidth, textureHeight);
@@ -52,10 +52,10 @@ public final class GuiDraw {
 
     /** Draws a destination rectangle from an arbitrary normalized source rectangle. */
     public static void blitUv(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             GuiGraphicsExtractor graphics, Identifier texture,
             //?} else {
-            /*GuiGraphics graphics, ResourceLocation texture,
+            /*GuiGraphicsExtractor graphics, ResourceLocation texture,
             *///?}
             int x, int y, int width, int height, float u0, float v0, float u1, float v1,
             int textureWidth, int textureHeight) {
@@ -64,10 +64,10 @@ public final class GuiDraw {
 
     /** Additive HUD lights retain their black background in the atlas; black contributes no light. */
     public static void blitUv(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             GuiGraphicsExtractor graphics, Identifier texture,
             //?} else {
-            /*GuiGraphics graphics, ResourceLocation texture,
+            /*GuiGraphicsExtractor graphics, ResourceLocation texture,
             *///?}
             int x, int y, int width, int height, float u0, float v0, float u1, float v1,
             int textureWidth, int textureHeight, boolean additive) {
@@ -76,16 +76,16 @@ public final class GuiDraw {
 
     /** {@link #blitUv} tinted by the ARGB {@code color}, as a 1.12 {@code GlStateManager.color} before the draw. */
     public static void blitUv(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             GuiGraphicsExtractor graphics, Identifier texture,
             //?} else {
-            /*GuiGraphics graphics, ResourceLocation texture,
+            /*GuiGraphicsExtractor graphics, ResourceLocation texture,
             *///?}
             int x, int y, int width, int height, float u0, float v0, float u1, float v1,
             int textureWidth, int textureHeight, boolean additive, int color) {
         int sourceWidth = Math.max(1, Math.round((u1 - u0) * textureWidth));
         int sourceHeight = Math.max(1, Math.round((v1 - v0) * textureHeight));
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         graphics.blit(additive ? GUI_ADDITIVE : RenderPipelines.GUI_TEXTURED, texture, x, y, u0 * textureWidth, v0 * textureHeight,
                 width, height, sourceWidth, sourceHeight, textureWidth, textureHeight, color);
         //?} else {
@@ -113,10 +113,10 @@ public final class GuiDraw {
      * {@code GL_REPEAT} sampler does.
      */
     public static void blitUvFullscreen(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             GuiGraphicsExtractor graphics, Identifier texture,
             //?} else {
-            /*GuiGraphics graphics, ResourceLocation texture,
+            /*GuiGraphicsExtractor graphics, ResourceLocation texture,
             *///?}
             float u0, float v0, float u1, float v1) {
         float uSpan = u1 - u0;
@@ -143,10 +143,10 @@ public final class GuiDraw {
      * gives it.
      */
     public static void blitSprite(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             GuiGraphicsExtractor graphics, dev.golem.core.render.Sprites.Atlas atlas, Identifier sprite,
             //?} else {
-            /*GuiGraphics graphics, dev.golem.core.render.Sprites.Atlas atlas, ResourceLocation sprite,
+            /*GuiGraphicsExtractor graphics, dev.golem.core.render.Sprites.Atlas atlas, ResourceLocation sprite,
             *///?}
             int x, int y, int width, int height) {
         var stitched = dev.golem.core.render.Sprites.sprite(atlas, sprite);
@@ -162,13 +162,13 @@ public final class GuiDraw {
 
     /** Draws a crosshair with vanilla's inverse-colour blend against the pixels behind it. */
     public static void crosshair(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             GuiGraphicsExtractor graphics, Identifier texture,
             //?} else {
-            /*GuiGraphics graphics, ResourceLocation texture,
+            /*GuiGraphicsExtractor graphics, ResourceLocation texture,
             *///?}
             int x, int y, float u, float v, int width, int height, int textureWidth, int textureHeight) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         graphics.blit(RenderPipelines.CROSSHAIR, texture, x, y, u, v, width, height, textureWidth, textureHeight);
         //?} else {
         /*com.mojang.blaze3d.systems.RenderSystem.enableBlend();
@@ -190,10 +190,10 @@ public final class GuiDraw {
      * <p>Include the alpha: {@code 0xFFFFFF} has alpha zero and draws nothing.
      */
     public static void fill(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             GuiGraphicsExtractor graphics,
             //?} else {
-            /*GuiGraphics graphics,
+            /*GuiGraphicsExtractor graphics,
             *///?}
             int x0, int y0, int x1, int y1, int color) {
         graphics.fill(x0, y0, x1, y1, color);
@@ -205,10 +205,10 @@ public final class GuiDraw {
      * Same name and argument order on every version; only the graphics type differs.
      */
     public static void fillGradient(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             GuiGraphicsExtractor graphics,
             //?} else {
-            /*GuiGraphics graphics,
+            /*GuiGraphicsExtractor graphics,
             *///?}
             int x0, int y0, int x1, int y1, int colorTop, int colorBottom) {
         graphics.fillGradient(x0, y0, x1, y1, colorTop, colorBottom);
@@ -219,14 +219,14 @@ public final class GuiDraw {
      * older versions have no such parameter and must set, draw, then reset the shader colour.
      */
     public static void blit(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             GuiGraphicsExtractor graphics, Identifier texture,
             //?} else {
-            /*GuiGraphics graphics, ResourceLocation texture,
+            /*GuiGraphicsExtractor graphics, ResourceLocation texture,
             *///?}
             int x, int y, float u, float v, int width, int height, int textureWidth, int textureHeight,
             int color) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         graphics.blit(RenderPipelines.GUI_TEXTURED, texture, x, y, u, v, width, height, textureWidth, textureHeight, color);
         //?} else {
         /*float a = ((color >> 24) & 0xFF) / 255F;
@@ -277,17 +277,17 @@ public final class GuiDraw {
     }
 
     public static void tooltip(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             GuiGraphicsExtractor graphics,
             //?} else {
-            /*GuiGraphics graphics,
+            /*GuiGraphicsExtractor graphics,
             *///?}
             net.minecraft.client.gui.Font font,
             java.util.List<net.minecraft.network.chat.Component> lines,
             java.util.Optional<net.minecraft.world.inventory.tooltip.TooltipComponent> image,
             int mouseX, int mouseY) {
         tooltipPass = ownTooltipPass;
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         graphics.setTooltipForNextFrame(font, lines, image, mouseX, mouseY);
         //?} else {
         /*graphics.renderTooltip(font, lines, image, mouseX, mouseY);
@@ -303,13 +303,13 @@ public final class GuiDraw {
      * and its overlays, which is what this is used for.
      */
     public static void nextStratum(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             GuiGraphicsExtractor graphics
             //?} else {
-            /*GuiGraphics graphics
+            /*GuiGraphicsExtractor graphics
             *///?}
             ) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         graphics.nextStratum();
         //?} else {
         /*graphics.pose().translate(0.0F, 0.0F, 200.0F);
@@ -321,13 +321,13 @@ public final class GuiDraw {
      * lifts each slot by Z 100, so its item sits near 250 and its count at 300; this rises to the count's height.
      */
     public static void aboveSlots(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             GuiGraphicsExtractor graphics
             //?} else {
-            /*GuiGraphics graphics
+            /*GuiGraphicsExtractor graphics
             *///?}
             ) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         graphics.nextStratum();
         //?} else {
         /*graphics.pose().translate(0.0F, 0.0F, 300.0F);
@@ -339,13 +339,13 @@ public final class GuiDraw {
      * slot counts, whose glyphs sit just above Z 300.
      */
     public static void tooltipStratum(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             GuiGraphicsExtractor graphics
             //?} else {
-            /*GuiGraphics graphics
+            /*GuiGraphicsExtractor graphics
             *///?}
             ) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         graphics.nextStratum();
         //?} else {
         /*graphics.pose().translate(0.0F, 0.0F, 400.0F);
@@ -364,10 +364,10 @@ public final class GuiDraw {
 
     /** Draws a string. 26.1 shortened {@code drawString} to {@code text}. */
     public static void text(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             GuiGraphicsExtractor graphics,
             //?} else {
-            /*GuiGraphics graphics,
+            /*GuiGraphicsExtractor graphics,
             *///?}
             net.minecraft.client.gui.Font font, String value, int x, int y, int color, boolean shadow) {
         color = textColor(color);
@@ -380,10 +380,10 @@ public final class GuiDraw {
 
     /** Draws a formatted component. */
     public static void text(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             GuiGraphicsExtractor graphics,
             //?} else {
-            /*GuiGraphics graphics,
+            /*GuiGraphicsExtractor graphics,
             *///?}
             net.minecraft.client.gui.Font font, net.minecraft.network.chat.Component value,
             int x, int y, int color, boolean shadow) {
@@ -397,10 +397,10 @@ public final class GuiDraw {
 
     /** Draws an item stack at GUI scale. 26.1 shortened {@code renderItem} to {@code item}. */
     public static void item(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             GuiGraphicsExtractor graphics,
             //?} else {
-            /*GuiGraphics graphics,
+            /*GuiGraphicsExtractor graphics,
             *///?}
             net.minecraft.world.item.ItemStack stack, int x, int y) {
         //? if >=26.1 {
@@ -412,10 +412,10 @@ public final class GuiDraw {
 
     /** Draws an item stack's count and durability bar over it. 26.1 renamed {@code renderItemDecorations}. */
     public static void itemDecorations(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             GuiGraphicsExtractor graphics,
             //?} else {
-            /*GuiGraphics graphics,
+            /*GuiGraphicsExtractor graphics,
             *///?}
             net.minecraft.client.gui.Font font, net.minecraft.world.item.ItemStack stack, int x, int y) {
         //? if >=26.1 {
@@ -430,13 +430,13 @@ public final class GuiDraw {
      * reach through to the underlying {@code PoseStack}.
      */
     public static void pushMatrix(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             GuiGraphicsExtractor graphics
             //?} else {
-            /*GuiGraphics graphics
+            /*GuiGraphicsExtractor graphics
             *///?}
             ) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         graphics.pose().pushMatrix();
         //?} else {
         /*graphics.pose().pushPose();
@@ -445,13 +445,13 @@ public final class GuiDraw {
 
     /** Restores the transform saved by {@link #pushMatrix}. */
     public static void popMatrix(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             GuiGraphicsExtractor graphics
             //?} else {
-            /*GuiGraphics graphics
+            /*GuiGraphicsExtractor graphics
             *///?}
             ) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         graphics.pose().popMatrix();
         //?} else {
         /*graphics.pose().popPose();
@@ -465,13 +465,13 @@ public final class GuiDraw {
      * {@code PoseStack} used for world rendering, so the older call needs a zero Z.
      */
     public static void translate(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             GuiGraphicsExtractor graphics,
             //?} else {
-            /*GuiGraphics graphics,
+            /*GuiGraphicsExtractor graphics,
             *///?}
             float x, float y) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         graphics.pose().translate(x, y);
         //?} else {
         /*graphics.pose().translate(x, y, 0F);
@@ -480,13 +480,13 @@ public final class GuiDraw {
 
     /** Scales the GUI transform. */
     public static void scale(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             GuiGraphicsExtractor graphics,
             //?} else {
-            /*GuiGraphics graphics,
+            /*GuiGraphicsExtractor graphics,
             *///?}
             float x, float y) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         graphics.pose().scale(x, y);
         //?} else {
         /*graphics.pose().scale(x, y, 1F);
@@ -495,13 +495,13 @@ public final class GuiDraw {
 
     /** Rotates the GUI transform about the screen normal, in radians. */
     public static void rotate(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             GuiGraphicsExtractor graphics,
             //?} else {
-            /*GuiGraphics graphics,
+            /*GuiGraphicsExtractor graphics,
             *///?}
             float radians) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         graphics.pose().rotate(radians);
         //?} else {
         /*graphics.pose().mulPose(com.mojang.math.Axis.ZP.rotation(radians));

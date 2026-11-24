@@ -1,9 +1,9 @@
 package dev.golem.core.client;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 //?} else {
-/*import net.minecraft.client.gui.GuiGraphics;
+/*import net.minecraft.client.gui.GuiGraphicsExtractor;
 *///?}
 
 /** Replaces the vanilla crosshair only when a registered renderer claims the current frame. */
@@ -14,10 +14,10 @@ public final class Crosshairs {
     @FunctionalInterface
     public interface Renderer {
         boolean render(
-                //? if >=26.1 {
+                //? if >=1.21.11 {
                 GuiGraphicsExtractor graphics
                 //?} else {
-                /*GuiGraphics graphics
+                /*GuiGraphicsExtractor graphics
                 *///?}
         );
     }
@@ -61,10 +61,10 @@ public final class Crosshairs {
 
     /** Called by loader events and the legacy Fabric mixin. */
     public static boolean render(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             GuiGraphicsExtractor graphics
             //?} else {
-            /*GuiGraphics graphics
+            /*GuiGraphicsExtractor graphics
             *///?}
     ) {
         return renderer.render(graphics);

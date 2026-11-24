@@ -42,7 +42,7 @@ public abstract class CompatCustomRecipe implements CraftingRecipe {
         return true;
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     public boolean showNotification() {
         return false;
@@ -118,7 +118,7 @@ public abstract class CompatCustomRecipe implements CraftingRecipe {
 
     protected abstract RecipeSerializer<?> serializer();
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*@Override
     public boolean canCraftInDimensions(int width, int height) {
         return true;

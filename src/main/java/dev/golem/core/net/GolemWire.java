@@ -94,7 +94,7 @@ public final class GolemWire {
         CHANNEL_PREFIX.clear();
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private static Integer probePacketId() {
         int[] found = {-1};
         net.minecraft.network.protocol.game.GameProtocols.CLIENTBOUND_TEMPLATE.details().listPackets(
@@ -256,7 +256,7 @@ public final class GolemWire {
         ByteBuf scratch = Unpooled.buffer();
         try {
             FriendlyByteBuf writer = new FriendlyByteBuf(scratch);
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             writer.writeIdentifier(codec.id());
             //?} elif forge && <1.20.5 {
             /*writer.writeResourceLocation(GolemNetwork.forgeChannel());

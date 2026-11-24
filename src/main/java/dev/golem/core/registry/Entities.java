@@ -19,7 +19,7 @@ public final class Entities {
      */
     @SuppressWarnings({"unchecked", "rawtypes"})
     public static <T extends Entity> EntityType<T> build(EntityType.Builder<T> builder, ResourceKey<?> key) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return builder.build((ResourceKey<EntityType<?>>) (ResourceKey) key);
         //?} else {
         /*return builder.build(dev.golem.core.Ids.keyId(key).getPath());
@@ -28,7 +28,7 @@ public final class Entities {
 
     /** Disables the entity loot table across the builder API change. */
     public static <T extends Entity> EntityType.Builder<T> noLoot(EntityType.Builder<T> builder) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return builder.noLootTable();
         //?} else {
         /*return builder;
@@ -61,7 +61,7 @@ public final class Entities {
      * missile nosing over past vertical, needs its own copy of the value on 26.1 only.
      */
     public static boolean clampsXRot() {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return true;
         //?} else {
         /*return false;
@@ -70,7 +70,7 @@ public final class Entities {
 
     /** Resolves an entity type by namespaced id across the registry lookup rename. */
     public static EntityType<?> byId(String id) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getValue(dev.golem.core.Ids.parse(id));
         //?} else {
         /*return net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.get(dev.golem.core.Ids.parse(id));
@@ -79,7 +79,7 @@ public final class Entities {
 
     /** Creates a mob for an entity conversion, preserving the modern creation reason where available. */
     public static <T extends Entity> T createForConversion(EntityType<T> type, ServerLevel level) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return type.create(level, net.minecraft.world.entity.EntitySpawnReason.CONVERSION);
         //?} else {
         /*return type.create(level);
@@ -88,7 +88,7 @@ public final class Entities {
 
     /** Creates an entity with the explicit triggered spawn reason across the entity-construction API change. */
     public static <T extends Entity> T createTriggered(EntityType<T> type, ServerLevel level) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return type.create(level, net.minecraft.world.entity.EntitySpawnReason.TRIGGERED);
         //?} else {
         /*return type.create(level);
@@ -100,7 +100,7 @@ public final class Entities {
      * versions only consumed the reason through {@code EntityType.spawn}, so {@code create(Level)} is used.
      */
     public static <T extends Entity> T create(EntityType<T> type, net.minecraft.world.level.Level level,
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             net.minecraft.world.entity.EntitySpawnReason reason) {
         return type.create(level, reason);
         //?} else {
@@ -114,7 +114,7 @@ public final class Entities {
      * across the entity-construction API change.
      */
     public static <T extends Entity> T createDetached(EntityType<T> type, net.minecraft.world.level.Level level) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return type.create(level, net.minecraft.world.entity.EntitySpawnReason.LOAD);
         //?} else {
         /*return type.create(level);
@@ -123,7 +123,7 @@ public final class Entities {
 
     /** An entity's save data (without its type id) as a compound tag, across the ValueOutput rename. */
     public static net.minecraft.nbt.CompoundTag saveToTag(Entity entity) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         net.minecraft.world.level.storage.TagValueOutput output = net.minecraft.world.level.storage.TagValueOutput
                 .createWithContext(net.minecraft.util.ProblemReporter.DISCARDING, entity.level().registryAccess());
         entity.saveWithoutId(output);
@@ -135,7 +135,7 @@ public final class Entities {
 
     /** Loads entity save data from a compound tag across the ValueInput rename. */
     public static void loadFromTag(Entity entity, net.minecraft.nbt.CompoundTag tag) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         entity.load(net.minecraft.world.level.storage.TagValueInput.create(
                 net.minecraft.util.ProblemReporter.DISCARDING, entity.level().registryAccess(), tag));
         //?} else {

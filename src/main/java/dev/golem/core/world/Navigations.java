@@ -27,7 +27,7 @@ public final class Navigations {
 
     /** {@code setCanOpenDoors}, on the ground navigation only before 26.1 lifted it to the base class. */
     public static void setCanOpenDoors(PathNavigation navigation, boolean canOpenDoors) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         navigation.setCanOpenDoors(canOpenDoors);
         //?} else {
         /*if (navigation instanceof net.minecraft.world.entity.ai.navigation.GroundPathNavigation ground) {

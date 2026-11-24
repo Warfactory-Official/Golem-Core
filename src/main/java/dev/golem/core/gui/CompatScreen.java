@@ -5,13 +5,13 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.network.chat.Component;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 //?} else {
-/*import net.minecraft.client.gui.GuiGraphics;
+/*import net.minecraft.client.gui.GuiGraphicsExtractor;
 *///?}
 
 /**
@@ -30,18 +30,18 @@ public abstract class CompatScreen extends Screen {
     }
 
     protected void extractBackgroundCompat(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             GuiGraphicsExtractor graphics,
             //?} else {
-            /*GuiGraphics graphics,
+            /*GuiGraphicsExtractor graphics,
             *///?}
             int mouseX, int mouseY, float partialTick) {}
 
     protected void extractForegroundCompat(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             GuiGraphicsExtractor graphics,
             //?} else {
-            /*GuiGraphics graphics,
+            /*GuiGraphicsExtractor graphics,
             *///?}
             int mouseX, int mouseY, float partialTick) {}
 
@@ -65,6 +65,7 @@ public abstract class CompatScreen extends Screen {
         return true;
     }
 
+    //? if >=1.21.11 {
     //? if >=26.1 {
     @Override
     public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
@@ -77,6 +78,7 @@ public abstract class CompatScreen extends Screen {
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
         this.extractForegroundCompat(graphics, mouseX, mouseY, partialTick);
     }
+    //?}
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
@@ -174,26 +176,26 @@ public abstract class CompatScreen extends Screen {
      */
     //? if >=1.21 && <26.1 {
     /*@Override
-    public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    public void renderBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         if (this.menuBackground()) super.renderBackground(graphics, mouseX, mouseY, partialTick);
         this.extractBackgroundCompat(graphics, mouseX, mouseY, partialTick);
     }
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    public void render(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         super.render(graphics, mouseX, mouseY, partialTick);
         this.extractForegroundCompat(graphics, mouseX, mouseY, partialTick);
     }
     *///?} elif <1.21 {
     /*@Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+    public void render(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         this.extractBackgroundCompat(graphics, mouseX, mouseY, partialTick);
         super.render(graphics, mouseX, mouseY, partialTick);
         this.extractForegroundCompat(graphics, mouseX, mouseY, partialTick);
     }
     *///?}
 
-    //? if >=1.21 && <26.1 {
+    //? if >=1.21 && <1.21.11 {
     /*@Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         return this.mouseScrolledCompat(mouseX, mouseY, scrollX, scrollY)

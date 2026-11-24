@@ -9,7 +9,7 @@ import org.joml.Vector3f;
 import java.util.Arrays;
 import java.util.function.Consumer;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.client.renderer.rendertype.RenderType;
 //?} else {
 /*import net.minecraft.client.renderer.RenderType;
@@ -77,9 +77,12 @@ public final class GeometryPoints implements SubmitSink {
         @Override public VertexConsumer setUv(float u, float v) { return this; }
         @Override public VertexConsumer setUv1(int u, int v) { return this; }
         @Override public VertexConsumer setUv2(int u, int v) { return this; }
+        //? if >=26.3 {
+        /*@Override public VertexConsumer setUv3(float u, float v) { return this; }
+        *///?}
         @Override public VertexConsumer setNormal(float x, float y, float z) { return this; }
         //?}
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         @Override public VertexConsumer setLineWidth(float width) { return this; }
         //?}
         //? if <1.21 {

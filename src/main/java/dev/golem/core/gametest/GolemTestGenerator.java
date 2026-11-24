@@ -1,6 +1,6 @@
 package dev.golem.core.gametest;
 
-//? if <26.1 {
+//? if <1.21.11 {
 
 /*import net.minecraft.gametest.framework.GameTestGenerator;
 import net.minecraft.gametest.framework.TestFunction;

@@ -198,7 +198,7 @@ public final class EntityData<T> {
 
     // CompoundTag bridge for the backends that store a plain compound (Fabric, Forge)
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     public static DataIn dataIn(CompoundTag tag, HolderLookup.Provider registries) {
         return new ValueDataIn(net.minecraft.world.level.storage.TagValueInput.create(
                 net.minecraft.util.ProblemReporter.DISCARDING, registries, tag));
@@ -227,7 +227,7 @@ public final class EntityData<T> {
 
     // NeoForge
 
-    //? if neoforge && >=26.1 {
+    //? if neoforge && >=1.21.11 {
     private net.neoforged.neoforge.attachment.IAttachmentSerializer<T> serializer() {
         return new net.neoforged.neoforge.attachment.IAttachmentSerializer<>() {
             @Override

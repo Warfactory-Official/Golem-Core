@@ -31,11 +31,25 @@ public final class CameraInfo {
         //? if >=26.1 {
         var state = Minecraft.getInstance().gameRenderer.getGameRenderState().levelRenderState.cameraRenderState;
         return new CameraInfo(state.pos, state.yRot, state.orientation);
-        //?} else {
+        //?} elif >=1.21.11 {
+        /*net.minecraft.client.Camera camera = Minecraft.getInstance().gameRenderer.getMainCamera();
+        return new CameraInfo(camera.position(), camera.yRot(), camera.rotation());
+        *///?} else {
         /*net.minecraft.client.Camera camera = Minecraft.getInstance().gameRenderer.getMainCamera();
         return new CameraInfo(camera.getPosition(), camera.getYRot(), camera.rotation());
         *///?}
     }
+
+    //? if >=1.21.11 {
+    /** The camera a render state was extracted for. 1.21.11's state has no yaw; the main camera's is the same frame's. */
+    public static CameraInfo of(net.minecraft.client.renderer.state.level.CameraRenderState camera) {
+        //? if >=26.1 {
+        return new CameraInfo(camera.pos, camera.yRot, camera.orientation);
+        //?} else {
+        /*return new CameraInfo(camera.pos, Minecraft.getInstance().gameRenderer.getMainCamera().yRot(), camera.orientation);
+        *///?}
+    }
+    //?}
 
     /** Converts a camera-relative world vector to the coordinate space of a world renderer's pose. */
     public org.joml.Vector3f worldToRender(org.joml.Vector3f vector) {

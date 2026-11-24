@@ -1,9 +1,8 @@
 package dev.golem.core.render;
 
-//? if >=26.1 {
+import com.mojang.blaze3d.vertex.VertexFormat;
+//? if >=1.21.11 {
 import com.mojang.blaze3d.pipeline.BlendFunction;
-import com.mojang.blaze3d.pipeline.ColorTargetState;
-import com.mojang.blaze3d.pipeline.DepthStencilState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import net.minecraft.client.particle.SingleQuadParticle;
 import net.minecraft.client.renderer.RenderPipelines;
@@ -34,25 +33,22 @@ final class FaintParticleLayers {
 
     private FaintParticleLayers() {}
 
-    //? if >=26.1 {
-    private static final RenderPipeline TRANSLUCENT_PIPELINE = WorldPipelines.add(RenderPipeline.builder(RenderPipelines.PARTICLE_SNIPPET)
+    //? if >=1.21.11 {
+    private static final RenderPipeline TRANSLUCENT_PIPELINE = WorldPipelines.add(PipelineStates.depth(PipelineStates.blend(RenderPipeline.builder(RenderPipelines.PARTICLE_SNIPPET)
             .withLocation("pipeline/golem_particle_faint")
-            .withFragmentShader(dev.golem.core.Ids.parse("golemcore:core/particle_faint"))
-            .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
-            .withDepthStencilState(new DepthStencilState(DepthStencilState.DEFAULT.depthTest(), false))
+            .withFragmentShader(dev.golem.core.Ids.parse("golemcore:core/particle_faint")), BlendFunction.TRANSLUCENT),
+            PipelineStates.Depth.LESS_OR_EQUAL, false)
             .build(), RenderPipelines.TRANSLUCENT_PARTICLE);
-    private static final RenderPipeline ADDITIVE_PIPELINE = WorldPipelines.add(RenderPipeline.builder(RenderPipelines.PARTICLE_SNIPPET)
+    private static final RenderPipeline ADDITIVE_PIPELINE = WorldPipelines.add(PipelineStates.depth(PipelineStates.blend(RenderPipeline.builder(RenderPipelines.PARTICLE_SNIPPET)
             .withLocation("pipeline/golem_particle_faint_additive")
-            .withFragmentShader(dev.golem.core.Ids.parse("golemcore:core/particle_faint"))
-            .withColorTargetState(new ColorTargetState(BlendFunction.ADDITIVE))
-            .withDepthStencilState(new DepthStencilState(DepthStencilState.DEFAULT.depthTest(), false))
+            .withFragmentShader(dev.golem.core.Ids.parse("golemcore:core/particle_faint")), BlendFunction.ADDITIVE),
+            PipelineStates.Depth.LESS_OR_EQUAL, false)
             .build(), RenderPipelines.TRANSLUCENT_PARTICLE);
 
-    private static final RenderPipeline FOGLESS_ADDITIVE_PIPELINE = WorldPipelines.add(RenderPipeline.builder(RenderPipelines.PARTICLE_SNIPPET)
+    private static final RenderPipeline FOGLESS_ADDITIVE_PIPELINE = WorldPipelines.add(PipelineStates.depth(PipelineStates.blend(RenderPipeline.builder(RenderPipelines.PARTICLE_SNIPPET)
             .withLocation("pipeline/golem_particle_fogless_additive")
-            .withFragmentShader(dev.golem.core.Ids.parse("golemcore:core/particle_fogless"))
-            .withColorTargetState(new ColorTargetState(BlendFunction.ADDITIVE))
-            .withDepthStencilState(new DepthStencilState(DepthStencilState.DEFAULT.depthTest(), false))
+            .withFragmentShader(dev.golem.core.Ids.parse("golemcore:core/particle_fogless")), BlendFunction.ADDITIVE),
+            PipelineStates.Depth.LESS_OR_EQUAL, false)
             .build(), RenderPipelines.TRANSLUCENT_PARTICLE);
 
     static final SingleQuadParticle.Layer TRANSLUCENT =
@@ -113,14 +109,14 @@ final class FaintParticleLayers {
             public com.mojang.blaze3d.vertex.BufferBuilder begin(com.mojang.blaze3d.vertex.Tesselator tesselator,
                     net.minecraft.client.renderer.texture.TextureManager textureManager) {
                 setup();
-                return tesselator.begin(com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, DefaultVertexFormat.PARTICLE);
+                return tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.PARTICLE);
             }
             //?} else {
             /^@Override
             public void begin(com.mojang.blaze3d.vertex.BufferBuilder buffer,
                     net.minecraft.client.renderer.texture.TextureManager textureManager) {
                 setup();
-                buffer.begin(com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, DefaultVertexFormat.PARTICLE);
+                buffer.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.PARTICLE);
             }
 
             @Override

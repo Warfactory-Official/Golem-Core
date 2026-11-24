@@ -19,7 +19,7 @@ public final class Platform {
     public static boolean isClient() {
         //? if fabric {
         /*return net.fabricmc.api.EnvType.CLIENT == net.fabricmc.loader.api.FabricLoader.getInstance().getEnvironmentType();
-        *///?} elif neoforge && >=26.1 {
+        *///?} elif neoforge && >=1.21.11 {
         return net.neoforged.fml.loading.FMLLoader.getCurrent().getDist() == net.neoforged.api.distmarker.Dist.CLIENT;
         //?} elif neoforge {
         /*return net.neoforged.fml.loading.FMLLoader.getDist() == net.neoforged.api.distmarker.Dist.CLIENT;
@@ -114,7 +114,7 @@ public final class Platform {
     public static boolean isDevelopment() {
         //? if fabric {
         /*return net.fabricmc.loader.api.FabricLoader.getInstance().isDevelopmentEnvironment();
-        *///?} elif neoforge && >=26.1 {
+        *///?} elif neoforge && >=1.21.11 {
         return !net.neoforged.fml.loading.FMLLoader.getCurrent().isProduction();
         //?} elif neoforge {
         /*return !net.neoforged.fml.loading.FMLLoader.isProduction();

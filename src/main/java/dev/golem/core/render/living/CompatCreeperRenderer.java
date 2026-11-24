@@ -10,7 +10,7 @@ import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.CreeperPowerLayer;
 import org.jspecify.annotations.Nullable;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.client.model.monster.creeper.CreeperModel;
 import net.minecraft.client.renderer.entity.state.CreeperRenderState;
 import net.minecraft.resources.Identifier;
@@ -31,7 +31,7 @@ import net.minecraft.world.entity.monster.Creeper;
 public class CompatCreeperRenderer extends CreeperRenderer {
 
     private final
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier
             //?} else {
             /*ResourceLocation
@@ -40,7 +40,7 @@ public class CompatCreeperRenderer extends CreeperRenderer {
     private final float swellMultiplier;
 
     public CompatCreeperRenderer(EntityRendererProvider.Context context,
-                                 //? if >=26.1 {
+                                 //? if >=1.21.11 {
                                  Identifier
                                  //?} else {
                                  /*ResourceLocation
@@ -50,13 +50,13 @@ public class CompatCreeperRenderer extends CreeperRenderer {
     }
 
     public CompatCreeperRenderer(EntityRendererProvider.Context context,
-                                 //? if >=26.1 {
+                                 //? if >=1.21.11 {
                                  Identifier
                                  //?} else {
                                  /*ResourceLocation
                                  *///?}
                                  texture, float swellMultiplier,
-                                 //? if >=26.1 {
+                                 //? if >=1.21.11 {
                                  @Nullable Identifier
                                  //?} else {
                                  /*@Nullable ResourceLocation
@@ -72,7 +72,7 @@ public class CompatCreeperRenderer extends CreeperRenderer {
     }
 
     /** Vanilla's power swirl on a different sheet. */
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private static final class Overlay extends CreeperPowerLayer {
         private final Identifier texture;
 
@@ -113,7 +113,7 @@ public class CompatCreeperRenderer extends CreeperRenderer {
                 (1.0F + swell * 0.4F) * wobble);
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     protected void scale(CreeperRenderState state, PoseStack poseStack) {
         swell(state.swelling, poseStack);

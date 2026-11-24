@@ -3,6 +3,7 @@ package dev.golem.core.render;
 import com.mojang.blaze3d.vertex.PoseStack;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
+import org.joml.Quaternionfc;
 
 /**
  * Operations on a {@link PoseStack.Pose} that are spelled differently across versions.
@@ -27,7 +28,7 @@ public final class Poses {
      */
     public static PoseStack copyOf(PoseStack.Pose pose) {
         PoseStack copy = new PoseStack();
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         copy.last().set(pose);
         //?} elif >=1.21 {
         /*copy.mulPose(pose.pose());
@@ -48,12 +49,23 @@ public final class Poses {
         *///?}
     }
 
+    /** Rotates the top of the stack: {@code PoseStack.mulPose}, which 26.3 calls {@code rotate}. */
+    public static void rotate(PoseStack poseStack, Quaternionfc rotation) {
+        //? if >=26.3 {
+        /*poseStack.rotate(rotation);
+        *///?} elif >=1.21.11 {
+        poseStack.mulPose(rotation);
+        //?} else {
+        /*poseStack.mulPose(new Quaternionf(rotation));
+        *///?}
+    }
+
     /**
      * Rotates the pose in place, applying the rotation to both the position and normal matrices,
      * as {@code PoseStack.mulPose} does to the top of the stack.
      */
     public static void rotate(PoseStack.Pose pose, Quaternionf rotation) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         pose.rotate(rotation);
         //?} else {
         /*pose.pose().rotate(rotation);
@@ -67,7 +79,7 @@ public final class Poses {
      * directions unchanged, which is why the normal matrix is untouched.
      */
     public static void scale(PoseStack.Pose pose, float x, float y, float z) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         pose.scale(x, y, z);
         //?} else {
         /*pose.pose().scale(x, y, z);
@@ -76,7 +88,7 @@ public final class Poses {
 
     /** Translates a pose in place. Same split as {@link #scale}; a translation never affects normals. */
     public static void translate(PoseStack.Pose pose, float x, float y, float z) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         pose.translate(x, y, z);
         //?} else {
         /*pose.pose().translate(x, y, z);

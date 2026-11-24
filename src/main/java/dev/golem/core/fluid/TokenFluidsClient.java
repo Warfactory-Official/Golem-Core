@@ -56,7 +56,15 @@ final class TokenFluidsClient {
         *///?}
     }
 
-    //? if neoforge && <26.1 {
+    //? if neoforge && >=1.21.11 && <26.1 {
+    /*static net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions extensions(java.util.function.Supplier<TokenFluids.Spec> spec) {
+        return new net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions() {
+            @Override public net.minecraft.resources.Identifier getStillTexture() { return Ids.parse(spec.get().sprite()); }
+            @Override public net.minecraft.resources.Identifier getFlowingTexture() { return Ids.parse(spec.get().sprite()); }
+            @Override public int getTintColor() { return spec.get().tint(); }
+        };
+    }
+    *///?} elif neoforge && <26.1 {
     /*static net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions extensions(java.util.function.Supplier<TokenFluids.Spec> spec) {
         return new net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions() {
             @Override public net.minecraft.resources.ResourceLocation getStillTexture() { return Ids.parse(spec.get().sprite()); }

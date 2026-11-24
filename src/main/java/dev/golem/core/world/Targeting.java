@@ -13,7 +13,7 @@ public final class Targeting {
 
     private Targeting() {}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     public static net.minecraft.world.entity.ai.targeting.TargetingConditions.@Nullable Selector selector(
             @Nullable Predicate<LivingEntity> predicate) {
         return predicate == null ? null : (entity, level) -> predicate.test(entity);

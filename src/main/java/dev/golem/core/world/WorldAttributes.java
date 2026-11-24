@@ -8,7 +8,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.world.attribute.BedRule;
 import net.minecraft.world.attribute.EnvironmentAttributeSystem;
 import net.minecraft.world.attribute.EnvironmentAttributes;
@@ -37,7 +37,7 @@ public final class WorldAttributes {
     public static final Hook<Rule> MONSTERS_BURN = rules();
 
     static {
-        //? if fabric && <26.1 {
+        //? if fabric && <1.21.11 {
         /*net.fabricmc.fabric.api.entity.event.v1.EntitySleepEvents.ALLOW_SETTING_SPAWN.register((player, pos) ->
                 BED_SPAWN.invoker().apply(player.level(), pos, player.level().dimensionType().natural()));
         net.fabricmc.fabric.api.entity.event.v1.EntitySleepEvents.ALLOW_SLEEP_TIME.register((player, pos, vanilla) -> {
@@ -45,7 +45,7 @@ public final class WorldAttributes {
             boolean allowed = BED_SLEEP.invoker().apply(level, pos, level.dimensionType().natural() && vanilla);
             return allowed == vanilla ? InteractionResult.PASS : allowed ? InteractionResult.SUCCESS : InteractionResult.FAIL;
         });
-        *///?} elif neoforge && <26.1 {
+        *///?} elif neoforge && <1.21.11 {
         /*net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 (net.neoforged.neoforge.event.entity.player.CanPlayerSleepEvent event) -> {
                     var problem = event.getProblem();
@@ -97,20 +97,26 @@ public final class WorldAttributes {
         });
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     public static final Hook<BiConsumer<Level, EnvironmentAttributeSystem.Builder>> LAYERS = Hook.notifying();
 
     public static void apply(Level level, EnvironmentAttributeSystem.Builder attributes) {
         attributes.addPositionalLayer(EnvironmentAttributes.MONSTERS_BURN,
-                (vanilla, pos, _) -> MONSTERS_BURN.invoker().apply(level, BlockPos.containing(pos), vanilla));
-        attributes.addPositionalLayer(EnvironmentAttributes.BED_RULE, (rule, pos, _) -> {
+                (vanilla, pos, biome) -> MONSTERS_BURN.invoker().apply(level, BlockPos.containing(pos), vanilla));
+        attributes.addPositionalLayer(EnvironmentAttributes.BED_RULE, (rule, pos, biome) -> {
             var block = BlockPos.containing(pos);
             boolean baseSleep = rule.canSleep(level), baseSpawn = rule.canSetSpawn(level);
             boolean sleep = BED_SLEEP.invoker().apply(level, block, baseSleep);
             boolean spawn = BED_SPAWN.invoker().apply(level, block, baseSpawn);
             if (sleep == baseSleep && spawn == baseSpawn) return rule;
+            //? if >=26.3 {
+            /*return new BedRule(sleep ? BedRule.Rule.ALWAYS : BedRule.Rule.NEVER,
+                    spawn ? BedRule.Rule.ALWAYS : BedRule.Rule.NEVER, rule.destroyOnUse(), rule.destroyOnLeave(),
+                    rule.errorMessage());
+            *///?} else {
             return new BedRule(sleep ? BedRule.Rule.ALWAYS : BedRule.Rule.NEVER,
                     spawn ? BedRule.Rule.ALWAYS : BedRule.Rule.NEVER, rule.explodes(), rule.errorMessage());
+            //?}
         });
         for (var listener : LAYERS) listener.accept(level, attributes);
     }

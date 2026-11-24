@@ -50,8 +50,12 @@ public abstract class MixinFishingLoot {
             golem$fishingCategory = FishingLoot.categoryTag((LootTable) (Object) this, context.getLevel());
         }
         if (golem$fishingCategory < 0) return false;
-        //? if >=26.1 {
+        //? if >=1.21.11 {
+        //? if >=26.3 {
+        /*var origin = context.getOptional(LootContextParams.ORIGIN);
+        *///?} else {
         var origin = context.getOptionalParameter(LootContextParams.ORIGIN);
+        //?}
         //?} else {
         /*var origin = context.getParamOrNull(LootContextParams.ORIGIN);
          *///?}

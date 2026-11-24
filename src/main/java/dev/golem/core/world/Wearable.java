@@ -5,7 +5,7 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.core.component.DataComponents;
 //?} else {
 /*import net.minecraft.world.InteractionResultHolder;
@@ -18,7 +18,7 @@ import net.minecraft.world.item.Item;
  * A non-armour item worn in one armour slot (1.7 {@code isValidArmor}): the armour slot, shift-click and mobs take it,
  * and {@link #wear} equips it from the hand. Give it {@link Armors#equippable} for the same slot, which 26.1 reads.
  */
-//? if >=26.1 {
+//? if >=1.21.11 {
 public interface Wearable {
 //?} else {
 /*public interface Wearable extends Equipable {
@@ -28,7 +28,7 @@ public interface Wearable {
 
     /** Swaps the stack in {@code hand} with the one worn in its slot, for the item's use. */
     default InteractionResult wear(Level level, Player player, InteractionHand hand) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         ItemStack held = player.getItemInHand(hand);
         var equippable = held.get(DataComponents.EQUIPPABLE);
         // As vanilla's Item.use: a command can strip the component from one stack.
@@ -42,7 +42,7 @@ public interface Wearable {
         *///?}
     }
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*@Override
     default EquipmentSlot getEquipmentSlot() {
         return Armors.equipmentSlot(wornSlot());

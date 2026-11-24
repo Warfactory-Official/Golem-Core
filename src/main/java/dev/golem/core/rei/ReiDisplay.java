@@ -1,9 +1,8 @@
 package dev.golem.core.rei;
 
-import dev.architectury.fluid.FluidStack;
-
 //? if rei {
 
+import dev.architectury.fluid.FluidStack;
 import dev.golem.core.fluid.FluidUnits;
 import dev.golem.core.viewer.Drawable;
 import dev.golem.core.viewer.FluidIcons;
@@ -154,7 +153,7 @@ public final class ReiDisplay<T> implements Display {
         return id;
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     public java.util.Optional<net.minecraft.resources.Identifier> getDisplayLocation() {
         return java.util.Optional.empty();

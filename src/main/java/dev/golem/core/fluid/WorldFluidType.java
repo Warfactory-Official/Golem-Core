@@ -32,7 +32,7 @@ final class WorldFluidType extends net.neoforged.neoforge.fluids.FluidType {
         switch (spec.physics()) {
             case WATER -> p = p.canSwim(true).canDrown(true).canExtinguish(true).canPushEntity(true).supportsBoating(true)
                     .canHydrate(true).fallDistanceModifier(0.0F).motionScale(0.014D)
-                    //? if >=26.1 {
+                    //? if >=1.21.11 {
                     .isWaterLike(true)
                     //?}
                     .sound(net.neoforged.neoforge.common.SoundActions.BUCKET_FILL, SoundEvents.BUCKET_FILL)

@@ -4,7 +4,7 @@ import java.util.Objects;
 import java.util.function.Supplier;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.resources.Identifier;
 //?} else {
 /*import net.minecraft.resources.ResourceLocation;
@@ -52,7 +52,7 @@ public class RegistryObject<T> implements Supplier<T> {
 
     /** The id ({@code namespace:path}) this object is registered under. */
     public
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier
             //?} else {
             /*ResourceLocation
@@ -71,7 +71,7 @@ public class RegistryObject<T> implements Supplier<T> {
     @Override
     public T get() {
         if (value == null) {
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Registry<?> registry = (Registry<?>) BuiltInRegistries.REGISTRY.getValueOrThrow((ResourceKey) registryKey.get());
             value = (T) registry.getValueOrThrow((ResourceKey) key.get());
             //?} else {

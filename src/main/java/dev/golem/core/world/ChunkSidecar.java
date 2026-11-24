@@ -124,7 +124,7 @@ public final class ChunkSidecar implements AutoCloseable {
 
     private static byte[] payload(Optional<CompoundTag> tag) {
         if (tag.isEmpty()) return null;
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         byte[] bytes = tag.get().getByteArray(PAYLOAD).orElse(null);
         //?} else {
         /*byte[] bytes = tag.get().getByteArray(PAYLOAD);

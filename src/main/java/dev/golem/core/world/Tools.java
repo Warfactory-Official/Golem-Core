@@ -80,7 +80,7 @@ public final class Tools {
         return 0.0F;
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     /** A 26.1 tool material for a tier; enchantability is clamped because 26.1 rejects zero. */
     public static net.minecraft.world.item.ToolMaterial material(ToolTier tier) {
         return new net.minecraft.world.item.ToolMaterial(incorrectFor(tier.level()), tier.uses(), tier.speed(),
@@ -119,7 +119,7 @@ public final class Tools {
      */
     static Item.Properties unbreakableIfWorn(Item.Properties properties, ToolTier tier) {
         if (tier.uses() > 0) return properties;
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return properties.component(net.minecraft.core.component.DataComponents.UNBREAKABLE, net.minecraft.util.Unit.INSTANCE)
                 .component(net.minecraft.core.component.DataComponents.TOOLTIP_DISPLAY,
                         net.minecraft.world.item.component.TooltipDisplay.DEFAULT

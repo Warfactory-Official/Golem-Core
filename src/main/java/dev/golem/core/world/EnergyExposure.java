@@ -3,10 +3,10 @@ package dev.golem.core.world;
 //? if forge {
 /*import net.minecraftforge.common.util.LazyOptional;
 *///?}
-//? if neoforge && >=26.1 {
+//? if neoforge && >=1.21.11 {
 import net.neoforged.neoforge.transfer.energy.EnergyHandler;
 //?}
-//? if neoforge && >=26.1 {
+//? if neoforge && >=1.21.11 {
 import net.neoforged.neoforge.transfer.transaction.SnapshotJournal;
 //?}
 
@@ -57,7 +57,7 @@ public final class EnergyExposure {
      *               a consumer's own registries are necessarily populated.
      */
     public static void expose(EnergySource source, Supplier<Block[]> blocks) {
-        //? if neoforge && >=26.1 {
+        //? if neoforge && >=1.21.11 {
         dev.golem.core.platform.NeoForgeEntrypoint.modBus().addListener(
                 (net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent event) ->
                         event.registerBlock(net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK,
@@ -98,7 +98,7 @@ public final class EnergyExposure {
         *///?}
     }
 
-    //? if neoforge && >=26.1 {
+    //? if neoforge && >=1.21.11 {
     /**
      * A handler whose every mutation is journalled, because 26.1 lets a caller open a transaction,
      * take energy, and then abort, at which point what we handed over has to come back.
@@ -161,7 +161,7 @@ public final class EnergyExposure {
     }
     //?}
 
-    //? if neoforge && <26.1 {
+    //? if neoforge && <1.21.11 {
     /*private static final class Simulated implements net.neoforged.neoforge.energy.IEnergyStorage {
 
         private final EnergySource source;
@@ -267,7 +267,7 @@ public final class EnergyExposure {
     }
     *///?}
 
-    //? if forgelike && <26.1 {
+    //? if forgelike && <1.21.11 {
     /*private static int saturate(long value) {
         return value > Integer.MAX_VALUE ? Integer.MAX_VALUE : (value < 0L ? 0 : (int) value);
     }

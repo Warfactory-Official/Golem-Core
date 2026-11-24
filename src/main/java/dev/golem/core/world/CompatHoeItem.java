@@ -1,6 +1,8 @@
 package dev.golem.core.world;
 
+//? if <26.3 {
 import net.minecraft.world.item.HoeItem;
+//?}
 import net.minecraft.world.item.Item;
 
 /**
@@ -10,12 +12,19 @@ import net.minecraft.world.item.Item;
  * and two baselines, 1.21.1 a {@code Tier} plus attributes on the properties, 1.20.1 a {@code Tier}
  * with an integer damage baseline. {@code attackDamage} here is the absolute main-hand modifier.
  */
+//? if >=26.3 {
+/*public class CompatHoeItem extends Item {
+*///?} else {
 public class CompatHoeItem extends HoeItem {
+//?}
 
     protected final ToolTier toolTier;
 
     public CompatHoeItem(Item.Properties properties, ToolTier tier, float attackDamage, float attackSpeed) {
-        //? if >=26.1 {
+        //? if >=26.3 {
+        /*super(Tools.unbreakableIfWorn(properties, tier).hoe(Tools.material(tier), attackDamage - tier.attackDamageBonus(),
+                attackSpeed));
+        *///?} elif >=1.21.11 {
         super(Tools.material(tier), attackDamage - tier.attackDamageBonus(), attackSpeed,
                 Tools.unbreakableIfWorn(properties, tier));
         //?} else if >=1.21.1 {

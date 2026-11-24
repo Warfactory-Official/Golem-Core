@@ -15,7 +15,7 @@ public final class ClientResourceReloads {
                 .registerReloadListener(new net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener() {
                     @Override
                     public
-                            //? if >=26.1 {
+                            //? if >=1.21.11 {
                             net.minecraft.resources.Identifier
                             //?} else {
                             /^net.minecraft.resources.ResourceLocation^/
@@ -30,7 +30,7 @@ public final class ClientResourceReloads {
                     }
                 });
         *///?} elif neoforge {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         dev.golem.core.platform.NeoForgeEntrypoint.modBus().addListener(
                 (net.neoforged.neoforge.client.event.AddClientReloadListenersEvent event) ->
                         event.addListener(Ids.of(namespace, path),

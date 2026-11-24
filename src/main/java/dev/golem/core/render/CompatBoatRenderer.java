@@ -4,7 +4,7 @@ import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.model.EntityModel;
 import net.minecraft.client.model.Model;
@@ -41,16 +41,19 @@ import org.joml.Quaternionf;
  * host a foreign hull, so the frame is restated there from vanilla's own sequence.
  */
 public class CompatBoatRenderer
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         extends AbstractBoatRenderer
         //?} else {
         /*extends EntityRenderer<Boat>
         *///?}
 {
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private final EntityModel<BoatRenderState> hull;
     private final Model.Simple waterPatch;
+    //? if <26.1 {
+    /*private final Identifier texture;
+    *///?}
     //?} else {
     /*private final ResourceLocation texture;
     private final ModelPart hull;
@@ -58,7 +61,7 @@ public class CompatBoatRenderer
     *///?}
 
     public CompatBoatRenderer(EntityRendererProvider.Context context,
-                              //? if >=26.1 {
+                              //? if >=1.21.11 {
                               Identifier
                               //?} else {
                               /*ResourceLocation
@@ -66,6 +69,11 @@ public class CompatBoatRenderer
                               texture, LayerDefinition hull) {
         //? if >=26.1 {
         super(context, texture);
+        //?} elif >=1.21.11 {
+        /*super(context);
+        this.texture = texture;
+        *///?}
+        //? if >=1.21.11 {
         this.hull = new EntityModel<>(hull.bakeRoot()) {};
         this.waterPatch = new Model.Simple(context.bakeLayer(ModelLayers.BOAT_WATER_PATCH), ignored -> RenderTypes.waterMask());
         //?} else {
@@ -80,25 +88,40 @@ public class CompatBoatRenderer
 
     /** The baked hull, for a subclass that animates a part of it. */
     public ModelPart hull() {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return hull.root();
         //?} else {
         /*return hull;
         *///?}
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     protected EntityModel<BoatRenderState> model() {
         return hull;
     }
 
+    //? if <26.1 {
+    /*@Override
+    protected net.minecraft.client.renderer.rendertype.RenderType renderType() {
+        return hull.renderType(texture);
+    }
+    *///?}
+
     @Override
     protected void submitTypeAdditions(BoatRenderState state, PoseStack poseStack, SubmitNodeCollector collector,
                                        int lightCoords) {
         if (!state.isUnderWater) {
+            //? if >=26.3 {
+            /*collector.submitModel(waterPatch, Unit.INSTANCE, poseStack, texture, lightCoords,
+                    OverlayTexture.NO_OVERLAY, state.outlineColor);
+            *///?} elif >=26.1 {
             collector.submitModel(waterPatch, Unit.INSTANCE, poseStack, texture, lightCoords,
                     OverlayTexture.NO_OVERLAY, state.outlineColor, null);
+            //?} else {
+            /*collector.submitModel(waterPatch, Unit.INSTANCE, poseStack, waterPatch.renderType(texture), lightCoords,
+                    OverlayTexture.NO_OVERLAY, state.outlineColor, null);
+            *///?}
         }
     }
     //?} else {

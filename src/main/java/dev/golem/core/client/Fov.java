@@ -25,7 +25,11 @@ public final class Fov {
         registered = true;
         Fov.modifier = modifier;
 
-        //? if neoforge {
+        //? if neoforge && >=26.2 {
+        /*net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.client.event.ViewportEvent.ComputeFov event) ->
+                        event.setFOV(apply(event.getFOV(), (float) event.getPartialTick())));
+        *///?} elif neoforge {
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 (net.neoforged.neoforge.client.event.ViewportEvent.ComputeFov event) -> {
                     if (event.usedConfiguredFov()) event.setFOV(apply((float) event.getFOV(), (float) event.getPartialTick()));

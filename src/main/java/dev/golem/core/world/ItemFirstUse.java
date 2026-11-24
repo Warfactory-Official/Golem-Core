@@ -112,7 +112,7 @@ public final class ItemFirstUse {
     /** The server's block-use step for a held item, as {@code ServerPlayerGameMode.useItemOn} runs it past the gate. */
     private static InteractionResult useBlock(BlockState state, Level level, Player player, InteractionHand hand,
                                               ItemStack stack, BlockHitResult hit) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         InteractionResult result = state.useItemOn(stack, level, player, hand, hit);
         if (result instanceof InteractionResult.TryEmptyHandInteraction && hand == InteractionHand.MAIN_HAND) {
             return state.useWithoutItem(level, player, hit);

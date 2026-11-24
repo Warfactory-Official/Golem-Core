@@ -5,7 +5,7 @@ import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.client.model.monster.zombie.ZombieModel;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 //?} else {
@@ -28,7 +28,7 @@ import net.minecraft.client.renderer.RenderType;
 @SuppressWarnings({"rawtypes", "unchecked"})
 public final class HumanoidBody<T extends net.minecraft.world.entity.Mob> {
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     final HumanoidModel<CompatHumanoidRenderState> model;
 
     private HumanoidBody(HumanoidModel<CompatHumanoidRenderState> model) {
@@ -50,7 +50,7 @@ public final class HumanoidBody<T extends net.minecraft.world.entity.Mob> {
      */
     public static <T extends net.minecraft.world.entity.Mob> HumanoidBody<T> plain(LayerDefinition layer,
                                                                                    boolean translucent) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         java.util.function.Function<net.minecraft.resources.Identifier, net.minecraft.client.renderer.rendertype.RenderType> type =
                 translucent ? RenderTypes::entityTranslucent : RenderTypes::entityCutout;
         return new HumanoidBody<>(new HumanoidModel<>(layer.bakeRoot(), type));
@@ -73,7 +73,7 @@ public final class HumanoidBody<T extends net.minecraft.world.entity.Mob> {
 
     private static <T extends net.minecraft.world.entity.Mob> HumanoidBody<T> undead(
             net.minecraft.client.model.geom.ModelPart root) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return new HumanoidBody<>(new ZombieModel<>(root));
         //?} else {
         /*return new HumanoidBody<>(new HumanoidModel<T>(root) {

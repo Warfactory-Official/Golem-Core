@@ -4,7 +4,9 @@ import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+//? if <26.2 {
 import com.mojang.blaze3d.vertex.Tesselator;
+//?}
 import com.mojang.blaze3d.vertex.VertexFormat;
 import dev.golem.core.GolemCore;
 import dev.golem.core.platform.Platform;
@@ -82,7 +84,7 @@ final class Translucency {
         cover = null;
         reportedFast = false;
         reportedFabulous = false;
-        //? if <26.1 {
+        //? if <1.21.11 {
         /*if (shader != null) shader.close();
         shader = null;
         *///?}
@@ -94,7 +96,7 @@ final class Translucency {
         ensureTargets(main);
         copyColour(main, under);
         under.copyDepthFrom(main);
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         alphaPass(main, CLEAR_ALPHA);
         //?} else {
         /*clearAlpha(main);
@@ -128,7 +130,7 @@ final class Translucency {
     }
 
     private static void restoreAlpha(RenderTarget main) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         alphaPass(main, RESTORE_ALPHA);
         //?} else {
         /*restoreAlphaLegacy(main);
@@ -139,9 +141,9 @@ final class Translucency {
         if (under == null || under.width != main.width || under.height != main.height) {
             if (under != null) under.destroyBuffers();
             if (cover != null) cover.destroyBuffers();
-            //? if >=26.1 {
-            under = new TextureTarget("golem_translucency_under", main.width, main.height, true);
-            cover = new TextureTarget("golem_translucency_cover", main.width, main.height, false);
+            //? if >=1.21.11 {
+            under = Passes.target("golem_translucency_under", main.width, main.height, true);
+            cover = Passes.target("golem_translucency_cover", main.width, main.height, false);
             //?} else {
             /*under = new TextureTarget(main.width, main.height, true, Minecraft.ON_OSX);
             cover = new TextureTarget(main.width, main.height, false, Minecraft.ON_OSX);
@@ -149,7 +151,7 @@ final class Translucency {
         }
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     /**
      * The textures a scene-warp shader samples: what lay under the translucent layer, its coverage (alpha) and the
      * world depth after translucency. Without this frame's capture the first two are the scene copy itself, so a
@@ -202,43 +204,38 @@ final class Translucency {
 
     /** Alpha := 0 (the sampled alpha is multiplied by zero). */
     private static final com.mojang.blaze3d.pipeline.RenderPipeline CLEAR_ALPHA = alphaPipeline("clear",
-            new com.mojang.blaze3d.pipeline.BlendFunction(
-                    com.mojang.blaze3d.platform.SourceFactor.ZERO, com.mojang.blaze3d.platform.DestFactor.ONE,
-                    com.mojang.blaze3d.platform.SourceFactor.ZERO, com.mojang.blaze3d.platform.DestFactor.ZERO));
+            PipelineStates.blendFunction(PipelineStates.Factor.ZERO, PipelineStates.Factor.ONE,
+                    PipelineStates.Factor.ZERO, PipelineStates.Factor.ZERO));
     /** Alpha := coverage + before·(1 - coverage), the saved alpha drawn under the target's own. */
     private static final com.mojang.blaze3d.pipeline.RenderPipeline RESTORE_ALPHA = alphaPipeline("restore",
-            new com.mojang.blaze3d.pipeline.BlendFunction(
-                    com.mojang.blaze3d.platform.SourceFactor.ZERO, com.mojang.blaze3d.platform.DestFactor.ONE,
-                    com.mojang.blaze3d.platform.SourceFactor.ONE_MINUS_DST_ALPHA,
-                    com.mojang.blaze3d.platform.DestFactor.ONE));
+            PipelineStates.blendFunction(PipelineStates.Factor.ZERO, PipelineStates.Factor.ONE,
+                    PipelineStates.Factor.ONE_MINUS_DST_ALPHA, PipelineStates.Factor.ONE));
 
     private static com.mojang.blaze3d.pipeline.RenderPipeline alphaPipeline(String name,
             com.mojang.blaze3d.pipeline.BlendFunction blend) {
-        return com.mojang.blaze3d.pipeline.RenderPipeline.builder()
+        return PipelineStates.color(PipelineStates.vertices(com.mojang.blaze3d.pipeline.RenderPipeline.builder()
                 .withLocation(dev.golem.core.Ids.of("golemcore", "pipeline/translucency_" + name))
                 .withVertexShader(dev.golem.core.Ids.of("golemcore", "core/translucency_alpha"))
                 .withFragmentShader(dev.golem.core.Ids.of("golemcore", "core/translucency_alpha"))
                 .withSampler("Sampler0")
-                .withVertexFormat(DefaultVertexFormat.POSITION, VertexFormat.Mode.TRIANGLES)
-                .withColorTargetState(new com.mojang.blaze3d.pipeline.ColorTargetState(java.util.Optional.of(blend),
-                        com.mojang.blaze3d.pipeline.ColorTargetState.WRITE_ALPHA))
+                , DefaultVertexFormat.POSITION, VertexFormat.Mode.TRIANGLES), blend, false, true)
                 .withCull(false).build();
     }
 
     private static void alphaPass(RenderTarget main, com.mojang.blaze3d.pipeline.RenderPipeline pipeline) {
-        var builder = Tesselator.getInstance().begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION);
+        var builder = CompatTesselator.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION);
         builder.addVertex(-1F, -1F, 0F);
         builder.addVertex(3F, -1F, 0F);
         builder.addVertex(-1F, 3F, 0F);
         try (var mesh = builder.buildOrThrow()) {
-            var vertices = DefaultVertexFormat.POSITION.uploadImmediateVertexBuffer(mesh.vertexBuffer());
+            var vertices = Passes.upload(DefaultVertexFormat.POSITION, mesh.vertexBuffer());
             var sampler = RenderSystem.getSamplerCache().getClampToEdge(com.mojang.blaze3d.textures.FilterMode.NEAREST);
-            try (var pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
-                    () -> "Translucency alpha", main.getColorTextureView(), java.util.OptionalInt.empty())) {
-                pass.setPipeline(pipeline);
-                pass.bindTexture("Sampler0", under.getColorTextureView(), sampler);
-                pass.setVertexBuffer(0, vertices);
-                pass.draw(0, 3);
+            try (var pass = Passes.open(
+                    () -> "Translucency alpha", main.getColorTextureView(), null)) {
+                Passes.pipeline(pass, pipeline);
+                Passes.texture(pass, "Sampler0", under.getColorTextureView(), sampler);
+                Passes.vertices(pass, vertices);
+                Passes.draw(pass, 3);
             }
         }
     }
@@ -339,7 +336,7 @@ final class Translucency {
                 int location = com.mojang.blaze3d.shaders.Uniform.glGetUniformLocation(shader.getId(), "Sampler0");
                 com.mojang.blaze3d.shaders.Uniform.uploadInteger(location, 0);
                 //? if >=1.21 {
-                var builder = Tesselator.getInstance().begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION);
+                var builder = CompatTesselator.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION);
                 builder.addVertex(-1F, -1F, 0F);
                 builder.addVertex(3F, -1F, 0F);
                 builder.addVertex(-1F, 3F, 0F);

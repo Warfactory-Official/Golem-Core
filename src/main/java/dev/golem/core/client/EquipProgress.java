@@ -24,7 +24,11 @@ public final class EquipProgress {
     private EquipProgress() {}
 
     private static ItemInHandRenderer hands() {
+        //? if >=26.3 {
+        /*return Minecraft.getInstance().player.firstPersonHandsAndItems();
+        *///?} else {
         return Minecraft.getInstance().gameRenderer.itemInHandRenderer;
+        //?}
     }
 
     /** This tick's main-hand raise. */

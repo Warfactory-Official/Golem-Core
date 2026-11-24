@@ -6,7 +6,7 @@ import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.world.item.ItemStack;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.entity.state.HumanoidRenderState;
@@ -75,7 +75,7 @@ public abstract class CompatHumanoidLayer extends RenderLayer {
         return model instanceof HumanoidModel<?> humanoid ? humanoid : null;
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     /**
      * Bridges vanilla's submit signature. The stacks come straight off the render state. 26.1 snapshots
      * them during extraction, so there is no entity to consult and no attachment API needed.

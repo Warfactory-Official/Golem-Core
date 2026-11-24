@@ -13,12 +13,11 @@ import net.minecraft.world.level.lighting.LevelLightEngine;
 import net.minecraft.world.level.material.FluidState;
 import org.jspecify.annotations.Nullable;
 
-//? if >=26.1 {
 import net.minecraft.client.renderer.block.BlockAndTintGetter;
+//? if >=26.1 {
 import net.minecraft.world.level.CardinalLighting;
 //?} else {
 /*import net.minecraft.core.Direction;
-import net.minecraft.world.level.BlockAndTintGetter;
 *///?}
 
 /**
@@ -213,7 +212,7 @@ public final class WorldInAJar implements BlockAndTintGetter {
      */
     @Override
     public LevelLightEngine getLightEngine() {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return LevelLightEngine.EMPTY;
         //?} else {
         /*return null;
@@ -227,23 +226,27 @@ public final class WorldInAJar implements BlockAndTintGetter {
         return grassTint;
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     public int getMinY() {
         return 0;
     }
 
+    //? if >=26.1 {
     @Override
     public CardinalLighting cardinalLighting() {
         return CardinalLighting.DEFAULT;
     }
+    //?}
     //?} else {
     /*@Override
     public int getMinBuildHeight() {
         return 0;
     }
+    *///?}
 
-    @Override
+    //? if <26.1 {
+    /*@Override
     public float getShade(Direction direction, boolean shade) {
         if (!shade) return 1F;
         return switch (direction) {

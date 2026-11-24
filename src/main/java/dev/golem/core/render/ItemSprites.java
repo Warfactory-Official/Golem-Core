@@ -10,7 +10,7 @@ import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.resources.Identifier;
 //?} else {
 /*import net.minecraft.resources.ResourceLocation;
@@ -44,7 +44,7 @@ public final class ItemSprites {
 
     /** Draws {@code texture} as a generated item over the unit square of the pose's space. */
     public static void submit(PoseStack pose, SubmitSink sink,
-                              //? if >=26.1 {
+                              //? if >=1.21.11 {
                               Identifier texture,
                               //?} else {
                               /*ResourceLocation texture,
@@ -56,7 +56,7 @@ public final class ItemSprites {
     }
 
     private static boolean[][] read(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier texture) {
             //?} else {
             /*ResourceLocation texture) {

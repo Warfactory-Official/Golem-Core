@@ -9,7 +9,7 @@ public final class Fires {
     private Fires() {}
 
     public static boolean canSpreadAround(ServerLevel level, BlockPos pos) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return level.canSpreadFireAround(pos);
         //?} else {
         /*return level.getGameRules().getBoolean(net.minecraft.world.level.GameRules.RULE_DOFIRETICK)

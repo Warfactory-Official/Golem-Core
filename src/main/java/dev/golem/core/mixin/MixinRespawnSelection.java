@@ -19,7 +19,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.Set;
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.world.level.portal.TeleportTransition;
 //?} elif >=1.21 {
 /*import net.minecraft.world.level.portal.DimensionTransition;
@@ -34,7 +34,7 @@ import net.minecraft.world.level.portal.TeleportTransition;
 public abstract class MixinRespawnSelection {
     private static final String BED_LOOKUP = "*(Lnet/minecraft/core/BlockPos;)Lcom/mojang/datafixers/util/Either;";
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Inject(method = "findRespawnPositionAndUseSpawnBlock", at = @At("HEAD"), cancellable = true)
     private void golem$respawnTransition(boolean consumeSpawnBlock, TeleportTransition.PostTeleportTransition after,
                                          CallbackInfoReturnable<TeleportTransition> result) {
@@ -100,7 +100,7 @@ public abstract class MixinRespawnSelection {
     }
     *///?}
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*@ModifyExpressionValue(method = BED_LOOKUP, at = @At(value = "INVOKE",
             target = "Lnet/minecraft/world/level/dimension/DimensionType;natural()Z"))
     private boolean golem$bedWorld(boolean natural, @Local(argsOnly = true) BlockPos pos) {
@@ -110,7 +110,7 @@ public abstract class MixinRespawnSelection {
     }
     *///?}
 
-    //? if !fabric && <26.1 {
+    //? if !fabric && <1.21.11 {
     /*@WrapOperation(method = BED_LOOKUP, at = @At(value = "INVOKE",
             target = "Lnet/minecraft/server/level/ServerPlayer;setRespawnPosition(Lnet/minecraft/resources/ResourceKey;Lnet/minecraft/core/BlockPos;FZZ)V"))
     private void golem$bedSpawn(ServerPlayer player, ResourceKey<Level> dimension, BlockPos pos, float yaw,

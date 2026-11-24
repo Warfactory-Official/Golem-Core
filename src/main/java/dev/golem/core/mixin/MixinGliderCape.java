@@ -15,7 +15,7 @@ import org.spongepowered.asm.mixin.injection.At;
 @Mixin(CapeLayer.class)
 public abstract class MixinGliderCape {
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @ModifyExpressionValue(method = "submit(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;ILnet/minecraft/client/renderer/entity/state/AvatarRenderState;FF)V",
             at = @At(value = "FIELD", target = "chestEquipment:Lnet/minecraft/world/item/ItemStack;"))
     private ItemStack golem$wings(ItemStack chest) {

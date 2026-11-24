@@ -5,7 +5,7 @@ import net.minecraft.world.entity.ai.goal.GoalSelector;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.goal.UseItemGoal;
 import net.minecraft.world.item.ItemStack;
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.world.entity.animal.fox.Fox;
 //?} else {
 /*import net.minecraft.world.entity.animal.Fox;

@@ -3,6 +3,31 @@
 Each release has a `## <version>` section; the release workflow uploads only the section matching
 `mod.version` in gradle.properties.
 
+## 1.0.7
+
+### Added
+- Six new nodes: 1.21.11, 26.2 and 26.3, each on NeoForge and Fabric (twelve in all). The stale 26.3 snapshot node is
+  gone. JEI, REI, Jade and CC: Tweaked are wired on all six, AE2 on NeoForge 26.2 and 26.3; EMI, KubeJS, GemRender,
+  Sable and the Mo' Bends port Core adapts have no builds for these versions. 26.2 and 26.3 run on OpenGL and Vulkan.
+- On 26.3 a registered skybox replaces vanilla's sun, moon and stars, `Precipitation` weather also draws under
+  order-independent transparency, and `Fuels` fuels burn half as long in smokers and blast furnaces, as on every
+  earlier node.
+- GameTests on Fabric 1.21.11 (the bridge into Fabric's registry hook now covers it).
+- NeoForge 1.21.11: `Precipitation` weather replaces vanilla's again. NeoForge 21.11 never calls its custom weather
+  renderers, so Core hooks vanilla's weather there as it does on Fabric.
+- `Passes`, `CompatTesselator`, `ImmediateBuffers`, `WorldTargets`: immediate draws, the shared tesselator, a buffer
+  source and the Fabulous targets with one spelling on every node (26.2 removed `MultiBufferSource` and `Tesselator`;
+  26.3 removed output targets and Fabulous).
+- `PipelineStates.vertices`, `sampler`, `uniform`, `blendFunction(Factor...)` and pipeline inspection helpers, for
+  26.2's bind group layouts and split vertex topology.
+- `Poses.rotate(PoseStack, Quaternionfc)`: `PoseStack.mulPose(Quaternion)`, which 26.3 renamed `rotate`.
+- Development checks `-Dgolem.mixinAudit=true` (applies every mixin at the first client tick) and
+  `-Dgolem.pipelineAudit=true` (compiles every static Core pipeline once a world is loaded).
+
+### Fixed
+- `chiseledBuild` built 26.2 and 26.3 with the access widener and transformers of whichever node was active; both are
+  now rewritten for the node being built.
+
 ## 1.0.6
 
 GemRender 0.1.21 or newer (older versions are refused). On 26.1, GemRender 0.1.22 needs NeoForge 26.1.2.126 or newer.

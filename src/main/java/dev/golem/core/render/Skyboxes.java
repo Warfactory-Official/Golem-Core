@@ -94,7 +94,12 @@ public final class Skyboxes {
     public static boolean darkDiscFollows() {
         //? if >=26.1 {
         return Minecraft.getInstance().gameRenderer.getGameRenderState().levelRenderState.skyRenderState.shouldRenderDarkDisc;
-        //?} else {
+        //?} elif >=1.21.11 {
+        /*Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft.player == null || minecraft.level == null) return false;
+        return minecraft.player.getEyePosition(FrameTime.partialTick()).y
+                - minecraft.level.getLevelData().getHorizonHeight(minecraft.level) < 0.0;
+        *///?} else {
         /*return false;
         *///?}
     }

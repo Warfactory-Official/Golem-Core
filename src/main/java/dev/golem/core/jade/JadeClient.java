@@ -13,7 +13,7 @@ import snownee.jade.api.IBlockComponentProvider;
 import snownee.jade.api.ITooltip;
 import snownee.jade.api.IWailaClientRegistration;
 import snownee.jade.api.config.IPluginConfig;
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.resources.Identifier;
 //?} else {
 /*import net.minecraft.resources.ResourceLocation;
@@ -56,7 +56,7 @@ final class JadeClient {
         }
 
         @Override
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         public Identifier getUid() {
         //?} else {
         /*public ResourceLocation getUid() {

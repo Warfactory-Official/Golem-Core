@@ -6,7 +6,7 @@ public final class Colors {
     private Colors() {}
 
     public static int colorFromFloat(float alpha, float red, float green, float blue) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return net.minecraft.util.ARGB.colorFromFloat(alpha, red, green, blue);
         //?} elif >=1.21 {
         /*return net.minecraft.util.FastColor.ARGB32.colorFromFloat(alpha, red, green, blue);
@@ -18,7 +18,7 @@ public final class Colors {
     }
 
     public static int black(int alpha) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return net.minecraft.util.ARGB.color(alpha, 0, 0, 0);
         //?} else {
         /*return net.minecraft.util.FastColor.ARGB32.color(alpha, 0, 0, 0);

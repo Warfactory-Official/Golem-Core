@@ -95,7 +95,7 @@ final class HarnessSounds {
     private static void record(SoundInstance sound) {
         try {
             String id;
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             id = String.valueOf(sound.getIdentifier());
             //?} else {
             /*id = String.valueOf(sound.getLocation());

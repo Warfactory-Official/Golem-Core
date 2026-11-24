@@ -58,7 +58,7 @@ public final class Jei {
      * <p>29.x names this {@code CRAFTING_STATION}. 19.x has no such constant and uses {@code CATALYST}
      * for the same thing; the rename came with no behavioural change.
      */
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     public static final RecipeIngredientRole CRAFTING_STATION = RecipeIngredientRole.CRAFTING_STATION;
     //?} else {
     /*public static final RecipeIngredientRole CRAFTING_STATION = RecipeIngredientRole.CATALYST;
@@ -70,7 +70,7 @@ public final class Jei {
      */
     public static void addCraftingStation(IRecipeCatalystRegistration registration, JeiRecipeType<?> type,
                                           ItemStack... stations) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         registration.addCraftingStation(type.unwrap(), stations);
         //?} else {
         /*// 19.x takes the item first and the types as varargs, and accepts an ItemLike rather than a
@@ -85,13 +85,13 @@ public final class Jei {
      * spelling differs between the lines, so the call site reads identically.
      */
     public static void addCraftingStation(IRecipeCatalystRegistration registration,
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             mezz.jei.api.recipe.types.IRecipeType<?> type,
             //?} else {
             /*mezz.jei.api.recipe.RecipeType<?> type,
             *///?}
             ItemStack... stations) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         registration.addCraftingStation(type, stations);
         //?} else {
         /*for (ItemStack station : stations) registration.addRecipeCatalyst(station.getItem(), type);
@@ -149,7 +149,7 @@ public final class Jei {
             IRecipeTransferRegistration registration, Class<? extends C> containerClass, MenuType<C> menuType,
             JeiRecipeType<R> type, int[] recipeSlotIndices, int inventorySlotStart, int inventorySlotCount,
             Predicate<R> canHandle) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         registration.addRecipeTransferHandler(new mezz.jei.api.recipe.transfer.IRecipeTransferInfo<C, R>() {
             @Override public Class<? extends C> getContainerClass() { return containerClass; }
             @Override public Optional<MenuType<C>> getMenuType() { return Optional.of(menuType); }
@@ -193,7 +193,7 @@ public final class Jei {
         registration.addRecipeTransferHandler(new IRecipeTransferHandler<C, R>() {
             @Override public Class<? extends C> getContainerClass() { return containerClass; }
             @Override public Optional<MenuType<C>> getMenuType() { return Optional.of(menuType); }
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             @Override public mezz.jei.api.recipe.types.IRecipeType<R> getRecipeType() { return type.unwrap(); }
             //?} else {
             /*@Override public mezz.jei.api.recipe.RecipeType<R> getRecipeType() { return type.unwrap(); }
@@ -220,7 +220,7 @@ public final class Jei {
     public static void registerFromDataComponentTypes(ISubtypeRegistration registration, Item item,
                                                       dev.golem.core.data.GolemComponent<?>... components) {
         if (components.length == 0) return;
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         registration.registerFromDataComponentTypes(item,
                 java.util.Arrays.stream(components)
                         .map(dev.golem.core.data.GolemComponent::type)
@@ -291,12 +291,17 @@ public final class Jei {
      */
     public static List<Map.Entry<ItemStack, ItemStack>> smeltingRecipes(IJeiRuntime runtime) {
         List<Map.Entry<ItemStack, ItemStack>> out = new ArrayList<>();
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         runtime.getRecipeManager().createRecipeLookup(mezz.jei.api.constants.RecipeTypes.SMELTING).get().forEach(holder -> {
             var recipe = holder.value();
             recipe.input().items().forEach(item -> {
                 ItemStack in = new ItemStack(item);
+                //? if >=26.1 {
                 ItemStack result = recipe.assemble(new net.minecraft.world.item.crafting.SingleRecipeInput(in));
+                //?} else {
+                /*ItemStack result = recipe.assemble(new net.minecraft.world.item.crafting.SingleRecipeInput(in),
+                        net.minecraft.client.Minecraft.getInstance().level.registryAccess());
+                *///?}
                 if (!result.isEmpty()) out.add(Map.entry(in, result));
             });
         });

@@ -1,7 +1,12 @@
 package dev.golem.core.client;
 
+import dev.golem.core.render.Passes;
+import com.mojang.blaze3d.vertex.VertexFormat;
+import dev.golem.core.render.CompatTesselator;
+import dev.golem.core.render.PipelineStates;
 import dev.golem.core.world.Skies;
-//? if >=26.1 {
+//? if >=1.21.11 {
+import com.mojang.blaze3d.pipeline.BlendFunction;
 import net.minecraft.world.attribute.EnvironmentAttributes;
 //?}
 
@@ -43,7 +48,7 @@ public final class Lightmaps {
     /** The sky input actually consumed by this node's light map and its additive tints. */
     // port: Older nodes retain native brightness and classic lightmap cells for their rendering API.
     public static float skyInput(ClientLevel level, float partialTick) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return Minecraft.getInstance().gameRenderer.getMainCamera().attributeProbe()
                 .getValue(EnvironmentAttributes.SKY_LIGHT_FACTOR, partialTick);
         //?} else {
@@ -201,29 +206,26 @@ public final class Lightmaps {
 
     // Per-version application
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private static final com.mojang.blaze3d.pipeline.RenderPipeline PIPELINE =
-            com.mojang.blaze3d.pipeline.RenderPipeline.builder()
+            PipelineStates.color(PipelineStates.vertices(com.mojang.blaze3d.pipeline.RenderPipeline.builder()
                     .withLocation(dev.golem.core.Ids.of("golemcore", "pipeline/lightmap_tint"))
                     .withVertexShader(dev.golem.core.Ids.of("golemcore", "core/lightmap_tint"))
                     .withFragmentShader(dev.golem.core.Ids.of("golemcore", "core/lightmap_tint"))
-                    .withVertexFormat(com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_COLOR,
-                            com.mojang.blaze3d.vertex.VertexFormat.Mode.TRIANGLES)
-                    .withColorTargetState(new com.mojang.blaze3d.pipeline.ColorTargetState(
-                            java.util.Optional.of(com.mojang.blaze3d.pipeline.BlendFunction.ADDITIVE),
-                            com.mojang.blaze3d.pipeline.ColorTargetState.WRITE_COLOR))
+                    , com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_COLOR,
+                            VertexFormat.Mode.TRIANGLES),
+                    BlendFunction.ADDITIVE, true, false)
                     .withCull(false).build();
 
     /** {@link #PIPELINE} without blending: the classic formula's cells replace vanilla's. */
     private static final com.mojang.blaze3d.pipeline.RenderPipeline CLASSIC_PIPELINE =
-            com.mojang.blaze3d.pipeline.RenderPipeline.builder()
+            PipelineStates.color(PipelineStates.vertices(com.mojang.blaze3d.pipeline.RenderPipeline.builder()
                     .withLocation(dev.golem.core.Ids.of("golemcore", "pipeline/lightmap_classic"))
                     .withVertexShader(dev.golem.core.Ids.of("golemcore", "core/lightmap_tint"))
                     .withFragmentShader(dev.golem.core.Ids.of("golemcore", "core/lightmap_tint"))
-                    .withVertexFormat(com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_COLOR,
-                            com.mojang.blaze3d.vertex.VertexFormat.Mode.TRIANGLES)
-                    .withColorTargetState(new com.mojang.blaze3d.pipeline.ColorTargetState(
-                            java.util.Optional.empty(), com.mojang.blaze3d.pipeline.ColorTargetState.WRITE_COLOR))
+                    , com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_COLOR,
+                            VertexFormat.Mode.TRIANGLES),
+                    null, true, false)
                     .withCull(false).build();
 
     /**
@@ -231,17 +233,16 @@ public final class Lightmaps {
      * additions, clamped to 255 as before 26.1) drawn over vanilla's; otherwise one additive quad per changed cell, in
      * the light map's own 16 x 16.
      */
-    public static void apply(com.mojang.blaze3d.textures.GpuTextureView lightmap,
-            net.minecraft.client.renderer.state.LightmapRenderState state) {
+    public static void apply(com.mojang.blaze3d.textures.GpuTextureView lightmap, Frame state) {
         ClientLevel level = Minecraft.getInstance().level;
         if (classic(level)) {
             float sun = dev.golem.core.world.Skies.clientSkyLight;
             // no modifier answered yet: the brightness behind vanilla's factor
-            if (Float.isNaN(sun)) sun = (state.skyFactor - 0.05F) / 0.95F;
+            if (Float.isNaN(sun)) sun = (state.skyFactor() - 0.05F) / 0.95F;
             // vanilla's lightning layer sets the (clamped) factor to 1 while the sky flashes
-            boolean flash = state.skyFactor >= 1.0F && sun * 0.95F + 0.05F < 1.0F;
-            int[] cells = classicCells(sun, flash, state.blockFactor + 0.1F, state.brightness, state.darknessEffectScale,
-                    state.nightVisionEffectIntensity, state.bossOverlayWorldDarkening, level.dimensionType().ambientLight());
+            boolean flash = state.skyFactor() >= 1.0F && sun * 0.95F + 0.05F < 1.0F;
+            int[] cells = classicCells(sun, flash, state.blockFactor() + 0.1F, state.brightness(), state.darknessScale(),
+                    state.nightVision(), state.bossDarkening(), level.dimensionType().ambientLight());
             int[] add = additions();
             if (add != null) {
                 for (int k = 0; k < cells.length; k++) cells[k] = Math.min(255, cells[k] + add[k]);
@@ -254,11 +255,15 @@ public final class Lightmaps {
         draw(lightmap, PIPELINE, add, true);
     }
 
+    /** The light-map factors vanilla used this frame; {@code blockFactor} is 26.1's (the flicker plus 1.4). */
+    public record Frame(float skyFactor, float blockFactor, float brightness, float darknessScale, float nightVision,
+                        float bossDarkening) {}
+
     /** One quad per cell of {@code add} (0..255 per channel; above 255 drawn as 255), skipping black cells if asked. */
     private static void draw(com.mojang.blaze3d.textures.GpuTextureView lightmap,
             com.mojang.blaze3d.pipeline.RenderPipeline pipeline, int[] add, boolean skipBlack) {
-        var builder = com.mojang.blaze3d.vertex.Tesselator.getInstance().begin(
-                com.mojang.blaze3d.vertex.VertexFormat.Mode.TRIANGLES, com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_COLOR);
+        var builder = CompatTesselator.begin(
+                VertexFormat.Mode.TRIANGLES, com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_COLOR);
         int vertices = 0;
         for (int sky = 0; sky < 16; sky++) {
             for (int block = 0; block < 16; block++) {
@@ -278,12 +283,12 @@ public final class Lightmaps {
             }
         }
         try (var mesh = builder.buildOrThrow()) {
-            var buffer = com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_COLOR.uploadImmediateVertexBuffer(mesh.vertexBuffer());
-            try (var pass = com.mojang.blaze3d.systems.RenderSystem.getDevice().createCommandEncoder().createRenderPass(
-                    () -> "Golem light map additions", lightmap, java.util.OptionalInt.empty())) {
-                pass.setPipeline(pipeline);
-                pass.setVertexBuffer(0, buffer);
-                pass.draw(0, vertices);
+            var buffer = Passes.upload(com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_COLOR, mesh.vertexBuffer());
+            try (var pass = Passes.open(
+                    () -> "Golem light map additions", lightmap, null)) {
+                Passes.pipeline(pass, pipeline);
+                Passes.vertices(pass, buffer);
+                Passes.draw(pass, vertices);
             }
         }
     }

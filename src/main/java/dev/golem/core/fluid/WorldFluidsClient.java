@@ -61,8 +61,13 @@ final class WorldFluidsClient {
                             Ids.parse(spec.stillSprite()), Ids.parse(spec.flowingSprite()),
                             spec.tint() == UNTINTED ? -1 : spec.tint()));
             if (spec.translucent()) {
-                net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap.INSTANCE.putFluids(
+                //? if >=1.21.11 {
+                net.fabricmc.fabric.api.client.rendering.v1.BlockRenderLayerMap.putFluids(
+                        net.minecraft.client.renderer.chunk.ChunkSectionLayer.TRANSLUCENT, handle.source(), handle.flowing());
+                //?} else {
+                /^net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap.INSTANCE.putFluids(
                         net.minecraft.client.renderer.RenderType.translucent(), handle.source(), handle.flowing());
+                ^///?}
             }
         }
         *///?}
@@ -74,7 +79,15 @@ final class WorldFluidsClient {
     }
     //?}
 
-    //? if forgelike && <26.1 {
+    //? if forgelike && >=1.21.11 && <26.1 {
+    /*private static void layers() {
+        for (WorldFluids.Handle handle : WorldFluids.declared()) {
+            if (!handle.spec().translucent()) continue;
+            net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(handle.source(), net.minecraft.client.renderer.chunk.ChunkSectionLayer.TRANSLUCENT);
+            net.minecraft.client.renderer.ItemBlockRenderTypes.setRenderLayer(handle.flowing(), net.minecraft.client.renderer.chunk.ChunkSectionLayer.TRANSLUCENT);
+        }
+    }
+    *///?} elif forgelike && <26.1 {
     /*private static void layers() {
         for (WorldFluids.Handle handle : WorldFluids.declared()) {
             if (!handle.spec().translucent()) continue;
@@ -84,7 +97,15 @@ final class WorldFluidsClient {
     }
     *///?}
 
-    //? if neoforge && <26.1 {
+    //? if neoforge && >=1.21.11 && <26.1 {
+    /*static net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions extensions(java.util.function.Supplier<WorldFluids.Spec> spec) {
+        return new net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions() {
+            @Override public net.minecraft.resources.Identifier getStillTexture() { return Ids.parse(spec.get().stillSprite()); }
+            @Override public net.minecraft.resources.Identifier getFlowingTexture() { return Ids.parse(spec.get().flowingSprite()); }
+            @Override public int getTintColor() { return spec.get().tint(); }
+        };
+    }
+    *///?} elif neoforge && <26.1 {
     /*static net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions extensions(java.util.function.Supplier<WorldFluids.Spec> spec) {
         return new net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions() {
             @Override public net.minecraft.resources.ResourceLocation getStillTexture() { return Ids.parse(spec.get().stillSprite()); }

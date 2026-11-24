@@ -1,6 +1,6 @@
 package dev.golem.core.render;
 
-//? if <26.1 {
+//? if <1.21.11 {
 /*import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;

@@ -21,7 +21,7 @@ public abstract class MixinGameTestDimensions {
                                                                 @Local(argsOnly = true) WorldLoader.DataLoadContext context) {
         if (!Boolean.getBoolean("golem.gametest.datapackDimensions") || original.key() != Registries.LEVEL_STEM)
             return original;
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return context.datapackDimensions().lookupOrThrow(Registries.LEVEL_STEM);
         //?} else {
         /*return context.datapackDimensions().registryOrThrow(Registries.LEVEL_STEM);

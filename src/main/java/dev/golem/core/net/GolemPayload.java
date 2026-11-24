@@ -1,6 +1,6 @@
 package dev.golem.core.net;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.resources.Identifier;
 //?} else {
 /*import net.minecraft.resources.ResourceLocation;
@@ -17,7 +17,7 @@ public interface GolemPayload
 {
 
     /** The channel used by this payload. Keep this value stable after release. */
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     Identifier id();
     //?} else {
     /*ResourceLocation id();

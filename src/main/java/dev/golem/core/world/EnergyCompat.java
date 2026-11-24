@@ -33,7 +33,7 @@ public final class EnergyCompat {
 
     /** The foreign handler exposed at {@code pos} on {@code side}, or null if there is none. */
     public static @Nullable EnergyView find(Level level, BlockPos pos, @Nullable Direction side) {
-        //? if neoforge && >=26.1 {
+        //? if neoforge && >=1.21.11 {
         net.neoforged.neoforge.transfer.energy.EnergyHandler handler =
                 level.getCapability(net.neoforged.neoforge.capabilities.Capabilities.Energy.BLOCK, pos, side);
         return handler == null ? null : view(handler);
@@ -70,7 +70,7 @@ public final class EnergyCompat {
         //?}
     }
 
-    //? if neoforge && >=26.1 {
+    //? if neoforge && >=1.21.11 {
     /**
      * A simulation is a transaction that is never committed; a real move commits it. Amounts saturate at
      * {@code int}, the width the handler's insert and extract take.
@@ -120,7 +120,7 @@ public final class EnergyCompat {
     }
     //?}
 
-    //? if forgelike && <26.1 {
+    //? if forgelike && <1.21.11 {
     /*private static EnergyView view(
             //? if neoforge {
             /^net.neoforged.neoforge.energy.IEnergyStorage storage

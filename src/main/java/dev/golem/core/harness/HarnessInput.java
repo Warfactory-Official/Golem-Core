@@ -13,7 +13,6 @@ import java.util.Map;
 import java.util.Set;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
-import org.lwjgl.glfw.GLFW;
 
 /**
  * Synthetic input through the vanilla handlers, so every key binding, screen and slot sees exactly
@@ -25,59 +24,68 @@ final class HarnessInput {
     record Binding(boolean mouse, int code) {}
 
     private static final Map<String, Integer> NAMED = new HashMap<>();
+    private static final Map<String, Integer> MOUSE_NAMED = new HashMap<>();
+    // Digit and F keys are not consecutive codes on every node (SDL numbers 0 after 9).
+    private static final int[] DIGITS = {InputConstants.KEY_0, InputConstants.KEY_1, InputConstants.KEY_2, InputConstants.KEY_3,
+            InputConstants.KEY_4, InputConstants.KEY_5, InputConstants.KEY_6, InputConstants.KEY_7, InputConstants.KEY_8,
+            InputConstants.KEY_9};
+    private static final int[] F_KEYS = {InputConstants.KEY_F1, InputConstants.KEY_F2, InputConstants.KEY_F3, InputConstants.KEY_F4,
+            InputConstants.KEY_F5, InputConstants.KEY_F6, InputConstants.KEY_F7, InputConstants.KEY_F8, InputConstants.KEY_F9,
+            InputConstants.KEY_F10, InputConstants.KEY_F11, InputConstants.KEY_F12};
     private static final Set<Binding> held = new LinkedHashSet<>();
     private static final List<long[]> scheduledReleases = new ArrayList<>(); // {tick, mouse(0/1), code}
 
     static {
-        NAMED.put("space", GLFW.GLFW_KEY_SPACE);
-        NAMED.put("escape", GLFW.GLFW_KEY_ESCAPE);
-        NAMED.put("esc", GLFW.GLFW_KEY_ESCAPE);
-        NAMED.put("enter", GLFW.GLFW_KEY_ENTER);
-        NAMED.put("return", GLFW.GLFW_KEY_ENTER);
-        NAMED.put("tab", GLFW.GLFW_KEY_TAB);
-        NAMED.put("backspace", GLFW.GLFW_KEY_BACKSPACE);
-        NAMED.put("delete", GLFW.GLFW_KEY_DELETE);
-        NAMED.put("insert", GLFW.GLFW_KEY_INSERT);
-        NAMED.put("home", GLFW.GLFW_KEY_HOME);
-        NAMED.put("end", GLFW.GLFW_KEY_END);
-        NAMED.put("pageup", GLFW.GLFW_KEY_PAGE_UP);
-        NAMED.put("pagedown", GLFW.GLFW_KEY_PAGE_DOWN);
-        NAMED.put("left", GLFW.GLFW_KEY_LEFT);
-        NAMED.put("right", GLFW.GLFW_KEY_RIGHT);
-        NAMED.put("up", GLFW.GLFW_KEY_UP);
-        NAMED.put("down", GLFW.GLFW_KEY_DOWN);
-        NAMED.put("lshift", GLFW.GLFW_KEY_LEFT_SHIFT);
-        NAMED.put("shift", GLFW.GLFW_KEY_LEFT_SHIFT);
-        NAMED.put("rshift", GLFW.GLFW_KEY_RIGHT_SHIFT);
-        NAMED.put("lctrl", GLFW.GLFW_KEY_LEFT_CONTROL);
-        NAMED.put("ctrl", GLFW.GLFW_KEY_LEFT_CONTROL);
-        NAMED.put("rctrl", GLFW.GLFW_KEY_RIGHT_CONTROL);
-        NAMED.put("lalt", GLFW.GLFW_KEY_LEFT_ALT);
-        NAMED.put("alt", GLFW.GLFW_KEY_LEFT_ALT);
-        NAMED.put("ralt", GLFW.GLFW_KEY_RIGHT_ALT);
-        NAMED.put("capslock", GLFW.GLFW_KEY_CAPS_LOCK);
-        NAMED.put("minus", GLFW.GLFW_KEY_MINUS);
-        NAMED.put("equal", GLFW.GLFW_KEY_EQUAL);
-        NAMED.put("comma", GLFW.GLFW_KEY_COMMA);
-        NAMED.put("period", GLFW.GLFW_KEY_PERIOD);
-        NAMED.put("slash", GLFW.GLFW_KEY_SLASH);
-        NAMED.put("semicolon", GLFW.GLFW_KEY_SEMICOLON);
-        NAMED.put("apostrophe", GLFW.GLFW_KEY_APOSTROPHE);
-        NAMED.put("grave", GLFW.GLFW_KEY_GRAVE_ACCENT);
-        NAMED.put("lbracket", GLFW.GLFW_KEY_LEFT_BRACKET);
-        NAMED.put("rbracket", GLFW.GLFW_KEY_RIGHT_BRACKET);
-        NAMED.put("backslash", GLFW.GLFW_KEY_BACKSLASH);
-        for (int i = 1; i <= 12; i++) NAMED.put("f" + i, GLFW.GLFW_KEY_F1 + i - 1);
-        NAMED.put("mouse.left", -1);
-        NAMED.put("mouse.right", -2);
-        NAMED.put("mouse.middle", -3);
+        NAMED.put("space", InputConstants.KEY_SPACE);
+        NAMED.put("escape", InputConstants.KEY_ESCAPE);
+        NAMED.put("esc", InputConstants.KEY_ESCAPE);
+        NAMED.put("enter", InputConstants.KEY_RETURN);
+        NAMED.put("return", InputConstants.KEY_RETURN);
+        NAMED.put("tab", InputConstants.KEY_TAB);
+        NAMED.put("backspace", InputConstants.KEY_BACKSPACE);
+        NAMED.put("delete", InputConstants.KEY_DELETE);
+        NAMED.put("insert", InputConstants.KEY_INSERT);
+        NAMED.put("home", InputConstants.KEY_HOME);
+        NAMED.put("end", InputConstants.KEY_END);
+        NAMED.put("pageup", InputConstants.KEY_PAGEUP);
+        NAMED.put("pagedown", InputConstants.KEY_PAGEDOWN);
+        NAMED.put("left", InputConstants.KEY_LEFT);
+        NAMED.put("right", InputConstants.KEY_RIGHT);
+        NAMED.put("up", InputConstants.KEY_UP);
+        NAMED.put("down", InputConstants.KEY_DOWN);
+        NAMED.put("lshift", InputConstants.KEY_LSHIFT);
+        NAMED.put("shift", InputConstants.KEY_LSHIFT);
+        NAMED.put("rshift", InputConstants.KEY_RSHIFT);
+        NAMED.put("lctrl", InputConstants.KEY_LCONTROL);
+        NAMED.put("ctrl", InputConstants.KEY_LCONTROL);
+        NAMED.put("rctrl", InputConstants.KEY_RCONTROL);
+        NAMED.put("lalt", InputConstants.KEY_LALT);
+        NAMED.put("alt", InputConstants.KEY_LALT);
+        NAMED.put("ralt", InputConstants.KEY_RALT);
+        NAMED.put("capslock", InputConstants.KEY_CAPSLOCK);
+        NAMED.put("minus", InputConstants.KEY_MINUS);
+        NAMED.put("equal", InputConstants.KEY_EQUALS);
+        NAMED.put("comma", InputConstants.KEY_COMMA);
+        NAMED.put("period", InputConstants.KEY_PERIOD);
+        NAMED.put("slash", InputConstants.KEY_SLASH);
+        NAMED.put("semicolon", InputConstants.KEY_SEMICOLON);
+        NAMED.put("apostrophe", InputConstants.KEY_APOSTROPHE);
+        NAMED.put("grave", InputConstants.KEY_GRAVE);
+        NAMED.put("lbracket", InputConstants.KEY_LBRACKET);
+        NAMED.put("rbracket", InputConstants.KEY_RBRACKET);
+        NAMED.put("backslash", InputConstants.KEY_BACKSLASH);
+        for (int i = 0; i < 12; i++) NAMED.put("f" + (i + 1), F_KEYS[i]);
+        for (int i = 0; i < 10; i++) NAMED.put(String.valueOf(i), DIGITS[i]);
+        MOUSE_NAMED.put("mouse.left", InputConstants.MOUSE_BUTTON_LEFT);
+        MOUSE_NAMED.put("mouse.right", InputConstants.MOUSE_BUTTON_RIGHT);
+        MOUSE_NAMED.put("mouse.middle", InputConstants.MOUSE_BUTTON_MIDDLE);
     }
 
     private HarnessInput() {}
 
     /**
      * Resolves {@code key.use}, {@code key.hotbar.3}, {@code w}, {@code space}, {@code f3},
-     * {@code mouse.left}, {@code mouse.right}, {@code glfw:<code>} or a bare number (GLFW key code).
+     * {@code mouse.left}, {@code mouse.right}, {@code glfw:<code>} or a bare number (the node's key code).
      */
     static Binding resolve(Minecraft minecraft, String name) {
         String n = name.trim();
@@ -94,15 +102,12 @@ final class HarnessInput {
         }
         if (lower.startsWith("glfw:")) return new Binding(false, Integer.parseInt(lower.substring(5)));
         if (lower.startsWith("mouse:")) return new Binding(true, Integer.parseInt(lower.substring(6)));
+        Integer mouse = MOUSE_NAMED.get(lower);
+        if (mouse != null) return new Binding(true, mouse);
         Integer named = NAMED.get(lower);
-        if (named != null) {
-            if (named < 0) return new Binding(true, -named - 1);
-            return new Binding(false, named);
-        }
-        if (lower.length() == 1) {
-            char c = lower.charAt(0);
-            if (c >= 'a' && c <= 'z') return new Binding(false, GLFW.GLFW_KEY_A + (c - 'a'));
-            if (c >= '0' && c <= '9') return new Binding(false, GLFW.GLFW_KEY_0 + (c - '0'));
+        if (named != null) return new Binding(false, named);
+        if (lower.length() == 1 && lower.charAt(0) >= 'a' && lower.charAt(0) <= 'z') {
+            return new Binding(false, InputConstants.KEY_A + (lower.charAt(0) - 'a'));
         }
         try {
             return new Binding(false, Integer.parseInt(lower));
@@ -161,9 +166,13 @@ final class HarnessInput {
 
     static void key(Minecraft minecraft, int key, boolean down, int mods) {
         long window = HarnessWindow.handle(minecraft);
-        int scancode = GLFW.glfwGetKeyScancode(key);
-        int action = down ? GLFW.GLFW_PRESS : GLFW.GLFW_RELEASE;
-        //? if >=26.1 {
+        int action = down ? InputConstants.PRESS : InputConstants.RELEASE;
+        //? if >=26.3 {
+        /*int scancode = org.lwjgl.sdl.SDLKeyboard.SDL_GetKeyFromScancode(key, (short) 0, false);
+        *///?} else {
+        int scancode = org.lwjgl.glfw.GLFW.glfwGetKeyScancode(key);
+        //?}
+        //? if >=1.21.11 {
         ((HarnessKeyboardHandlerAccessor) minecraft.keyboardHandler).golem$keyPress(window, action,
                 new net.minecraft.client.input.KeyEvent(key, scancode, mods));
         //?} else {
@@ -176,15 +185,18 @@ final class HarnessInput {
         //? if >=26.1 {
         ((HarnessKeyboardHandlerAccessor) minecraft.keyboardHandler).golem$charTyped(window,
                 new net.minecraft.client.input.CharacterEvent(codepoint));
-        //?} else {
+        //?} elif >=1.21.11 {
+        /*((HarnessKeyboardHandlerAccessor) minecraft.keyboardHandler).golem$charTyped(window,
+                new net.minecraft.client.input.CharacterEvent(codepoint, mods));
+        *///?} else {
         /*((HarnessKeyboardHandlerAccessor) minecraft.keyboardHandler).golem$charTyped(window, codepoint, mods);
         *///?}
     }
 
     static void mouseButton(Minecraft minecraft, int button, boolean down, int mods) {
         long window = HarnessWindow.handle(minecraft);
-        int action = down ? GLFW.GLFW_PRESS : GLFW.GLFW_RELEASE;
-        //? if >=26.1 {
+        int action = down ? InputConstants.PRESS : InputConstants.RELEASE;
+        //? if >=1.21.11 {
         ((HarnessMouseHandlerAccessor) minecraft.mouseHandler).golem$onButton(window,
                 new net.minecraft.client.input.MouseButtonInfo(button, mods), action);
         //?} else {
@@ -197,7 +209,12 @@ final class HarnessInput {
         long window = HarnessWindow.handle(minecraft);
         double px = guiX * minecraft.getWindow().getScreenWidth() / (double) minecraft.getWindow().getGuiScaledWidth();
         double py = guiY * minecraft.getWindow().getScreenHeight() / (double) minecraft.getWindow().getGuiScaledHeight();
+        //? if >=26.3 {
+        /*((HarnessMouseHandlerAccessor) minecraft.mouseHandler).golem$onMove(window, px, py,
+                px - minecraft.mouseHandler.xpos(), py - minecraft.mouseHandler.ypos());
+        *///?} else {
         ((HarnessMouseHandlerAccessor) minecraft.mouseHandler).golem$onMove(window, px, py);
+        //?}
         return new double[] {px, py, minecraft.mouseHandler.xpos(), minecraft.mouseHandler.ypos()};
     }
 

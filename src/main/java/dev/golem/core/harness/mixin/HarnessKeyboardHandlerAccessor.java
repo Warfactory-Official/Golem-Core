@@ -8,7 +8,7 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 @Mixin(KeyboardHandler.class)
 public interface HarnessKeyboardHandlerAccessor {
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Invoker("keyPress")
     void golem$keyPress(long window, int action, net.minecraft.client.input.KeyEvent event);
 

@@ -52,7 +52,7 @@ public final class CompatConsumables {
 
     /** The 26.1 use-time remainder path; older targets use the item's finish hook instead. */
     public static Item.Properties usingConvertsTo(Item.Properties properties, Item remainder) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return properties.usingConvertsTo(remainder);
         //?} else {
         /*return properties;

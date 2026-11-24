@@ -1,5 +1,6 @@
 package dev.golem.core.render.gem;
 
+import dev.golem.core.render.Poses;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -70,7 +71,7 @@ final class GemModelTest {
 
         PoseStack expected = new PoseStack();
         expected.translate(0.5F, 0F, 0.5F);
-        expected.mulPose(Axis.YP.rotationDegrees(90F));
+        Poses.rotate(expected, Axis.YP.rotationDegrees(90F));
         expected.scale(0.0625F, 0.0625F, 0.0625F);
 
         assertSame(new Matrix4f(expected.last().pose()), declared.local(new Probe()),
@@ -178,9 +179,9 @@ final class GemModelTest {
         for (int i = 0; i < 3; i++) {
             int axis = (int) t[12 + i];
             float degrees = (float) t[3 + axis];
-            if (axis == 0) expected.mulPose(Axis.XP.rotationDegrees(degrees));
-            else if (axis == 1) expected.mulPose(Axis.YP.rotationDegrees(degrees));
-            else expected.mulPose(Axis.ZP.rotationDegrees(degrees));
+            if (axis == 0) Poses.rotate(expected, Axis.XP.rotationDegrees(degrees));
+            else if (axis == 1) Poses.rotate(expected, Axis.YP.rotationDegrees(degrees));
+            else Poses.rotate(expected, Axis.ZP.rotationDegrees(degrees));
         }
         expected.translate(-t[9], -t[10], -t[11]);
         expected.scale((float) t[6], (float) t[7], (float) t[8]);

@@ -1,6 +1,6 @@
 package dev.golem.core.data;
 
-//? if <26.1 {
+//? if <1.21.11 {
 /*import com.mojang.serialization.Codec;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;

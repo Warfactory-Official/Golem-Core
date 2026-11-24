@@ -14,7 +14,9 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.ModelBaker;
 import net.minecraft.client.resources.model.ModelDebugName;
 import net.minecraft.client.resources.model.UnbakedModel;
+//? if >=26.1 {
 import net.minecraft.client.resources.model.cuboid.CuboidModel;
+//?}
 import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.client.resources.model.geometry.QuadCollection;
 import net.minecraft.client.resources.model.geometry.UnbakedGeometry;
@@ -47,8 +49,13 @@ final class GroupedModels {
         var offset = new Vector3f(0.5F + number(json, "offset_x"), number(json, "offset_y"),
                 0.5F + number(json, "offset_z"));
         var geometry = new GroupsGeometry(new MeshKey(registration, source, loader), skins, offset);
+        //? if >=26.1 {
         return new CuboidModel(geometry, base.guiLight(), base.ambientOcclusion(), base.transforms(),
                 base.textureSlots(), base.parent());
+        //?} else {
+        /*return new net.minecraft.client.renderer.block.model.BlockModel(geometry, base.guiLight(),
+                base.ambientOcclusion(), base.transforms(), base.textureSlots(), base.parent());
+        *///?}
     }
 
     private static float number(JsonObject json, String field) {
@@ -67,11 +74,23 @@ final class GroupedModels {
             var mesh = baker.compute(meshKey);
             var output = new QuadCollection.Builder();
             var rotation = state.transformation().getMatrix();
+            //? if >=26.1 {
             var interner = baker.interner();
+            //?} else {
+            /*var interner = baker.parts();
+            *///?}
             for (var skin : skins.entrySet()) {
+                //? if >=26.1 {
                 var material = baker.materials().resolveSlot(textures, skin.getKey(), name);
                 var sprite = material.sprite();
+                //? if >=26.3 {
+                /*var info = interner.materialInfo(BakedQuad.MaterialInfo.of(material, sprite.transparency(), -1, null, 0));
+                *///?} else {
                 var info = interner.materialInfo(BakedQuad.MaterialInfo.of(material, sprite.transparency(), -1, true, 0));
+                //?}
+                //?} else {
+                /*var sprite = baker.sprites().resolveSlot(textures, skin.getKey(), name);
+                *///?}
                 var vertices = mesh.parts(skin.getValue().toArray(String[]::new)).vertices();
                 var stride = Geometry.FLOATS_PER_VERTEX;
                 for (int at = 0; at < vertices.length; at += 3 * stride) {
@@ -87,7 +106,12 @@ final class GroupedModels {
                     long uv2 = uv(vertices, at + 2 * stride, sprite);
                     // Native quads carry a triangle by repeating its final vertex.
                     output.addUnculledFace(new BakedQuad(interner.vector(a), interner.vector(b), interner.vector(c),
-                            interner.vector(c), uv0, uv1, uv2, uv2, face, info));
+                            interner.vector(c), uv0, uv1, uv2, uv2,
+                            //? if >=26.1 {
+                            face, info));
+                            //?} else {
+                            /*-1, face, sprite, true, 0));
+                            *///?}
                 }
             }
             return output.build();

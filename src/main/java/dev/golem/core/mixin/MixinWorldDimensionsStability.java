@@ -39,7 +39,7 @@ public abstract class MixinWorldDimensionsStability {
         }
     }
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*@com.llamalad7.mixinextras.injector.ModifyExpressionValue(method = "bake", at = @At(value = "INVOKE",
             target = "Ljava/util/List;size()I"))
     private int golem$declaredNotCounted(int size,

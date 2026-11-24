@@ -6,7 +6,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import dev.golem.core.world.WorldAttributes;
 import org.spongepowered.asm.mixin.injection.At;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.world.attribute.EnvironmentAttributeSystem;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
@@ -17,13 +17,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * return is the seam. Before 26.1 no loader event answers Mob.isSunBurnTick, whose day check, read before the burn
  * roll, stands where 26.1 reads MONSTERS_BURN. Widening adds neither a layer nor a rule.
  */
-//? if >=26.1 {
+//? if >=1.21.11 {
 @Mixin(EnvironmentAttributeSystem.Builder.class)
 //?} else {
 /*@Mixin(Mob.class)
  *///?}
 public abstract class MixinWorldAttributes {
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Inject(method = "addDefaultLayers", at = @At("RETURN"))
     private void golem$worldLayers(Level level, CallbackInfoReturnable<EnvironmentAttributeSystem.Builder> result) {
         WorldAttributes.apply(level, result.getReturnValue());

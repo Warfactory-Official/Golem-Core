@@ -11,19 +11,19 @@ import net.minecraft.world.level.block.Block;
 /** A {@link BlockItem} with version-neutral tooltip, pre-placement and air-use hooks. */
 public class CompatBlockItem extends BlockItem {
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*private final boolean blockPrefix;
     private String compatDescriptionId;
     *///?}
 
     public CompatBlockItem(Block block, Properties properties) {
         super(block, properties);
-        //? if <26.1 {
+        //? if <1.21.11 {
         /*blockPrefix = Compat.takeBlockDescription(properties);
         *///?}
     }
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*@Override
     public String getDescriptionId() {
         if (!blockPrefix) return super.getDescriptionId();
@@ -81,7 +81,7 @@ public class CompatBlockItem extends BlockItem {
         return result != null ? result : super.useOn(context);
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     public net.minecraft.world.InteractionResult use(net.minecraft.world.level.Level level,
             net.minecraft.world.entity.player.Player player, net.minecraft.world.InteractionHand hand) {
@@ -101,7 +101,7 @@ public class CompatBlockItem extends BlockItem {
     }
     *///?}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context,
                                 net.minecraft.world.item.component.TooltipDisplay display,

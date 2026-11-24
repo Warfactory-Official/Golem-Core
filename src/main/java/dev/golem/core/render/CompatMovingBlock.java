@@ -6,7 +6,7 @@ import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jspecify.annotations.Nullable;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.block.MovingBlockRenderState;
 //?}
@@ -22,7 +22,7 @@ import net.minecraft.client.renderer.block.MovingBlockRenderState;
  */
 public final class CompatMovingBlock {
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     final MovingBlockRenderState delegate = new MovingBlockRenderState();
     //?} else {
     /*@Nullable Level level;
@@ -49,14 +49,18 @@ public final class CompatMovingBlock {
      */
     public void extract(Level level, BlockState block, BlockPos pos, BlockPos seedPos) {
         this.state = block;
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         delegate.blockState = block;
         delegate.blockPos = pos;
         delegate.randomSeedPos = seedPos;
         if (level instanceof ClientLevel clientLevel) {
             delegate.biome = clientLevel.getBiome(pos);
+            //? if >=26.1 {
             delegate.cardinalLighting = clientLevel.cardinalLighting();
             delegate.lightEngine = clientLevel.getLightEngine();
+            //?} else {
+            /*delegate.level = clientLevel;
+            *///?}
         }
         //?} else {
         /*this.level = level;

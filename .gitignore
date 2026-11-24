@@ -41,3 +41,7 @@ replay_pid*
 ### OS
 .DS_Store
 Thumbs.db
+
+### Harness
+# Which harness clients are running (harness/out is covered by out/ above).
+.harness/

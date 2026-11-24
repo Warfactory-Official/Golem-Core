@@ -1,6 +1,6 @@
 package dev.golem.core.mixin;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import dev.golem.core.player.SlotSync;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket;

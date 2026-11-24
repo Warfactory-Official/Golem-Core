@@ -51,7 +51,7 @@ public final class Ingredients {
     /** One {@code item} carrying the potion {@code id} ({@code minecraft:water} makes a water bottle). */
     public static ItemStack potionStack(String item, String id) {
         Item base = BuiltInRegistries.ITEM.getValue(Ids.parse(item));
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         net.minecraft.world.item.alchemy.Potion potion = BuiltInRegistries.POTION.getValue(Ids.parse(id));
         if (potion == null) return new ItemStack(base);
         return net.minecraft.world.item.alchemy.PotionContents.createItemStack(base,

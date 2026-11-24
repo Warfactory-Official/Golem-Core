@@ -90,6 +90,16 @@ final class ClientProbe implements Profiler.Probe {
                 .register(context -> mark("translucent terrain"));
         net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents.END_MAIN
                 .register(context -> end("particles, weather and rest of level"));
+        *///?} elif fabric && >=1.21.11 {
+        /*net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents.START_MAIN.register(context -> begin());
+        net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents.BEFORE_ENTITIES
+                .register(context -> mark("setup, sky and opaque terrain"));
+        net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents.AFTER_ENTITIES
+                .register(context -> mark("entities, block entities, items"));
+        net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents.BEFORE_TRANSLUCENT
+                .register(context -> mark("debug and solid features"));
+        net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents.END_MAIN
+                .register(context -> end("translucent terrain, particles, weather and rest of level"));
         *///?} elif fabric {
         /*net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.START.register(context -> begin());
         net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.AFTER_SETUP.register(context -> mark("setup and culling"));
@@ -124,7 +134,24 @@ final class ClientProbe implements Profiler.Probe {
                 (net.neoforged.neoforge.client.event.RenderLevelStageEvent.AfterWeather event) -> mark("weather"));
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 (net.neoforged.neoforge.client.event.RenderLevelStageEvent.AfterLevel event) -> mark("rest of level"));
-        //?} elif neoforge {
+        //?} elif neoforge && >=1.21.11 {
+        /*net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.client.event.RenderLevelStageEvent.AfterSky event) -> mark("setup and sky"));
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.client.event.RenderLevelStageEvent.AfterOpaqueBlocks event) -> mark("opaque terrain"));
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.client.event.RenderLevelStageEvent.AfterEntities event) ->
+                        mark("entities, block entities, items"));
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.client.event.RenderLevelStageEvent.AfterTranslucentBlocks event) ->
+                        mark("translucent terrain"));
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.client.event.RenderLevelStageEvent.AfterParticles event) -> mark("particles"));
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.client.event.RenderLevelStageEvent.AfterWeather event) -> mark("weather"));
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.client.event.RenderLevelStageEvent.AfterLevel event) -> mark("rest of level"));
+        *///?} elif neoforge {
         /*net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 (net.neoforged.neoforge.client.event.RenderLevelStageEvent event) -> mark(legacyStage(event.getStage())));
         *///?} elif forge {
@@ -133,7 +160,7 @@ final class ClientProbe implements Profiler.Probe {
         *///?}
     }
 
-    //? if neoforge && <26.1 {
+    //? if neoforge && <1.21.11 {
     /*private static String legacyStage(net.neoforged.neoforge.client.event.RenderLevelStageEvent.Stage stage) {
         return legacyStage(stage.toString());
     }
@@ -143,7 +170,7 @@ final class ClientProbe implements Profiler.Probe {
     }
     *///?}
 
-    //? if forgelike && <26.1 {
+    //? if forgelike && <1.21.11 {
     /*private static String legacyStage(String id) {
         String name = id.substring(id.indexOf(':') + 1);
         return LEGACY_STAGES.getOrDefault(name, name);

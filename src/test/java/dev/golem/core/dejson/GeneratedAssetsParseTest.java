@@ -1,12 +1,17 @@
 package dev.golem.core.dejson;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import com.google.gson.JsonObject;
 import com.mojang.serialization.JsonOps;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
+//? if >=26.1 {
 import net.minecraft.client.renderer.block.dispatch.BlockStateModelDispatcher;
 import net.minecraft.client.resources.model.cuboid.CuboidModel;
+//?} else {
+/*import net.minecraft.client.renderer.block.model.BlockModel;
+import net.minecraft.client.renderer.block.model.BlockModelDefinition;
+*///?}
 import net.minecraft.server.Bootstrap;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -26,10 +31,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * The generated JSON through the game's own parsers, on the era whose model system was rewritten.
  *
  * <p>Nothing here asserts a string. A generated model is only correct if
- * {@link CuboidModel#fromStream} accepts it and reports back the parent and slots that were asked
- * for, and a generated blockstate is only correct if
- * {@link BlockStateModelDispatcher#instantiate} maps every state of a real block. Both are the
- * same code paths the client takes at reload, minus the bake.
+ * the game's model parser ({@code CuboidModel}, 1.21.11's {@code BlockModel}) accepts it and reports back the
+ * parent and slots that were asked for, and a generated blockstate is only correct if the game's blockstate
+ * dispatcher ({@code BlockStateModelDispatcher}, 1.21.11's {@code BlockModelDefinition}) maps every state of a real
+ * block. Both are the same code paths the client takes at reload, minus the bake.
  */
 class GeneratedAssetsParseTest {
 
@@ -41,7 +46,7 @@ class GeneratedAssetsParseTest {
 
     @Test
     void parentedModelsKeepTheirParentAndSlots() {
-        CuboidModel model = parse(Models.cubeBottomTop("hbm:blocks/c4_bottom",
+        Parsed model = parse(Models.cubeBottomTop("hbm:blocks/c4_bottom",
                 "hbm:blocks/c4_side", "hbm:blocks/c4_top").models("hbm:block/c4").get("hbm:block/c4"));
 
         assertEquals("minecraft:block/cube_bottom_top", model.parent().toString());
@@ -50,7 +55,7 @@ class GeneratedAssetsParseTest {
 
     @Test
     void aSlotNothingReferencesSurvivesTheParse() {
-        CuboidModel model = parse(Models.parented(Models.CUBE_ALL,
+        Parsed model = parse(Models.parented(Models.CUBE_ALL,
                 Slots.of("all", "hbm:blocks/deco_steel").and("ct", "hbm:blocks/deco_steel_ctm"))
                 .models("hbm:block/deco_steel").get("hbm:block/deco_steel"));
 
@@ -127,8 +132,12 @@ class GeneratedAssetsParseTest {
      */
     private static void assertCoversEveryState(Block block, Dispatch dispatch) {
         JsonObject json = dispatch.toJson("hbm:block/example");
+        //? if >=26.1 {
         BlockStateModelDispatcher parsed = BlockStateModelDispatcher.CODEC
                 .parse(JsonOps.INSTANCE, json).getOrThrow();
+        //?} else {
+        /*BlockModelDefinition parsed = BlockModelDefinition.CODEC.parse(JsonOps.INSTANCE, json).getOrThrow();
+        *///?}
         Map<BlockState, BlockStateModel.UnbakedRoot> roots =
                 parsed.instantiate(block.getStateDefinition(), () -> "test");
 
@@ -141,10 +150,17 @@ class GeneratedAssetsParseTest {
         assertEquals(block.getStateDefinition().getPossibleStates().size(), roots.size());
     }
 
-    private static CuboidModel parse(JsonObject json) {
+    private record Parsed(Object parent, net.minecraft.client.resources.model.sprite.TextureSlots.Data textureSlots) {}
+
+    private static Parsed parse(JsonObject json) {
+        //? if >=26.1 {
         CuboidModel model = CuboidModel.fromStream(new StringReader(json.toString()));
         assertSame(CuboidModel.class, model.getClass());
-        return model;
+        //?} else {
+        /*BlockModel model = BlockModel.fromStream(new StringReader(json.toString()));
+        assertSame(BlockModel.class, model.getClass());
+        *///?}
+        return new Parsed(model.parent(), model.textureSlots());
     }
 }
 //?}

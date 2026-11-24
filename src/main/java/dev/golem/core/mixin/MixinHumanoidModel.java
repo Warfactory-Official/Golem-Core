@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 // also runs before legacy PlayerModel copies the skin overlays, keeping every layer on the same pose.
 @Mixin(HumanoidModel.class)
 public class MixinHumanoidModel {
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Inject(method = "setupAnim(Lnet/minecraft/client/renderer/entity/state/HumanoidRenderState;)V", at = @At("TAIL"))
     private void golem$pose(net.minecraft.client.renderer.entity.state.HumanoidRenderState state, CallbackInfo ci) {
         PlayerRenderHooks.applyModel(PlayerRenderHooks.playerForState(state), (HumanoidModel<?>) (Object) this);

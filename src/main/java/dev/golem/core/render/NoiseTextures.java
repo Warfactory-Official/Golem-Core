@@ -1,6 +1,6 @@
 package dev.golem.core.render;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.AddressMode;
 import com.mojang.blaze3d.textures.FilterMode;
@@ -21,7 +21,7 @@ public final class NoiseTextures {
 
     private NoiseTextures() {}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     /** Repeat, minification nearest, magnification linear, no mipmaps. */
     public static GpuSampler sampler() {
         return RenderSystem.getSamplerCache().getSampler(AddressMode.REPEAT, AddressMode.REPEAT, FilterMode.NEAREST,

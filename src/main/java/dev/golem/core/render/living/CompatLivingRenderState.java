@@ -15,12 +15,12 @@ package dev.golem.core.render.living;
  * model's {@code setupAnim} runs, which is what vanilla itself animates from.
  */
 public class CompatLivingRenderState
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         extends net.minecraft.client.renderer.entity.state.LivingEntityRenderState
         //?}
 {
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*public int lightCoords;
     public float ageInTicks;
     public float bodyRot;

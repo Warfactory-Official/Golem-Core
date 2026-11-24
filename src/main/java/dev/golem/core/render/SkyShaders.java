@@ -6,16 +6,13 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import org.joml.Matrix4f;
-//? if >=26.1 {
+//? if >=1.21.11 {
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.buffers.Std140Builder;
 import com.mojang.blaze3d.pipeline.BlendFunction;
-import com.mojang.blaze3d.pipeline.ColorTargetState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.pipeline.RenderTarget;
-import com.mojang.blaze3d.platform.DestFactor;
-import com.mojang.blaze3d.platform.SourceFactor;
+import dev.golem.core.render.PipelineStates.Factor;
 import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -25,11 +22,9 @@ import com.mojang.blaze3d.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.MeshData;
-import com.mojang.blaze3d.vertex.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.client.renderer.rendertype.OutputTarget;
 import net.minecraft.client.renderer.texture.AbstractTexture;
 //?} else {
 /*import com.mojang.blaze3d.platform.GlStateManager;
@@ -109,19 +104,14 @@ final class SkyShaders {
         count(GUI_DRAWS, namespace, name);
     }
 
-    //? if >=26.1 {
-    private static final BlendFunction BLEND_ALPHA = new BlendFunction(SourceFactor.SRC_ALPHA, DestFactor.ONE_MINUS_SRC_ALPHA,
-            SourceFactor.ONE, DestFactor.ZERO);
+    //? if >=1.21.11 {
+    private static final BlendFunction BLEND_ALPHA = PipelineStates.blendFunction(Factor.SRC_ALPHA, Factor.ONE_MINUS_SRC_ALPHA, Factor.ONE, Factor.ZERO);
     /** 1.7's colour factors, the alpha accumulated as "over" coverage (see {@link #blend}). */
-    private static final BlendFunction PICTURE_ALPHA = new BlendFunction(SourceFactor.SRC_ALPHA, DestFactor.ONE_MINUS_SRC_ALPHA,
-            SourceFactor.ONE, DestFactor.ONE_MINUS_SRC_ALPHA);
+    private static final BlendFunction PICTURE_ALPHA = PipelineStates.blendFunction(Factor.SRC_ALPHA, Factor.ONE_MINUS_SRC_ALPHA, Factor.ONE, Factor.ONE_MINUS_SRC_ALPHA);
     /** 1.7's additive colour factors, the coverage left as it is (see {@link #blend}). */
-    private static final BlendFunction PICTURE_ADDITIVE = new BlendFunction(SourceFactor.SRC_ALPHA, DestFactor.ONE,
-            SourceFactor.ZERO, DestFactor.ONE);
-    private static final BlendFunction PREMULTIPLIED_ADDITIVE = new BlendFunction(SourceFactor.ONE, DestFactor.ONE,
-            SourceFactor.ONE, DestFactor.ZERO);
-    private static final BlendFunction PICTURE_PREMULTIPLIED_ADDITIVE = new BlendFunction(SourceFactor.ONE, DestFactor.ONE,
-            SourceFactor.ZERO, DestFactor.ONE);
+    private static final BlendFunction PICTURE_ADDITIVE = PipelineStates.blendFunction(Factor.SRC_ALPHA, Factor.ONE, Factor.ZERO, Factor.ONE);
+    private static final BlendFunction PREMULTIPLIED_ADDITIVE = PipelineStates.blendFunction(Factor.ONE, Factor.ONE, Factor.ONE, Factor.ZERO);
+    private static final BlendFunction PICTURE_PREMULTIPLIED_ADDITIVE = PipelineStates.blendFunction(Factor.ONE, Factor.ONE, Factor.ZERO, Factor.ONE);
 
     /**
      * The blend of a draw. In the sky ({@code picture} false): 1.7's colour factors with vanilla's alpha factors
@@ -156,16 +146,15 @@ final class SkyShaders {
                                    boolean picture, boolean premultiplied) {
         String key = namespace + ":" + name + "|" + blend + "|" + cull + "|" + picture + "|" + premultiplied;
         return PIPELINES.computeIfAbsent(key, k -> {
-            RenderPipeline.Builder builder = RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET)
+            RenderPipeline.Builder builder = PipelineStates.vertices(PipelineStates.blend(RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET)
                     .withLocation(dev.golem.core.Ids.of(namespace, "pipeline/golem_sky/" + name + "_"
                             + blend.name().toLowerCase(Locale.ROOT) + (cull ? "" : "_no_cull") + (picture ? "_gui" : "")
                             + (premultiplied ? "_premultiplied" : "")))
                     .withVertexShader(dev.golem.core.Ids.of("golemcore", "core/sky_shader"))
                     .withFragmentShader(dev.golem.core.Ids.of(namespace, "core/" + name))
                     .withShaderDefine("GOLEM_SKY_UBO")
-                    .withUniform("GolemSkyShader", UniformType.UNIFORM_BUFFER)
-                    .withColorTargetState(new ColorTargetState(blend(blend, picture, premultiplied)))
-                    .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.QUADS)
+                    .withUniform("GolemSkyShader", UniformType.UNIFORM_BUFFER), blend(blend, picture, premultiplied))
+                    , DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.QUADS)
                     .withCull(cull);
             for (int i = 0; i < samplers; i++) builder.withSampler("Sampler" + i);
             // No depth state: neither tested nor written, as vanilla's sky.
@@ -195,7 +184,7 @@ final class SkyShaders {
     private static void render(String namespace, String name, int samplers, Sky.Blend blend, boolean cull, boolean picture,
                                boolean premultiplied, String[] textures, Matrix4f local, float[] params, float[] v, int quads) {
         RenderPipeline pipeline = pipeline(namespace, name, samplers, blend, cull, picture, premultiplied);
-        BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
+        BufferBuilder builder = CompatTesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
         for (int i = 0; i < quads * 4; i++) {
             int o = i * 5;
             builder.addVertex(v[o], v[o + 1], v[o + 2]).setUv(v[o + 3], v[o + 4]);
@@ -216,15 +205,11 @@ final class SkyShaders {
         try (mesh) {
             GpuBufferSlice transforms = RenderSystem.getDynamicUniforms().writeTransform(RenderSystem.getModelViewMatrix(),
                     new org.joml.Vector4f(1.0F, 1.0F, 1.0F, 1.0F), new org.joml.Vector3f(), new Matrix4f());
-            GpuBuffer vertices = pipeline.getVertexFormat().uploadImmediateVertexBuffer(mesh.vertexBuffer());
+            GpuBuffer vertices = Passes.upload(pipeline.getVertexFormat(), mesh.vertexBuffer());
             RenderSystem.AutoStorageIndexBuffer indices = RenderSystem.getSequentialBuffer(mesh.drawState().mode());
             GpuBuffer indexBuffer = indices.getBuffer(mesh.drawState().indexCount());
-            RenderTarget target = OutputTarget.MAIN_TARGET.getRenderTarget();
-            GpuTextureView color = RenderSystem.outputColorTextureOverride != null
-                    ? RenderSystem.outputColorTextureOverride : target.getColorTextureView();
-            GpuTextureView depth = target.useDepth
-                    ? (RenderSystem.outputDepthTextureOverride != null ? RenderSystem.outputDepthTextureOverride : target.getDepthTextureView())
-                    : null;
+            GpuTextureView color = Passes.outputColor();
+            GpuTextureView depth = Passes.outputDepth();
             // 1.7's texture-manager textures: GL_REPEAT, GL_NEAREST, no mipmaps
             GpuSampler sampler = RenderSystem.getSamplerCache().getRepeat(FilterMode.NEAREST);
             // Resolve (and on first use load) every texture before the pass opens: a first load uploads the pixels through
@@ -234,18 +219,18 @@ final class SkyShaders {
                 AbstractTexture texture = Minecraft.getInstance().getTextureManager().getTexture(dev.golem.core.Ids.parse(textures[i]));
                 views[i] = texture.getTextureView();
             }
-            try (RenderPass pass = RenderSystem.getDevice().createCommandEncoder().createRenderPass(
-                    label, color, java.util.OptionalInt.empty(), depth, java.util.OptionalDouble.empty())) {
-                pass.setPipeline(pipeline);
+            try (RenderPass pass = Passes.open(
+                    label, color, depth)) {
+                Passes.pipeline(pass, pipeline);
                 com.mojang.blaze3d.systems.ScissorState scissor = RenderSystem.getScissorStateForRenderTypeDraws();
                 if (scissor.enabled()) pass.enableScissor(scissor.x(), scissor.y(), scissor.width(), scissor.height());
                 RenderSystem.bindDefaultUniforms(pass);
                 pass.setUniform("DynamicTransforms", transforms);
                 if (parameters != null) pass.setUniform("GolemSkyShader", parameters);
-                pass.setVertexBuffer(0, vertices);
-                for (int i = 0; i < samplers; i++) pass.bindTexture("Sampler" + i, views[i], sampler);
+                Passes.vertices(pass, vertices);
+                for (int i = 0; i < samplers; i++) Passes.texture(pass, "Sampler" + i, views[i], sampler);
                 pass.setIndexBuffer(indexBuffer, indices.type());
-                pass.drawIndexed(0, 0, mesh.drawState().indexCount(), 1);
+                Passes.drawIndexed(pass, 0, mesh.drawState().indexCount());
             }
         }
     }
@@ -336,7 +321,7 @@ final class SkyShaders {
         applyBlend();
         if (!cull) RenderSystem.disableCull();
         //? if >=1.21 {
-        BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
+        BufferBuilder builder = CompatTesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
         for (int i = 0; i < quads * 4; i++) {
             int o = i * 5;
             builder.addVertex(v[o], v[o + 1], v[o + 2]).setUv(v[o + 3], v[o + 4]);

@@ -6,7 +6,7 @@ import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.level.Level;
 import org.jspecify.annotations.Nullable;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 //?} else {
@@ -33,7 +33,7 @@ public final class CompatItemRenderState {
     private ItemDisplayContext displayContext = ItemDisplayContext.NONE;
     private float droppedItemYOffset;
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     final ItemStackRenderState delegate = new ItemStackRenderState();
     //?} else {
     /*@Nullable ItemStack stack;
@@ -41,7 +41,7 @@ public final class CompatItemRenderState {
 
     /** True when there is nothing to draw. */
     public boolean isEmpty() {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return delegate.isEmpty();
         //?} else {
         /*return stack == null || stack.isEmpty();
@@ -64,7 +64,7 @@ public final class CompatItemRenderState {
         gui3d = false;
         displayContext = ItemDisplayContext.NONE;
         droppedItemYOffset = 0F;
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         delegate.clear();
         //?} else {
         /*stack = null;
@@ -81,7 +81,7 @@ public final class CompatItemRenderState {
             clear();
             return;
         }
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         Minecraft.getInstance().getItemModelResolver().updateForTopItem(delegate, stack, context, level, null, 0);
         gui3d = delegate.usesBlockLight();
         droppedItemYOffset = (float) (-delegate.getModelBoundingBox().minY + 0.1625D);
@@ -99,7 +99,7 @@ public final class CompatItemRenderState {
         return droppedItemYOffset;
     }
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*/^* Draws immediately; pre-26.1 item rendering is not deferred. ^/
     void draw(PoseStack poseStack, MultiBufferSource bufferSource, int light, int overlay, @Nullable Level level) {
         if (stack == null || stack.isEmpty()) return;

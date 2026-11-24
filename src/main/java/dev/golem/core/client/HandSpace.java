@@ -1,5 +1,6 @@
 package dev.golem.core.client;
 
+import dev.golem.core.render.Poses;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
 
@@ -29,8 +30,8 @@ public final class HandSpace {
     /** Resets {@code pose} to camera space. */
     public static void enterCameraSpace(PoseStack pose) {
         pose.setIdentity();
-        //? if >=26.1 {
-        if (!ShaderPacks.inUse()) pose.mulPose(Minecraft.getInstance().gameRenderer.getMainCamera().rotation());
+        //? if >=1.21.11 {
+        if (!ShaderPacks.inUse()) Poses.rotate(pose, Minecraft.getInstance().gameRenderer.getMainCamera().rotation());
         //?} else if >=1.21 {
         /*pose.mulPose(new org.joml.Matrix4f(com.mojang.blaze3d.systems.RenderSystem.getModelViewMatrix()).invert());
         *///?}

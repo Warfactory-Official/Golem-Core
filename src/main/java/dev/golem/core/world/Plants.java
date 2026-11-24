@@ -13,7 +13,11 @@ public final class Plants {
     public static boolean isValidBonemealTarget(BonemealableBlock block, Level level,
                                                  BlockPos pos, BlockState state) {
         //? if >=1.21.1 {
+        //? if >=26.3 {
+        /*return block.isValidBonemealTarget(level, pos, state, net.minecraft.world.level.block.BonemealSource.INTERACTION);
+        *///?} else {
         return block.isValidBonemealTarget(level, pos, state);
+        //?}
         //?} else {
         /*return block.isValidBonemealTarget(level, pos, state, false);
         *///?}

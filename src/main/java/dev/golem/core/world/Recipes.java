@@ -28,7 +28,7 @@ public final class Recipes {
     /** Returns whether the level's active recipe manager contains the namespaced recipe id. */
     public static boolean hasRecipe(Level level, String namespace, String path) {
         var id = Ids.of(namespace, path);
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         if (level.getServer() == null) return false;
         return level.getServer().getRecipeManager().getRecipes().stream()
                 .anyMatch(recipe -> recipe.id().identifier().equals(id));
@@ -43,7 +43,7 @@ public final class Recipes {
      */
     public static List<Map.Entry<ItemStack, ItemStack>> smeltingPairs(Level level) {
         List<Map.Entry<ItemStack, ItemStack>> pairs = new ArrayList<>();
-        //? if <26.1 {
+        //? if <1.21.11 {
         /*for (var entry : level.getRecipeManager().getAllRecipesFor(RecipeType.SMELTING)) {
             //? if >=1.21.1 {
             var recipe = entry.value();
@@ -69,10 +69,10 @@ public final class Recipes {
     public static Optional<ItemStack> smeltingResult(Level level, ItemStack input) {
         if (input.isEmpty()) return Optional.empty();
 
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         if (!(level instanceof ServerLevel serverLevel)) return Optional.empty();
         return serverLevel.recipeAccess().getRecipeFor(RecipeType.SMELTING, new SingleRecipeInput(input), level)
-                .map(holder -> holder.value().assemble(new SingleRecipeInput(input)))
+                .map(holder -> assemble(holder.value(), new SingleRecipeInput(input), level))
                 .filter(result -> !result.isEmpty())
                 .map(ItemStack::copy);
         //?} elif >=1.21.1 {
@@ -96,11 +96,11 @@ public final class Recipes {
     public static Optional<ItemStack> craftingResult(Level level, ItemStack input) {
         if (input.isEmpty()) return Optional.empty();
 
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         if (!(level instanceof ServerLevel serverLevel)) return Optional.empty();
         CraftingInput craftingInput = CraftingInput.of(1, 1, List.of(input));
         return serverLevel.recipeAccess().getRecipeFor(RecipeType.CRAFTING, craftingInput, level)
-                .map(holder -> holder.value().assemble(craftingInput))
+                .map(holder -> assemble(holder.value(), craftingInput, level))
                 .filter(result -> !result.isEmpty())
                 .map(ItemStack::copy);
         //?} elif >=1.21.1 {
@@ -124,11 +124,11 @@ public final class Recipes {
                                                       List<ItemStack> inputs) {
         if (width <= 0 || height <= 0 || inputs.size() != width * height) return Optional.empty();
 
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         if (!(level instanceof ServerLevel serverLevel)) return Optional.empty();
         CraftingInput craftingInput = CraftingInput.of(width, height, inputs);
         return serverLevel.recipeAccess().getRecipeFor(RecipeType.CRAFTING, craftingInput, level)
-                .map(holder -> holder.value().assemble(craftingInput))
+                .map(holder -> assemble(holder.value(), craftingInput, level))
                 .filter(result -> !result.isEmpty())
                 .map(ItemStack::copy);
         //?} elif >=1.21.1 {
@@ -153,7 +153,7 @@ public final class Recipes {
                                                                 List<ItemStack> inputs) {
         if (width <= 0 || height <= 0 || inputs.size() != width * height) return Optional.empty();
 
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         if (!(level instanceof ServerLevel serverLevel)) return Optional.empty();
         CraftingInput craftingInput = CraftingInput.of(width, height, inputs);
         return serverLevel.recipeAccess().getRecipeFor(RecipeType.CRAFTING, craftingInput, level)
@@ -188,7 +188,7 @@ public final class Recipes {
     public static List<CraftingMatch> craftingMatches(Level level, int width, int height, List<ItemStack> inputs) {
         if (width <= 0 || height <= 0 || inputs.size() != width * height) return List.of();
         List<CraftingMatch> matches = new java.util.ArrayList<>();
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         if (!(level instanceof ServerLevel serverLevel)) return List.of();
         CraftingInput craftingInput = CraftingInput.of(width, height, inputs);
         for (net.minecraft.world.item.crafting.RecipeHolder<?> holder : serverLevel.recipeAccess().getRecipes()) {
@@ -231,14 +231,14 @@ public final class Recipes {
     public static Optional<ItemStack> craftingResult(Level level, CraftingMatch match, int width, int height,
                                                       List<ItemStack> inputs) {
         if (width <= 0 || height <= 0 || inputs.size() != width * height) return Optional.empty();
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         if (!(level instanceof ServerLevel)) return Optional.empty();
         CraftingInput craftingInput = CraftingInput.of(width, height, inputs);
         @SuppressWarnings("unchecked")
         net.minecraft.world.item.crafting.Recipe<CraftingInput> recipe =
                 (net.minecraft.world.item.crafting.Recipe<CraftingInput>) match.recipe();
         if (!recipe.matches(craftingInput, level)) return Optional.empty();
-        ItemStack result = recipe.assemble(craftingInput);
+        ItemStack result = assemble(recipe, craftingInput, level);
         //?} elif >=1.21.1 {
         /*if (level.isClientSide()) return Optional.empty();
         CraftingInput craftingInput = CraftingInput.of(width, height, inputs);
@@ -260,4 +260,15 @@ public final class Recipes {
         *///?}
         return result.isEmpty() ? Optional.empty() : Optional.of(result.copy());
     }
+
+    //? if >=1.21.11 {
+    private static <I extends net.minecraft.world.item.crafting.RecipeInput> ItemStack assemble(
+            net.minecraft.world.item.crafting.Recipe<I> recipe, I input, Level level) {
+        //? if >=26.1 {
+        return recipe.assemble(input);
+        //?} else {
+        /*return recipe.assemble(input, level.registryAccess());
+        *///?}
+    }
+    //?}
 }

@@ -2,7 +2,7 @@ package dev.golem.core.world;
 
 import java.util.function.UnaryOperator;
 import net.minecraft.server.MinecraftServer;
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.world.attribute.EnvironmentAttributes;
 //?}
 
@@ -28,7 +28,7 @@ public final class Skies {
     private Skies() {}
 
     public static float celestialAngle(Level level, BlockPos pos) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return level.environmentAttributes()
                 .getValue(net.minecraft.world.attribute.EnvironmentAttributes.SUN_ANGLE, pos) / 360.0F;
         //?} else {
@@ -38,7 +38,7 @@ public final class Skies {
 
     /** The server's sky light factor at a position; empty below 26.1, which has only integer sky darkening. */
     public static OptionalDouble lightInput(Level level, BlockPos pos) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return OptionalDouble.of(level.environmentAttributes()
                 .getValue(EnvironmentAttributes.SKY_LIGHT_FACTOR, pos));
         //?} else {
@@ -47,7 +47,7 @@ public final class Skies {
     }
 
     public static int moonPhase(Level level, BlockPos pos) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return level.environmentAttributes()
                 .getValue(net.minecraft.world.attribute.EnvironmentAttributes.MOON_PHASE, pos).index();
         //?} else {
@@ -181,7 +181,7 @@ public final class Skies {
     }
 
     public static boolean rawSkyLightFactor(Level level) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         for (var modifier : MODIFIERS) if (modifier.active(level) && modifier.rawSkyLightFactor(level)) return true;
         //?}
         return false;
@@ -238,7 +238,7 @@ public final class Skies {
 
     /** Drops 26.1's cached environment attributes and sky brightness after a time-rate change; older nodes read live. */
     public static void refreshAfterRateChange(MinecraftServer server) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         for (var level : server.getAllLevels()) {
             level.environmentAttributes().invalidateTickCache();
             level.updateSkyBrightness();
@@ -248,7 +248,7 @@ public final class Skies {
 
     /** One level's half of {@link #refreshAfterRateChange}, for a client told the new rate. No-op below 26.1. */
     public static void invalidateEnvironment(Level level) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         level.environmentAttributes().invalidateTickCache();
         //?}
     }

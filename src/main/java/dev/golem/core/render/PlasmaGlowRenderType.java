@@ -1,9 +1,7 @@
 package dev.golem.core.render;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import com.mojang.blaze3d.pipeline.BlendFunction;
-import com.mojang.blaze3d.pipeline.ColorTargetState;
-import com.mojang.blaze3d.pipeline.DepthStencilState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
@@ -54,19 +52,18 @@ public final class PlasmaGlowRenderType {
         *///?}
     }
 
-    //? if >=26.1 {
-    private static final RenderPipeline PIPELINE = WorldPipelines.add(RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
+    //? if >=1.21.11 {
+    private static final RenderPipeline PIPELINE = WorldPipelines.add(PipelineStates.depth(PipelineStates.vertices(PipelineStates.blend(RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
             .withLocation("pipeline/golem_plasma_glow")
             .withVertexShader("core/entity")
             .withFragmentShader("core/entity")
             .withShaderDefine("EMISSIVE")
             .withShaderDefine("NO_OVERLAY")
             .withShaderDefine("NO_CARDINAL_LIGHTING")
-            .withSampler("Sampler0")
-            .withColorTargetState(new ColorTargetState(BlendFunction.LIGHTNING))
-            .withVertexFormat(DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS)
+            .withSampler("Sampler0"), BlendFunction.LIGHTNING)
+            , DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS),
             // Depth test as normal, depth WRITE off.
-            .withDepthStencilState(new DepthStencilState(DepthStencilState.DEFAULT.depthTest(), false))
+            PipelineStates.Depth.LESS_OR_EQUAL, false)
             .withCull(false)
             .build(), RenderPipelines.ENTITY_TRANSLUCENT_EMISSIVE);
 
@@ -75,17 +72,15 @@ public final class PlasmaGlowRenderType {
                     RenderSetup.builder(PIPELINE).withTexture("Sampler0", texture).useLightmap().useOverlay()
                             .createRenderSetup()));
 
-    private static final RenderPipeline SEE_THROUGH_PIPELINE = WorldPipelines.add(RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
+    private static final RenderPipeline SEE_THROUGH_PIPELINE = WorldPipelines.add(PipelineStates.noDepth(PipelineStates.vertices(PipelineStates.blend(RenderPipeline.builder(RenderPipelines.MATRICES_FOG_SNIPPET)
             .withLocation("pipeline/golem_plasma_glow_see_through")
             .withVertexShader("core/entity")
             .withFragmentShader("core/entity")
             .withShaderDefine("EMISSIVE")
             .withShaderDefine("NO_OVERLAY")
             .withShaderDefine("NO_CARDINAL_LIGHTING")
-            .withSampler("Sampler0")
-            .withColorTargetState(new ColorTargetState(BlendFunction.LIGHTNING))
-            .withVertexFormat(DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS)
-            .withDepthStencilState(java.util.Optional.empty())
+            .withSampler("Sampler0"), BlendFunction.LIGHTNING)
+            , DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS))
             .withCull(false)
             .build(), RenderPipelines.ENTITY_TRANSLUCENT_EMISSIVE);
 
@@ -131,7 +126,7 @@ public final class PlasmaGlowRenderType {
                 final class GlowShader extends net.minecraft.client.renderer.ShaderInstance {
                     GlowShader() throws java.io.IOException {
                         super(net.minecraft.client.Minecraft.getInstance().getResourceManager(),
-                                "rendertype_entity_translucent_emissive", DefaultVertexFormat.NEW_ENTITY);
+                                "rendertype_entity_translucent_emissive", DefaultVertexFormat.ENTITY);
                     }
 
                     @Override
@@ -161,7 +156,7 @@ public final class PlasmaGlowRenderType {
 
         static RenderType glow(ResourceLocation texture, boolean seeThrough) {
             return create(seeThrough ? "golem_plasma_glow_see_through" : "golem_plasma_glow",
-                    DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS, 256, false, true,
+                    DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS, 256, false, true,
                     CompositeState.builder()
                             //? if <1.21 {
                             /^.setShaderState(new ShaderStateShard(Factory::shader))

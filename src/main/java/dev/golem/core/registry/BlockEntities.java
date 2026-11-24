@@ -54,7 +54,7 @@ public final class BlockEntities {
         //? if fabric {
         /*return net.fabricmc.fabric.api.object.builder.v1.block.entity.FabricBlockEntityTypeBuilder
                 .<T>create(factory::create, blocks).build();
-        *///?} elif neoforge && >=26.1 {
+        *///?} elif neoforge && >=1.21.11 {
         return new BlockEntityType<>(factory::create, java.util.Set.of(blocks));
         //?} elif neoforge {
         /*return new BlockEntityType<T>(factory::create, java.util.Set.of(blocks), null);
@@ -142,7 +142,7 @@ public final class BlockEntities {
     }
     /** The block entity's custom data (no id/position), across the ValueOutput rewrite. */
     public static CompoundTag saveWithoutMetadata(BlockEntity blockEntity, HolderLookup.Provider registries) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         net.minecraft.world.level.storage.TagValueOutput output = net.minecraft.world.level.storage.TagValueOutput
                 .createWithContext(net.minecraft.util.ProblemReporter.DISCARDING, registries);
         blockEntity.saveWithoutMetadata(output);
@@ -156,7 +156,7 @@ public final class BlockEntities {
 
     /** Loads custom data plus the carried components into an existing block entity. */
     public static void loadWithComponents(BlockEntity blockEntity, CompoundTag tag, HolderLookup.Provider registries) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         blockEntity.loadWithComponents(net.minecraft.world.level.storage.TagValueInput.create(
                 net.minecraft.util.ProblemReporter.DISCARDING, registries, tag));
         //?} elif >=1.20.5 {
@@ -168,7 +168,7 @@ public final class BlockEntities {
 
     /** Loads custom data only (no components) into an existing block entity. */
     public static void loadCustomOnly(BlockEntity blockEntity, CompoundTag tag, HolderLookup.Provider registries) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         blockEntity.loadCustomOnly(net.minecraft.world.level.storage.TagValueInput.create(
                 net.minecraft.util.ProblemReporter.DISCARDING, registries, tag));
         //?} elif >=1.20.5 {

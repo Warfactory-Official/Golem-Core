@@ -23,7 +23,22 @@ public class MixinCameraFov {
         return Fov.apply(fov, partialTick);
     }
 }
-//?} else {
+//?} elif >=1.21.11 {
+/^import net.minecraft.client.renderer.GameRenderer;
+
+@Mixin(GameRenderer.class)
+public class MixinCameraFov {
+
+    @ModifyReturnValue(method = "getFov", at = @At("RETURN"))
+    private float golem$modifyFov(float fov, @Local(argsOnly = true) float partialTick,
+            @Local(argsOnly = true) boolean useFovSetting) {
+        if (!useFovSetting) return fov;
+        float out = Fov.apply(fov, partialTick);
+        Fov.record(out);
+        return out;
+    }
+}
+^///?} else {
 /^import net.minecraft.client.renderer.GameRenderer;
 
 @Mixin(GameRenderer.class)

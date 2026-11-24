@@ -1,6 +1,7 @@
 package dev.golem.core.render;
 
-//? if >=26.1 {
+import com.mojang.blaze3d.vertex.VertexFormat;
+//? if >=1.21.11 {
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 //?} else {
@@ -19,11 +20,10 @@ public final class LineRenderTypes {
 
     private LineRenderTypes() {}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private static final com.mojang.blaze3d.pipeline.RenderPipeline SEE_THROUGH_PIPELINE =
-            WorldPipelines.add(com.mojang.blaze3d.pipeline.RenderPipeline.builder(net.minecraft.client.renderer.RenderPipelines.LINES_SNIPPET)
-                    .withLocation("pipeline/golem_lines_see_through")
-                    .withDepthStencilState(java.util.Optional.empty())
+            WorldPipelines.add(PipelineStates.noDepth(com.mojang.blaze3d.pipeline.RenderPipeline.builder(net.minecraft.client.renderer.RenderPipelines.LINES_SNIPPET)
+                    .withLocation("pipeline/golem_lines_see_through"))
                     .build(), net.minecraft.client.renderer.RenderPipelines.LINES);
     private static final RenderType SEE_THROUGH = RenderType.create("golem_lines_see_through",
             net.minecraft.client.renderer.rendertype.RenderSetup.builder(SEE_THROUGH_PIPELINE).createRenderSetup());
@@ -79,7 +79,7 @@ public final class LineRenderTypes {
             }
             return RenderType.create((seeThrough ? "golem_lines_see_through_" : "golem_lines_") + width,
                     com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_COLOR_NORMAL,
-                    com.mojang.blaze3d.vertex.VertexFormat.Mode.LINES, 256, false, false,
+                    VertexFormat.Mode.LINES, 256, false, false,
                     state.createCompositeState(false));
         }
     }

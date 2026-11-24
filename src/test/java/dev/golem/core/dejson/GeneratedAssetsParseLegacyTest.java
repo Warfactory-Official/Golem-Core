@@ -1,6 +1,6 @@
 package dev.golem.core.dejson;
 
-//? if <26.1 {
+//? if <1.21.11 {
 /*import com.google.gson.JsonObject;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.renderer.block.model.BlockModel;

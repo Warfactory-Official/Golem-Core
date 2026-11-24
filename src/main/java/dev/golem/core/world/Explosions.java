@@ -29,14 +29,14 @@ public final class Explosions {
 
     /** One native callback context whose identity survives allocation and block processing. */
     public abstract static class Context
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             implements Explosion
             //?} else {
             /*extends Explosion
             *///?}
     {
         protected Context(Level level, @Nullable Entity source, double x, double y, double z, float radius) {
-            //? if >=1.21 && <26.1 {
+            //? if >=1.21 && <1.21.11 {
             /*super(level, source, level.damageSources().explosion(source, sourceOwner(source)), null,
                     x, y, z, radius, false, BlockInteraction.DESTROY_WITH_DECAY,
                     ParticleTypes.EXPLOSION, ParticleTypes.EXPLOSION_EMITTER, SoundEvents.GENERIC_EXPLODE);
@@ -77,7 +77,7 @@ public final class Explosions {
             return source == null || source.shouldBlockExplode(this, level, pos, state, power);
         }
 
-        //? if <26.1 {
+        //? if <1.21.11 {
         /*@Override
         public final boolean interactsWithBlocks() {
             return getBlockInteraction() != BlockInteraction.KEEP;
@@ -214,7 +214,7 @@ public final class Explosions {
         }
 
         // One hurt carries the final 1.7 damage.
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         @Override
         public float getEntityDamageAmount(Explosion explosion, Entity entity, float seen) {
             return legacyAmount(explosion, entity, seen);

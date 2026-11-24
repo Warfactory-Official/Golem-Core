@@ -39,7 +39,7 @@ public final class DebugLines {
      */
     public static synchronized void register(String namespace, String path, Source source) {
         ENTRIES.add(new Entry(namespace, path, source));
-        //? if neoforge && >=26.1 {
+        //? if neoforge && >=1.21.11 {
         if (hooked) return;
         hooked = true;
         dev.golem.core.platform.NeoForgeEntrypoint.modBus().addListener(

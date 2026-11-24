@@ -1,9 +1,7 @@
 package dev.golem.core.render;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import com.mojang.blaze3d.pipeline.BlendFunction;
-import com.mojang.blaze3d.pipeline.ColorTargetState;
-import com.mojang.blaze3d.pipeline.DepthStencilState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
@@ -29,7 +27,7 @@ final class AdditiveRenderType {
 
     private AdditiveRenderType() {}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private static final RenderType QUADS = create("golem_additive", VertexFormat.Mode.QUADS, false, true);
     private static final RenderType TRIANGLES = create("golem_additive_triangles", VertexFormat.Mode.TRIANGLES, false, true);
     private static final RenderType QUADS_DEPTH = create("golem_additive_depth", VertexFormat.Mode.QUADS, true, true);
@@ -39,14 +37,13 @@ final class AdditiveRenderType {
     // position_color is vanilla's untextured program without fog.
     private static RenderType create(String name, VertexFormat.Mode mode, boolean depthWrite, boolean fog) {
         String shader = fog ? "core/rendertype_lightning" : "core/position_color";
-        RenderPipeline pipeline = WorldPipelines.add(RenderPipeline.builder(
+        RenderPipeline pipeline = WorldPipelines.add(PipelineStates.depth(PipelineStates.blend(PipelineStates.vertices(RenderPipeline.builder(
                         fog ? RenderPipelines.MATRICES_FOG_SNIPPET : RenderPipelines.MATRICES_PROJECTION_SNIPPET)
                 .withLocation("pipeline/" + name)
                 .withVertexShader(shader)
                 .withFragmentShader(shader)
-                .withVertexFormat(DefaultVertexFormat.POSITION_COLOR, mode)
-                .withColorTargetState(new ColorTargetState(BlendFunction.LIGHTNING))
-                .withDepthStencilState(new DepthStencilState(DepthStencilState.DEFAULT.depthTest(), depthWrite))
+                , DefaultVertexFormat.POSITION_COLOR, mode), BlendFunction.LIGHTNING),
+                PipelineStates.Depth.LESS_OR_EQUAL, depthWrite)
                 .withCull(false)
                 .build());
         return RenderType.create(name, RenderSetup.builder(pipeline).createRenderSetup());

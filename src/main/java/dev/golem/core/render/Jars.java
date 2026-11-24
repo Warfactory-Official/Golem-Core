@@ -7,7 +7,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 //?} else {
@@ -28,7 +28,7 @@ import net.minecraft.client.renderer.rendertype.RenderTypes;
  */
 public final class Jars {
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private static net.minecraft.client.renderer.block.@org.jspecify.annotations.Nullable ModelBlockRenderer blocks;
     private static boolean blocksLit;
     //?}
@@ -56,7 +56,7 @@ public final class Jars {
     }
 
     private static RenderType layer() {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return RenderTypes.cutoutMovingBlock();
         //?} else {
         /*return RenderType.cutoutMipped();
@@ -97,7 +97,11 @@ public final class Jars {
             buffer.putBakedQuad(pose.last(), quad, instance);
             pose.popPose();
         };
-        //?} else {
+        //?} elif >=1.21.11 {
+        /*var dispatcher = Minecraft.getInstance().getBlockRenderer();
+        var random = net.minecraft.util.RandomSource.create();
+        java.util.List<net.minecraft.client.renderer.block.model.BlockModelPart> parts = new java.util.ArrayList<>();
+        *///?} else {
         /*var dispatcher = Minecraft.getInstance().getBlockRenderer();
         *///?}
 
@@ -115,7 +119,19 @@ public final class Jars {
                     renderer.tesselateBlock(output, 0F, 0F, 0F, jar, cursor, state,
                             models.get(state), state.getSeed(cursor));
                     pose.popPose();
+                    //?} elif >=1.21.11 {
+                    /*pose.pushPose();
+                    pose.translate(x, y, z);
+                    parts.clear();
+                    random.setSeed(state.getSeed(cursor));
+                    //? if neoforge {
+                    dispatcher.getBlockModel(state).collectParts(jar, cursor, state, random, parts);
                     //?} else {
+                    /^dispatcher.getBlockModel(state).collectParts(random, parts);
+                    ^///?}
+                    dispatcher.renderBatched(state, cursor, jar, pose, buffer, true, parts);
+                    pose.popPose();
+                    *///?} else {
                     /*pose.pushPose();
                     pose.translate(x, y, z);
                     dispatcher.renderBatched(state, cursor, jar, pose, buffer, true,
@@ -197,6 +213,14 @@ public final class Jars {
             return this;
         }
 
+        //? if >=26.3 {
+        /*@Override
+        public VertexConsumer setUv3(float u, float v) {
+            out.setUv3(u, v);
+            return this;
+        }
+        *///?}
+
         @Override
         public VertexConsumer setNormal(float x, float y, float z) {
             normal.transform(x, y, z, scratch).normalize();
@@ -258,7 +282,7 @@ public final class Jars {
         }
         *///?}
 
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         @Override
         public VertexConsumer setColor(int color) {
             out.setColor(color);

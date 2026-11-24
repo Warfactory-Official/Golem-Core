@@ -1,11 +1,11 @@
 package dev.golem.core.viewer;
 
 import dev.golem.core.gui.GuiDraw;
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.resources.Identifier;
 //?} else {
-/*import net.minecraft.client.gui.GuiGraphics;
+/*import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.resources.ResourceLocation;
 *///?}
 import net.minecraft.world.item.ItemStack;
@@ -27,10 +27,10 @@ public interface Drawable {
     int height();
 
     void draw(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             GuiGraphicsExtractor graphics,
             //?} else {
-            /*GuiGraphics graphics,
+            /*GuiGraphicsExtractor graphics,
             *///?}
             int x, int y);
 
@@ -50,7 +50,7 @@ public interface Drawable {
 
     /** A {@code width x height} region at {@code (u, v)} of a 256x256 texture. */
     static Texture texture(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier texture,
             //?} else {
             /*ResourceLocation texture,
@@ -61,7 +61,7 @@ public interface Drawable {
 
     /** A region of a texture of the given size. */
     static Texture texture(
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             Identifier texture,
             //?} else {
             /*ResourceLocation texture,
@@ -90,7 +90,7 @@ public interface Drawable {
 
     /** A texture region (JEI's {@code DrawableResource} with no padding). */
     final class Texture implements Drawable {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         private final Identifier texture;
         //?} else {
         /*private final ResourceLocation texture;
@@ -98,7 +98,7 @@ public interface Drawable {
         private final int u, v, width, height, textureWidth, textureHeight;
 
         Texture(
-                //? if >=26.1 {
+                //? if >=1.21.11 {
                 Identifier texture,
                 //?} else {
                 /*ResourceLocation texture,
@@ -125,10 +125,10 @@ public interface Drawable {
 
         @Override
         public void draw(
-                //? if >=26.1 {
+                //? if >=1.21.11 {
                 GuiGraphicsExtractor graphics,
                 //?} else {
-                /*GuiGraphics graphics,
+                /*GuiGraphicsExtractor graphics,
                 *///?}
                 int x, int y) {
             draw(graphics, x, y, 0, 0, 0, 0);
@@ -136,10 +136,10 @@ public interface Drawable {
 
         /** Draws the region with the given number of pixels cut from each side. */
         public void draw(
-                //? if >=26.1 {
+                //? if >=1.21.11 {
                 GuiGraphicsExtractor graphics,
                 //?} else {
-                /*GuiGraphics graphics,
+                /*GuiGraphicsExtractor graphics,
                 *///?}
                 int x, int y, int maskTop, int maskBottom, int maskLeft, int maskRight) {
             int w = width - maskRight - maskLeft;
@@ -186,10 +186,10 @@ public interface Drawable {
 
         @Override
         public void draw(
-                //? if >=26.1 {
+                //? if >=1.21.11 {
                 GuiGraphicsExtractor graphics,
                 //?} else {
-                /*GuiGraphics graphics,
+                /*GuiGraphicsExtractor graphics,
                 *///?}
                 int x, int y) {
             int value = value();
@@ -225,10 +225,10 @@ public interface Drawable {
 
         @Override
         public void draw(
-                //? if >=26.1 {
+                //? if >=1.21.11 {
                 GuiGraphicsExtractor graphics,
                 //?} else {
-                /*GuiGraphics graphics,
+                /*GuiGraphicsExtractor graphics,
                 *///?}
                 int x, int y) {
             GuiDraw.fill(graphics, x, y, x + 17, y + 1, 0xFF373737);
@@ -263,10 +263,10 @@ public interface Drawable {
 
         @Override
         public void draw(
-                //? if >=26.1 {
+                //? if >=1.21.11 {
                 GuiGraphicsExtractor graphics,
                 //?} else {
-                /*GuiGraphics graphics,
+                /*GuiGraphicsExtractor graphics,
                 *///?}
                 int x, int y) {
             GuiDraw.item(graphics, stack, x, y);

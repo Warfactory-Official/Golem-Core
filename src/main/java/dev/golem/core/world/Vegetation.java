@@ -20,7 +20,7 @@ public final class Vegetation {
     /** True for grass, ferns, flowers, saplings, crops and the rest of legacy {@code Material.plants}. */
     public static boolean isPlant(BlockState state) {
         Block block = state.getBlock();
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         return block instanceof net.minecraft.world.level.block.VegetationBlock
                 || block instanceof net.minecraft.world.level.block.BushBlock;
         //?} else {

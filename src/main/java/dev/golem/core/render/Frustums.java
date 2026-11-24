@@ -10,7 +10,16 @@ public final class Frustums {
 
     private Frustums() {}
 
-    //? if fabric && <26.1 {
+    //? if >=1.21.11 && <26.1 {
+    /*private static volatile @Nullable Frustum captured;
+
+    /^* 1.21.11: the frustum {@code LevelRenderer.prepareCullFrustum} built for this frame (MixinWorldEffects). ^/
+    public static void capture(Frustum frustum) {
+        captured = frustum;
+    }
+    *///?}
+
+    //? if fabric && <1.21.11 {
     /*private static volatile @Nullable Frustum captured;
     private static boolean listening;
     *///?}
@@ -20,7 +29,9 @@ public final class Frustums {
         Minecraft minecraft = Minecraft.getInstance();
         //? if >=26.1 {
         return minecraft.gameRenderer == null ? null : minecraft.gameRenderer.getMainCamera().getCullFrustum();
-        //?} elif fabric {
+        //?} elif >=1.21.11 {
+        /*return captured;
+        *///?} elif fabric {
         /*if (!listening) {
             listening = true;
             net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.AFTER_SETUP.register(

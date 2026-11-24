@@ -28,7 +28,7 @@ public final class FluidExposure {
 
     /** Exposes every face {@code ports} answers for, on the blocks {@code carriers} accepts. */
     public static void exposeBlocks(FluidPorts ports, Predicate<Block> carriers) {
-        //? if neoforge && >=26.1 {
+        //? if neoforge && >=1.21.11 {
         NeoTransferFluids.exposeBlocks(ports, carriers);
         //?} elif neoforge {
         /*NeoLegacyFluids.exposeBlocks(ports, carriers);
@@ -41,7 +41,7 @@ public final class FluidExposure {
 
     /** Exposes {@code contract} on the items {@code carriers} accepts. */
     public static void exposeItems(FluidContainer contract, Predicate<Item> carriers) {
-        //? if neoforge && >=26.1 {
+        //? if neoforge && >=1.21.11 {
         NeoTransferFluids.exposeItems(contract, carriers);
         //?} elif neoforge {
         /*NeoLegacyFluids.exposeItems(contract, carriers);

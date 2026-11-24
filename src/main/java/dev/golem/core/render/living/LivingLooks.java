@@ -1,5 +1,6 @@
 package dev.golem.core.render.living;
 
+import dev.golem.core.render.Poses;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.minecraft.client.renderer.texture.OverlayTexture;
@@ -24,6 +25,6 @@ public final class LivingLooks {
 
     /** Applies the roll where vanilla does: right after the {@code 180 - bodyYaw} turn, before the model's flip. */
     public static void tilt(PoseStack pose, float degrees) {
-        if (degrees != 0F) pose.mulPose(Axis.ZP.rotationDegrees(degrees));
+        if (degrees != 0F) Poses.rotate(pose, Axis.ZP.rotationDegrees(degrees));
     }
 }

@@ -1,6 +1,6 @@
 package dev.golem.core.fluid;
 
-//? if neoforge && >=26.1 {
+//? if neoforge && >=1.21.11 {
 import java.lang.ref.WeakReference;
 import java.util.Map;
 import java.util.WeakHashMap;

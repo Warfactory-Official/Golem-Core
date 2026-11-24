@@ -86,7 +86,7 @@ public class ComponentShapedRecipe extends CompatCustomRecipe {
         return copyFrom;
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     public final net.minecraft.world.item.ItemStackTemplate resultTemplate() {
         return result.template();
     }
@@ -199,7 +199,7 @@ public class ComponentShapedRecipe extends CompatCustomRecipe {
     }
     *///?}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     public net.minecraft.world.item.crafting.PlacementInfo placementInfo() {
         return net.minecraft.world.item.crafting.PlacementInfo.createFromOptionals(ingredients.stream()
@@ -217,12 +217,12 @@ public class ComponentShapedRecipe extends CompatCustomRecipe {
                 ingredients.stream().map(ingredient -> ingredient.isEmpty()
                         ? net.minecraft.world.item.crafting.display.SlotDisplay.Empty.INSTANCE
                         : ingredient.slotDisplay()).toList(),
-                new net.minecraft.world.item.crafting.display.SlotDisplay.ItemStackSlotDisplay(resultTemplate()),
+                ItemStackSpec.slot(resultTemplate()),
                 new net.minecraft.world.item.crafting.display.SlotDisplay.ItemSlotDisplay(Items.CRAFTING_TABLE)));
     }
     //?}
 
-    //? if <26.1 {
+    //? if <1.21.11 {
     /*@Override
     public boolean canCraftInDimensions(int gridWidth, int gridHeight) {
         return width <= gridWidth && height <= gridHeight;
@@ -236,7 +236,7 @@ public class ComponentShapedRecipe extends CompatCustomRecipe {
     }
     *///?}
 
-    //? if >=1.21.1 && <26.1 {
+    //? if >=1.21.1 && <1.21.11 {
     /*@Override
     public ItemStack getResultItem(net.minecraft.core.HolderLookup.Provider registries) {
         return result.create();

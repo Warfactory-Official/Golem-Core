@@ -1,5 +1,6 @@
 package dev.golem.core.render;
 
+import com.mojang.blaze3d.vertex.VertexFormat;
 import dev.golem.core.client.Precipitation;
 import java.util.HashSet;
 import java.util.Set;
@@ -8,6 +9,10 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+
+//? if >=1.21.11 {
+import com.mojang.blaze3d.pipeline.BlendFunction;
+//?}
 
 /**
  * Client half of {@link Precipitation}: installs each node's hook and draws a registered level's weather quads in
@@ -31,7 +36,7 @@ public final class PrecipitationRendering {
     /** Installs the node's hook (once) and, where the hook is per dimension, for {@code dimension}. */
     public static synchronized void install(ResourceKey<Level> dimension) {
         if (!INSTALLED.add(dimension)) return;
-        //? if fabric && <26.1 {
+        //? if fabric && <1.21.11 {
         /*net.fabricmc.fabric.api.client.rendering.v1.DimensionRenderingRegistry.registerWeatherRenderer(dimension, context -> {
             var camera = context.camera().getPosition();
             renderLegacy(context.lightmapTextureManager(), dev.golem.core.client.FrameTime.partialTick(), camera.x, camera.y, camera.z);
@@ -39,18 +44,44 @@ public final class PrecipitationRendering {
         *///?}
         if (hooked) return;
         hooked = true;
-        //? if neoforge && >=26.1 {
+        //? if neoforge && >=1.21.11 {
         dev.golem.core.platform.NeoForgeEntrypoint.modBus().addListener(
                 (net.neoforged.neoforge.client.event.RegisterCustomEnvironmentEffectRendererEvent event) ->
                         event.registerWeatherEffectRenderer(dev.golem.core.Ids.of(NAMESPACE, PATH),
                                 new net.neoforged.neoforge.client.CustomWeatherEffectRenderer() {
+                                    //? if >=26.3 {
+                                    /*@Override
+                                    public void prepare(net.minecraft.client.renderer.state.level.LevelRenderState state,
+                                                        net.minecraft.client.renderer.state.level.WeatherRenderState weather,
+                                                        Vec3 camera) {
+                                        prepareFrame(camera);
+                                    }
+
                                     @Override
                                     public boolean renderSnowAndRain(net.minecraft.client.renderer.state.level.LevelRenderState state,
                                                                      net.minecraft.client.renderer.state.level.WeatherRenderState weather,
+                                                                     Vec3 camera, com.mojang.blaze3d.systems.RenderPass pass) {
+                                        return drawPending(pass);
+                                    }
+
+                                    @Override
+                                    public boolean renderSnowAndRainOit(net.minecraft.client.renderer.state.level.LevelRenderState state,
+                                                                        net.minecraft.client.renderer.state.level.WeatherRenderState weather,
+                                                                        Vec3 camera, net.minecraft.client.renderer.oit.OitStage stage,
+                                                                        com.mojang.blaze3d.systems.RenderPass pass) {
+                                        return drawPendingOit(stage, pass);
+                                    }
+                                    *///?} else {
+                                    @Override
+                                    public boolean renderSnowAndRain(net.minecraft.client.renderer.state.level.LevelRenderState state,
+                                                                     net.minecraft.client.renderer.state.level.WeatherRenderState weather,
+                                                                     //? if <26.2 {
                                                                      net.minecraft.client.renderer.MultiBufferSource buffers,
+                                                                     //?}
                                                                      Vec3 camera) {
                                         return render(camera);
                                     }
+                                    //?}
                                 }));
         //?}
     }
@@ -59,23 +90,20 @@ public final class PrecipitationRendering {
     public static final String NAMESPACE = "golemcore";
     public static final String PATH = "weather";
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private static final java.util.Map<Boolean, com.mojang.blaze3d.pipeline.RenderPipeline> PIPELINES = new java.util.HashMap<>();
 
     private static com.mojang.blaze3d.pipeline.RenderPipeline pipeline(boolean depthWrite) {
         return PIPELINES.computeIfAbsent(depthWrite, write -> {
-            com.mojang.blaze3d.pipeline.RenderPipeline.Builder builder = com.mojang.blaze3d.pipeline.RenderPipeline
-                    .builder(net.minecraft.client.renderer.RenderPipelines.PARTICLE_SNIPPET)
+            com.mojang.blaze3d.pipeline.RenderPipeline.Builder builder = PipelineStates.blend(com.mojang.blaze3d.pipeline.RenderPipeline
+                    .builder(net.minecraft.client.renderer.RenderPipelines.PARTICLE_SNIPPET), BlendFunction.TRANSLUCENT)
                     // vanilla's WEATHER_SNIPPET (not visible on every loader): translucent blend, both faces
-                    .withColorTargetState(new com.mojang.blaze3d.pipeline.ColorTargetState(
-                            com.mojang.blaze3d.pipeline.BlendFunction.TRANSLUCENT))
                     .withCull(false)
                     .withLocation(dev.golem.core.Ids.of("golemcore", write ? "pipeline/weather_tint_depth_write"
                             : "pipeline/weather_tint_no_depth_write"))
                     .withFragmentShader(dev.golem.core.Ids.of("golemcore", "core/weather_tint"));
             if (!write) {
-                builder.withDepthStencilState(new com.mojang.blaze3d.pipeline.DepthStencilState(
-                        com.mojang.blaze3d.platform.CompareOp.LESS_THAN_OR_EQUAL, false));
+                PipelineStates.depth(builder, PipelineStates.Depth.LESS_OR_EQUAL, false);
             }
             return WorldPipelines.add(builder.build());
         });
@@ -86,21 +114,49 @@ public final class PrecipitationRendering {
      * when the level is not registered with {@link Precipitation}.
      */
     public static boolean render(Vec3 camera) {
+        Prepared prepared = prepare(camera);
+        if (prepared == null) return false;
+        if (prepared != EMPTY) {
+            com.mojang.blaze3d.pipeline.RenderTarget target = WorldTargets.weather();
+            try (com.mojang.blaze3d.systems.RenderPass pass = Passes.open(() -> "Golem weather",
+                    target.getColorTextureView(), target.getDepthTextureView())) {
+                prepared.draw(pass);
+            }
+            Precipitation.countDrawn(prepared.quads());
+        }
+        return true;
+    }
+
+    /** A frame's weather, uploaded and ready to draw into an open pass with its own pipeline or another. */
+    private record Prepared(int quads, com.mojang.blaze3d.pipeline.RenderPipeline pipeline,
+                            java.util.function.BiConsumer<com.mojang.blaze3d.systems.RenderPass, com.mojang.blaze3d.pipeline.RenderPipeline> drawWith) {
+        void draw(com.mojang.blaze3d.systems.RenderPass pass) {
+            drawWith.accept(pass, pipeline);
+        }
+    }
+
+    private static final Prepared EMPTY = new Prepared(0, null, (pass, pipeline) -> {});
+
+    /**
+     * Uploads the frame's weather; null when the level is not registered with {@link Precipitation}. Uploads and first
+     * texture loads go through the command encoder, which blaze3d refuses while a render pass is open.
+     */
+    private static @org.jspecify.annotations.Nullable Prepared prepare(Vec3 camera) {
         ClientLevel level = Minecraft.getInstance().level;
-        if (!Precipitation.has(level)) return false;
+        if (!Precipitation.has(level)) return null;
         Precipitation.Frame frame = Precipitation.collect(level, dev.golem.core.client.FrameTime.partialTick(), camera);
-        if (frame == null || frame.batches().isEmpty()) return true;
+        if (frame == null || frame.batches().isEmpty()) return EMPTY;
         int quads = 0;
         for (Precipitation.Batch batch : frame.batches()) quads += batch.vertices().length / 40;
-        com.mojang.blaze3d.pipeline.RenderPipeline pipeline = pipeline(Minecraft.useShaderTransparency());
+        com.mojang.blaze3d.pipeline.RenderPipeline pipeline = pipeline(WorldTargets.fabulous());
         com.mojang.blaze3d.vertex.VertexFormat format = com.mojang.blaze3d.vertex.DefaultVertexFormat.PARTICLE;
         com.mojang.blaze3d.buffers.GpuBuffer vertexBuffer;
         com.mojang.blaze3d.buffers.GpuBuffer indexBuffer;
-        com.mojang.blaze3d.vertex.VertexFormat.IndexType indexType;
+        VertexFormat.IndexType indexType;
         try (com.mojang.blaze3d.vertex.ByteBufferBuilder bytes =
                      com.mojang.blaze3d.vertex.ByteBufferBuilder.exactlySized(quads * format.getVertexSize() * 4)) {
             com.mojang.blaze3d.vertex.BufferBuilder builder = new com.mojang.blaze3d.vertex.BufferBuilder(bytes,
-                    com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, format);
+                    VertexFormat.Mode.QUADS, format);
             for (Precipitation.Batch batch : frame.batches()) {
                 float[] v = batch.vertices();
                 for (int i = 0; i < v.length / 40 * 4; i++) {
@@ -110,7 +166,7 @@ public final class PrecipitationRendering {
                 }
             }
             try (com.mojang.blaze3d.vertex.MeshData mesh = builder.buildOrThrow()) {
-                vertexBuffer = pipeline.getVertexFormat().uploadImmediateVertexBuffer(mesh.vertexBuffer());
+                vertexBuffer = Passes.upload(pipeline.getVertexFormat(), mesh.vertexBuffer());
                 com.mojang.blaze3d.systems.RenderSystem.AutoStorageIndexBuffer indices =
                         com.mojang.blaze3d.systems.RenderSystem.getSequentialBuffer(mesh.drawState().mode());
                 indexBuffer = indices.getBuffer(mesh.drawState().indexCount());
@@ -120,36 +176,77 @@ public final class PrecipitationRendering {
         com.mojang.blaze3d.buffers.GpuBufferSlice transforms = com.mojang.blaze3d.systems.RenderSystem.getDynamicUniforms()
                 .writeTransform(com.mojang.blaze3d.systems.RenderSystem.getModelViewMatrix(), new org.joml.Vector4f(1.0F, 1.0F, 1.0F, 1.0F),
                         new org.joml.Vector3f(), new org.joml.Matrix4f());
-        com.mojang.blaze3d.pipeline.RenderTarget target = net.minecraft.client.renderer.rendertype.OutputTarget.WEATHER_TARGET.getRenderTarget();
         net.minecraft.client.renderer.texture.TextureManager textures = Minecraft.getInstance().getTextureManager();
-        // Resolve (and on first use load) every batch texture before the pass opens: a first load uploads through the
-        // command encoder, which blaze3d refuses while a render pass is open.
         java.util.List<com.mojang.blaze3d.textures.GpuTextureView> views = new java.util.ArrayList<>();
         for (Precipitation.Batch batch : frame.batches()) views.add(textures.getTexture(dev.golem.core.Ids.parse(batch.texture())).getTextureView());
-        try (com.mojang.blaze3d.systems.RenderPass pass = com.mojang.blaze3d.systems.RenderSystem.getDevice().createCommandEncoder()
-                .createRenderPass(() -> "Golem weather", target.getColorTextureView(), java.util.OptionalInt.empty(),
-                        target.getDepthTextureView(), java.util.OptionalDouble.empty())) {
-            pass.setPipeline(pipeline);
+        final var vertices = vertexBuffer;
+        final var indices = indexBuffer;
+        final var type = indexType;
+        return new Prepared(quads, pipeline, (pass, drawn) -> {
+            Passes.pipeline(pass, drawn);
             com.mojang.blaze3d.systems.RenderSystem.bindDefaultUniforms(pass);
             pass.setUniform("DynamicTransforms", transforms);
-            pass.bindTexture("Sampler2", Minecraft.getInstance().gameRenderer.lightmap(),
+            Passes.texture(pass, "Sampler2", Minecraft.getInstance().gameRenderer.lightmap(),
                     com.mojang.blaze3d.systems.RenderSystem.getSamplerCache().getClampToEdge(com.mojang.blaze3d.textures.FilterMode.LINEAR));
-            pass.setIndexBuffer(indexBuffer, indexType);
-            pass.setVertexBuffer(0, vertexBuffer);
+            pass.setIndexBuffer(indices, type);
+            Passes.vertices(pass, vertices);
             int first = 0;
             int index = 0;
             for (Precipitation.Batch batch : frame.batches()) {
                 int count = batch.vertices().length / 40;
                 // 1.7's texture-manager state: GL_REPEAT, GL_NEAREST
-                pass.bindTexture("Sampler0", views.get(index++),
+                Passes.texture(pass, "Sampler0", views.get(index++),
                         com.mojang.blaze3d.systems.RenderSystem.getSamplerCache().getRepeat(com.mojang.blaze3d.textures.FilterMode.NEAREST));
-                pass.drawIndexed(0, first * 6, count * 6, 1);
+                Passes.drawIndexed(pass, first * 6, count * 6);
                 first += count;
             }
+        });
+    }
+
+    //? if >=26.3 {
+    /*private static @org.jspecify.annotations.Nullable Prepared pending;
+
+    /^* 26.3 hands the renderer vanilla's open weather pass; the upload happens in its prepare step. ^/
+    public static void prepareFrame(Vec3 camera) {
+        pending = prepare(camera);
+    }
+
+    public static boolean drawPending(com.mojang.blaze3d.systems.RenderPass pass) {
+        Prepared prepared = pending;
+        if (prepared == null) return false;
+        if (prepared != EMPTY) {
+            prepared.draw(pass);
+            Precipitation.countDrawn(prepared.quads());
         }
-        Precipitation.countDrawn(quads);
         return true;
     }
+
+    private static net.minecraft.client.renderer.oit.@org.jspecify.annotations.Nullable OitPipelineSet oit;
+
+    /^* Order-independent transparency draws weather once per stage, each with that stage's copy of the pipeline. ^/
+    public static boolean drawPendingOit(net.minecraft.client.renderer.oit.OitStage stage, com.mojang.blaze3d.systems.RenderPass pass) {
+        Prepared prepared = pending;
+        if (prepared == null) return false;
+        if (prepared != EMPTY) {
+            if (oit == null) {
+                // Fabric's builder takes a suffix under the minecraft namespace; NeoForge adds an id overload.
+                //? if neoforge {
+                var suffix = dev.golem.core.Ids.of("golemcore", "weather_tint");
+                //?} else {
+                /^var suffix = "golemcore_weather_tint";
+                ^///?}
+                oit = net.minecraft.client.renderer.oit.OitPipelineSet.builder(suffix,
+                        com.mojang.blaze3d.pipeline.RenderPipeline.builder(net.minecraft.client.renderer.RenderPipelines.OIT_PARTICLE_SNIPPET)
+                                .withFragmentShader(dev.golem.core.Ids.of("golemcore", "core/weather_tint"))
+                                .withCull(false)).build();
+                for (var stages : net.minecraft.client.renderer.oit.OitStage.values()) WorldPipelines.add(oit.getPipeline(stages));
+            }
+            prepared.drawWith().accept(pass, oit.getPipeline(stage));
+            if (stage == net.minecraft.client.renderer.oit.OitStage.ACCUMULATE) Precipitation.countDrawn(prepared.quads());
+        }
+        return true;
+    }
+    *///?}
     //?} else {
     /*private static net.minecraft.client.renderer.ShaderInstance shader;
 
@@ -197,8 +294,8 @@ public final class PrecipitationRendering {
             int count = v.length / 40;
             com.mojang.blaze3d.systems.RenderSystem.setShaderTexture(0, dev.golem.core.Ids.parse(batch.texture()));
             //? if >=1.21 {
-            com.mojang.blaze3d.vertex.BufferBuilder builder = com.mojang.blaze3d.vertex.Tesselator.getInstance().begin(
-                    com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, com.mojang.blaze3d.vertex.DefaultVertexFormat.PARTICLE);
+            com.mojang.blaze3d.vertex.BufferBuilder builder = CompatTesselator.begin(
+                    VertexFormat.Mode.QUADS, com.mojang.blaze3d.vertex.DefaultVertexFormat.PARTICLE);
             for (int i = 0; i < count * 4; i++) {
                 int o = i * 10;
                 builder.addVertex(v[o], v[o + 1], v[o + 2])
@@ -208,7 +305,7 @@ public final class PrecipitationRendering {
             if (mesh != null) com.mojang.blaze3d.vertex.BufferUploader.drawWithShader(mesh);
             //?} else {
             /^com.mojang.blaze3d.vertex.BufferBuilder builder = com.mojang.blaze3d.vertex.Tesselator.getInstance().getBuilder();
-            builder.begin(com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, com.mojang.blaze3d.vertex.DefaultVertexFormat.PARTICLE);
+            builder.begin(VertexFormat.Mode.QUADS, com.mojang.blaze3d.vertex.DefaultVertexFormat.PARTICLE);
             for (int i = 0; i < count * 4; i++) {
                 int o = i * 10;
                 builder.vertex(v[o], v[o + 1], v[o + 2]).uv(v[o + 3], v[o + 4])

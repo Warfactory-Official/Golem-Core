@@ -1,12 +1,12 @@
 package dev.golem.core.render;
 
+import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 
-//? if >=26.1 {
-import com.mojang.blaze3d.pipeline.ColorTargetState;
-import com.mojang.blaze3d.pipeline.DepthStencilState;
+//? if >=1.21.11 {
+import com.mojang.blaze3d.pipeline.BlendFunction;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
@@ -96,7 +96,7 @@ public final class SceneWarp {
         *///?}
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private static final java.util.Map<Identifier, RenderType> TYPES = new java.util.HashMap<>();
 
     /**
@@ -104,6 +104,16 @@ public final class SceneWarp {
      * {@code DefaultVertexFormat.ENTITY} and overwrites each quad's normals with its face normal, which would
      * destroy the parameter carried in Normal; it does not touch any other format instance.
      */
+    //? if >=26.2 {
+    /*private static final com.mojang.blaze3d.vertex.VertexFormat FORMAT = com.mojang.blaze3d.vertex.VertexFormat.builder(0)
+            .addAttribute("Position", com.mojang.blaze3d.GpuFormat.RGB32_FLOAT)
+            .addAttribute("Color", com.mojang.blaze3d.GpuFormat.RGBA8_UNORM)
+            .addAttribute("UV0", com.mojang.blaze3d.GpuFormat.RG32_FLOAT)
+            .addAttribute("UV1", com.mojang.blaze3d.GpuFormat.RG16_SINT)
+            .addAttribute("UV2", com.mojang.blaze3d.GpuFormat.RG16_SINT)
+            .addAttribute("Normal", com.mojang.blaze3d.GpuFormat.RGBA8_SNORM)
+            .build();
+    *///?} else {
     private static final com.mojang.blaze3d.vertex.VertexFormat FORMAT = com.mojang.blaze3d.vertex.VertexFormat.builder()
             .add("Position", com.mojang.blaze3d.vertex.VertexFormatElement.POSITION)
             .add("Color", com.mojang.blaze3d.vertex.VertexFormatElement.COLOR)
@@ -113,6 +123,7 @@ public final class SceneWarp {
             .add("Normal", com.mojang.blaze3d.vertex.VertexFormatElement.NORMAL)
             .padding(1)
             .build();
+    //?}
 
     private static void reset() {
         TYPES.clear();
@@ -135,7 +146,7 @@ public final class SceneWarp {
     }
 
     private static RenderType create(Identifier texture) {
-        RenderPipeline pipeline = RenderPipeline.builder(
+        RenderPipeline pipeline = PipelineStates.blend(PipelineStates.depth(PipelineStates.vertices(RenderPipeline.builder(
                         RenderPipelines.MATRICES_PROJECTION_SNIPPET, RenderPipelines.GLOBALS_SNIPPET)
                 .withLocation(dev.golem.core.Ids.parse(require(pipelineId, "pipeline")))
                 .withVertexShader(dev.golem.core.Ids.parse(modernShaderId()))
@@ -145,12 +156,9 @@ public final class SceneWarp {
                 .withSampler("Sampler2")
                 .withSampler("Sampler3")
                 .withSampler("Sampler4")
-                .withVertexFormat(FORMAT, com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS)
-                .withDepthStencilState(new DepthStencilState(
-                        com.mojang.blaze3d.platform.CompareOp.LESS_THAN_OR_EQUAL, false))
+                , FORMAT, VertexFormat.Mode.QUADS),
+                PipelineStates.Depth.LESS_OR_EQUAL, false), BlendFunction.TRANSLUCENT)
                 .withCull(false)
-                .withColorTargetState(new ColorTargetState(
-                        com.mojang.blaze3d.pipeline.BlendFunction.TRANSLUCENT))
                 .build();
         return RenderType.create("golem_scene_warp", RenderSetup.builder(pipeline)
                 .withTexture("Sampler0", HeatDistortionRenderType.sceneTexture(),
@@ -188,7 +196,7 @@ public final class SceneWarp {
         if (shader == null) {
             try {
                 shader = ShaderLoader.load(Minecraft.getInstance().getResourceManager(), require(shaderId, "shader"),
-                        DefaultVertexFormat.NEW_ENTITY);
+                        DefaultVertexFormat.ENTITY);
             } catch (IOException e) {
                 throw new IllegalStateException("Could not load configured scene warp shader", e);
             }
@@ -229,8 +237,8 @@ public final class SceneWarp {
 
         private static RenderType create(ResourceLocation texture) {
             require(shaderId, "shader");
-            return RenderType.create("golem_scene_warp", DefaultVertexFormat.NEW_ENTITY,
-                    com.mojang.blaze3d.vertex.VertexFormat.Mode.QUADS, 256, false, false,
+            return RenderType.create("golem_scene_warp", DefaultVertexFormat.ENTITY,
+                    VertexFormat.Mode.QUADS, 256, false, false,
                     CompositeState.builder()
                             .setShaderState(new ShaderStateShard(SceneWarp::shader))
                             .setTextureState(new SceneTextureShard(texture))

@@ -1,6 +1,6 @@
 package dev.golem.core.mixin;
 
-//? if <26.1 {
+//? if <1.21.11 {
 /*import dev.golem.core.world.Skies;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;

@@ -108,7 +108,7 @@ public final class Trigger {
         return kinds.isEmpty() || kind != null && kinds.contains(kind);
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private static final class Impl extends net.minecraft.advancements.criterion.SimpleCriterionTrigger<Impl.Instance> {
 
         Impl(Object id) {}
@@ -122,7 +122,11 @@ public final class Trigger {
             trigger(player, instance -> instance.test(kind, stack, amount));
         }
 
+        //? if >=26.3 {
+        /*record Instance(java.util.Optional<net.minecraft.core.Holder<net.minecraft.world.level.storage.loot.predicates.LootItemCondition>> player,
+        *///?} else {
         record Instance(java.util.Optional<net.minecraft.advancements.criterion.ContextAwarePredicate> player,
+        //?}
                         List<String> kinds,
                         java.util.Optional<net.minecraft.advancements.criterion.ItemPredicate> item,
                         java.util.Optional<net.minecraft.advancements.criterion.MinMaxBounds.Doubles> value)
@@ -130,8 +134,16 @@ public final class Trigger {
 
             static final com.mojang.serialization.Codec<Instance> CODEC =
                     com.mojang.serialization.codecs.RecordCodecBuilder.create(i -> i.group(
+                            //? if >=26.3 {
+                            /*com.mojang.serialization.Codec.withAlternative(
+                                    net.minecraft.world.level.storage.loot.predicates.LootItemCondition.CODEC,
+                                    net.minecraft.advancements.criterion.EntityPredicate.CODEC,
+                                    net.minecraft.advancements.criterion.EntityPredicate::wrap)
+                                    .optionalFieldOf("player").forGetter(Instance::player),
+                            *///?} else {
                             net.minecraft.advancements.criterion.EntityPredicate.ADVANCEMENT_CODEC
                                     .optionalFieldOf("player").forGetter(Instance::player),
+                            //?}
                             com.mojang.serialization.Codec.STRING.listOf()
                                     .optionalFieldOf("kinds", List.of()).forGetter(Instance::kinds),
                             net.minecraft.advancements.criterion.ItemPredicate.CODEC

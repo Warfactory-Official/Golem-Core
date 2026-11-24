@@ -1,6 +1,6 @@
 package dev.golem.core.render;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import dev.golem.core.GolemCore;
 import java.lang.invoke.MethodHandle;

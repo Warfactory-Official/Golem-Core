@@ -5,15 +5,15 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import com.mojang.blaze3d.pipeline.BlendFunction;
-import com.mojang.blaze3d.pipeline.ColorTargetState;
-import com.mojang.blaze3d.pipeline.DepthStencilState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
 import net.minecraft.client.renderer.RenderPipelines;
+//? if <26.3 {
 import net.minecraft.client.renderer.rendertype.OutputTarget;
+//?}
 import net.minecraft.client.renderer.rendertype.RenderSetup;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.resources.Identifier;
@@ -43,7 +43,7 @@ public final class ScreenDistortion {
 
     static final ScreenEffects.Layer LAYER = new ScreenEffects.Layer("golem_distortion_layer");
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     private static Identifier noise;
     //?} else {
     /*private static ResourceLocation noise;
@@ -57,7 +57,7 @@ public final class ScreenDistortion {
      * accumulated {@code ONE / ONE}, depth-tested against the main depth without writing it, back faces culled.
      * {@code noise} is the texture the composite animates the offset with (1.12 bound {@code noise_2}).
      */
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     public static RenderType of(Identifier mask, Identifier noise) {
         ScreenDistortion.noise = noise;
         return BY_MASK.computeIfAbsent(mask, ScreenDistortion::create);
@@ -65,24 +65,27 @@ public final class ScreenDistortion {
 
     private static final Map<Identifier, RenderType> BY_MASK = new HashMap<>();
 
+    //? if <26.3 {
     private static final OutputTarget OUTPUT = new OutputTarget("golem_distortion_layer", LAYER::drawTarget);
+    //?}
 
-    private static final RenderPipeline PIPELINE = RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET)
+    private static final RenderPipeline PIPELINE = PipelineStates.blend(PipelineStates.depth(PipelineStates.vertices(RenderPipeline.builder(RenderPipelines.MATRICES_PROJECTION_SNIPPET)
             .withLocation(dev.golem.core.Ids.of("golemcore", "pipeline/screen_distortion_layer"))
             .withVertexShader(dev.golem.core.Ids.of("golemcore", "core/screen_layer"))
             .withFragmentShader(dev.golem.core.Ids.of("golemcore", "core/screen_distortion_layer"))
             .withSampler("Sampler0")
-            .withVertexFormat(DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS)
-            .withDepthStencilState(new DepthStencilState(com.mojang.blaze3d.platform.CompareOp.LESS_THAN_OR_EQUAL, false))
-            .withColorTargetState(new ColorTargetState(BlendFunction.ADDITIVE))
+            , DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS),
+            PipelineStates.Depth.LESS_OR_EQUAL, false), BlendFunction.ADDITIVE)
             .withCull(true)
             .build();
 
     private static RenderType create(Identifier mask) {
-        return RenderType.create("golem_distortion_layer", RenderSetup.builder(PIPELINE)
-                .withTexture("Sampler0", mask)
-                .setOutputTarget(OUTPUT)
-                .createRenderSetup());
+        RenderSetup.RenderSetupBuilder setup = RenderSetup.builder(PIPELINE).withTexture("Sampler0", mask);
+        //? if >=26.3 {
+        /*return LAYER.register(RenderType.create("golem_distortion_layer", setup.createRenderSetup()));
+        *///?} else {
+        return RenderType.create("golem_distortion_layer", setup.setOutputTarget(OUTPUT).createRenderSetup());
+        //?}
     }
 
     private static final RenderPipeline COMPOSITE = ScreenEffects.fullscreenPipeline("screen_distortion", 3, Optional.empty());
@@ -102,12 +105,12 @@ public final class ScreenDistortion {
         RenderTarget layer = LAYER.target();
         ScreenEffects.fullscreen("Screen distortion", COMPOSITE, main.getColorTextureView(), ScreenEffects.wallClockSeconds(),
                 pass -> {
-                    pass.bindTexture("Sampler0", layer.getColorTextureView(), ScreenEffects.linearClamp());
+                    Passes.texture(pass, "Sampler0", layer.getColorTextureView(), ScreenEffects.linearClamp());
                     // noise_2 as 1.12 sampled it: repeat, nearest minification (the *3 lookup minifies along a
                     // 720-pixel axis), linear magnification
-                    pass.bindTexture("Sampler1", noiseTexture.getTextureView(), NoiseTextures.sampler());
+                    Passes.texture(pass, "Sampler1", noiseTexture.getTextureView(), NoiseTextures.sampler());
                     // the main framebuffer texture is GL_NEAREST in 1.12
-                    pass.bindTexture("Sampler2", scene.getColorTextureView(),
+                    Passes.texture(pass, "Sampler2", scene.getColorTextureView(),
                             RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST));
                 });
         ScreenEffects.report("distortion", LAYER.target());
@@ -133,7 +136,7 @@ public final class ScreenDistortion {
             try {
                 // 1.20.1's apply() re-applies the program JSON's blend (none: opaque); put ONE / ONE back at the draw.
                 shader = ShaderLoader.load(Minecraft.getInstance().getResourceManager(), "golemcore:screen_distortion_layer",
-                        DefaultVertexFormat.NEW_ENTITY, () -> {
+                        DefaultVertexFormat.ENTITY, () -> {
                             com.mojang.blaze3d.systems.RenderSystem.enableBlend();
                             com.mojang.blaze3d.systems.RenderSystem.blendFunc(
                                     com.mojang.blaze3d.platform.GlStateManager.SourceFactor.ONE,
@@ -153,7 +156,7 @@ public final class ScreenDistortion {
                 LAYER::bindForDraw, () -> Minecraft.getInstance().getMainRenderTarget().bindWrite(false));
 
         static RenderType distortion(ResourceLocation mask) {
-            return ScreenEffects.skipEmpty(create("golem_distortion_layer", DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS, 256, false, false,
+            return ScreenEffects.skipEmpty(create("golem_distortion_layer", DefaultVertexFormat.ENTITY, VertexFormat.Mode.QUADS, 256, false, false,
                     CompositeState.builder()
                             .setShaderState(new ShaderStateShard(ScreenDistortion::shader))
                             .setTextureState(new TextureStateShard(mask, false, false))

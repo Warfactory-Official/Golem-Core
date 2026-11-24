@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 // Vanilla exposes no extraction or post-rotation callback. Fabric lacks a mutable state event;
 // loader Pre events precede root rotations. Widening visibility cannot add either timing point.
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.client.renderer.entity.player.AvatarRenderer;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.world.entity.Avatar;

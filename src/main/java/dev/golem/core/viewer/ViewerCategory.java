@@ -1,9 +1,9 @@
 package dev.golem.core.viewer;
 
-//? if >=26.1 {
+//? if >=1.21.11 {
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 //?} else {
-/*import net.minecraft.client.gui.GuiGraphics;
+/*import net.minecraft.client.gui.GuiGraphicsExtractor;
 *///?}
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
@@ -62,10 +62,10 @@ public abstract class ViewerCategory<T> {
 
     /** Draws one recipe's background and extras; the mouse is in the category's coordinates. */
     public void draw(T recipe,
-            //? if >=26.1 {
+            //? if >=1.21.11 {
             GuiGraphicsExtractor graphics,
             //?} else {
-            /*GuiGraphics graphics,
+            /*GuiGraphicsExtractor graphics,
             *///?}
             double mouseX, double mouseY) {
     }

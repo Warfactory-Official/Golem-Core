@@ -82,13 +82,18 @@ public class FluidBlock extends LiquidBlock {
      * {@code quanta - 1}) is brightest. Replaceability is the caller's: it was the fluid material's in 1.7.
      */
     public static BlockBehaviour.Properties properties(BlockBehaviour.Properties p, WorldFluids.Handle fluid) {
-        //? if >=26.1 {
+        //? if >=1.21.11 {
         p = p.noCollision();
         //?} else {
         /*p = p.noCollission();
         *///?}
+        //? if >=26.3 {
+        /*p = p.strength(100.0F).noOcclusion().noLootTable().liquid().pushReaction(PushReaction.POPPED).sound(SoundType.EMPTY)
+                .randomTicks();
+        *///?} else {
         p = p.strength(100.0F).noOcclusion().noLootTable().liquid().pushReaction(PushReaction.DESTROY).sound(SoundType.EMPTY)
                 .randomTicks();
+        //?}
         WorldFluids.Spec spec = fluid.spec();
         if (spec.luminosity() > 0) p = p.lightLevel(state -> light(spec, state.getValue(LEVEL)));
         return p;
@@ -185,7 +190,7 @@ public class FluidBlock extends LiquidBlock {
 
     protected void onEntityInside(BlockState state, Level level, BlockPos pos, Entity entity) {}
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     protected void neighborChanged(BlockState state, Level level, BlockPos pos, Block neighbourBlock,
                                    net.minecraft.world.level.redstone.@Nullable Orientation orientation, boolean movedByPiston) {
@@ -265,7 +270,12 @@ public class FluidBlock extends LiquidBlock {
 
     /** 1.7 {@code Material.blocksMovement() || material == Material.portal}. */
     protected static boolean blocksFluid(BlockState state) {
+        //? if >=26.3 {
+        /*return state.isSolid() && !state.is(Blocks.COBWEB) && !state.is(Blocks.BAMBOO_SAPLING) // 26.2 blocksMotion()
+                || state.is(Blocks.NETHER_PORTAL) || state.is(Blocks.END_PORTAL) || state.is(Blocks.END_GATEWAY);
+        *///?} else {
         return state.blocksMotion() || state.is(Blocks.NETHER_PORTAL) || state.is(Blocks.END_PORTAL) || state.is(Blocks.END_GATEWAY);
+        //?}
     }
 
     /** 1.7 {@code getDensity}: a fluid block's density; anything else counts as infinitely displaceable. */
@@ -585,7 +595,7 @@ public class FluidBlock extends LiquidBlock {
         return new ItemStack(bucket);
     }
 
-    //? if >=26.1 {
+    //? if >=1.21.11 {
     @Override
     public ItemStack pickupBlock(net.minecraft.world.entity.@Nullable LivingEntity user, LevelAccessor level, BlockPos pos, BlockState state) {
         return pickup(level, pos, state);
