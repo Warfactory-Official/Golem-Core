@@ -351,13 +351,13 @@ public abstract class CompatParticle extends
         buffer.addVertex(corner.x(), corner.y(), corner.z())
                 .setUv(u, v)
                 .setColor(golemChannel(this.rCol), golemChannel(this.gCol), golemChannel(this.bCol),
-                        golemChannel(this.alpha))
+                        FaintShaderFallback.alpha(golemChannel(this.alpha), this, this.golemFaint))
                 .setLight(light);
         //?} else {
         /^buffer.vertex(corner.x(), corner.y(), corner.z())
                 .uv(u, v)
                 .color(golemChannel(this.rCol), golemChannel(this.gCol), golemChannel(this.bCol),
-                        golemChannel(this.alpha))
+                        FaintShaderFallback.alpha(golemChannel(this.alpha), this, this.golemFaint))
                 .uv2(light)
                 .endVertex();
         ^///?}
@@ -366,7 +366,8 @@ public abstract class CompatParticle extends
 
     //? if >=1.21.11 {
     private int golemColor() {
-        return net.minecraft.util.ARGB.colorFromFloat(golemChannel(this.alpha), golemChannel(this.rCol),
+        return net.minecraft.util.ARGB.colorFromFloat(
+                FaintShaderFallback.alpha(golemChannel(this.alpha), this, this.golemFaint), golemChannel(this.rCol),
                 golemChannel(this.gCol), golemChannel(this.bCol));
     }
     //?}
@@ -397,6 +398,9 @@ public abstract class CompatParticle extends
     //? if >=1.21.11 {
     @Override
     protected net.minecraft.client.particle.SingleQuadParticle.Layer getLayer() {
+        net.minecraft.client.particle.SingleQuadParticle.Layer shaderPack =
+                FaintShaderFallback.layer(this.golemFaint, this.golemLayer, ADDITIVE_LAYER);
+        if (shaderPack != null) return shaderPack;
         if (this.golemFogless) return FaintParticleLayers.FOGLESS_ADDITIVE;
         if (this.golemFaint) {
             return this.golemLayer == ParticleLayer.ADDITIVE ? FaintParticleLayers.ADDITIVE : FaintParticleLayers.TRANSLUCENT;
@@ -407,6 +411,9 @@ public abstract class CompatParticle extends
     //?} else {
     /*@Override
     public net.minecraft.client.particle.ParticleRenderType getRenderType() {
+        net.minecraft.client.particle.ParticleRenderType shaderPack =
+                FaintShaderFallback.layer(this.golemFaint, this.golemLayer, ADDITIVE_LAYER);
+        if (shaderPack != null) return shaderPack;
         if (this.golemFogless) return FaintParticleLayers.FOGLESS_ADDITIVE;
         if (this.golemFaint) {
             return this.golemLayer == ParticleLayer.ADDITIVE ? FaintParticleLayers.ADDITIVE : FaintParticleLayers.TRANSLUCENT;
