@@ -4,6 +4,9 @@ package dev.golem.core.gui;
 import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.golem.core.render.VanillaSubmitSink;
+//? if >=26.3 {
+/*import dev.golem.core.render.Passes;
+*///?}
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
@@ -156,7 +159,16 @@ final class GuiSceneRenderer extends PictureInPictureRenderer<GuiSceneRenderer.S
     protected void renderToTexture(State state, PoseStack poseStack, SubmitNodeCollector collector) {
         Minecraft.getInstance().gameRenderer.getLighting().setupFor(Lighting.Entry.ENTITY_IN_UI);
         poseStack.scale(1.0F, 1.0F, -1.0F);
+        //? if >=26.3 {
+        /^Passes.picture(textureView, depthTextureView);
+        try {
+            state.scene().draw(poseStack, new VanillaSubmitSink(collector, new CameraRenderState()), GuiScenes.CAMERA);
+        } finally {
+            Passes.picture(null, null);
+        }
+        ^///?} else {
         state.scene().draw(poseStack, new VanillaSubmitSink(collector, new CameraRenderState()), GuiScenes.CAMERA);
+        //?}
     }
     *///?} else {
     @Override

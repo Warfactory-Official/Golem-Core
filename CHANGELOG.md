@@ -28,6 +28,8 @@ Each release has a `## <version>` section; the release workflow uploads only the
   (same button, same screen, under 250 ms), where it passed `false` before.
 - `gui.Checkboxes` (no `Checkbox.builder` on 1.20.1) and `gui.SliderButton` (a release hook; 1.21.11 changed
   `onRelease`).
+- `gradle/mod/shaders-26.3.gradle.kts`: a mod's `src/shaders-26.3` copies (explicit locations for SPIR-V) replace
+  its shared shaders on 26.3, as Core's own do.
 - Development checks `-Dgolem.mixinAudit=true` (applies every mixin at the first client tick) and
   `-Dgolem.pipelineAudit=true` (compiles every static Core pipeline once a world is loaded).
 
@@ -37,6 +39,8 @@ Each release has a `## <version>` section; the release workflow uploads only the
 - Harness clicks did nothing on 26.3: scenario buttons count from 0 as GLFW does, and are mapped to SDL's numbering.
 - `gui.MouseInput.button()` was SDL's numbering on 26.3 (left = 1); it counts from 0 on every node.
 - `DynamicTextures.decodePng` ran out of native stack on 1.21.1 and older for PNGs over 64 KB.
+- `GuiCanvas` and `Sky.Shader` draws inside a `GuiScenes` scene went to the main target on 26.3, which has no output
+  override: the scene's picture-in-picture texture is now handed to `Passes.outputColor`/`outputDepth`.
 - IntelliJ could not sync the project or a mod that includes it: two ModDev versions (2.0.141 for 1.20.1 Forge, 2.0.148
   elsewhere) each installed idea-ext on the root project. Every node now uses ModDev 2.0.148, loaded by the root build.
 

@@ -43,6 +43,9 @@ public final class Passes {
     *///?}
     //? if >=26.3 {
     /*private static final Map<RenderType, Supplier<RenderTarget>> LAYERS = new ConcurrentHashMap<>();
+    /^* The picture-in-picture texture Golem is drawing into, which 26.2 kept as RenderSystem's output override. ^/
+    private static @Nullable GpuTextureView pictureColor;
+    private static @Nullable GpuTextureView pictureDepth;
     *///?}
 
     private Passes() {}
@@ -92,7 +95,7 @@ public final class Passes {
     public static GpuTextureView outputColor() {
         RenderTarget main = Minecraft.getInstance().getMainRenderTarget();
         //? if >=26.3 {
-        /*return main.getColorTextureView();
+        /*return pictureColor != null ? pictureColor : main.getColorTextureView();
         *///?} else {
         return RenderSystem.outputColorTextureOverride != null ? RenderSystem.outputColorTextureOverride
                 : main.getColorTextureView();
@@ -103,13 +106,22 @@ public final class Passes {
         RenderTarget main = Minecraft.getInstance().getMainRenderTarget();
         if (!hasDepth(main)) return null;
         //? if >=26.3 {
-        /*return main.getDepthTextureView();
+        /*if (pictureColor != null) return pictureDepth;
+        return main.getDepthTextureView();
         *///?} else {
         return RenderSystem.outputDepthTextureOverride != null ? RenderSystem.outputDepthTextureOverride
                 : main.getDepthTextureView();
         //?}
     }
 
+    //? if >=26.3 {
+    /*/^* Sends {@link #outputColor} and {@link #outputDepth} to a picture-in-picture texture until it is cleared with nulls. ^/
+    public static void picture(@Nullable GpuTextureView color, @Nullable GpuTextureView depth) {
+        pictureColor = color;
+        pictureDepth = depth;
+    }
+
+    *///?}
     /** A pass that loads both attachments as they are; {@code depth} may be null. */
     public static RenderPass open(Supplier<String> label, GpuTextureView color, @Nullable GpuTextureView depth) {
         //? if >=26.2 {

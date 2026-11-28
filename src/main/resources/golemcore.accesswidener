@@ -88,4 +88,4 @@ accessible field net/minecraft/world/entity/InterpolationHandler$InterpolationDa
 # RenderOps.chatMessages / bossEvents: chat history and boss bars have no public view.
 accessible field net/minecraft/client/gui/components/ChatComponent allMessages Ljava/util/List;
 accessible field net/minecraft/client/gui/components/BossHealthOverlay events Ljava/util/Map;
-# 26.3 only: recipe views, the RecipeMap constructor and interpolation targets (a 26.3 rule expands this line).
+# 26.3 only: recipe views, the RecipeMap constructor, interpolation targets and the picture-in-picture target GuiSceneRenderer hands to Passes (a 26.3 rule expands this line).

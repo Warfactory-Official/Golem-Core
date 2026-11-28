@@ -288,7 +288,9 @@ public final class Sky {
      * <p>
      * {@code PARAM(0..63)} are the call's parameters (1.7's {@code setUniform} values, an int as a float). The vertex
      * half, the matrices and the program are Golem's ({@code golemcore:core/sky_shader} on 26.1, where
-     * {@code GOLEM_SKY_UBO} is defined; {@code golemcore:sky_shader_legacy} and a generated program JSON before).
+     * {@code GOLEM_SKY_UBO} is defined; {@code golemcore:sky_shader_legacy} and a generated program JSON before). 26.3
+     * compiles to SPIR-V: a mod ships a copy with explicit locations ({@code layout(location = 0) in vec2 texCoord0},
+     * {@code 1} for {@code localPos}, {@code 0} out) through {@code gradle/mod/shaders-26.3.gradle.kts}.
      */
     public static final class Shader {
         private final String namespace;

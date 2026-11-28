@@ -41,7 +41,7 @@ val widenerRules: List<Pair<String, List<Pair<String, String>>>> = listOf(
             "# Before 26.3: field net/minecraft/world/entity/InterpolationHandler\$InterpolationData ",
         "accessible field net/minecraft/world/entity/InterpolationHandler " to
             "# Before 26.3: field net/minecraft/world/entity/InterpolationHandler ",
-        "# 26.3 only: recipe views, the RecipeMap constructor and interpolation targets (a 26.3 rule expands this line)." to
+        "# 26.3 only: recipe views, the RecipeMap constructor, interpolation targets and the picture-in-picture target GuiSceneRenderer hands to Passes (a 26.3 rule expands this line)." to
             listOf(
                 "mutable field net/minecraft/world/item/crafting/RecipeManager recipes Lnet/minecraft/world/item/crafting/RecipeMap;",
                 "accessible field net/minecraft/world/item/crafting/RecipeManager learnableRecipes Ljava/util/Collection;",
@@ -50,6 +50,8 @@ val widenerRules: List<Pair<String, List<Pair<String, String>>>> = listOf(
                 "accessible method net/minecraft/world/entity/AbstractInterpolationHandler interpolationData ()Lnet/minecraft/core/PositionAndRotation\$Mutable;",
                 "accessible method net/minecraft/world/entity/LinearInterpolationHandler interpolationData ()Lnet/minecraft/core/PositionAndRotation\$Mutable;",
                 "accessible method net/minecraft/world/entity/SteppedInterpolationHandler interpolationData ()Lnet/minecraft/core/PositionAndRotation\$Mutable;",
+                "accessible field net/minecraft/client/gui/render/pip/PictureInPictureRenderer textureView Lcom/mojang/renderpearl/api/textures/GpuTextureView;",
+                "accessible field net/minecraft/client/gui/render/pip/PictureInPictureRenderer depthTextureView Lcom/mojang/renderpearl/api/textures/GpuTextureView;",
             ).joinToString("\n"),
         "net/minecraft/client/renderer/ItemInHandRenderer" to "net/minecraft/client/player/FirstPersonHandsAndItems",
         "com/mojang/blaze3d/opengl/GlBuffer" to "com/mojang/renderpearl/backend/opengl/GlBuffer",
